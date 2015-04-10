@@ -6,5 +6,8 @@ jdk:
 env:
  - TEST_DIR=aleph2_data_model
 
-script: cd $TEST_DIR && mvn install -DskipTests=true && mvn test && mvn clean cobertura:cobertura org.eluder.coveralls:coveralls-maven-plugin:report
+script: cd $TEST_DIR && mvn install -DskipTests=true && mvn test
+
+after_success:
+ - cd $TEST_DIR && mvn clean cobertura:cobertura coveralls:report
 
