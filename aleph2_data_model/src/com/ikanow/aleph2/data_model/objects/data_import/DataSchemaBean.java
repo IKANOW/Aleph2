@@ -15,7 +15,33 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
-public class DataBucketBean {
+/**
+ * Immutable object describing the data from this bucket
+ * @author acp
+ *
+ */
+public class DataSchemaBean {
 
+	public static class ArchiveSchemaBean {
+		
+	}
+	public static class ObjectSchemaBean {
+		
+	}
+	public static class SearchIndexSchemaBean {
+		
+	}
+	public static class ColumnarDbSchemaBean {
+		
+	}
+	public static class TemporalSchemaBean {
+		
+	}
+	public static class GeospatialSchemaBean {
+		
+	}
+	public static class GraphSchemaBean {
+		
+	}
 	
 }
