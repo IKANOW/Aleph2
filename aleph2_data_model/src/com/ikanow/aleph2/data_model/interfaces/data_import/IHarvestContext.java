@@ -18,5 +18,5 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
 public interface IHarvestContext {
 
 	//TODO store state
-	//TODO get location to which to write
+	//TODO get location to which to write data
 }

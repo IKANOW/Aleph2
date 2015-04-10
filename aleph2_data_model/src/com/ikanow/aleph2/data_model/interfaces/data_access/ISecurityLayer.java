@@ -13,30 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.objects.data_import;
+package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-public class DataBucketBean {
+public interface ISecurityLayer {
 
-	//TODO multi-bucket? make a different bean type?
+	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
+	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
+	// ie they are user groups
 	
-	////////////////////////////////////////
-	
-	// General information
-	
-	//TODO bucket id
-	//TODO bucket name
-	//TODO current logical locations within each schema
-	//TODO future logical locations within each schema
-	//TODO security information
-	
-	////////////////////////////////////////
-	
-	// Harvest specific information
-	
-	////////////////////////////////////////
-	
-	// Enrichment specific information
-	
-	// batch settings
-	
+	//TODO request privilege escalation
 }

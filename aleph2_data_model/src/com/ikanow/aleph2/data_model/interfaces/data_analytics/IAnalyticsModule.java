@@ -17,4 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_analytics;
 
 public interface IAnalyticsModule {
 
+	//TODO: in practice will be technology specific, ie a given analytics module
+	// will always run 
 }

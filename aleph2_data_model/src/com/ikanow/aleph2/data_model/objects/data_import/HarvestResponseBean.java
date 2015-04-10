@@ -28,7 +28,7 @@ import java.util.Optional;
 public class HarvestResponseBean {
 
 	/** Create an immutable harvest response bean
-	 * (use ObjectUtils to set its values(
+	 * (use ObjectUtils.build or ObjectUtils.clone to set its values)
 	 */
 	public HarvestResponseBean() {}
 	

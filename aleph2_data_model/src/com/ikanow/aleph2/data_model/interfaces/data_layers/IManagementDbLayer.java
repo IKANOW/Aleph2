@@ -17,4 +17,34 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 public interface IManagementDbLayer {
 
+	////////////////////////////////////
+	
+	// Access
+	
+	//TODO: authentication
+
+	//TODO: interfaces	
+	
+	////////////////////////////////////
+	
+	// Imports
+	
+	//TODO: buckets
+	
+	//TODO: bucket state
+	
+	//TODO: harvester modules
+	
+	//TODO: enhancement modules
+	
+	////////////////////////////////////
+	
+	// Analytics
+	
+	//TODO: analytics engines
+	
+	//TODO: analytics
+	
+	//TODO: analytics state
+	
 }
