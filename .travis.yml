@@ -1,0 +1,9 @@
+language: java
+
+jdk:
+ - oraclejdk8
+
+env:
+ - TEST_DIR=aleph2_data_model
+
+script: cd $TEST_DIR && mvn install -DskipTests=true && mvn test

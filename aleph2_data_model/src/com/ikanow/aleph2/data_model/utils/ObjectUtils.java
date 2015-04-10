@@ -15,6 +15,78 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-public class ObjectUtils {
+import java.lang.reflect.Method;
+import java.util.function.Function;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
+
+/**
+ * A set of utilities for access beans/pojos
+ * @author acp
+ *
+ */
+public class ObjectUtils {
+	
+	/**
+	 * Enables type-safe access to a single classes
+	 * @param clazz - the containing class for the fields
+	 * @return a MethodNamingHelper for this class
+	 */
+	public static <T> MethodNamingHelper<T> from(Class<T> clazz) {
+		return new MethodNamingHelper<T>(clazz);
+	}
+	
+	/**
+	 * Enables type-safe access to a single classes
+	 * @param a - any non-null instance of the class
+	 * @return a MethodNamingHelper for this class
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> MethodNamingHelper<T> from(@NonNull T a) {
+		return new MethodNamingHelper<T>((Class<T>) a.getClass());
+	}
+	
+	/**
+	 * A helper class that enables type safe field specification
+	 * Note: depends on all accessors being in the format "_<fieldname>()" for the given <fieldname>  
+	 * @author acp
+	 *
+	 * @param <T>
+	 */
+	public static class MethodNamingHelper<T> implements MethodInterceptor {
+		
+		protected String _name;
+		protected T _recorder;
+		@SuppressWarnings("unchecked")
+		protected MethodNamingHelper(Class<T> clazz) {
+			Enhancer enhancer = new Enhancer();
+			enhancer.setSuperclass(clazz);
+			enhancer.setCallback(this);
+			_recorder = (T) enhancer.create();
+		}
+		@Override
+		public Object intercept(Object object, Method method, Object[] args,
+				MethodProxy proxy) throws Throwable
+		{
+			if (method.getName().equals("field")) {
+				return _name;
+			}
+			else {
+				_name = method.getName().substring(1);
+			}
+			return null;
+		}
+		/**
+		 * @param getter - the method reference (T::<function>)
+		 * @return
+		 */
+		public String field(Function<T, ?> getter) {
+			getter.apply(_recorder);
+			return _name;
+		}
+	}
 }

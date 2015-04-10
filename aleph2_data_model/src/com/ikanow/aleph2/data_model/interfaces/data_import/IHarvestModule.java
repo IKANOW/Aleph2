@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces;
+package com.ikanow.aleph2.data_model.interfaces.data_import;
 
 public interface IHarvestModule {
 
