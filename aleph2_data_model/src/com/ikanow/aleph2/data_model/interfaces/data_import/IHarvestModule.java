@@ -1,17 +1,17 @@
 /*******************************************************************************
  * Copyright 2015, The IKANOW Open Source Project.
  * 
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License, version 3,
- * as published by the Free Software Foundation.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
+ *   http://www.apache.org/licenses/LICENSE-2.0
  * 
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
@@ -52,6 +52,7 @@ public interface IHarvestModule {
 	 * Instruction to suspend the bucket processing
 	 * 
 	 * @param suspended - the bucket that needs to be suspended
+	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	Future<HarvestResponseBean> onSuspend(DataBucketBean to_suspend, IHarvestContext context);
@@ -60,6 +61,7 @@ public interface IHarvestModule {
 	 * Instruction to re-activate a previously suspended bucket
 	 * 
 	 * @param to_resume - the bucket that needs to be re-activated
+	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	Future<HarvestResponseBean> onResume(DataBucketBean to_resume, IHarvestContext context);
@@ -70,6 +72,7 @@ public interface IHarvestModule {
 	 * case the state needs to be updated etc.
 	 * 
 	 * @param to_resume - the bucket that is going to be purged
+	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	Future<HarvestResponseBean> onPurge(DataBucketBean to_purge, IHarvestContext context);
@@ -81,7 +84,17 @@ public interface IHarvestModule {
 	 * the HarvestResponseBean until then).
 	 * 
 	 * @param to_resume - the bucket that needs to be re-activated
+	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	Future<HarvestResponseBean> onDelete(DataBucketBean to_delete, IHarvestContext context);
+	
+	/**
+	 * Periodic poll for statistics collection, health checks, etc.
+	 * The poll frequency is determined by the 
+	 * @param polled_bucket The bucket being polled
+	 * @param context - the context available to this harvester
+	 * @return A future for the response
+	 */
+	Future<HarvestResponseBean> onPeriodicPoll(DataBucketBean polled_bucket, IHarvestContext context);
 }
