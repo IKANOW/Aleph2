@@ -133,16 +133,16 @@ public class ObjectUtils {
 			return _element;
 		}
 		
-		@SuppressWarnings("unchecked")
 		protected static Object immutabilizeContainer(Object o) {
+			//(eclipse doesn't need the conversions, but JDK8 does)
 			return Patterns.matchAndReturn(o)
-					.when(SortedSet.class, c -> Collections.unmodifiableSortedSet(c) )
-					.when(Set.class, c -> Collections.unmodifiableSet(c) )
-					.when(NavigableMap.class, c -> Collections.unmodifiableNavigableMap(c) )
-					.when(SortedMap.class, c -> Collections.unmodifiableSortedMap(c) )
-					.when(Map.class, c -> Collections.unmodifiableMap(c) )
-					.when(List.class, c -> Collections.unmodifiableList(c) )
-					.when(Collection.class, c -> Collections.unmodifiableCollection(c) )
+					.when(SortedSet.class, c -> Collections.unmodifiableSortedSet((SortedSet<?>)c) )
+					.when(Set.class, c -> Collections.unmodifiableSet((Set<?>)c) )
+					.when(NavigableMap.class, c -> Collections.unmodifiableNavigableMap((NavigableMap<?,?>)c) )
+					.when(SortedMap.class, c -> Collections.unmodifiableSortedMap((SortedMap<?,?>)c) )
+					.when(Map.class, c -> Collections.unmodifiableMap((Map<?,?>)c) )
+					.when(List.class, c -> Collections.unmodifiableList((List<?>)c) )
+					.when(Collection.class, c -> Collections.unmodifiableCollection((Collection<?>)c) )
 					.otherwise(o);
 		}
 		

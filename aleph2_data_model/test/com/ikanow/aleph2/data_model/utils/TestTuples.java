@@ -17,4 +17,5 @@ package com.ikanow.aleph2.data_model.utils;
 
 public class TestTuples {
 
+	//TODO check hash code and equals code (matches and doesn't match in each param)
 }
