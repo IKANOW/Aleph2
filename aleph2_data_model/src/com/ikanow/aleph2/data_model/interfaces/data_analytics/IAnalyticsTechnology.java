@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.data_model.interfaces.data_analytics;
 
-public interface IAccessContext {
+public interface IAnalyticsTechnology {
 
+	//TODO like harvest technology except with analytic thread bean
 }

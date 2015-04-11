@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_analytics;
+package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-public interface IAnalyticsModule {
+public interface IEnrichmentLibraryModule {
 
-	//TODO: in practice will be technology specific, ie a given analytics module
-	// will always run 
+	//TODO enrichment modules are always run from within core-defined technologies
+	// so they have their own interface, unlike harvest
 }

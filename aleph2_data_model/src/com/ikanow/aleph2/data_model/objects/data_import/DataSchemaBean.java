@@ -15,6 +15,9 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Immutable object describing the data from this bucket
  * @author acp
@@ -31,32 +34,54 @@ public class DataSchemaBean {
 	private GraphDbSchemaBean graph_db_schema;
 	
 	public static class ArchiveSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private String grouping_time_period;
+		private String exist_age_max;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class ObjectDbSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private Boolean deduplicate;
+		private List<String> deduplication_fields;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class SearchIndexSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class ColumnarDbSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private List<String> field_include_list;
+		private List<String> field_exclude_list;
+		private String field_include_regex;
+		private String field_exclude_regex;
+		private List<String> field_type_include_list;
+		private List<String> field_type_exclude_list;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class TemporalSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private String grouping_time_period;
+		private String hot_age_max;
+		private String warm_age_max;
+		private String cold_age_max;
+		private String exist_age_max;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class GeospatialSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private Map<String, Object> technology_override_schema;
 	}
 	public static class GraphDbSchemaBean {
-		private Boolean enabled;
 		//TODO 
+		private Boolean enabled;
+		private Map<String, Object> technology_override_schema;
 	}
 	
 }

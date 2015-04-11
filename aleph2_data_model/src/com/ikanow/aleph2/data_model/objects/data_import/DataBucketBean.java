@@ -15,28 +15,55 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.List;
+import java.util.Map;
+
 public class DataBucketBean {
 
-	//TODO multi-bucket? make a different bean type?
-	
 	////////////////////////////////////////
 	
 	// General information
 	
-	//TODO bucket id
-	//TODO bucket name
-	//TODO current logical locations within each schema
-	//TODO future logical locations within each schema
-	//TODO security information
+	private String bucket_name;
+	private List<String> bucket_aliases;
+	private String bucket_id;
+	
+	private List<String> access_groups; 
+	
+	//TODO multi-bucket? make a different bean type?	
 	
 	////////////////////////////////////////
 	
 	// Harvest specific information
 	
+	private String harvest_technology_name_or_id;
+	
+	public static class HarvestControlMetadataBean {
+		private List<String> library_ids_or_names;
+		private Map<String, Object> config;
+	}	
+	private List<HarvestControlMetadataBean> harvest_configs;
+	
 	////////////////////////////////////////
 	
 	// Enrichment specific information
 	
-	// batch settings
+	public static class EnrichmentControlMetadataBean {
+		private List<String> library_ids_or_names;
+		private Map<String, Object> config;
+	}	
+	private List<EnrichmentControlMetadataBean> enrichment_configs;
+	
+	//TODO: batch settings?
+	
+	////////////////////////////////////////
+	
+	// Data schema
+	
+	private DataSchemaBean data_schema;
+	private String bucket_location;
+	
+	private DataSchemaBean future_data_schema; 
+	private String future_bucket_location;
 	
 }

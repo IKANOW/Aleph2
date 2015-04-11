@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
+import java.util.Optional;
+
 public interface IManagementDbLayer {
 
 	////////////////////////////////////
@@ -47,4 +49,9 @@ public interface IManagementDbLayer {
 	
 	//TODO: analytics state
 	
+	/** USE WITH CARE: this returns the driver to the underlying technology
+	 *  shouldn't be used unless absolutely necessary!
+	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
+	 */
+	<T> T getUnderlyingPlatformDriver(Class<T> driverClazz, Optional<String> driverOptionals);
 }

@@ -26,7 +26,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.HarvestResponseBean;
  * @author acp
  *
  */
-public interface IHarvestModule {
+public interface IHarvestTechnology {
 
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket

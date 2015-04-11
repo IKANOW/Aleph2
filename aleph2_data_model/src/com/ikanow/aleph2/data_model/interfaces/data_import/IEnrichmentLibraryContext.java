@@ -15,6 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-public interface IEnrichmentContext {
+public interface IEnrichmentLibraryContext {
 
 }
