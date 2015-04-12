@@ -17,9 +17,9 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 import java.util.Optional;
 
-public interface IArchiveLayer {
+public interface IGraphDbService {
 
-	//TODO is there really not a generic file system interface i can use?
+	//TODO: implement tinkerpop?
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

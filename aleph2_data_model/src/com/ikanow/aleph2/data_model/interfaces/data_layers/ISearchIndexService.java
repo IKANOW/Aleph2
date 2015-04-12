@@ -17,7 +17,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 import java.util.Optional;
 
-public interface IGeospatialLayer {
+public interface ISearchIndexService {
 
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

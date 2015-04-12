@@ -17,38 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 import java.util.Optional;
 
-public interface IManagementDbLayer {
+public interface IColumnarService {
 
-	////////////////////////////////////
-	
-	// Access
-	
-	//TODO: authentication
-
-	//TODO: interfaces	
-	
-	////////////////////////////////////
-	
-	// Imports
-	
-	//TODO: buckets
-	
-	//TODO: bucket state
-	
-	//TODO: harvester modules
-	
-	//TODO: enhancement modules
-	
-	////////////////////////////////////
-	
-	// Analytics
-	
-	//TODO: analytics engines
-	
-	//TODO: analytics
-	
-	//TODO: analytics state
-	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!

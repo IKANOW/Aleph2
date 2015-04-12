@@ -13,9 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_analytics;
+package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-public interface IAnalyticsTechnology {
+public interface ISecurityService {
 
-	//TODO like harvest technology except with analytic thread bean
+	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
+	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
+	// ie they are user groups
+	
+	//TODO request privilege escalation
 }

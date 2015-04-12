@@ -13,15 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_layers;
+package com.ikanow.aleph2.data_model.interfaces.data_analytics;
 
-import java.util.Optional;
+public interface IAnalyticsTechnologyModule {
 
-public interface ISearchIndexLayer {
-
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driverClazz, Optional<String> driverOptionals);
+	//TODO like harvest technology except with analytic thread bean
 }

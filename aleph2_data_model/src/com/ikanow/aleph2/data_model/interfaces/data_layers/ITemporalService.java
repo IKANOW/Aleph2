@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
-public interface ISecurityLayer {
+import java.util.Optional;
 
-	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
-	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
-	// ie they are user groups
-	
-	//TODO request privilege escalation
+public interface ITemporalService {
+
+	/** USE WITH CARE: this returns the driver to the underlying technology
+	 *  shouldn't be used unless absolutely necessary!
+	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
+	 */
+	<T> T getUnderlyingPlatformDriver(Class<T> driverClazz, Optional<String> driverOptionals);
 }
