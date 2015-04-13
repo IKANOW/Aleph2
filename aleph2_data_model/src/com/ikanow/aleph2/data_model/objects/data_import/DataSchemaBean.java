@@ -33,14 +33,14 @@ public class DataSchemaBean {
 	/** User constructor
 	 */
 	public DataSchemaBean(@Nullable ArchiveSchemaBean archive_schema,
-			@Nullable ObjectDbSchemaBean object_db_schema,
+			@Nullable DocumentDbSchemaBean object_db_schema,
 			@Nullable SearchIndexSchemaBean search_index_schema,
 			@Nullable ColumnarDbSchemaBean columnar_db_schema,
 			@Nullable TemporalSchemaBean temporal_schema,
 			@Nullable GeospatialSchemaBean geospatial_schema,
 			@Nullable GraphDbSchemaBean graph_db_schema) {
 		this.archive_schema = archive_schema;
-		this.object_db_schema = object_db_schema;
+		this.document_db_schema = object_db_schema;
 		this.search_index_schema = search_index_schema;
 		this.columnar_db_schema = columnar_db_schema;
 		this.temporal_schema = temporal_schema;
@@ -56,8 +56,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Object DB Service
 	 * @return the object_schema
 	 */
-	public ObjectDbSchemaBean object_db_schema() {
-		return object_db_schema;
+	public DocumentDbSchemaBean object_db_schema() {
+		return document_db_schema;
 	}
 	/** Per bucket schema for the Search Index Service
 	 * @return the search_index_schema
@@ -91,7 +91,7 @@ public class DataSchemaBean {
 	}
 	
 	private ArchiveSchemaBean archive_schema;
-	private ObjectDbSchemaBean object_db_schema;
+	private DocumentDbSchemaBean document_db_schema;
 	private SearchIndexSchemaBean search_index_schema;
 	private ColumnarDbSchemaBean columnar_db_schema;
 	private TemporalSchemaBean temporal_schema;
@@ -153,13 +153,13 @@ public class DataSchemaBean {
 	 * @author acp
 	 *
 	 */
-	public static class ObjectDbSchemaBean {
+	public static class DocumentDbSchemaBean {
 		
-		public ObjectDbSchemaBean() {}
+		public DocumentDbSchemaBean() {}
 		
 		/** User constructor
 		 */
-		public ObjectDbSchemaBean(@NonNull Boolean enabled, @Nullable Boolean deduplicate,
+		public DocumentDbSchemaBean(@NonNull Boolean enabled, @Nullable Boolean deduplicate,
 				@Nullable List<String> deduplication_fields,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
@@ -167,7 +167,7 @@ public class DataSchemaBean {
 			this.deduplication_fields = deduplication_fields;
 			this.technology_override_schema = technology_override_schema;
 		}
-		/** Describes if the object db service is used for this bucket
+		/** Describes if the document db service is used for this bucket
 		 * @return the enabled
 		 */
 		public Boolean enabled() {

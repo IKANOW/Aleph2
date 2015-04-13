@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -65,12 +66,21 @@ public class DataBucketBean {
 	public Map<String, ISecurityService.AccessType> access_groups() {
 		return access_groups;
 	}
+	/** If non-null, this bucket has been quarantined and will not be processed until the 
+	 *  specified date (at which point quarantined_until will be set to null)
+	 * @return the quarantined_until
+	 */
+	public Date quarantined_until() {
+		return quarantined_until;
+	}
+	
 	private String _id;	
 	private String name;
 	private String owner_id;
 	private String parent_path;
 	private List<String> tags;
-	private Map<String, ISecurityService.AccessType> access_groups; 
+	private Map<String, ISecurityService.AccessType> access_groups;
+	private Date quarantined_until;
 	
 	////////////////////////////////////////
 	

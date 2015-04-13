@@ -39,8 +39,8 @@ public class DataLayerConfigurationBean {
 			@Nullable Map<String, Object> geospatial_service_config,
 			@Nullable String management_db_service,
 			@Nullable Map<String, Object> management_db_service_config,
-			@Nullable String object_db_service,
-			@Nullable Map<String, Object> object_db_service_config,
+			@Nullable String document_db_service,
+			@Nullable Map<String, Object> document_db_service_config,
 			@Nullable String search_index_service,
 			@Nullable Map<String, Object> search_index_service_config,
 			@Nullable String temporal_service, Map<String, Object> temporal_service_config)
@@ -55,8 +55,8 @@ public class DataLayerConfigurationBean {
 		this.geospatial_service_config = geospatial_service_config;
 		this.management_db_service = management_db_service;
 		this.management_db_service_config = management_db_service_config;
-		this.object_db_service = object_db_service;
-		this.object_db_service_config = object_db_service_config;
+		this.document_db_service = document_db_service;
+		this.document_db_service_config = document_db_service_config;
 		this.search_index_service = search_index_service;
 		this.search_index_service_config = search_index_service_config;
 		this.temporal_service = temporal_service;
@@ -126,13 +126,13 @@ public class DataLayerConfigurationBean {
 	 * @return the object_db_service
 	 */
 	public String object_db_service() {
-		return object_db_service;
+		return document_db_service;
 	}
 	/** General configuration for the object db service as a JSON object
 	 * @return the object_db_service_config
 	 */
 	public Map<String, Object> object_db_service_config() {
-		return object_db_service_config;
+		return document_db_service_config;
 	}
 	/** The implementation of the search index service, in format "alias:fully.qualified.class.name"
 	 * @return the search_index_service
@@ -168,8 +168,8 @@ public class DataLayerConfigurationBean {
 	private Map<String, Object> geospatial_service_config;
 	private String management_db_service;
 	private Map<String, Object> management_db_service_config;
-	private String object_db_service;
-	private Map<String, Object> object_db_service_config;
+	private String document_db_service;
+	private Map<String, Object> document_db_service_config;
 	private String search_index_service;
 	private Map<String, Object> search_index_service_config;
 	private String temporal_service;
