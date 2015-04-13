@@ -19,23 +19,39 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
  * Utility class that converts a null collection/iterable into an empty one
  */
 public class Optionals {
 	
+	/** Returns the first element of a list that can be empty or null, with an empty option
+	 *  NOTE: the element inside can be null
+	 * @param a collection of Ts
+	 * @return the first element, or an empty optional if it's null or empty
+	 */
+	public static <T> Optional<T> first(@Nullable Iterable<T> ts) {
+		try {
+			return Optional.of(ts.iterator().next());
+		}
+		catch (Exception e) { // empty
+			return Optional.empty();
+		}
+	}
+	
 	/**
 	 * @param a collection of Ts
 	 * @return the collection, or an empty collection if "ts" is null
 	 */
-	public static <T> Collection<T> ofNullable(Collection<T> ts) {
+	public static <T> Collection<T> ofNullable(@Nullable Collection<T> ts) {
 		return Optional.ofNullable(ts).orElse(Collections.emptyList());
 	}
 	/**
 	 * @param ts
 	 * @return the iterable, or an empty iterable if "ts" is null
 	 */
-	public static <T> Iterable<T> ofNullable(Iterable<T> ts) {
+	public static <T> Iterable<T> ofNullable(@Nullable Iterable<T> ts) {
 		return Optional.ofNullable(ts).orElse(Collections.emptyList());
 	}
 }

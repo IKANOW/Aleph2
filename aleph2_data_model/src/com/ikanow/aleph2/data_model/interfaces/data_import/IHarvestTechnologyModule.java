@@ -91,10 +91,19 @@ public interface IHarvestTechnologyModule {
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
-	 * The poll frequency is determined by the 
+	 * The poll frequency is determined by the bucket
 	 * @param polled_bucket The bucket being polled
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	Future<HarvestResponseBean> onPeriodicPoll(DataBucketBean polled_bucket, IHarvestContext context);
+	
+	/**
+	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
+	 * @param completed_bucket The bucket whose batch has completed
+	 * @param context - the context available to this harvester
+	 * @return A future for the response
+	 */
+	Future<HarvestResponseBean> onHarvestComplete(DataBucketBean completed_bucket, IHarvestContext context);
+	
 }
