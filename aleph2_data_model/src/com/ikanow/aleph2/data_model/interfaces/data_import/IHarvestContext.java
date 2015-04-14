@@ -24,7 +24,7 @@ import java.util.concurrent.Future;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.ikanow.aleph2.data_model.interfaces.shared.ICrudRepository;
+import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStateAndStatusBean;
 
@@ -78,7 +78,7 @@ public interface IHarvestContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return a generic object repository
 	 */
-	ICrudRepository<?> getHarvestBucketObjectStore(Optional<DataBucketBean> bucket);
+	ICrudService<?> getHarvestBucketObjectStore(Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Returns the state/status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
