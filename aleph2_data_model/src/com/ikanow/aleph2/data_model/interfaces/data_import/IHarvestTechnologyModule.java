@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
 
 import java.util.concurrent.Future;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestResponseBean;
 
@@ -36,7 +38,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onNewSource(DataBucketBean new_bucket, IHarvestContext context);
+	Future<HarvestResponseBean> onNewSource(@NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
 	
 	/**
 	 * Handles changes to an existing bucket
@@ -46,7 +48,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onUpdatedSource(DataBucketBean old_bucket, DataBucketBean new_bucket, IHarvestContext context);
+	Future<HarvestResponseBean> onUpdatedSource(@NonNull DataBucketBean old_bucket, @NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing
@@ -55,7 +57,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onSuspend(DataBucketBean to_suspend, IHarvestContext context);
+	Future<HarvestResponseBean> onSuspend(@NonNull DataBucketBean to_suspend, @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to re-activate a previously suspended bucket
@@ -64,7 +66,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onResume(DataBucketBean to_resume, IHarvestContext context);
+	Future<HarvestResponseBean> onResume(@NonNull DataBucketBean to_resume, @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that all data for this bucket is to be purged
@@ -75,7 +77,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onPurge(DataBucketBean to_purge, IHarvestContext context);
+	Future<HarvestResponseBean> onPurge(@NonNull DataBucketBean to_purge, @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that this bucket is being deleted.
@@ -87,7 +89,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onDelete(DataBucketBean to_delete, IHarvestContext context);
+	Future<HarvestResponseBean> onDelete(@NonNull DataBucketBean to_delete, @NonNull IHarvestContext context);
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
@@ -96,7 +98,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onPeriodicPoll(DataBucketBean polled_bucket, IHarvestContext context);
+	Future<HarvestResponseBean> onPeriodicPoll(@NonNull DataBucketBean polled_bucket, @NonNull IHarvestContext context);
 	
 	/**
 	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
@@ -104,6 +106,6 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<HarvestResponseBean> onHarvestComplete(DataBucketBean completed_bucket, IHarvestContext context);
+	Future<HarvestResponseBean> onHarvestComplete(@NonNull DataBucketBean completed_bucket, @NonNull IHarvestContext context);
 	
 }

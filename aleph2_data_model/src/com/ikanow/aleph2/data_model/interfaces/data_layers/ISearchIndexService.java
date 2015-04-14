@@ -21,7 +21,9 @@ public interface ISearchIndexService {
 
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
+	 * @param driver_class the class of the driver
+	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driverClazz, Optional<String> driverOptionals);
+	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }

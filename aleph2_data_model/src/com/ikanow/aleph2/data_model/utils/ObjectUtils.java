@@ -41,8 +41,6 @@ import net.sf.cglib.proxy.MethodProxy;
  */
 public class ObjectUtils {
 	
-	//TODO need a NestedAccessHelper for nested access to objects
-	
 	/**
 	 * Enables type-safe access to a single classes
 	 * @param clazz - the containing class for the fields

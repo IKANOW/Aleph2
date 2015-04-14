@@ -17,7 +17,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 import java.util.Optional;
 
-public interface IArchiveService {
+public interface IStorageService {
 
 	/** Returns the root path for all Aleph2 DB related activities
 	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
@@ -28,7 +28,9 @@ public interface IArchiveService {
 	 *  shouldn't be used unless absolutely necessary!
 	 *  In this particular case, it will always point to HDFS FileSystem class, so it _can_ be used
 	 *  safely (the FileSystem API requires a huge set of JARs so this is left generic)
+	 * @param driver_class the class of the driver
+	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driverClazz, Optional<String> driverOptionals);
+	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }

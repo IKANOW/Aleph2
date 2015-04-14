@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.data_model.utils;
 
-public interface ISecurityService {
+public class JsonUtils {
 
-	enum AccessType { read_only, read_write, unelevated_admin, admin };
+	//TODO need a NestedAccessHelper for nested access to objects that can include maps
+	//(see Joern's code for the harvester...)
 	
-	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
-	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
-	// ie they are user groups
-	
-	//TODO request privilege escalation
 }
