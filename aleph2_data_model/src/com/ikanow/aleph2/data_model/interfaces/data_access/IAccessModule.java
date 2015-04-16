@@ -15,6 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-public interface IAccessLibraryContext {
+public interface IAccessModule {
 
 }

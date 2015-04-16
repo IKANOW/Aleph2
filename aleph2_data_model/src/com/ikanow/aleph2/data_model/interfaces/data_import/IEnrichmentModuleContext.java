@@ -15,8 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-public interface IEnrichmentLibraryModule {
+public interface IEnrichmentModuleContext {
 
-	//TODO enrichment modules are always run from within core-defined technologies
-	// so they have their own interface, unlike harvest
 }

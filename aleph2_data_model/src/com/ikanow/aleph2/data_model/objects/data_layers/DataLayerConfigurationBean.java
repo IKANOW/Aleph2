@@ -29,10 +29,10 @@ public class DataLayerConfigurationBean {
 	
 	/** User constructor
 	 */
-	public DataLayerConfigurationBean(@Nullable String archive_service,
-			@Nullable Map<String, Object> archive_service_config,
-			@Nullable String columnar_service,
-			@Nullable Map<String, Object> columnar_service_config,
+	public DataLayerConfigurationBean(@Nullable String storage_service,
+			@Nullable Map<String, Object> storage_service_config,
+			@Nullable String columnar_db_service,
+			@Nullable Map<String, Object> columnar_db_service_config,
 			@Nullable String graph_db_service,
 			@Nullable Map<String, Object> graph_db_service_config,
 			@Nullable String geospatial_service,
@@ -43,12 +43,13 @@ public class DataLayerConfigurationBean {
 			@Nullable Map<String, Object> document_db_service_config,
 			@Nullable String search_index_service,
 			@Nullable Map<String, Object> search_index_service_config,
-			@Nullable String temporal_service, Map<String, Object> temporal_service_config)
+			@Nullable String temporal_service, 
+			@Nullable Map<String, Object> temporal_service_config)
 	{
-		this.archive_service = archive_service;
-		this.archive_service_config = archive_service_config;
-		this.columnar_service = columnar_service;
-		this.columnar_service_config = columnar_service_config;
+		this.storage_service = storage_service;
+		this.storage_service_config = storage_service_config;
+		this.columnar_db_service = columnar_db_service;
+		this.columnar_db_service_config = columnar_db_service_config;
 		this.graph_db_service = graph_db_service;
 		this.graph_db_service_config = graph_db_service_config;
 		this.geospatial_service = geospatial_service;
@@ -63,28 +64,28 @@ public class DataLayerConfigurationBean {
 		this.temporal_service_config = temporal_service_config;
 	}
 	/** The implementation of the archive service, in format "alias:fully.qualified.class.name"
-	 * @return the archive_service
+	 * @return the storage_service
 	 */
 	public String archive_service() {
-		return archive_service;
+		return storage_service;
 	}
 	/** General configuration for the archive service as a JSON object
-	 * @return the archive_service_config
+	 * @return the storage_service_config
 	 */
 	public Map<String, Object> archive_service_config() {
-		return archive_service_config;
+		return storage_service_config;
 	}
 	/** The implementation of the columnar service, in format "alias:fully.qualified.class.name"
-	 * @return the columnar_service
+	 * @return the columnar_db_service
 	 */
 	public String columnar_service() {
-		return columnar_service;
+		return columnar_db_service;
 	}
 	/** General configuration for the columnar service as a JSON object
-	 * @return the columnar_service_config
+	 * @return the columnar_db_service_config
 	 */
 	public Map<String, Object> columnar_service_config() {
-		return columnar_service_config;
+		return columnar_db_service_config;
 	}
 	/** The implementation of the graph db service, in format "alias:fully.qualified.class.name"
 	 * @return the graph_db_service
@@ -158,10 +159,10 @@ public class DataLayerConfigurationBean {
 	public Map<String, Object> temporal_service_config() {
 		return temporal_service_config;
 	}
-	private String archive_service;
-	private Map<String, Object> archive_service_config;
-	private String columnar_service;
-	private Map<String, Object> columnar_service_config;
+	private String storage_service;
+	private Map<String, Object> storage_service_config;
+	private String columnar_db_service;
+	private Map<String, Object> columnar_db_service_config;
 	private String graph_db_service;
 	private Map<String, Object> graph_db_service_config;
 	private String geospatial_service;

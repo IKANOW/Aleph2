@@ -145,19 +145,19 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void sendObjectToEnrichmentAndStoragePipeline(
+		public void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket, @NonNull JsonNode object) {
 			
 		}
 
 		@Override
-		public <T> void sendObjectToEnrichmentAndStoragePipeline(
+		public <T> void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket, @NonNull T object) {
 			
 		}
 
 		@Override
-		public void sendObjectToEnrichmentAndStoragePipeline(
+		public void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket,
 				@NonNull Map<String, Object> object) {
 			

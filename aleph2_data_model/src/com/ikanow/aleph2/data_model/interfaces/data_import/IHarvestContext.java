@@ -38,12 +38,34 @@ public interface IHarvestContext {
 	
 	// HARVESTER MODULE ONLY
 	
-	/** (HarvesterModule only) Returns a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)   
+	/** (HarvesterModule only) Returns a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
+	 * (NOTE: harvester technology modules do not need this, they can access the required service directly via the @Inject annotation)    
 	 * @param service_clazz
 	 * @return
 	 */
 	<I> I getService(Class<I> service_clazz);
 	
+	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
+	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param object the object to emit represented by Jackson JsonNode
+	 */
+	void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket, @NonNull JsonNode object);
+	
+	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
+	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param object the object to emit in "pojo" format
+	 */
+	<T> void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket, @NonNull T object);
+	
+	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
+	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param object the object to emit in (possibly nested) Map<String, Object> format
+	 */
+	void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket, @NonNull Map<String, Object> object);
+
 	//////////////////////////////////////////////////////
 	
 	// HARVESTER TECHNOLOGY ONLY 
@@ -125,24 +147,6 @@ public interface IHarvestContext {
 	 * @param  quarantineDuration A string representing the duration for which to quarantine the data (eg "1 hour", "2 days", "3600")
 	 */
 	void emergencyQuarantineBucket(Optional<DataBucketBean> bucket, @NonNull String quarantineDuration);
-
-	/** (HarvestTechnology/HarvestModule) For (near) real time harvests emit the object to the enrichment/alerting pipeline
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit represented by Jackson JsonNode
-	 */
-	void sendObjectToEnrichmentAndStoragePipeline(Optional<DataBucketBean> bucket, @NonNull JsonNode object);
-	
-	/** (HarvestTechnology/HarvestModule) For (near) real time harvests emit the object to the enrichment/alerting pipeline
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit in "pojo" format
-	 */
-	<T> void sendObjectToEnrichmentAndStoragePipeline(Optional<DataBucketBean> bucket, @NonNull T object);
-	
-	/** (HarvestTechnology/HarvestModule) For (near) real time harvests emit the object to the enrichment/alerting pipeline
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit in (possibly nested) Map<String, Object> format
-	 */
-	void sendObjectToEnrichmentAndStoragePipeline(Optional<DataBucketBean> bucket, @NonNull Map<String, Object> object);
 
 	//////////////////////////////////////////////////////
 	

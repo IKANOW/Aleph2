@@ -32,15 +32,16 @@ public class DataSchemaBean {
 	
 	/** User constructor
 	 */
-	public DataSchemaBean(@Nullable ArchiveSchemaBean archive_schema,
-			@Nullable DocumentDbSchemaBean object_db_schema,
+	public DataSchemaBean(@Nullable StorageSchemaBean storage_schema,
+			@Nullable DocumentDbSchemaBean document_db_schema,
 			@Nullable SearchIndexSchemaBean search_index_schema,
 			@Nullable ColumnarDbSchemaBean columnar_db_schema,
 			@Nullable TemporalSchemaBean temporal_schema,
 			@Nullable GeospatialSchemaBean geospatial_schema,
-			@Nullable GraphDbSchemaBean graph_db_schema) {
-		this.archive_schema = archive_schema;
-		this.document_db_schema = object_db_schema;
+			@Nullable GraphDbSchemaBean graph_db_schema)
+	{
+		this.archive_schema = storage_schema;
+		this.document_db_schema = document_db_schema;
 		this.search_index_schema = search_index_schema;
 		this.columnar_db_schema = columnar_db_schema;
 		this.temporal_schema = temporal_schema;
@@ -50,7 +51,7 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Archive Service
 	 * @return the archive_schema
 	 */
-	public ArchiveSchemaBean archive_schema() {
+	public StorageSchemaBean archive_schema() {
 		return archive_schema;
 	}
 	/** Per bucket schema for the Object DB Service
@@ -90,7 +91,7 @@ public class DataSchemaBean {
 		return graph_db_schema;
 	}
 	
-	private ArchiveSchemaBean archive_schema;
+	private StorageSchemaBean archive_schema;
 	private DocumentDbSchemaBean document_db_schema;
 	private SearchIndexSchemaBean search_index_schema;
 	private ColumnarDbSchemaBean columnar_db_schema;
@@ -102,13 +103,13 @@ public class DataSchemaBean {
 	 * @author acp
 	 *
 	 */
-	public static class ArchiveSchemaBean {
+	public static class StorageSchemaBean {
 		
-		public ArchiveSchemaBean() {}
+		public StorageSchemaBean() {}
 		
 		/** User constructor
 		 */
-		public ArchiveSchemaBean(@NonNull Boolean enabled, @Nullable String grouping_time_period,
+		public StorageSchemaBean(@NonNull Boolean enabled, @Nullable String grouping_time_period,
 				@Nullable String exist_age_max,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
@@ -186,6 +187,13 @@ public class DataSchemaBean {
 		public List<String> deduplication_fields() {
 			return deduplication_fields;
 		}
+		/** If deduplication is enabled then this ordered list of strings describes the scope of the deduplication, 
+		 * ie the set of buckets and/or multi-buckets for which a matching set of fields is held.
+		 * @return the deduplication_fields
+		 */
+		public List<String> deduplication_contexts() {
+			return deduplication_contexts;
+		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -196,6 +204,7 @@ public class DataSchemaBean {
 		private Boolean enabled;
 		private Boolean deduplicate;
 		private List<String> deduplication_fields;
+		private List<String> deduplication_contexts;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service
@@ -395,7 +404,7 @@ public class DataSchemaBean {
 	 * @author acp
 	 */
 	public static class GeospatialSchemaBean {
-		//TODO
+		//TODO define an initial set of geo-spatial schema
 		//private Boolean enabled;
 		//private Map<String, Object> technology_override_schema;
 	}
@@ -403,7 +412,8 @@ public class DataSchemaBean {
 	 * @author acp
 	 */
 	public static class GraphDbSchemaBean {
-		//TODO
+		//TODO define an initial set of graph db schema 
+		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
 		//private Boolean enabled;
 		//private Map<String, Object> technology_override_schema;
 	}

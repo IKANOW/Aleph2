@@ -17,37 +17,58 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStateAndStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+
 public interface IManagementDbService {
 
-	////////////////////////////////////
+	//TODO javadocs
 	
-	// Access
-	
-	//TODO: authentication
-
-	//TODO: interfaces	
-	
-	//TODO: global library
+	//TODO what about a search index interface for these? Is that optional or ...?
 	
 	////////////////////////////////////
 	
-	// Imports
+	// 1] Access
 	
-	//TODO: buckets
+	// 1.1] JAR Library, includes:
+	//      - Harvest Technologies
+	//		- Harvest modules (no interface)
+	//		- Enrichment modules
+	//		- Analytics technologies
+	//		- Analytics modules
+	//		- Analytics utilities (no interface)
+	//		- Access modules
+	//		- Acccess utilities (no interface)
 	
-	//TODO: bucket state
+	ICrudService<SharedLibraryBean> getSharedLibraryStore();
 	
-	//TODO: global harvester technology modules library
+	//TODO: shared schemas
 	
-	//TODO: global enhancement modules library
+	//TODO: other "shares"
+	
+	//TODO: security and other things that we'll initially handle from IKANOW v1
+	
+	////////////////////////////////////
+	
+	// 2] Imports
+	
+	// 2.1] Buckets	
+	
+	//TODO need a higher level interface to this? Or do I just put all the logic in the CRUD service implementation
+	
+	ICrudService<DataSchemaBean> getDataBucketStore();
+	
+	ICrudService<DataBucketStateAndStatusBean> getDataBucketStatusStore();
+	
+	//TODO per bucket state?
 	
 	////////////////////////////////////
 	
 	// Analytics
-	
-	//TODO: analytics engines
-	
-	//TODO: analytics
+
+	//TODO: analytics threads	
 	
 	//TODO: analytics state
 	

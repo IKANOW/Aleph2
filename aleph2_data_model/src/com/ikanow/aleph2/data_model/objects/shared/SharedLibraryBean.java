@@ -15,13 +15,82 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
-import java.util.List;
+import java.util.Set;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class SharedLibraryBean {
 
+	public SharedLibraryBean() {}
+	
+	/** User constructor
+	 */
+	public SharedLibraryBean(String display_name, @NonNull String path_name,
+			@NonNull LibraryType type, String subtype, @NonNull String owner_id,
+			Set<String> tags, @NonNull Set<String> access_tokens) {
+		super();
+		this.display_name = display_name;
+		this.path_name = path_name;
+		this.type = type;
+		this.subtype = subtype;
+		this.owner_id = owner_id;
+		this.tags = tags;
+		this.access_tokens = access_tokens;
+	}
+	/** The display name - used for display and search only. If not set will correspond to the filename in the main path
+	 * @return the display name
+	 */
+	public String display_name() {
+		return display_name;
+	}
+	/** The full path - must be unique within the cluster
+	 * @return the full path of the file (in the storage service eg HDFS)
+	 */
+	public String path_name() {
+		return path_name;
+	}
+	/** The type of the library (harvest/enrichment/analytics/access and technology/module/utility)
+	 * @return the type
+	 */
+	public LibraryType type() {
+		return type;
+	}
+	/** An optional sub-type provided for searching, can be any string - for display/search only
+	 * @return the subtype
+	 */
+	public String subtype() {
+		return subtype;
+	}
+	/** The owner id, a meaningful string to the security service
+	 * @return the owner id
+	 */
+	public String owner_id() {
+		return owner_id;
+	}
+	/** An optional set of tags for display/search purposes
+	 * @return
+	 */
+	public Set<String> tags() {
+		return tags;
+	}
+	/** The set of access tokens, read access only - any admin has write access and nobody else
+	 * @return the set of access tokens
+	 */
+	public Set<String> access_tokens() {
+		return access_tokens;
+	}
+	
 	private String display_name;
-	private String path_name; 
+	private String path_name;
+	private LibraryType type;
+	private String subtype;
+	public enum LibraryType { 
+			analytics_technology, analytics_module, 
+				enrichment_module, enrichment_utility, 
+					harvest_technology, harvest_module,
+						access_module, access_utility };
+						
 	private String owner_id;
-	private List<String> tags;
-	private List<String> access_tokens;
+	private Set<String> tags;
+	private Set<String> access_tokens;
 }

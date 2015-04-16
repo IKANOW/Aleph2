@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -57,7 +58,7 @@ public class DataBucketBean {
 	/** A list of bucket tags - for display/search only
 	 * @return the bucket_aliases
 	 */
-	public List<String> tags() {
+	public Set<String> tags() {
 		return tags;
 	}
 	/** A map of SecurityService specific tokens that control read/write/admin access to the bucket
@@ -66,13 +67,20 @@ public class DataBucketBean {
 	public Map<String, ISecurityService.AccessType> access_groups() {
 		return access_groups;
 	}
+	/** The frequency with which the harvester is polled for this bucket.
+	 * @return the poll_frequency in some human readable format ("every 5 minutes", "hourly", "3600" etc)
+	 */
+	public String poll_frequency() {
+		return poll_frequency;
+	}
 	
 	private String _id;	
 	private String full_name;
 	private String display_name;
 	private String owner_id;
-	private List<String> tags;
+	private Set<String> tags;
 	private Map<String, ISecurityService.AccessType> access_groups;
+	private String poll_frequency;
 	
 	////////////////////////////////////////
 	
@@ -84,18 +92,18 @@ public class DataBucketBean {
 	/** A list of bucket aliases - each alias defines a multi-bucket (as an alternative to specifically creating one, which is also possible)
 	 * @return the bucket_aliases
 	 */
-	public List<String> aliases() {
+	public Set<String> aliases() {
 		return aliases;
 	}
 	/** A list of buckets in this multi-buckets
 	 *  (Nested multi-buckets are currently not supported)
 	 * @return multi_group_children
 	 */
-	public List<String> multi_bucket_children() {
+	public Set<String> multi_bucket_children() {
 		return multi_bucket_children;
 	}
-	private List<String> multi_bucket_children;
-	private List<String> aliases;
+	private Set<String> multi_bucket_children;
+	private Set<String> aliases;
 	
 	////////////////////////////////////////
 	
@@ -169,11 +177,27 @@ public class DataBucketBean {
 	
 	// Enrichment specific information
 	
-	/** A list of enrichments that are applied to the bucket after ingestion
+	/** A list of enrichments that are applied to the bucket after ingestion via batch
 	 * @return the enrichment_configs
 	 */
-	public List<EnrichmentControlMetadataBean> enrichment_configs() {
-		return enrichment_configs;
+	public List<EnrichmentControlMetadataBean> batch_enrichment_configs() {
+		return batch_enrichment_configs;
+	}
+
+	/** A list of enrichments that are applied to the bucket after ingestion via streaming
+	 * @return the enrichment_configs
+	 */
+	public List<EnrichmentControlMetadataBean> streaming_enrichment_configs() {
+		return streaming_enrichment_configs;
+	}
+
+	/** Only objects from the specified (potentially empty) enrichment route are stored
+	 *  Objects from the other enrichment route are broadcast to listening analytic or access modules and if not
+	 *  subscribed to are discarded.
+	 * @return
+	 */
+	public MasterEnrichmentType master_enrichment_type() {
+		return master_enrichment_type;
 	}
 	
 	/** Bean controlling an enrichment configuration
@@ -232,7 +256,11 @@ public class DataBucketBean {
 		private List<String> library_ids_or_names;
 		private Map<String, Object> config;
 	}	
-	private List<EnrichmentControlMetadataBean> enrichment_configs;
+	private List<EnrichmentControlMetadataBean> batch_enrichment_configs;
+	private List<EnrichmentControlMetadataBean> streaming_enrichment_configs;
+	
+	public enum MasterEnrichmentType { streaming, batch, streaming_and_batch }
+	private MasterEnrichmentType master_enrichment_type;
 	
 	////////////////////////////////////////
 	
@@ -245,5 +273,10 @@ public class DataBucketBean {
 		return data_schema;
 	}
 	private DataSchemaBean data_schema;	
+	
+	public Map<String, String> data_locations() {
+		return data_locations;
+	}	
+	private Map<String, String> data_locations;
 	
 }

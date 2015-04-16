@@ -30,7 +30,7 @@ import com.ikanow.aleph2.data_model.utils.ObjectUtils.MethodNamingHelper;
  */
 public class CrudUtils {
 
-	public enum Operator { all_of, any_of, exists, not_exists };
+	public enum Operator { all_of, any_of, exists, not_exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed };
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 * @param  the starting set of fields (can be empty generated from default c'tor)
@@ -170,7 +170,7 @@ public class CrudUtils {
 		/** Adds a collection field to the query - any of which can match
 		 * @param the Java8 getter for the field
 		 * @param the collection of objects, any of which can match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		@SuppressWarnings("unchecked")
 		public QueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
@@ -182,7 +182,7 @@ public class CrudUtils {
 		/** Adds a collection field to the query - all of which must match
 		 * @param the Java8 getter for the field
 		 * @param the collection of objects, all of which must match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		@SuppressWarnings("unchecked")
 		public QueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
@@ -191,10 +191,51 @@ public class CrudUtils {
 			}
 			return with(Operator.all_of, _naming_helper.field(getter), in);
 		}
+		/** Adds the requirement that the field be greater (or equal, if open is false) than the specified lower bound
+		 * @param the field name (dot notation supported)
+		 * @param lower_bound the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param open if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		@SuppressWarnings("unchecked")
+		public <U> QueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean open) {			
+			if (null == _naming_helper) {
+				_naming_helper = ObjectUtils.from((Class<T>) _element.getClass());
+			}
+			return rangeIn(_naming_helper.field(getter), lower_bound, open, null, false);
+		}
+		/** Adds the requirement that the field be lesser (or equal, if open is false) than the specified lower bound
+		 * @param the field name (dot notation supported)
+		 * @param upper_bound the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param open if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		@SuppressWarnings("unchecked")
+		public <U> QueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean open) {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectUtils.from((Class<T>) _element.getClass());
+			}
+			return rangeIn(_naming_helper.field(getter), null, false, upper_bound, open);
+		}
+		/** Adds the requirement that the field be within the two bounds (with open/closed ie lower bound not included/included set by the 
+		 * @param the field name (dot notation supported)
+		 * @param lower_bound the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param lower_open if true, then the bound is _not_ included, if true then it is
+		 * @param upper_bound the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param upper_open if true, then the bound is _not_ included, if true then it is
+		 * @return
+		 */
+		@SuppressWarnings("unchecked")
+		public <U> QueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_open, U upper_bound, boolean upper_open) {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectUtils.from((Class<T>) _element.getClass());
+			}
+			return rangeIn(_naming_helper.field(getter), lower_bound, lower_open, upper_bound, upper_open);
+		}
 		/** Adds the requirement that a field be present 
 		 * @param the Java8 getter for the field
 		 * @param the collection of objects, any of which can match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		@SuppressWarnings("unchecked")
 		public QueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
@@ -206,7 +247,7 @@ public class CrudUtils {
 		/** Adds the requirement that a field be missing 
 		 * @param the Java8 getter for the field
 		 * @param the collection of objects, any of which can match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		@SuppressWarnings("unchecked")
 		public QueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
@@ -218,7 +259,7 @@ public class CrudUtils {
 		/** Adds a collection field to the query - any of which can match
 		 * @param the field name (dot notation supported)
 		 * @param the collection of objects, any of which can match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		public QueryComponent<T> withAny(@NonNull String field, @NonNull Collection<?> in) {
 			return with(Operator.any_of, field, in);
@@ -226,11 +267,57 @@ public class CrudUtils {
 		/** Adds a collection field to the query - all of which must match
 		 * @param the field name (dot notation supported)
 		 * @param the collection of objects, all of which must match
-		 * @return
+		 * @return the Query Component helper
 		 */
 		public QueryComponent<T> withAll(@NonNull String field, @NonNull Collection<?> in) {
 			return with(Operator.all_of, field, in);
 		}
+		
+		/** Adds the requirement that the field be greater (or equal, if open is false) than the specified lower bound
+		 * @param the field name (dot notation supported)
+		 * @param lower_bound the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param open if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> QueryComponent<T> rangeAbove(@NonNull String field, @NonNull U lower_bound, boolean open) {			
+			return rangeIn(field, lower_bound, open, null, false);
+		}
+		/** Adds the requirement that the field be lesser (or equal, if open is false) than the specified lower bound
+		 * @param the field name (dot notation supported)
+		 * @param upper_bound the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param open if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> QueryComponent<T> rangeBelow(@NonNull String field, @NonNull U upper_bound, boolean open) {
+			return rangeIn(field, null, false, upper_bound, open);
+		}
+		/** Adds the requirement that the field be within the two bounds (with open/closed ie lower bound not included/included set by the 
+		 * @param the field name (dot notation supported)
+		 * @param lower_bound the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param lower_open if true, then the bound is _not_ included, if true then it is
+		 * @param upper_bound the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param upper_open if true, then the bound is _not_ included, if true then it is
+		 * @return
+		 */
+		public <U> QueryComponent<T> rangeIn(@NonNull String field, U lower_bound, boolean lower_open, U upper_bound, boolean upper_open) {
+			java.util.function.BiFunction<Boolean, Boolean, Operator> getRange =
+				(upper, lower) -> {
+					if (lower && upper) {
+						return Operator.range_open_open;
+					}
+					else if (upper) {
+						return Operator.range_closed_open;						
+					}
+					else if (lower) {
+						return Operator.range_open_closed;						
+					}
+					else {
+						return Operator.range_closed_closed;												
+					}
+				};
+			return with(getRange.apply(lower_open, upper_open), field, Arrays.asList(lower_bound, upper_bound));
+		}		
+		
 		/** Adds the requirement that a field be present 
 		 * @param the field name (dot notation supported)
 		 * @param the collection of objects, any of which can match
