@@ -29,7 +29,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 
 /** A context library that is always passed to the IHarvestTechnology module and can also be 
- *  passed to the harvest library processing (TODO: need to document how)
+ *  passed to the harvest library processing (TODO: need to document how, ie copy JARs into external classpath and call ContextUtils.getHarvestContext)
  * @author acp
  */
 public interface IHarvestContext {

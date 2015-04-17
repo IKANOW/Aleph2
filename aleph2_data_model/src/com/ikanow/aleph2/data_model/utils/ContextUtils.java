@@ -21,7 +21,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
 public class ContextUtils {
 	
-	/** Returns the configured context object
+	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
 	 * @param signature can either be the fully qualified class name, or "<FQ class name>:arbitrary_config_string", which is then passed to the context via IHarvestContext.initializeNewContext 
 	 * @return
 	 * @throws InstantiationException
@@ -39,5 +39,5 @@ public class ContextUtils {
 		return context;
 	}
 	//TODO getAnalyticsContext
-	//TODO getAccessContext
+	//TODO getAccessContext?
 }

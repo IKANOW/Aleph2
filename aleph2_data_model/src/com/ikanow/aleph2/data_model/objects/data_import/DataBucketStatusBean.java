@@ -23,8 +23,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
-import com.ikanow.aleph2.data_model.utils.Tuples;
-import com.ikanow.aleph2.data_model.utils.Tuples._2T;
+import scala.Tuple2;
 
 /** Represents generic harvest status
  * @author acp
@@ -42,7 +41,7 @@ public class DataBucketStatusBean {
 			@NonNull Long num_objects,
 			@Nullable Map<String, BasicMessageBean> last_harvest_status_messages,
 			@Nullable Map<String, BasicMessageBean> last_enrichment_status_messages,
-			@Nullable Map<_2T<String, String>, BasicMessageBean> last_storage_status_messages,
+			@Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
 			@Nullable Multimap<String, BasicMessageBean> harvest_log_messages,
 			@Nullable Multimap<String, BasicMessageBean> enrichment_log_messages,
 			@Nullable Multimap<String, BasicMessageBean> storage_log_messages) {
@@ -103,7 +102,7 @@ public class DataBucketStatusBean {
 	/** Each time a host and data service performs an enrichment activity it updates this date/status (from within the core) 
 	 * @return a map of host+service vs the status/date
 	 */
-	public Map<Tuples._2T<String, String>, BasicMessageBean> last_storage_status_messages() {
+	public Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages() {
 		return last_storage_status_messages;
 	}
 	/** A set of recent log messages from the harvesters, keyed by host. The core will remove old messages in an unspecified FIFO 
@@ -133,7 +132,7 @@ public class DataBucketStatusBean {
 	
 	private Map<String, BasicMessageBean> last_harvest_status_messages;
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;
-	private Map<Tuples._2T<String, String>, BasicMessageBean> last_storage_status_messages;
+	private Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages;
 	
 	private Multimap<String, BasicMessageBean> harvest_log_messages;
 	private Multimap<String, BasicMessageBean> enrichment_log_messages;

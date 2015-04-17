@@ -148,7 +148,7 @@ public class ObjectUtils {
 		
 		protected void cloneInitialFields(T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
-				.map(f -> { try { return Tuples._2(f, f.get(_element)); } catch (Exception e) { return null; } })
+				.map(f -> { try { return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
 				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
 		}

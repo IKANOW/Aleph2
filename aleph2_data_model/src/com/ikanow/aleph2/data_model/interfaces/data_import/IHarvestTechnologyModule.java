@@ -21,6 +21,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestResponseBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestTestSpecBean;
 
 /** Harvesters are responsible from taking objects in arbitrary formats over arbitrary transport protocols,
  *  and doing one of the following things:
@@ -30,13 +31,11 @@ import com.ikanow.aleph2.data_model.objects.data_import.HarvestResponseBean;
  */
 public interface IHarvestTechnologyModule {
 
-	//TODO test?? maybe need a test harvest specification bean and then a test initiate/cancel call
-	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
 	 * that was previously associated with a different harvester.
 	 * 
-	 * @param newBucket - a new bucket associated with this harvester
+	 * @param new_bucket - a new bucket associated with this harvester
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
@@ -110,4 +109,13 @@ public interface IHarvestTechnologyModule {
 	 */
 	Future<HarvestResponseBean> onHarvestComplete(@NonNull DataBucketBean completed_bucket, @NonNull IHarvestContext context);
 	
+	/**
+	 * Handles either a new bucket associated with this harvester, or an existing bucket
+	 * that was previously associated with a different harvester.
+	 * 
+	 * @param test_bucket - the bucket to test
+	 * @param context - the context available to this harvester
+	 * @return A future for the response (only completes when the test is complete)
+	 */
+	Future<HarvestResponseBean> onTestSource(@NonNull DataBucketBean test_bucket, @NonNull HarvestTestSpecBean test_spec, IHarvestContext context);		
 }

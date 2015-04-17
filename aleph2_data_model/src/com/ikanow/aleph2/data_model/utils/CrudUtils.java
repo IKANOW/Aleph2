@@ -22,6 +22,8 @@ import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import scala.Tuple2;
+
 import com.google.common.collect.LinkedHashMultimap;
 import com.ikanow.aleph2.data_model.utils.ObjectUtils.MethodNamingHelper;
 
@@ -86,7 +88,7 @@ public class CrudUtils {
 			return _limit;
 		}
 
-		public List<Tuples._2T<String, Integer>> getOrderBy() {
+		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
 		}
 		
@@ -113,7 +115,7 @@ public class CrudUtils {
 		 * @param orderList a list of 2-tupes, first is the field string, second is +1 for ascending, -1 for descending
 		 * @return the "multi" query component "helper"
 		 */
-		public MultiQueryComponent<T> orderBy(@SuppressWarnings("unchecked") Tuples. @NonNull _2T<String, Integer>... orderList) {
+		public MultiQueryComponent<T> orderBy(@SuppressWarnings("unchecked") @NonNull Tuple2<String, Integer>... orderList) {
 			if (null == _orderBy) {
 				_orderBy = Arrays.asList(orderList);
 			}
@@ -126,7 +128,7 @@ public class CrudUtils {
 		// Implementation
 		
 		protected Long _limit;
-		protected List<Tuples._2T<String, Integer>> _orderBy;
+		protected List<Tuple2<String, Integer>> _orderBy;
 		
 		List<QueryComponent<T>> _elements;
 		Operator _op;
@@ -153,7 +155,7 @@ public class CrudUtils {
 			return _op;
 		}
 
-		public LinkedHashMultimap<String, Tuples. @NonNull _2T<Operator, Collection<?>>> getExtra() {
+		public LinkedHashMultimap<String, @NonNull Tuple2<Operator, Collection<?>>> getExtra() {
 			return _extra;
 		}
 
@@ -161,7 +163,7 @@ public class CrudUtils {
 			return _limit;
 		}
 
-		public List<Tuples._2T<String, Integer>> getOrderBy() {
+		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
 		}
 		
@@ -346,7 +348,7 @@ public class CrudUtils {
 		 * @param orderList a list of 2-tupes, first is the field string, second is +1 for ascending, -1 for descending
 		 * @return the "multi" query component "helper"
 		 */
-		public QueryComponent<T> orderBy(@SuppressWarnings("unchecked") Tuples. @NonNull  _2T<String, Integer>... orderList) {
+		public QueryComponent<T> orderBy(@SuppressWarnings("unchecked") @NonNull  Tuple2<String, Integer>... orderList) {
 			if (null == _orderBy) {
 				_orderBy = Arrays.asList(orderList);
 			}
@@ -361,11 +363,11 @@ public class CrudUtils {
 		protected MethodNamingHelper<T> _naming_helper = null;
 		protected T _element = null;
 		protected Operator _op; 		
-		LinkedHashMultimap<String, Tuples._2T<Operator, Collection<?>>> _extra = null;
+		LinkedHashMultimap<String, Tuple2<Operator, Collection<?>>> _extra = null;
 		
 		// Not supported when used in multi query
 		protected Long _limit;
-		protected List<Tuples._2T<String, Integer>> _orderBy;
+		protected List<Tuple2<String, Integer>> _orderBy;
 		
 		protected QueryComponent(T t, Operator op) {
 			_element = t;
@@ -376,7 +378,7 @@ public class CrudUtils {
 			if (null == _extra) {
 				_extra = LinkedHashMultimap.create();
 			}
-			_extra.put(field, Tuples._2(op, in));
+			_extra.put(field, Tuples._2T(op, in));
 			return this;
 		}
 	}	
