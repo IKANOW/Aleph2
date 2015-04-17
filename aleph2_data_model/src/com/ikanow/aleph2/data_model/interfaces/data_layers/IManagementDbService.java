@@ -18,16 +18,16 @@ package com.ikanow.aleph2.data_model.interfaces.data_layers;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
-import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStateAndStatusBean;
-import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
+/** The interface to the management database
+ * @author acp
+ */
 public interface IManagementDbService {
 
-	//TODO javadocs
-	
-	//TODO what about a search index interface for these? Is that optional or ...?
-	
 	////////////////////////////////////
 	
 	// 1] Access
@@ -42,35 +42,63 @@ public interface IManagementDbService {
 	//		- Access modules
 	//		- Acccess utilities (no interface)
 	
+	/** Gets the store of shared JVM JAR libraries
+	 * @return the CRUD service for the shared libraries store
+	 */
 	ICrudService<SharedLibraryBean> getSharedLibraryStore();
 	
 	//TODO: shared schemas
 	
-	//TODO: other "shares"
+	//TODO: other "shares" - including "bucket artefacts" like "documents", "spreadsheets", "knowledge graphs" 
 	
 	//TODO: security and other things that we'll initially handle from IKANOW v1
 	
+	/** Gets or (lazily) creates a repository shared by all users of the specified library (eg Harvest Technology)
+	 * @param library a partial bean with the name or _id set
+	 * @return the CRUD service for the per library generic object store
+	 */
+	<T> ICrudService<T> getPerLibraryState(SharedLibraryBean library);
+	
 	////////////////////////////////////
 	
-	// 2] Imports
+	// 2] Importing
 	
 	// 2.1] Buckets	
 	
-	//TODO need a higher level interface to this? Or do I just put all the logic in the CRUD service implementation
+	/** Gets the store of data buckets
+	 * @return  the CRUD service for the bucket store
+	 */
+	ICrudService<DataBucketBean> getDataBucketStore();
 	
-	ICrudService<DataSchemaBean> getDataBucketStore();
+	/** Gets the store of data bucket statuses
+	 * @return  the CRUD service for the bucket status store
+	 */
+	ICrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
-	ICrudService<DataBucketStateAndStatusBean> getDataBucketStatusStore();
-	
-	//TODO per bucket state?
+	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
+	 * @param library a partial bean with the name or _id set
+	 * @return the CRUD service for the per bucket generic object store
+	 */
+	<T> ICrudService<T> getPerBucketState(DataBucketBean bucket);
 	
 	////////////////////////////////////
 	
-	// Analytics
+	// 3] Analytics
 
-	//TODO: analytics threads	
+	/** Gets the store of analytic threads
+	 * @return the CRUD service for the analytic thread store
+	 */
+	ICrudService<AnalyticThreadBean> getAnalyticThreadStore();
 	
-	//TODO: analytics state
+	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
+	 * @param library a partial bean with the name or _id set
+	 * @return the CRUD service for the per analytic thread generic object store
+	 */
+	<T> ICrudService<T> getPerAnalyticThreadState(AnalyticThreadBean analytic_thread);
+	
+	////////////////////////////////////
+
+	// X] Misc
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

@@ -25,10 +25,11 @@ public class SharedLibraryBean {
 	
 	/** User constructor
 	 */
-	public SharedLibraryBean(String display_name, @NonNull String path_name,
+	public SharedLibraryBean(String _id, String display_name, @NonNull String path_name,
 			@NonNull LibraryType type, String subtype, @NonNull String owner_id,
 			Set<String> tags, @NonNull Set<String> access_tokens) {
 		super();
+		this._id = _id;
 		this.display_name = display_name;
 		this.path_name = path_name;
 		this.type = type;
@@ -36,6 +37,12 @@ public class SharedLibraryBean {
 		this.owner_id = owner_id;
 		this.tags = tags;
 		this.access_tokens = access_tokens;
+	}
+	/** The management DB id of the shared library (unchangeable, unlike the name)
+	 * @return the library _id
+	 */
+	public String id() {
+		return _id;
 	}
 	/** The display name - used for display and search only. If not set will correspond to the filename in the main path
 	 * @return the display name
@@ -80,6 +87,7 @@ public class SharedLibraryBean {
 		return access_tokens;
 	}
 	
+	private String _id;
 	private String display_name;
 	private String path_name;
 	private LibraryType type;

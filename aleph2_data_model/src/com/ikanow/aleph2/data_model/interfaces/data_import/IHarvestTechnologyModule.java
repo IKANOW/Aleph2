@@ -30,6 +30,8 @@ import com.ikanow.aleph2.data_model.objects.data_import.HarvestResponseBean;
  */
 public interface IHarvestTechnologyModule {
 
+	//TODO test?? maybe need a test harvest specification bean and then a test initiate/cancel call
+	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
 	 * that was previously associated with a different harvester.

@@ -19,11 +19,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import com.ikanow.aleph2.data_model.interfaces.shared.ISecurityService;
 
+/** A very important bean that describes how a bucket gets and stores its data
+ * @author acp
+ *
+ */
 public class DataBucketBean {
 
 	////////////////////////////////////////
@@ -31,7 +32,7 @@ public class DataBucketBean {
 	// General information
 	
 	/** The management DB id of the bucket (unchangeable, unlike the bucket name)
-	 * @return the bucket_id
+	 * @return the _id
 	 */
 	public String id() {
 		return _id;
@@ -125,52 +126,6 @@ public class DataBucketBean {
 	
 	private String harvest_technology_name_or_id;
 	
-	/** Bean controlling a harvester configuration
-	 * @author acp
-	 */
-	public static class HarvestControlMetadataBean {
-		
-		public HarvestControlMetadataBean() {}
-		
-		public HarvestControlMetadataBean(@NonNull String name, @NonNull Boolean enabled, @Nullable List<String> library_ids_or_names,
-				@NonNull Map<String, Object> config) {
-			this.name = name;
-			this.enabled = enabled;
-			this.library_ids_or_names = library_ids_or_names;
-			this.config = config;
-		}
-		/** A name for this harvest config - must be unique within the list of harvest configs in the bucket
-		 *  (currently used for search/display only)
-		 * @return the enabled
-		 */
-		public String name() {
-			return name;
-		}
-		/** Whether this harvest block is currently enabled
-		 * @return the enabled
-		 */
-		public Boolean enabled() {
-			return enabled;
-		}
-		/** A list of ids or names pointing to the JAR library that is maintained either in
-		 * the global list or the per-bucket list (in both cases accessible via the Management DB or the harvest context)
-		 * The libraries can be arbitrary JARs
-		 * @return the library_ids_or_names
-		 */
-		public List<String> library_ids_or_names() {
-			return library_ids_or_names;
-		}
-		/** The harvest-technology-specific configuration that controls the per-bucket import
-		 * @return the config
-		 */
-		public Map<String, Object> config() {
-			return config;
-		}
-		private String name;
-		private Boolean enabled;
-		private List<String> library_ids_or_names;
-		private Map<String, Object> config;
-	}	
 	private List<HarvestControlMetadataBean> harvest_configs;
 	
 	////////////////////////////////////////
@@ -200,62 +155,6 @@ public class DataBucketBean {
 		return master_enrichment_type;
 	}
 	
-	/** Bean controlling an enrichment configuration
-	 * @author acp
-	 */
-	public static class EnrichmentControlMetadataBean {
-		
-		public EnrichmentControlMetadataBean() {}
-		
-		/** User constructor
-		 */
-		public EnrichmentControlMetadataBean(@NonNull String name,
-				@Nullable List<String> dependencies, @NonNull Boolean enabled,
-				@Nullable List<String> library_ids_or_names, @Nullable Map<String, Object> config) {
-			super();
-			this.name = name;
-			this.dependencies = dependencies;
-			this.enabled = enabled;
-			this.library_ids_or_names = library_ids_or_names;
-			this.config = config;
-		}
-		/** The name of the enrichment - must be unique within the list of enrichments in this bucket (used for search/display/dependencies)
-		 * @return the name
-		 */
-		public String name() {
-			return name;
-		}
-		/** Defines the dependency order of enrichment - this can be used by the framework to optimize runtime
-		 * @return the dependencies
-		 */
-		public List<String> dependencies() {
-			return dependencies;
-		}
-		/** Returns if this enrichment is currently enabled - implicitly disables all dependent enrichments
-		 * @return the enabled
-		 */
-		public Boolean enabled() {
-			return enabled;
-		}
-		/** A list of ids or names (within either the bucket or global library) of enrichment JARs to be
-		 *  used as part of this enrichment. Exactly on of the JARs must be of type IEnrichmentLibraryModule  
-		 * @return the library_ids_or_names
-		 */
-		public List<String> library_ids_or_names() {
-			return library_ids_or_names;
-		}
-		/** The enrichment-module-specific configuration that controls the per-bucket enrichment
-		 * @return the config
-		 */
-		public Map<String, Object> getConfig() {
-			return config;
-		}
-		private String name;
-		private List<String> dependencies;
-		private Boolean enabled;
-		private List<String> library_ids_or_names;
-		private Map<String, Object> config;
-	}	
 	private List<EnrichmentControlMetadataBean> batch_enrichment_configs;
 	private List<EnrichmentControlMetadataBean> streaming_enrichment_configs;
 	

@@ -26,7 +26,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStateAndStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 
 /** A context library that is always passed to the IHarvestTechnology module and can also be 
  *  passed to the harvest library processing (TODO: need to document how)
@@ -106,7 +106,7 @@ public interface IHarvestContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a bean containing the harvests state and status
 	 */
-	Future<DataBucketStateAndStatusBean> getHarvestStateOrStatus(Optional<DataBucketBean> bucket);
+	Future<DataBucketStatusBean> getHarvestStateOrStatus(Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he HarvestStateBean that is visible to the user
 	 * Note that the behavior of the context if called on another bucket than the one
