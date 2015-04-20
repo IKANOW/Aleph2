@@ -47,7 +47,7 @@ public interface IEnrichmentBatchModule {
 	void onObjectBatch(List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
 
 	//TODO can't reduce if you have a byte stream, you need to map that away...
-	//TODO have a boolean for "intermediate"?
+	//TODO have a boolean for "intermediate"? why doesn't this include the (Long) doc "handle"?
 	void onReducedBatch(List<JsonNode> batch);
 	
 	void onComplete();

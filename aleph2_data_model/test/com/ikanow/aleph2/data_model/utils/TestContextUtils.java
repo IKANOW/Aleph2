@@ -82,7 +82,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getHarvestContextSignature() {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket) {
 			return null;
 		}
 
