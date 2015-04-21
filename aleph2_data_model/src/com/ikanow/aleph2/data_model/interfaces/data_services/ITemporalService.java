@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_layers;
+package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
-public interface IDocumentDbService {
+public interface ITemporalService {
 
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

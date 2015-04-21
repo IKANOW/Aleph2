@@ -1,4 +1,4 @@
-package com.ikanow.aleph2.data_model.interfaces.shared;
+package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -7,6 +7,11 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public interface IUuidService {
 
+	//TODO: hmm I think there's a really strong argument to implement this 
+	// inside the data model as a Util, ie have a UuidUtils that implements this service
+	// and a static accessor - then you can override it from guice, but there's a default
+	// accessor that's in place?
+	
 	/** Generates a (type 1) UUID based string from now
 	 * @return time-based UUID string
 	 */

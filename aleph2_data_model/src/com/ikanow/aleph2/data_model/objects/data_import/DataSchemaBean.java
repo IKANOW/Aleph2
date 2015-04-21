@@ -33,32 +33,35 @@ public class DataSchemaBean {
 	/** User constructor
 	 */
 	public DataSchemaBean(@Nullable StorageSchemaBean storage_schema,
-			@Nullable DocumentDbSchemaBean document_db_schema,
+			@Nullable DocumentSchemaBean document_schema,
 			@Nullable SearchIndexSchemaBean search_index_schema,
-			@Nullable ColumnarDbSchemaBean columnar_db_schema,
+			@Nullable ColumnarSchemaBean columnar_schema,
 			@Nullable TemporalSchemaBean temporal_schema,
 			@Nullable GeospatialSchemaBean geospatial_schema,
-			@Nullable GraphDbSchemaBean graph_db_schema)
+			@Nullable GraphSchemaBean graph_schema,
+			@Nullable DataWarehouseSchemaBean data_warehouse_schema
+			)
 	{
 		this.archive_schema = storage_schema;
-		this.document_db_schema = document_db_schema;
+		this.document_schema = document_schema;
 		this.search_index_schema = search_index_schema;
-		this.columnar_db_schema = columnar_db_schema;
+		this.columnar_schema = columnar_schema;
 		this.temporal_schema = temporal_schema;
 		this.geospatial_schema = geospatial_schema;
-		this.graph_db_schema = graph_db_schema;
+		this.graph_schema = graph_schema;
+		this.data_warehouse_schema = data_warehouse_schema;
 	}
 	/** Per bucket schema for the Archive Service
 	 * @return the archive_schema
 	 */
-	public StorageSchemaBean archive_schema() {
+	public StorageSchemaBean storage_schema() {
 		return archive_schema;
 	}
 	/** Per bucket schema for the Object DB Service
 	 * @return the object_schema
 	 */
-	public DocumentDbSchemaBean object_db_schema() {
-		return document_db_schema;
+	public DocumentSchemaBean document_schema() {
+		return document_schema;
 	}
 	/** Per bucket schema for the Search Index Service
 	 * @return the search_index_schema
@@ -69,8 +72,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Columnar DB Service
 	 * @return the columnar_db_schema
 	 */
-	public ColumnarDbSchemaBean columnar_db_schema() {
-		return columnar_db_schema;
+	public ColumnarSchemaBean columnar_schema() {
+		return columnar_schema;
 	}
 	/** Per bucket schema for the Temporal Service
 	 * @return the temporal_schema
@@ -87,17 +90,18 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Graph DB Service
 	 * @return the graph_db_schema
 	 */
-	public GraphDbSchemaBean graph_db_schema() {
-		return graph_db_schema;
+	public GraphSchemaBean graph_schema() {
+		return graph_schema;
 	}
 	
 	private StorageSchemaBean archive_schema;
-	private DocumentDbSchemaBean document_db_schema;
+	private DocumentSchemaBean document_schema;
 	private SearchIndexSchemaBean search_index_schema;
-	private ColumnarDbSchemaBean columnar_db_schema;
+	private ColumnarSchemaBean columnar_schema;
 	private TemporalSchemaBean temporal_schema;
 	private GeospatialSchemaBean geospatial_schema;
-	private GraphDbSchemaBean graph_db_schema;
+	private GraphSchemaBean graph_schema;
+	private DataWarehouseSchemaBean data_warehouse_schema;
 	
 	/** Per bucket schema for the Archive Service
 	 * @author acp
@@ -146,21 +150,22 @@ public class DataSchemaBean {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private String service_name;
 		private String grouping_time_period;
 		private String exist_age_max;
 		private Map<String, Object> technology_override_schema;
 	}
-	/** Per bucket schema for the Object DB Service
+	/** Per bucket schema for the Document Service
 	 * @author acp
 	 *
 	 */
-	public static class DocumentDbSchemaBean {
+	public static class DocumentSchemaBean {
 		
-		public DocumentDbSchemaBean() {}
+		public DocumentSchemaBean() {}
 		
 		/** User constructor
 		 */
-		public DocumentDbSchemaBean(@NonNull Boolean enabled, @Nullable Boolean deduplicate,
+		public DocumentSchemaBean(@NonNull Boolean enabled, @Nullable Boolean deduplicate,
 				@Nullable List<String> deduplication_fields,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
@@ -202,6 +207,7 @@ public class DataSchemaBean {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private String service_name;
 		private Boolean deduplicate;
 		private List<String> deduplication_fields;
 		private List<String> deduplication_contexts;
@@ -236,18 +242,19 @@ public class DataSchemaBean {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private String service_name;
 		private Map<String, Object> technology_override_schema;
 	}
-	/** Per bucket schema for the Columnar DB Service
+	/** Per bucket schema for the Columnar Service
 	 * @author acp
 	 */
-	public static class ColumnarDbSchemaBean {
+	public static class ColumnarSchemaBean {
 		
-		public ColumnarDbSchemaBean() {}
+		public ColumnarSchemaBean() {}
 		
 		/** User constructor
 		 */
-		public ColumnarDbSchemaBean(@NonNull Boolean enabled,
+		public ColumnarSchemaBean(@NonNull Boolean enabled,
 				@Nullable List<String> field_include_list,
 				@Nullable List<String> field_exclude_list, String field_include_regex,
 				@Nullable String field_exclude_regex,
@@ -313,6 +320,7 @@ public class DataSchemaBean {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private String service_name;
 		private List<String> field_include_list;
 		private List<String> field_exclude_list;
 		private String field_include_regex;
@@ -393,6 +401,7 @@ public class DataSchemaBean {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private String service_name;
 		private String grouping_time_period;
 		private String hot_age_max;
 		private String warm_age_max;
@@ -406,15 +415,29 @@ public class DataSchemaBean {
 	public static class GeospatialSchemaBean {
 		//TODO define an initial set of geo-spatial schema
 		//private Boolean enabled;
+		//private String service_name;
 		//private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Graph DB Service
 	 * @author acp
 	 */
-	public static class GraphDbSchemaBean {
-		//TODO define an initial set of graph db schema 
+	public static class GraphSchemaBean {
+		//TODO define an initial set of graph schema 
 		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
 		//private Boolean enabled;
+		//private String service_name;
+		//private Map<String, Object> technology_override_schema;
+	}
+
+	/** Per bucket schema for the Data Warehouse service 
+	 * @author acp
+	 */
+	public static class DataWarehouseSchemaBean {
+		//TODO "sql" (hive) view of the data
+		//config: map JSON to sql fields ie allow generation of serde
+		//also maps buckets to database/table format
+		//private Boolean enabled;
+		//private String service_name;
 		//private Map<String, Object> technology_override_schema;
 	}
 	

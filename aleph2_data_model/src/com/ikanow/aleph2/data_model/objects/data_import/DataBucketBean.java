@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.ikanow.aleph2.data_model.interfaces.shared.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
 /** A very important bean that describes how a bucket gets and stores its data
  * @author acp

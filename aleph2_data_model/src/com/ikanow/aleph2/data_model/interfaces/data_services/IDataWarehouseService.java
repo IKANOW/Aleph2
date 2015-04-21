@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.shared;
+package com.ikanow.aleph2.data_model.interfaces.data_services;
 
-public interface ISecurityService {
+import java.util.Optional;
 
-	enum AccessType { read_only, read_write, unelevated_admin, admin };
-	
-	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
-	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
-	// ie they are user groups
-	
-	//TODO request privilege escalation
-	
-	//TODO use futures everywhere
+public interface IDataWarehouseService {
+
+	/** USE WITH CARE: this returns the driver to the underlying technology
+	 *  shouldn't be used unless absolutely necessary!
+	 * @param driver_class the class of the driver
+	 * @param a string containing options in some technology-specific format
+	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
+	 */
+	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }
