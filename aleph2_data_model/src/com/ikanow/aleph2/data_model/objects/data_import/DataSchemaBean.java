@@ -42,7 +42,7 @@ public class DataSchemaBean {
 			@Nullable DataWarehouseSchemaBean data_warehouse_schema
 			)
 	{
-		this.archive_schema = storage_schema;
+		this.storage_schema = storage_schema;
 		this.document_schema = document_schema;
 		this.search_index_schema = search_index_schema;
 		this.columnar_schema = columnar_schema;
@@ -51,13 +51,13 @@ public class DataSchemaBean {
 		this.graph_schema = graph_schema;
 		this.data_warehouse_schema = data_warehouse_schema;
 	}
-	/** Per bucket schema for the Archive Service
+	/** Per bucket schema for the Storage Service
 	 * @return the archive_schema
 	 */
 	public StorageSchemaBean storage_schema() {
-		return archive_schema;
+		return storage_schema;
 	}
-	/** Per bucket schema for the Object DB Service
+	/** Per bucket schema for the Document Service
 	 * @return the object_schema
 	 */
 	public DocumentSchemaBean document_schema() {
@@ -69,8 +69,8 @@ public class DataSchemaBean {
 	public SearchIndexSchemaBean search_index_schema() {
 		return search_index_schema;
 	}
-	/** Per bucket schema for the Columnar DB Service
-	 * @return the columnar_db_schema
+	/** Per bucket schema for the Columnar Service
+	 * @return the columnar_schema
 	 */
 	public ColumnarSchemaBean columnar_schema() {
 		return columnar_schema;
@@ -87,14 +87,20 @@ public class DataSchemaBean {
 	public GeospatialSchemaBean geospatial_schema() {
 		return geospatial_schema;
 	}
-	/** Per bucket schema for the Graph DB Service
-	 * @return the graph_db_schema
+	/** Per bucket schema for the Graph Service
+	 * @return the graph_schema
 	 */
 	public GraphSchemaBean graph_schema() {
 		return graph_schema;
 	}
+	/** Per bucket schema for the Data Warehouse Service
+	 * @return the warehouse schema
+	 */
+	public DataWarehouseSchemaBean data_warehouse_schema() {
+		return data_warehouse_schema;
+	}
 	
-	private StorageSchemaBean archive_schema;
+	private StorageSchemaBean storage_schema;
 	private DocumentSchemaBean document_schema;
 	private SearchIndexSchemaBean search_index_schema;
 	private ColumnarSchemaBean columnar_schema;
@@ -113,10 +119,13 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public StorageSchemaBean(@NonNull Boolean enabled, @Nullable String grouping_time_period,
+		public StorageSchemaBean(@NonNull Boolean enabled, 
+				@Nullable String service_name,
+				@Nullable String grouping_time_period,
 				@Nullable String exist_age_max,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
+			this.service_name = service_name;
 			this.grouping_time_period = grouping_time_period;
 			this.exist_age_max = exist_age_max;
 			this.technology_override_schema = technology_override_schema;
@@ -126,6 +135,12 @@ public class DataSchemaBean {
 		 */
 		public Boolean enabled() {
 			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
 		}
 		/** A string describing the time period granularity for searches
 		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
@@ -165,10 +180,13 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public DocumentSchemaBean(@NonNull Boolean enabled, @Nullable Boolean deduplicate,
+		public DocumentSchemaBean(@NonNull Boolean enabled, 
+				@Nullable String service_name,
+				@Nullable Boolean deduplicate,
 				@Nullable List<String> deduplication_fields,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
+			this.service_name = service_name;
 			this.deduplicate = deduplicate;
 			this.deduplication_fields = deduplication_fields;
 			this.technology_override_schema = technology_override_schema;
@@ -178,6 +196,12 @@ public class DataSchemaBean {
 		 */
 		public Boolean enabled() {
 			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
 		}
 		/** If enabled, then deduplication-during-the-harvest-phase is engaged
 		 *  The default field is "_id" (which is then by default generated from the object body, which can be computationally expensive)
@@ -223,9 +247,11 @@ public class DataSchemaBean {
 		/** User constructor
 		 */
 		public SearchIndexSchemaBean(@NonNull Boolean enabled,
+				@Nullable String service_name,
 				@Nullable Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
+			this.service_name = service_name;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the search index service is used for this bucket
@@ -233,6 +259,12 @@ public class DataSchemaBean {
 		 */
 		public Boolean enabled() {
 			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
 		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
@@ -244,6 +276,8 @@ public class DataSchemaBean {
 		private Boolean enabled;
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
+		
+		//TODO: handle object format collisions - coexist/prevent/block
 	}
 	/** Per bucket schema for the Columnar Service
 	 * @author acp
@@ -255,6 +289,7 @@ public class DataSchemaBean {
 		/** User constructor
 		 */
 		public ColumnarSchemaBean(@NonNull Boolean enabled,
+				@Nullable String service_name,
 				@Nullable List<String> field_include_list,
 				@Nullable List<String> field_exclude_list, String field_include_regex,
 				@Nullable String field_exclude_regex,
@@ -262,6 +297,7 @@ public class DataSchemaBean {
 				@Nullable List<String> field_type_exclude_list,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
+			this.service_name = service_name;
 			this.field_include_list = field_include_list;
 			this.field_exclude_list = field_exclude_list;
 			this.field_include_regex = field_include_regex;
@@ -275,6 +311,12 @@ public class DataSchemaBean {
 		 */
 		public Boolean enabled() {
 			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
 		}
 		/** A list of fields to index as a "column"
 		 * @return the field_include_list
@@ -338,11 +380,14 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public TemporalSchemaBean(@NonNull Boolean enabled, @Nullable String grouping_time_period,
+		public TemporalSchemaBean(@NonNull Boolean enabled, 
+				@Nullable String service_name,
+				@Nullable String grouping_time_period,
 				@Nullable String hot_age_max, @Nullable String warm_age_max, @Nullable String cold_age_max,
 				@Nullable String exist_age_max,
 				@Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
+			this.service_name = service_name;
 			this.grouping_time_period = grouping_time_period;
 			this.hot_age_max = hot_age_max;
 			this.warm_age_max = warm_age_max;
@@ -356,6 +401,12 @@ public class DataSchemaBean {
 		 */
 		public Boolean enabled() {
 			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
 		}
 		/** A string describing the time period granularity for searches
 		 *  (ie it will be possible to "search" more efficiently for objects in the same time period) 
