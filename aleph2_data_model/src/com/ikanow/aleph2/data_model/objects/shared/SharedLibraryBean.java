@@ -56,7 +56,7 @@ public class SharedLibraryBean {
 	public String path_name() {
 		return path_name;
 	}
-	/** The type of the library (harvest/enrichment/analytics/access and technology/module/utility)
+	/** The type of the library (harvest/enrichment/analytics/access/misc and technology/module/etc-for-misc)
 	 * @return the type
 	 */
 	public LibraryType type() {
@@ -87,6 +87,13 @@ public class SharedLibraryBean {
 		return access_tokens;
 	}
 	
+	/** For JARs, the default entry point (type specific - eg will point to the implementation of IAccessTechnology, or IEnrichmentBatchModule, etc)
+	 * @return the fully qualified classpath of the primary/default entry point
+	 */
+	public String primary_entry_point() {
+		return primary_entry_point;
+	}
+
 	private String _id;
 	private String display_name;
 	private String path_name;
@@ -96,9 +103,11 @@ public class SharedLibraryBean {
 			analytics_technology, analytics_module, 
 				enrichment_module, enrichment_utility, 
 					harvest_technology, harvest_module,
-						access_module, access_utility };
+						access_module, access_utility,
+							misc_archive, misc_directory, misc_file, misc_json };
 						
 	private String owner_id;
 	private Set<String> tags;
 	private Set<String> access_tokens;
+	private String primary_entry_point;
 }

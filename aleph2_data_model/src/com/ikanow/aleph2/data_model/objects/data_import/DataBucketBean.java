@@ -138,12 +138,29 @@ public class DataBucketBean {
 	public List<EnrichmentControlMetadataBean> batch_enrichment_configs() {
 		return batch_enrichment_configs;
 	}
+	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
+	 *  to pass a single enrichment topology that is applied - this gives the developers much more control
+	 *  Currently there is no batch enrichment topology supported however, so this is a placeholder.
+	 * @return the enrichment_configs
+	 */
+	public EnrichmentControlMetadataBean batch_enrichment_topology() {
+		return batch_enrichment_topology;
+	}
 
 	/** A list of enrichments that are applied to the bucket after ingestion via streaming
 	 * @return the enrichment_configs
 	 */
 	public List<EnrichmentControlMetadataBean> streaming_enrichment_configs() {
 		return streaming_enrichment_configs;
+	}
+	
+	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
+	 *  to pass a single enrichment topology that is applied - this gives the developers much more control
+	 *  Currently the only streaming topology supported is Apache STORM
+	 * @return the enrichment_configs
+	 */
+	public EnrichmentControlMetadataBean streaming_enrichment_topology() {
+		return streaming_enrichment_topology;
 	}
 
 	/** Only objects from the specified (potentially empty) enrichment route are stored
@@ -154,9 +171,13 @@ public class DataBucketBean {
 	public MasterEnrichmentType master_enrichment_type() {
 		return master_enrichment_type;
 	}
-	
+
+	// You can supply a list of modules....
 	private List<EnrichmentControlMetadataBean> batch_enrichment_configs;
 	private List<EnrichmentControlMetadataBean> streaming_enrichment_configs;
+	// ...Or a single topology
+	private EnrichmentControlMetadataBean streaming_enrichment_topology;
+	private EnrichmentControlMetadataBean batch_enrichment_topology;
 	
 	public enum MasterEnrichmentType { streaming, batch, streaming_and_batch }
 	private MasterEnrichmentType master_enrichment_type;

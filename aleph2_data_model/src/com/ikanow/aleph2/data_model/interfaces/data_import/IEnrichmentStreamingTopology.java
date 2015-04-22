@@ -15,7 +15,19 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-public class IEnrichmentStreamingTopology {
+import java.util.Map;
 
-	//TODO
+import scala.Tuple2;
+
+public interface IEnrichmentStreamingTopology {
+
+	//TODO should this be an IEnrichmentStreamingModuleContext? or in fact an IEnrichmentStreamingTopologyContext
+	// with just the stuff needed to _build_ the topology, and then an accessor to get a IEnrichmentStreamingModuleContext?
+	
+	/** The developer should return a technology-specific topology in Tuple2._1() and a map of options in Tuple2._2() 
+	 *  (currently only backtype.storm.topology.TopologyBuilder is supported)
+	 * @param context The enrichment context passed in by the core
+	 * @return the topology and configuration for this streaming enrichment process
+	 */
+	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(IEnrichmentModuleContext context);
 }
