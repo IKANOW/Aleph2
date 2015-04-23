@@ -98,16 +98,18 @@ public interface IHarvestContext {
 	// BOTH HARVEST TECHNOLOGY AND HARVEST MODULE 
 	
 	/** (HarvestTechnology/HarvestModule) Returns an object repository that the harvester/module can use to store arbitrary internal state
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return a generic object repository
 	 */
-	ICrudService<?> getHarvestBucketObjectStore(Optional<DataBucketBean> bucket);
+	<S> ICrudService<S> getHarvestBucketObjectStore(@NonNull Class<S> clazz, Optional<DataBucketBean> bucket, Optional<String> sub_collection);
 	
 	/** (HarvestTechnology/HarvestModule) Returns the state/status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a bean containing the harvests state and status
 	 */
-	Future<DataBucketStatusBean> getHarvestStateOrStatus(Optional<DataBucketBean> bucket);
+	Future<DataBucketStatusBean> getHarvestStatus(Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he HarvestStateBean that is visible to the user
 	 * Note that the behavior of the context if called on another bucket than the one
