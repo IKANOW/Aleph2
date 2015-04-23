@@ -15,11 +15,12 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
 /** A very important bean that describes how a bucket gets and stores its data
  * @author acp
@@ -36,6 +37,18 @@ public class DataBucketBean {
 	 */
 	public String id() {
 		return _id;
+	}
+	/** When this bucket was first created
+	 * @return created date
+	 */
+	public Date created() {
+		return created;
+	}
+	/** When this bucket was last modified
+	 * @return modified date
+	 */
+	public Date modified() {
+		return modified;
 	}
 	/** The bucket name as a path relative to the root path (starting with /) - is enforced unique across the cluster
 	 * eg /project1/web_crawl_1, /project2/log_files/netflow_logs
@@ -65,8 +78,8 @@ public class DataBucketBean {
 	/** A map of SecurityService specific tokens that control read/write/admin access to the bucket
 	 * @return the access_groups
 	 */
-	public Map<String, ISecurityService.AccessType> access_groups() {
-		return access_groups;
+	public AuthorizationBean access_rights() {
+		return access_rights;
 	}
 	/** The frequency with which the harvester is polled for this bucket.
 	 * @return the poll_frequency in some human readable format ("every 5 minutes", "hourly", "3600" etc)
@@ -76,11 +89,13 @@ public class DataBucketBean {
 	}
 	
 	private String _id;	
+	private Date created;
+	private Date modified;
 	private String full_name;
 	private String display_name;
 	private String owner_id;
 	private Set<String> tags;
-	private Map<String, ISecurityService.AccessType> access_groups;
+	private AuthorizationBean access_rights;
 	private String poll_frequency;
 	
 	////////////////////////////////////////

@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.util.Date;
 import java.util.Set;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -27,7 +28,7 @@ public class SharedLibraryBean {
 	 */
 	public SharedLibraryBean(String _id, String display_name, @NonNull String path_name,
 			@NonNull LibraryType type, String subtype, @NonNull String owner_id,
-			Set<String> tags, @NonNull Set<String> access_tokens) {
+			Set<String> tags, @NonNull AuthorizationBean access_rights) {
 		super();
 		this._id = _id;
 		this.display_name = display_name;
@@ -36,13 +37,25 @@ public class SharedLibraryBean {
 		this.subtype = subtype;
 		this.owner_id = owner_id;
 		this.tags = tags;
-		this.access_tokens = access_tokens;
+		this.access_rights = access_rights;
 	}
 	/** The management DB id of the shared library (unchangeable, unlike the name)
 	 * @return the library _id
 	 */
 	public String id() {
 		return _id;
+	}
+	/** When this bucket was first created
+	 * @return created date
+	 */
+	public Date created() {
+		return created;
+	}
+	/** When this bucket was last modified
+	 * @return modified date
+	 */
+	public Date modified() {
+		return modified;
 	}
 	/** The display name - used for display and search only. If not set will correspond to the filename in the main path
 	 * @return the display name
@@ -83,8 +96,8 @@ public class SharedLibraryBean {
 	/** The set of access tokens, read access only - any admin has write access and nobody else
 	 * @return the set of access tokens
 	 */
-	public Set<String> access_tokens() {
-		return access_tokens;
+	public AuthorizationBean access_rights() {
+		return access_rights;
 	}
 	
 	/** For JARs, the default entry point (type specific - eg will point to the implementation of IAccessTechnology, or IEnrichmentBatchModule, etc)
@@ -95,6 +108,8 @@ public class SharedLibraryBean {
 	}
 
 	private String _id;
+	private Date created;
+	private Date modified;
 	private String display_name;
 	private String path_name;
 	private LibraryType type;
@@ -108,6 +123,6 @@ public class SharedLibraryBean {
 						
 	private String owner_id;
 	private Set<String> tags;
-	private Set<String> access_tokens;
+	private AuthorizationBean access_rights;
 	private String primary_entry_point;
 }
