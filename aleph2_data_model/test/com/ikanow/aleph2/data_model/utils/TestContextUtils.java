@@ -33,6 +33,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class TestContextUtils {
 
@@ -87,7 +88,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <I> I getService(Class<I> service_clazz) {
+		public <I> I getService(Class<I> service_clazz, Optional<String> service_name) {
 			return null;
 		}
 
@@ -97,7 +98,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<JsonNode> getGlobalHarvestTecnologyConfiguration() {
+		public Future<JsonNode> getGlobalHarvestTechnologyConfiguration() {
 			return null;
 		}
 
@@ -108,19 +109,19 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<DataBucketStatusBean> getHarvestStatus(
+		public Future<DataBucketStatusBean> getBucketStatus(
 				Optional<DataBucketBean> bucket) {
 			return null;
 		}
 
 		@Override
 		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				@NonNull String message, boolean roll_up_duplicates) {
+				@NonNull BasicMessageBean message, boolean roll_up_duplicates) {
 		}
 
 		@Override
 		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				@NonNull String message) {
+				@NonNull BasicMessageBean message) {
 		}
 
 		@Override
@@ -164,8 +165,8 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <S> ICrudService<S> getHarvestBucketObjectStore(Class<S> clazz,
-				Optional<DataBucketBean> bucket, Optional<String> sub_collection) {
+		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
+				Optional<DataBucketBean> bucket, Optional<String> sub_collection, boolean auto_prepend_prefix) {
 			return null;
 		}
 		

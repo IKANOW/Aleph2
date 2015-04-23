@@ -15,19 +15,45 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 import scala.Tuple2;
 
+/** The interface that developers of streaming technology developers (currently in Storm) must implement
+ * in order to deploy a complete end-end streaming enrichment topology. Compared to the IEnrichmentStreamingModule,
+ * this provides much more flexibility
+ * @author acp
+ */
 public interface IEnrichmentStreamingTopology {
 
-	//TODO should this be an IEnrichmentStreamingModuleContext? or in fact an IEnrichmentStreamingTopologyContext
-	// with just the stuff needed to _build_ the topology, and then an accessor to get a IEnrichmentStreamingModuleContext?
-	
 	/** The developer should return a technology-specific topology in Tuple2._1() and a map of options in Tuple2._2() 
 	 *  (currently only backtype.storm.topology.TopologyBuilder is supported)
+	 * @param bucket The bucket 
 	 * @param context The enrichment context passed in by the core
 	 * @return the topology and configuration for this streaming enrichment process
 	 */
-	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(IEnrichmentModuleContext context);
+	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(@NonNull DataBucketBean bean, @NonNull IEnrichmentModuleContext context);
+	
+	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - For every object submitted to the streaming topology, this function is applied to generate a simpler object more amenable to being passed around
+	 * It is recommended to make the final element inserted be the entire object in string format (see incoming_object_string)
+	 * @param incoming_object - the incoming "raw" object to decompose into simpler format
+	 * @param incoming_object_string - it will often be the case that one of the tuple elements should be the entire message. If the framework has the object in string form, it will pass it in here to avoid a spurious serialization. If it does not, the client will have to deserialize the object if he wants it in the stream object.
+	 * @return an object representing the simplified object (eg in Storm the keys will be used to declare the fields)
+	 */
+	LinkedHashMap<String, Object> decomposeIncomingObject(JsonNode incoming_object, Optional<String> incoming_object_string);
+	
+	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
+	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 
+	 * TODO build a util that lets you fold all the fields into the last one (converted from String)
+	 * @param outgoing_object - the final object output via either the success or error endpoint
+	 * @return the final JsonNode to store
+	 */
+	JsonNode rebuildObject(LinkedHashMap<String, Object> outgoing_object);
 }
