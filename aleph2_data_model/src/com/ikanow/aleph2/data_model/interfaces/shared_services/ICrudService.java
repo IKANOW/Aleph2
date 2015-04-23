@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.shared;
+package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +21,8 @@ import java.util.concurrent.Future;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 
 //TODO need to add an (optional) Search Index Service to the CRUD repository
@@ -32,6 +34,18 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils;
  */
 public interface ICrudService<O> {
 
+	//////////////////////////////////////////////////////
+
+	// Authorization and project filtering:
+	
+	/** Returns a copy of the CRUD service that is filtered based on the client (user) and project rights
+	 * @param authorization_fieldname the fieldname in the bean that determines where the per-bean authorization is held
+	 * @param client_auth Optional specification of the user's access rights
+	 * @param project_auth Optional specification of the projects's access rights
+	 * @return The filtered CRUD repo
+	 */
+	ICrudService<O> getFilteredRepo(@NonNull String authorization_fieldname, Optional<AuthorizationBean> client_auth, Optional<ProjectBean> project_auth);
+	
 	//////////////////////////////////////////////////////
 	
 	// *C*REATE

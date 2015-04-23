@@ -13,17 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_layers;
+package com.ikanow.aleph2.data_model.objects.data_import;
 
-import java.util.Optional;
+public class AnnotationBean {
 
-public interface ISearchIndexService {
-
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	//TODO:
+	// tags
+	// source_url
+	// display_url
+	// entities (CONCEPT OF HIDDEN)
+	// associations (CONCEPT OF HIDDEN)
+	// published date
+	// user comments
+	// user modifications
+	
+	//TODO need to get right a bunch of the things that were wrong in the original:
+	// - handle large objects more elegantly
+	// - (optionally) handle proximity, multiple references
 }

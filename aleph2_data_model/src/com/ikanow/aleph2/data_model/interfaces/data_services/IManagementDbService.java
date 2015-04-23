@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_layers;
+package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
-import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;

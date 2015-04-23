@@ -30,4 +30,6 @@ public class AnalyticThreadBean {
 	// - Exit conditions
 	
 	//TODO: list/graph of analytics with some sort og exit criteria
+	
+	//TODO: want an associated bucket 
 }

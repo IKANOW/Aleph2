@@ -40,5 +40,16 @@ public class TestAccessManager {
 		IDataService custom_service = context.getDataService("SampleCustomService");
 		assertNotNull(custom_service);
 	}
+	
+	@Test
+	public void testSecurity() {
+		//step1 call an application
+		
+		//step2 core should validate user can access application
+		
+		//step3 application will validate user can perform specific action
+		
+		//step4 application performs action
+	}
 
 }

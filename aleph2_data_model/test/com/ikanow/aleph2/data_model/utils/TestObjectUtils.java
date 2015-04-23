@@ -28,11 +28,12 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.ImmutableMap;
+import com.ikanow.aleph2.data_model.utils.TestObjectUtils.NestedTestBean.NestedNestedTestBean;
 
 public class TestObjectUtils {
 
 	public static class TestBean {
-		public String _testField() { return testField; } /** Test field */
+		public String testField() { return testField; } /** Test field */
 		
 		private String testField;
 	}
@@ -40,16 +41,53 @@ public class TestObjectUtils {
 	@Test
 	public void testSingleMethodHelper() {
 		
-		String test1 = ObjectUtils.from(TestBean.class).field(TestBean::_testField);
+		String test1 = ObjectUtils.from(TestBean.class).field(TestBean::testField);
 		TestBean t = new TestBean();
-		String test2 = ObjectUtils.from(t).field(TestBean::_testField);
+		String test2 = ObjectUtils.from(t).field(TestBean::testField);
 		assertEquals("The type safe reference should resolve correctly (class ref)", "testField", test1);
 		assertEquals("The type safe reference should resolve correctly (object ref)", "testField", test2);
 	}
 
+	public static class NestedTestBean {
+		public String testField() { return testField; } /** Test field */
+		public NestedNestedTestBean nestedBean() { return nestedBean; } 
+		public static class NestedNestedTestBean {
+			public String testField() { return nestedField; } /** Test field */
+			public NestedNestedTestBean nestedBean() { return nestedBean; }
+			
+			private NestedNestedTestBean nestedBean;			
+			private String nestedField;
+		}
+		
+		private String testField;
+		private NestedNestedTestBean nestedBean;
+		
+	}
+	
+	@Test
+	public void testNestedMethodHelper() {
+		String test1 = ObjectUtils.from(NestedTestBean.class).field(NestedTestBean::testField);
+		String test2 = ObjectUtils.from(NestedTestBean.class)
+							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class).field(NestedNestedTestBean::testField);
+		String test3 = ObjectUtils.from(NestedTestBean.class)
+							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class)
+							.nested(NestedNestedTestBean::nestedBean, NestedNestedTestBean.class)
+							.field(NestedNestedTestBean::testField);
+		
+		NestedTestBean t1 = new NestedTestBean();
+		NestedNestedTestBean t2 = new NestedNestedTestBean();
+		
+		String test4 = ObjectUtils.from(t1).nested(NestedTestBean::nestedBean, t2).field(NestedNestedTestBean::nestedBean);
+		
+		assertEquals("The type safe reference should resolve correctly (class ref)", "testField", test1);
+		assertEquals("The type safe reference should resolve correctly (nested, class ref)", "testField", test2);
+		assertEquals("The type safe reference should resolve correctly (2x nested, class ref)", "testField", test3);
+		assertEquals("The type safe reference should resolve correctly (nested, object ref)", "nestedBean", test4);		
+	}
+	
 	public static class TestBuildBean {
-		public String _testField() { return testField; } /** Test field */
-		public String _test3Field() { return test3Field; } /** Test field */
+		public String testField() { return testField; } /** Test field */
+		public String test3Field() { return test3Field; } /** Test field */
 		
 		String testField;
 		String test2Field;
@@ -61,14 +99,14 @@ public class TestObjectUtils {
 	public void testBeanBuilder() {
 		
 		TestBuildBean test = ObjectUtils.build(TestBuildBean.class)
-								.with(TestBuildBean::_testField, "4")
+								.with(TestBuildBean::testField, "4")
 								.with("test2Field", "5")
 								.with("test4Fields", Arrays.asList("1", "2", "3"))
 								.done();
 		
-		assertEquals("testField should have been set", "4", test._testField());
+		assertEquals("testField should have been set", "4", test.testField());
 		assertEquals("test2Field should have been set", "5", test.test2Field);
-		assertEquals("test3Field should have not been set", null, test._test3Field());
+		assertEquals("test3Field should have not been set", null, test.test3Field());
 		assertThat("test4Fields should be this list", test.test4Fields, is(Arrays.asList("1", "2", "3")));		
 	}
 	
@@ -78,7 +116,7 @@ public class TestObjectUtils {
 	@Test
 	public void testBeanBuilder_ContainersImmutable() {
 		TestBuildBean test = ObjectUtils.build(TestBuildBean.class)
-				.with(TestBuildBean::_testField, "4")
+				.with(TestBuildBean::testField, "4")
 				.with("test2Field", "5")
 				.with("test4Fields", Arrays.asList("1", "2", "3"))
 				.done();
@@ -88,8 +126,8 @@ public class TestObjectUtils {
 	}
 
 	public static class TestCloneBean {
-		public String _testField() { return testField; } /** Test field */
-		public String _test3Field() { return test3Field; } /** Test field */
+		public String testField() { return testField; } /** Test field */
+		public String test3Field() { return test3Field; } /** Test field */
 		
 		String testField;
 		String test2Field;
@@ -112,9 +150,9 @@ public class TestObjectUtils {
 		to_clone.test6Fields.put("6", 6);
 		
 		TestCloneBean test = ObjectUtils.clone(to_clone)
-								.with(TestCloneBean::_testField, "1b")
+								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
-								.with(TestCloneBean::_test3Field, "3")
+								.with(TestCloneBean::test3Field, "3")
 								.with("test6Fields",
 										ImmutableMap.<String, Integer>builder()
 											.putAll(to_clone.test6Fields)
@@ -127,9 +165,9 @@ public class TestObjectUtils {
 		expected.put("6", 6);
 		expected.put("7", 7);
 		
-		assertEquals("testField should have been changed", "1b", test._testField());
+		assertEquals("testField should have been changed", "1b", test.testField());
 		assertEquals("test2Field should have nulled", null, test.test2Field);
-		assertEquals("test3Field should have have been set", "3", test._test3Field());
+		assertEquals("test3Field should have have been set", "3", test.test3Field());
 		assertEquals("test4Field should have have been left null", null, test.test4Field);
 		assertEquals("test5Field should have have been left 5", "5", test.test5Field);
 		assertEquals("test6Fields should be this map", test.test6Fields, expected);		
@@ -147,9 +185,9 @@ public class TestObjectUtils {
 		to_clone.test6Fields.put("6", 6);
 		
 		TestCloneBean test = ObjectUtils.clone(to_clone)
-								.with(TestCloneBean::_testField, "1b")
+								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
-								.with(TestCloneBean::_test3Field, "3")
+								.with(TestCloneBean::test3Field, "3")
 								.with("test6Fields",
 										ImmutableMap.<String, Integer>builder()
 											.putAll(to_clone.test6Fields)

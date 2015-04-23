@@ -24,7 +24,7 @@ import java.util.concurrent.Future;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 
@@ -77,9 +77,10 @@ public interface IHarvestContext {
 	List<String> getHarvestContextLibraries(Optional<Set<Class<?>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
-	String getHarvestContextSignature();
+	String getHarvestContextSignature(Optional<DataBucketBean> bucket);
 
 	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) configuration
 	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"
@@ -146,7 +147,7 @@ public interface IHarvestContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param  quarantineDuration A string representing the duration for which to quarantine the data (eg "1 hour", "2 days", "3600")
 	 */
-	void emergencyQuarantineBucket(Optional<DataBucketBean> bucket, @NonNull String quarantineDuration);
+	void emergencyQuarantineBucket(Optional<DataBucketBean> bucket, @NonNull String quarantine_duration);
 
 	//////////////////////////////////////////////////////
 	

@@ -60,6 +60,8 @@ public interface IEnrichmentModuleContext {
 	
 	void emitObject(long id, JsonNode mutated_json, ObjectNode mutations);
 	
+	//TODO have a separate "discard object" that will write to some reject pile?
+	
 	////////////////////////////////////////////
 	
 	// Object annotations:

@@ -16,16 +16,16 @@
 package com.ikanow.aleph2.data_model.interfaces.data_access;
 
 import com.google.inject.Provider;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IColumnarDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IDocumentDbService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IGeospatialService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IGraphDbService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IManagementDbService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.ISearchIndexService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IStorageService;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.ITemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
 /**
  * Gives an app access to all the currently configured data services.
@@ -35,10 +35,10 @@ import com.ikanow.aleph2.data_model.interfaces.shared.ISecurityService;
  */
 public interface IAccessContext {	
 	enum DataServiceType {
-		ColumnarDbService,
-		DocumentDbService,
+		ColumnarService,
+		DocumentService,
 		GeospatialService,
-		GraphDbService,
+		GraphService,
 		ManagementDbService,
 		SearchIndexService,
 		StorageService,
@@ -51,10 +51,10 @@ public interface IAccessContext {
 	public IDataService getDataService(String serviceName);
 	
 	//utility getters for common services
-	public IColumnarDbService getColumnarDbService();
-	public IDocumentDbService getDocumentDbService();
+	public IColumnarService getColumnarDbService();
+	public IDocumentService getDocumentDbService();
 	public IGeospatialService getGeospatialService();
-	public IGraphDbService getGraphDbService();	
+	public IGraphService getGraphDbService();	
 	public IManagementDbService getManagementDbService();
 	public ISearchIndexService getSearchIndexService();
 	public IStorageService getStorageIndexService();

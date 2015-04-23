@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -46,8 +47,8 @@ public class ObjectUtils {
 	 * @param clazz - the containing class for the fields
 	 * @return a MethodNamingHelper for this class
 	 */
-	public static <T> MethodNamingHelper<T> from(Class<T> clazz) {
-		return new MethodNamingHelper<T>(clazz);
+	public static <T> MethodNamingHelper<T> from(@NonNull Class<T> clazz) {
+		return new MethodNamingHelper<T>(clazz, Optional.empty());
 	}
 	
 	/**
@@ -57,7 +58,7 @@ public class ObjectUtils {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> MethodNamingHelper<T> from(@NonNull T a) {
-		return new MethodNamingHelper<T>((Class<T>) a.getClass());
+		return new MethodNamingHelper<T>((Class<T>) a.getClass(), Optional.empty());
 	}
 	
 	/** Clones the specified object, returning a builder that can be used to replace specified values
@@ -94,9 +95,9 @@ public class ObjectUtils {
 		/**Set a field in a cloned/new object
 		 * @param fieldName The field to set
 		 * @param val the value to which it should be set
-		 * @return
+		 * @return Clone Helper, finish with done() to return the class
 		 */
-		public <U> CloningHelper<T> with(String fieldName, U val) {
+		public <U> CloningHelper<T> with(@NonNull String fieldName, @NonNull U val) {
 			try {
 				Field f = _element.getClass().getDeclaredField(fieldName);
 				f.set(_element, val);
@@ -110,9 +111,9 @@ public class ObjectUtils {
 		/**Set a field in a cloned/new object
 		 * @param fieldName The field to set
 		 * @param val the value to which it should be set
-		 * @return
+		 * @return Clone Helper, finish with done() to return the class
 		 */
-		public <U> CloningHelper<T> with(Function<T, ?> getter, U val) {
+		public <U> CloningHelper<T> with(@NonNull Function<T, ?> getter, @NonNull U val) {
 			try {
 				if (null == _naming_helper) {
 					_naming_helper = from(_element);
@@ -133,7 +134,7 @@ public class ObjectUtils {
 			return _element;
 		}
 		
-		protected static Object immutabilizeContainer(Object o) {
+		protected static Object immutabilizeContainer(@NonNull Object o) {
 			//(eclipse doesn't need the conversions, but JDK8 does)
 			return Patterns.matchAndReturn(o)
 					.when(SortedSet.class, c -> Collections.unmodifiableSortedSet((SortedSet<?>)c) )
@@ -146,17 +147,17 @@ public class ObjectUtils {
 					.otherwise(o);
 		}
 		
-		protected void cloneInitialFields(T to_clone) {
+		protected void cloneInitialFields(@NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.map(f -> { try { return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
 				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
-		protected CloningHelper(Class<?> element_clazz) throws InstantiationException, IllegalAccessException {
+		protected CloningHelper(@NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException {
 			_element = (T) element_clazz.newInstance();
 		}
-		protected CloningHelper(T to_clone) {
+		protected CloningHelper(@NonNull T to_clone) {
 			_element = to_clone;
 		}
 		protected final T _element;
@@ -174,12 +175,14 @@ public class ObjectUtils {
 		
 		protected String _name;
 		protected T _recorder;
+		protected Optional<String> _parent_path;
 		@SuppressWarnings("unchecked")
-		protected MethodNamingHelper(Class<T> clazz) {
+		protected MethodNamingHelper(@NonNull Class<T> clazz, Optional<String> parent_path) {
 			Enhancer enhancer = new Enhancer();
 			enhancer.setSuperclass(clazz);
 			enhancer.setCallback(this);
 			_recorder = (T) enhancer.create();
+			_parent_path = parent_path;
 		}
 		@Override
 		public Object intercept(Object object, Method method, Object[] args,
@@ -189,7 +192,7 @@ public class ObjectUtils {
 				return _name;
 			}
 			else {
-				_name = method.getName().substring(1);
+				_name = method.getName();
 			}
 			return null;
 		}
@@ -197,9 +200,27 @@ public class ObjectUtils {
 		 * @param getter - the method reference (T::<function>)
 		 * @return
 		 */
-		public String field(Function<T, ?> getter) {
+		public String field(@NonNull Function<T, ?> getter) {
 			getter.apply(_recorder);
 			return _name;
+		}
+		/** Returns a nested fieldname in an object hierarchy (given a non-null object of nested type)
+		 * @param getter - the getter utility defining the fieldname of the nested object 
+		 * @param from - an object of the nested type 
+		 * @return a MethodNamingHelper for the nested class
+		 */
+		@SuppressWarnings("unchecked")
+		public <U> MethodNamingHelper<U> nested(@NonNull Function<T, ?> getter, @NonNull U from) {
+			return (MethodNamingHelper<U>) nested(getter, from.getClass());			
+		}
+		/** Returns a nested fieldname in an object hierarchy
+		 * @param getter - the getter utility defining the fieldname of the nested object 
+		 * @param nested_clazz - the class of the nested type
+		 * @return a MethodNamingHelper for the nested class
+		 */
+		public <U> MethodNamingHelper<U> nested(@NonNull Function<T, ?> getter, @NonNull Class<U> nested_clazz) {
+			String new_parent_path =  _parent_path.orElse("") + "." + field(getter) + ".";
+			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}
 	}
 }

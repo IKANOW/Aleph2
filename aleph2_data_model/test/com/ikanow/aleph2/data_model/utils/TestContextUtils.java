@@ -30,7 +30,7 @@ import org.junit.rules.ExpectedException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
-import com.ikanow.aleph2.data_model.interfaces.shared.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 
@@ -82,7 +82,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getHarvestContextSignature() {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket) {
 			return null;
 		}
 
