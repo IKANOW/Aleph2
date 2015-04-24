@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.objects.shared;
 
 import java.util.Date;
+import java.util.Map;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -29,22 +30,34 @@ public class BasicMessageBean {
 	
 	/** User constructor
 	 */
-	public BasicMessageBean(@NonNull Date date, 								
+	public BasicMessageBean(@NonNull Date date,
+								@NonNull Boolean success,
 								@Nullable String source,
 								@Nullable String command,
 								@Nullable Integer message_code,
-								@NonNull String message) {
+								@NonNull String message,
+								@Nullable Map<String, String> details
+								)
+	{
 		this.date = date;
+		this.success = success;
 		this.source = source;
 		this.message = message;
 		this.message_code = message_code;
 		this.command = command;
+		this.details = details;
 	}
 	/** the date when the message was generated
 	 * @return the date when the message was generated
 	 */
 	public Date date() {
 		return date;
+	}
+	/**
+	 * @return the success (optional, assumes true if not present)
+	 */
+	public Boolean success() {
+		return success;
 	}
 	/** A freeform string representing the source of the message
 	 * @return the source of the message
@@ -70,10 +83,18 @@ public class BasicMessageBean {
 	public String message() {
 		return message;
 	}
+	/**
+	 * @return the details (optional, for display purposes)
+	 */
+	public Map<String, String> details() {
+		return details;
+	}
 	
 	private Date date;
+	private Boolean success;
 	private String source;
 	private String command;
 	private Integer message_code;
 	private String message;
+	private Map<String, String> details;	
 }

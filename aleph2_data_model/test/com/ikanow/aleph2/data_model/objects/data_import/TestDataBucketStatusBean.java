@@ -33,8 +33,8 @@ public class TestDataBucketStatusBean {
 		assertEquals(bean.last_enrichment_status_messages().get("a").command(), ImmutableMap.<String, BasicMessageBean>builder().put("a", new BasicMessageBean()).put("b", new BasicMessageBean()).build().get("a").command());
 		assertEquals(bean.last_storage_status_messages().get(new Tuple2<String, String>("a", "b")).command(), ImmutableMap.<Tuple2<String, String>, BasicMessageBean>builder().put(new Tuple2<String,String>("a", "b"), new BasicMessageBean()).put(new Tuple2<String,String>("c", "d"), new BasicMessageBean()).build().get(new Tuple2<String, String>("a", "b")).command());
 		bean.harvest_log_messages().get("a").forEach(messageBean -> assertEquals(messageBean.command(), new BasicMessageBean().command()));
-		bean.getEnrichment_log_messages().get("a").forEach(messageBean -> assertEquals(messageBean.command(), new BasicMessageBean().command()));
-		bean.getStorage_log_messages().get("a").forEach(messageBean -> assertEquals(messageBean.command(), new BasicMessageBean().command()));		
+		bean.enrichment_log_messages().get("a").forEach(messageBean -> assertEquals(messageBean.command(), new BasicMessageBean().command()));
+		bean.storage_log_messages().get("a").forEach(messageBean -> assertEquals(messageBean.command(), new BasicMessageBean().command()));		
 	}
 
 }

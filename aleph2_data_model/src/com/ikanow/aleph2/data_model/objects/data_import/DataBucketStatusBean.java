@@ -114,13 +114,13 @@ public class DataBucketStatusBean {
 	/** A set of recent log messages from the enrichment modules, keyed by host. The core will remove old messages in an unspecified FIFO 
 	 * @return multimap of recent enrichment messages vs host
 	 */
-	public Multimap<String, BasicMessageBean> getEnrichment_log_messages() {
+	public Multimap<String, BasicMessageBean> enrichment_log_messages() {
 		return enrichment_log_messages;
 	}
 	/** A set of recent log messages from the storage services, keyed by host. The core will remove old messages in an unspecified FIFO 
 	 * @return multimap of recent enrichment messages vs host
 	 */
-	public Multimap<String, BasicMessageBean> getStorage_log_messages() {
+	public Multimap<String, BasicMessageBean> storage_log_messages() {
 		return storage_log_messages;
 	}
 	

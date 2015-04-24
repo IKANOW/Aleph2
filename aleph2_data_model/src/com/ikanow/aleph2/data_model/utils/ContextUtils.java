@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
 public class ContextUtils {
@@ -38,6 +39,21 @@ public class ContextUtils {
 		}
 		return context;
 	}
-	//TODO getAnalyticsContext
-	//TODO getAccessContext?
+	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
+	 * @param signature can either be the fully qualified class name, or "<FQ class name>:arbitrary_config_string", which is then passed to the context via IHarvestContext.initializeNewContext 
+	 * @return
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static @NonNull IAnalyticsContext getAnalyticsContext(@NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		String[] clazz_and_config = signature.split(":", 2);
+		@SuppressWarnings("unchecked")
+		Class<IAnalyticsContext> analytics_clazz = (Class<IAnalyticsContext>) Class.forName(clazz_and_config[0]);
+		IAnalyticsContext context = analytics_clazz.newInstance();
+		if (clazz_and_config.length > 1) {
+			context.initializeNewContext(clazz_and_config[1]);
+		}
+		return context;
+	}
 }
