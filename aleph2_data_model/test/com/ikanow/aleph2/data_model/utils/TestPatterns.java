@@ -99,5 +99,5 @@ public class TestPatterns {
 		
 		assertEquals("Should pass condition and assign accordingly", "1: class java.lang.Double 2: class java.lang.Double", _retVal);
 	}
-	//TODO (ALEPH-4): handle otherwise cases
+	//TODO (ALEPH-3): handle otherwise cases
 }
