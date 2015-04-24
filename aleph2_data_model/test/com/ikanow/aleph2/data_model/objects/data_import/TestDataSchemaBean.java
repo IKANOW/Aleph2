@@ -30,6 +30,9 @@ public class TestDataSchemaBean {
 		
 		// Storage Schema Bean
 		
+		DataSchemaBean.StorageSchemaBean empty_storage_bean = new DataSchemaBean.StorageSchemaBean();
+		assertEquals("Empty Storage Bean", empty_storage_bean.service_name(), null);		
+		
 		DataSchemaBean.StorageSchemaBean storage_bean =
 				new DataSchemaBean.StorageSchemaBean(
 						true,
@@ -45,6 +48,9 @@ public class TestDataSchemaBean {
 		assertEquals("Storage bean technology_override_schema", storage_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Document Bean
+		
+		DataSchemaBean.DocumentSchemaBean empty_document_bean = new DataSchemaBean.DocumentSchemaBean();
+		assertEquals("Empty Document Bean", empty_document_bean.service_name(), null);		
 		
 		DataSchemaBean.DocumentSchemaBean document_bean =
 				new DataSchemaBean.DocumentSchemaBean(
@@ -63,6 +69,9 @@ public class TestDataSchemaBean {
 		
 		// Search Index Bean
 		
+		DataSchemaBean.SearchIndexSchemaBean empty_search_index_bean = new DataSchemaBean.SearchIndexSchemaBean();
+		assertEquals("Empty Search Index Bean", empty_search_index_bean.service_name(), null);		
+		
 		DataSchemaBean.SearchIndexSchemaBean search_index_bean =
 				new DataSchemaBean.SearchIndexSchemaBean(
 						true,
@@ -75,6 +84,9 @@ public class TestDataSchemaBean {
 		assertEquals("Search Index bean technology_override_schema", search_index_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Columnar Bean:
+		
+		DataSchemaBean.ColumnarSchemaBean empty_columnar_bean = new DataSchemaBean.ColumnarSchemaBean();
+		assertEquals("Empty Columnar Bean", empty_columnar_bean.service_name(), null);		
 		
 		DataSchemaBean.ColumnarSchemaBean columnar_bean =
 				new DataSchemaBean.ColumnarSchemaBean(
@@ -100,6 +112,9 @@ public class TestDataSchemaBean {
 		assertEquals("Columnar bean technology_override_schema", columnar_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Temporal
+		
+		DataSchemaBean.TemporalSchemaBean empty_temporal_bean = new DataSchemaBean.TemporalSchemaBean();
+		assertEquals("Empty Temporal Bean", empty_temporal_bean.service_name(), null);		
 		
 		DataSchemaBean.TemporalSchemaBean temporal_bean =
 				new DataSchemaBean.TemporalSchemaBean(
@@ -135,6 +150,9 @@ public class TestDataSchemaBean {
 		DataSchemaBean.DataWarehouseSchemaBean warehouse_bean = new DataSchemaBean.DataWarehouseSchemaBean();
 		
 		// Parent DataSchemaBean
+		
+		DataSchemaBean empty_schema_bean = new DataSchemaBean();
+		assertEquals("Empty Schema Bean", empty_schema_bean.storage_schema(), null);				
 		
 		DataSchemaBean schema_bean = new DataSchemaBean(storage_bean, document_bean, search_index_bean,
 				columnar_bean, temporal_bean, geospatial_bean, graph_bean, warehouse_bean

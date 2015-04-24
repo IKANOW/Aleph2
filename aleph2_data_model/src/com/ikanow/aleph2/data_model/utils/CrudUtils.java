@@ -34,7 +34,7 @@ public class CrudUtils {
 
 	//TODO add nested field support (see my notebook notes)
 	
-	public enum Operator { all_of, any_of, exists, not_exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed };
+	public enum Operator { all_of, any_of, exists, not_exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed, equals };
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 * @param  the starting set of fields (can be empty generated from default c'tor)
@@ -171,6 +171,13 @@ public class CrudUtils {
 		
 		// Public interface - build
 		
+		@SuppressWarnings("unchecked")
+		public <U> QueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull QueryComponent<U> nested_query_component) {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectUtils.from((Class<T>) _element.getClass());
+			}
+			return nested(_naming_helper.field(getter), nested_query_component);
+		}
 		/** Adds a collection field to the query - any of which can match
 		 * @param the Java8 getter for the field
 		 * @param the collection of objects, any of which can match
@@ -338,6 +345,34 @@ public class CrudUtils {
 		public QueryComponent<T> withNotPresent(@NonNull String field) {
 			return with(Operator.not_exists, field, null);
 		}
+		/**
+		 * @param field
+		 * @param nested_query_component
+		 * @return
+		 */
+		public <U> QueryComponent<T> nested(@NonNull String field, @NonNull QueryComponent<U> nested_query_component) {
+			
+			// Take all the non-null fields from the raw object and add them as op_equals
+			
+			Arrays.stream(nested_query_component._element.getClass().getDeclaredFields())
+				.map(field_accessor -> { 
+					try { 
+						Object val = field_accessor.get(nested_query_component._element);
+						return val == null ? null : Tuples._2T(field_accessor.getName(), val);
+					} 
+					catch (Exception e) { return null; }
+				})
+				.filter(field_tuple -> null != field_tuple) 
+				.forEach(field_tuple -> this.with(Operator.equals, field + "." + field_tuple._1(), Arrays.asList(field_tuple._2(), null))); 
+			
+			// Easy bit, add the extras
+			
+			Optionals.ofNullable(nested_query_component._extra.entries()).stream()
+				.forEach(entry -> this._extra.put(field + "." + entry.getKey(), entry.getValue()));
+			
+			return this;
+		}
+		
 		/** Limits the number of returned objects (ignored if the query component is used in a multi-query)
 		 * @param limit the max number of objects to retrieve
 		 * @return the query component "helper"
