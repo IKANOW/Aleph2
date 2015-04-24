@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;

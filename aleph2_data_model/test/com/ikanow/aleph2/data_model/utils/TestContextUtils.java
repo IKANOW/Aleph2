@@ -108,7 +108,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<DataBucketStatusBean> getHarvestStateOrStatus(
+		public Future<DataBucketStatusBean> getHarvestStatus(
 				Optional<DataBucketBean> bucket) {
 			return null;
 		}
@@ -164,8 +164,8 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public ICrudService<?> getHarvestBucketObjectStore(
-				Optional<DataBucketBean> bucket) {
+		public <S> ICrudService<S> getHarvestBucketObjectStore(Class<S> clazz,
+				Optional<DataBucketBean> bucket, Optional<String> sub_collection) {
 			return null;
 		}
 		

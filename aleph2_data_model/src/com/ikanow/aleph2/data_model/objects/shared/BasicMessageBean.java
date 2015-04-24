@@ -29,10 +29,16 @@ public class BasicMessageBean {
 	
 	/** User constructor
 	 */
-	public BasicMessageBean(@NonNull Date date, @Nullable String source, @NonNull String message) {
+	public BasicMessageBean(@NonNull Date date, 								
+								@Nullable String source,
+								@Nullable String command,
+								@Nullable Integer message_code,
+								@NonNull String message) {
 		this.date = date;
 		this.source = source;
 		this.message = message;
+		this.message_code = message_code;
+		this.command = command;
 	}
 	/** the date when the message was generated
 	 * @return the date when the message was generated
@@ -46,6 +52,18 @@ public class BasicMessageBean {
 	public String source() {
 		return source;
 	}
+	/** A freeform string representing the command that resulted in this message
+	 * @return the command that spawned the message
+	 */
+	public String command() {
+		return command;
+	}
+	/** An integer representing a message code for non-human
+	 * @return the command that spawned the message
+	 */
+	public Integer message_code() {
+		return message_code;
+	}
 	/** A freeform string containing the message itself
 	 * @return
 	 */
@@ -55,5 +73,7 @@ public class BasicMessageBean {
 	
 	private Date date;
 	private String source;
+	private String command;
+	private Integer message_code;
 	private String message;
 }

@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -54,10 +56,12 @@ public interface IManagementDbService {
 	//TODO: security and other things that we'll initially handle from IKANOW v1
 	
 	/** Gets or (lazily) creates a repository shared by all users of the specified library (eg Harvest Technology)
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param library a partial bean with the name or _id set
+	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per library generic object store
 	 */
-	<T> ICrudService<T> getPerLibraryState(SharedLibraryBean library);
+	<T> ICrudService<T> getPerLibraryState(@NonNull Class<T> clazz, @NonNull SharedLibraryBean library, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -76,10 +80,12 @@ public interface IManagementDbService {
 	ICrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
-	 * @param library a partial bean with the name or _id set
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param bucket a partial bean with the name or _id set
+	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per bucket generic object store
 	 */
-	<T> ICrudService<T> getPerBucketState(DataBucketBean bucket);
+	<T> ICrudService<T> getPerBucketState(@NonNull Class<T> clazz, @NonNull DataBucketBean bucket, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -91,10 +97,12 @@ public interface IManagementDbService {
 	ICrudService<AnalyticThreadBean> getAnalyticThreadStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
-	 * @param library a partial bean with the name or _id set
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param analytic_thread a partial bean with the name or _id set
+	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
-	<T> ICrudService<T> getPerAnalyticThreadState(AnalyticThreadBean analytic_thread);
+	<T> ICrudService<T> getPerAnalyticThreadState(@NonNull Class<T> clazz, @NonNull AnalyticThreadBean analytic_thread, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 
