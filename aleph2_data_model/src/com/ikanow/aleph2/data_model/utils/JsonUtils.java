@@ -17,7 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 public class JsonUtils {
 
-	//TODO need a NestedAccessHelper for nested access to objects that can include maps
+	//TODO (ALEPH-4): need a NestedAccessHelper for nested access to objects that can include maps
 	//(see Joern's code for the harvester...)
 	
 }

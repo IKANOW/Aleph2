@@ -32,8 +32,6 @@ import com.ikanow.aleph2.data_model.utils.ObjectUtils.MethodNamingHelper;
  */
 public class CrudUtils {
 
-	//TODO add nested field support (see my notebook notes)
-	
 	public enum Operator { all_of, any_of, exists, not_exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed, equals };
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match

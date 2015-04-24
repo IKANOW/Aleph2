@@ -51,7 +51,7 @@ public interface IEnrichmentStreamingTopology {
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
 	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 
-	 * TODO build a util that lets you fold all the fields into the last one (converted from String)
+	 * TODO (ALEPH-4): build a util that lets you fold all the fields into the last one (converted from String)
 	 * @param outgoing_object - the final object output via either the success or error endpoint
 	 * @return the final JsonNode to store
 	 */

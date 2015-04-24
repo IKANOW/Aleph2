@@ -33,7 +33,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** A context library that is always passed to the IAnalyticsTechnology module and can also be 
- *  passed to the analytics library processing (TODO: need to document how, ie copy JARs into external classpath and call ContextUtils.getAnalyticsContext)
+ *  passed to the analytics library processing (TODO (ALEPH-12): need to document how, ie copy JARs into external classpath and call ContextUtils.getAnalyticsContext)
  * @author acp
  */
 public interface IAnalyticsContext {
@@ -105,7 +105,7 @@ public interface IAnalyticsContext {
 	 */
 	Future<JsonNode> getGlobalAnalyticsTechnologyConfiguration();
 	
-	/** (AnalyticsTechnology only) For each library defined by the analytic_thread.XXX, returns a FileSystem path 
+	/** (AnalyticsTechnology only) For each library defined by the analytic_thread.xxx (TODO: ALEPH-12), returns a FileSystem path 
 	 * @param analytic_thread An optional analytic thread - if there is no ambiguity in the thread then Optional.empty() can be passed (Note that the behavior of the context if called on another thread than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
 	 */

@@ -17,10 +17,11 @@ package com.ikanow.aleph2.data_model.objects.data_analytics;
 
 public class AnalyticThreadBean {
 
-	//TODO so the thread looks like
+	//TODO (ALEPH-12): so the thread looks like
 	// analytic engine (MapReduce/Spark/Storm) -> module (eg sliding window aggregation) -> thread (set of modules within an engine + config)
 	// (Compare to import .. analytic engine <-> ?? / analytic module <-> harvester / bucket <->  analytic thread
-	//TODO: hmm suppose I want to run Flume as the overall technology, but I want to run different 
+	
+	//TODO (ALEPH-12): hmm suppose I want to run Flume as the overall technology, but I want to run different 
 	// java within my different flume instances? i need some way to manage my "JAR" files
 	
 	// Each analytic has a bunch of generic parameters:
@@ -29,7 +30,7 @@ public class AnalyticThreadBean {
 	// - Start conditions (permanent/periodic/dependent on another job)
 	// - Exit conditions
 	
-	//TODO: list/graph of analytics with some sort og exit criteria
+	//TODO (ALEPH-12): list/graph of analytics with some sort og exit criteria
 	
-	//TODO: want an associated bucket 
+	//TODO (ALEPH-12): want an associated bucket 
 }

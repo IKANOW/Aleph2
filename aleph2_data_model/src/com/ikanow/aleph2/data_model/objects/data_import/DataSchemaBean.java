@@ -277,7 +277,7 @@ public class DataSchemaBean {
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
 		
-		//TODO: handle object format collisions - coexist/prevent/block
+		//TODO (ALEPH-14): handle object format collisions - coexist/prevent/block
 	}
 	/** Per bucket schema for the Columnar Service
 	 * @author acp
@@ -464,7 +464,7 @@ public class DataSchemaBean {
 	 * @author acp
 	 */
 	public static class GeospatialSchemaBean {
-		//TODO define an initial set of geo-spatial schema
+		//TODO (ALEPH-16): define an initial set of geo-spatial schema
 		//private Boolean enabled;
 		//private String service_name;
 		//private Map<String, Object> technology_override_schema;
@@ -473,7 +473,7 @@ public class DataSchemaBean {
 	 * @author acp
 	 */
 	public static class GraphSchemaBean {
-		//TODO define an initial set of graph schema 
+		//TODO (ALEPH-15): define an initial set of graph schema 
 		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
 		//private Boolean enabled;
 		//private String service_name;
@@ -484,7 +484,7 @@ public class DataSchemaBean {
 	 * @author acp
 	 */
 	public static class DataWarehouseSchemaBean {
-		//TODO "sql" (hive) view of the data
+		//TODO (ALEPH-17): "sql" (hive) view of the data
 		//config: map JSON to sql fields ie allow generation of serde
 		//also maps buckets to database/table format
 		//private Boolean enabled;

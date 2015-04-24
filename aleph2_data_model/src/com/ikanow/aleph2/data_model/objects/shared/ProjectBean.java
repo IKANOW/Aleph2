@@ -19,5 +19,5 @@ package com.ikanow.aleph2.data_model.objects.shared;
  * @author acp
  */
 public class ProjectBean {
-	//TODO
+	//TODO (ALEPH-21):
 }
