@@ -112,7 +112,8 @@ public class DataBucketBean {
 		return multi_node_enabled;
 	}
 	/** Each item is either a glob or regex (format: /regex/flags) which is compared against the nodes' hostnames to determine whether the associated bucket can run on that hostname
-	 * @return
+	 * If a string is prefaced with the '-' then it is an exclude rule; if there is no prefix, or the prefix is '+' then it is an include rule. 
+	 * @return the node list rules
 	 */
 	public List<String> node_list_rules() {
 		return node_list_rules;
