@@ -18,7 +18,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 /** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
  * @author acp
  */
-public interface IGeneralDistributedServices {
+public interface ICoreDistributedServices {
 
 	//TODO (ALEPH-18)
 }
