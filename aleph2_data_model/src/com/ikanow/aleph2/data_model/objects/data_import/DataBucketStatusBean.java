@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -23,6 +24,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+
 import scala.Tuple2;
 
 /** Represents generic harvest status
@@ -39,6 +41,7 @@ public class DataBucketStatusBean {
 			@NonNull Boolean suspended,
 			@Nullable Date quarantined_until,
 			@NonNull Long num_objects,
+			@Nullable List<String> node_affinity,
 			@Nullable Map<String, BasicMessageBean> last_harvest_status_messages,
 			@Nullable Map<String, BasicMessageBean> last_enrichment_status_messages,
 			@Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
@@ -50,6 +53,7 @@ public class DataBucketStatusBean {
 		this.suspended = suspended;
 		this.quarantined_until = quarantined_until;
 		this.num_objects = num_objects;
+		this.node_affinity = node_affinity;
 		this.last_harvest_status_messages = last_harvest_status_messages;
 		this.last_enrichment_status_messages = last_enrichment_status_messages;
 		this.last_storage_status_messages = last_storage_status_messages;
@@ -86,6 +90,13 @@ public class DataBucketStatusBean {
 		return num_objects;
 	}
 
+	/** The current set of hostnames on which the associated harvest technology is running
+	 * @return the current list of hostnames on which the associated harvest technology is running
+	 */
+	public List<String> node_affinity() {
+		return node_affinity;
+	}
+	
 	/** Each time a host performs a harvest activity (either -internal- technology or -external- module) it can update this date/status 
 	 * @return a map of hosts vs the last time they harvested for this bucket 
 	 */
@@ -129,6 +140,8 @@ public class DataBucketStatusBean {
 	private Date quarantined_until;
 	
 	private Long num_objects;
+	
+	private List<String> node_affinity;
 	
 	private Map<String, BasicMessageBean> last_harvest_status_messages;
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;

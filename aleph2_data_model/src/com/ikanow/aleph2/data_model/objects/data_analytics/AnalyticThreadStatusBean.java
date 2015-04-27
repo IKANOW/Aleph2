@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -39,6 +40,7 @@ public class AnalyticThreadStatusBean {
 			@NonNull Boolean suspended,
 			@Nullable Date quarantined_until,
 			@NonNull Long num_objects,
+			@Nullable List<String> node_affinity,
 			@Nullable Map<String, BasicMessageBean> last_status_messages,
 			@Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
 			@Nullable Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages) {
@@ -47,6 +49,7 @@ public class AnalyticThreadStatusBean {
 		this.suspended = suspended;
 		this.quarantined_until = quarantined_until;
 		this.num_objects = num_objects;
+		this.node_affinity = node_affinity;
 		this.last_status_messages = last_status_messages;
 		this.last_storage_status_messages = last_storage_status_messages;
 		this.analytics_log_messages = analytics_log_messages;
@@ -80,6 +83,13 @@ public class AnalyticThreadStatusBean {
 		return num_objects;
 	}
 
+	/** The current set of hostnames on which the analytics technology is running
+	 * @return the current list of hostnames on which the analytics technology is running
+	 */
+	public List<String> node_affinity() {
+		return node_affinity;
+	}
+	
 	/** Each time a host performs an analytic activity (either -internal- technology or -external- module) it can update this date/status 
 	 * @return a map of hosts vs the last time they performed processing for this thread 
 	 */
@@ -105,6 +115,8 @@ public class AnalyticThreadStatusBean {
 	private Date quarantined_until;
 	
 	private Long num_objects;
+	
+	private List<String> node_affinity;
 	
 	private Map<String, BasicMessageBean> last_status_messages;
 	private Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages;	

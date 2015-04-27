@@ -97,6 +97,29 @@ public class DataBucketBean {
 	private Set<String> tags;
 	private AuthorizationBean access_rights;
 	private String poll_frequency;
+
+	////////////////////////////////////////
+
+	// Distribution across nodes in the cluster
+	
+	// There is quite a lot of flexibility in exactly where the harvester associated with a bucket can run, and on how many nodes
+	
+	/** Determines whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 *  - regardless, will only run on nodes meeting the rules specified in node_list_rules()
+	 * @return whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 */
+	public Boolean multi_node_enabled() {
+		return multi_node_enabled;
+	}
+	/** Each item is either a glob or regex (format: /regex/flags) which is compared against the nodes' hostnames to determine whether the associated bucket can run on that hostname
+	 * @return
+	 */
+	public List<String> node_list_rules() {
+		return node_list_rules;
+	}
+	
+	private Boolean multi_node_enabled;
+	private List<String> node_list_rules;
 	
 	////////////////////////////////////////
 	

@@ -31,6 +31,14 @@ import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
  */
 public interface IHarvestTechnologyModule {
 
+	/** This function should check the local environment, decide whether the technology module can run on this node
+	 *  (eg is the external software installed? are the environment variables set up correctly etc) and return 
+	 *  true/false as quickly as possibly. (Will often default to just 'return true;') 
+	 * @param bucket - the bucket to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
+	 * @return true if this node can run this module's functionality
+	 */
+	boolean canRunOnThisNode(@NonNull DataBucketBean bucket);
+	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
 	 * that was previously associated with a different harvester.
