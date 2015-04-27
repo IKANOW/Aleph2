@@ -15,25 +15,22 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-import java.io.ByteArrayOutputStream;
-import java.util.Optional;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+//import java.io.ByteArrayOutputStream;
+//import java.util.Optional;
+//import com.fasterxml.jackson.databind.JsonNode;
+//import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 /** A single element in a streaming real-time pipeline
+ *  Prefer to the IEnrichmentStreamingTopology when generating highly re-usable components that can be used 
+ *  in very simple processing pipelines 
+ *  (NOT YET IMPLEMENTED)
  * @author acp
  */
 public interface IEnrichmentStreamingModule {
 
-	//TODO (would like to get rid of this to avoid classpath pollution?)
-	void onConfigure(IEnrichmentModuleContext context, DataBucketBean bucket);
-	
-	//TODO when the actual processing starts up
-	void onInitialize(IEnrichmentModuleContext context, DataBucketBean bucket);
-	
-	//TODO do I want this to be an Iterable? Stream?!
-	//TODO stream does have the advantage that I can always make reducers batch...
-	void onObject(long id, JsonNode json, Optional<ByteArrayOutputStream> binary);
+	//TODO: something like
+	//void onConfigure(IEnrichmentModuleContext context, DataBucketBean bucket);
+	//void onInitialize(IEnrichmentModuleContext context, DataBucketBean bucket);
+	//void onObject(long id, JsonNode json, Optional<ByteArrayOutputStream> binary);
 	
 }
