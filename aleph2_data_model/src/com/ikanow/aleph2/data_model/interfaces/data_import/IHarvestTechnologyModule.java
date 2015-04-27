@@ -25,7 +25,7 @@ import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 
 /** Harvesters are responsible from taking objects in arbitrary formats over arbitrary transport protocols,
  *  and doing one of the following things:
- *   - 
+ *   - TODO (ALEPH-3)
  * @author acp
  *
  */
