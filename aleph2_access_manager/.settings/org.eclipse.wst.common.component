@@ -2,5 +2,6 @@
     <wb-module deploy-name="aleph2_access_manager">
         <wb-resource deploy-path="/" source-path="/src"/>
         <wb-resource deploy-path="/" source-path="/test"/>
+        <wb-resource deploy-path="/" source-path="/resources"/>
     </wb-module>
 </project-modules>

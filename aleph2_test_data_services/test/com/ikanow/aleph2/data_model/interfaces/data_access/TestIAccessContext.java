@@ -32,5 +32,13 @@ public class TestIAccessContext {
 		IAccessContext context = AccessDriver.getAccessContext();
 		assertNotNull(context.getDataService("SampleCustomService"));
 	}
+	
+	@Test
+	public void test() {
+		IAccessContext context = com.ikanow.aleph2.data_model.interfaces.data_access.AccessDriver.getAccessContext();
+		System.out.println(context.getClass().getName()); //this should be our AccessContext
+		context.getSecurityService();
+		
+	}
 
 }

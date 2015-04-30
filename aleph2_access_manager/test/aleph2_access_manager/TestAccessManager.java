@@ -57,7 +57,7 @@ public class TestAccessManager {
 	@Test
 	public void testGetCustomServices() {
 		IAccessContext context = AccessDriver.getAccessContext();
-		assertNotNull(context.getDataService("SampleCustomService"));
+		assertNotNull(context.getDataService("com.ikanow.aleph2.access_manager.data_access.SampleCustomService"));
 	}
 
 }
