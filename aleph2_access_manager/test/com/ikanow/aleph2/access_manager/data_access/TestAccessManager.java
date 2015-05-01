@@ -9,12 +9,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ikanow.aleph2.access_manager.data_access.AccessContext;
+import com.ikanow.aleph2.access_manager.data_access.util.ConfigUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
+import com.typesafe.config.Config;
 
 public class TestAccessManager {
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		//TODO load the config
+		Config test_config = ConfigUtil.loadTestConfig();
+		
 	}
 
 	@AfterClass
@@ -28,13 +33,8 @@ public class TestAccessManager {
 	@After
 	public void tearDown() throws Exception {
 	}	
-
-	@Test
-	public void test() {
-		AccessContext context = new AccessContext();
-		IDataService custom_service = context.getDataService("SampleCustomService");
-		assertNotNull(custom_service);
-	}
+	
+	//TODO I should probably be loading up a different config just for tests
 	
 	@Test
 	public void testGetDefaultServices() {
@@ -54,6 +54,12 @@ public class TestAccessManager {
 	public void testGetCustomServices() {
 		AccessContext context = new AccessContext();
 		assertNotNull(context.getDataService("SampleCustomService"));
+	}
+	
+	@Test
+	public void testGetCustomServiceDNE() {
+		AccessContext context = new AccessContext();
+		assertNull(context.getDataService("SampleCustomServiceDNE"));
 	}
 
 }
