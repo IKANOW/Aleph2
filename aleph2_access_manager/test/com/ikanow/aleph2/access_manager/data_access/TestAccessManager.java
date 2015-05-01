@@ -1,4 +1,4 @@
-package aleph2_access_manager;
+package com.ikanow.aleph2.access_manager.data_access;
 
 import static org.junit.Assert.*;
 
@@ -8,10 +8,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.ikanow.aleph2.data_model.interfaces.data_access.AccessDriver;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
+import com.ikanow.aleph2.access_manager.data_access.AccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
 public class TestAccessManager {
 
@@ -29,20 +27,18 @@ public class TestAccessManager {
 
 	@After
 	public void tearDown() throws Exception {
-	}
+	}	
 
 	@Test
 	public void test() {
-		IAccessContext context = AccessDriver.getAccessContext();
-		ISecurityService security_service = context.getSecurityService();
-		assertNotNull(security_service);
+		AccessContext context = new AccessContext();
 		IDataService custom_service = context.getDataService("SampleCustomService");
 		assertNotNull(custom_service);
 	}
 	
 	@Test
 	public void testGetDefaultServices() {
-		IAccessContext context = AccessDriver.getAccessContext();
+		AccessContext context = new AccessContext();
 		assertNotNull(context.getColumnarDbService());
 		assertNotNull(context.getDocumentDbService());
 		assertNotNull(context.getGeospatialService());
@@ -56,9 +52,8 @@ public class TestAccessManager {
 	
 	@Test
 	public void testGetCustomServices() {
-		IAccessContext context = AccessDriver.getAccessContext();
+		AccessContext context = new AccessContext();
 		assertNotNull(context.getDataService("SampleCustomService"));
-		//assertNotNull(context.getDataService("com.ikanow.aleph2.access_manager.data_access.SampleCustomService"));
 	}
 
 }
