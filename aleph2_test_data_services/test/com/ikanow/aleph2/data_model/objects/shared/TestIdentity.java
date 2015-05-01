@@ -9,7 +9,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.ikanow.aleph2.access_manager.data_access.AccessDriver;
+import com.ikanow.aleph2.data_model.interfaces.data_access.AccessDriver;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
 public class TestIdentity {

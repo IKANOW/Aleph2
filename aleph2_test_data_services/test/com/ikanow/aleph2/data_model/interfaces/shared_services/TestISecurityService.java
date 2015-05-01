@@ -11,7 +11,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.ikanow.aleph2.access_manager.data_access.AccessDriver;
+import com.ikanow.aleph2.data_model.interfaces.data_access.AccessDriver;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 
 public class TestISecurityService {

@@ -8,7 +8,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.ikanow.aleph2.access_manager.data_access.AccessDriver;
+import com.ikanow.aleph2.data_model.interfaces.data_access.AccessDriver;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
@@ -57,7 +57,8 @@ public class TestAccessManager {
 	@Test
 	public void testGetCustomServices() {
 		IAccessContext context = AccessDriver.getAccessContext();
-		assertNotNull(context.getDataService("com.ikanow.aleph2.access_manager.data_access.SampleCustomService"));
+		assertNotNull(context.getDataService("SampleCustomService"));
+		//assertNotNull(context.getDataService("com.ikanow.aleph2.access_manager.data_access.SampleCustomService"));
 	}
 
 }
