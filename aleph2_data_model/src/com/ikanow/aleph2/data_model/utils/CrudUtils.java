@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -192,6 +193,7 @@ public class CrudUtils {
 			}
 			
 			Arrays.stream(_element.getClass().getDeclaredFields())
+				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.map(field_accessor -> {
 					try { 
 						field_accessor.setAccessible(true);
@@ -428,6 +430,7 @@ public class CrudUtils {
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
 			Arrays.stream(nested_query_component._element.getClass().getDeclaredFields())
+				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.map(field_accessor -> { 
 					try { 
 						field_accessor.setAccessible(true);
@@ -459,7 +462,8 @@ public class CrudUtils {
 		 * @param orderList a list of 2-tupes, first is the field string, second is +1 for ascending, -1 for descending
 		 * @return the "multi" query component "helper"
 		 */
-		public QueryComponent<T> orderBy(@SuppressWarnings("unchecked") @NonNull  Tuple2<String, Integer>... orderList) {
+		@SafeVarargs
+		public final QueryComponent<T> orderBy(@NonNull  Tuple2<String, Integer>... orderList) {
 			if (null == _orderBy) {
 				_orderBy = Arrays.asList(orderList);
 			}

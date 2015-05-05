@@ -19,6 +19,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -152,6 +153,7 @@ public class ObjectTemplateUtils {
 		
 		protected void cloneInitialFields(@NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
+				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
 				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
