@@ -118,19 +118,6 @@ public class Patterns {
 				return expression.apply(_g);
 			}
 		}
-		/** If none of the when clauses applies, then returns the value specified  
-		 * @param r the return value
-		 * @return the return value from the matching clause or this otherwise
-		 */
-		@SuppressWarnings("unchecked")
-		public <RR> RR otherwise(RR r) {
-			if (_r_set) {
-				return (RR) _r;
-			}
-			else {
-				return r;
-			}
-		}
 		/** If none of the when clauses applies, then throws the specified exception  
 		 * @param t the exception to throw
 		 * @return the return value from the matching clause
@@ -147,7 +134,7 @@ public class Patterns {
 		/** If none of the when clauses applies, then performs the specified action (no return)
 		 * @param expression the action to perform, taking the matching variable as the input
 		 */
-		public void otherwise(Consumer<G> expression) {
+		public void otherwiseDo(Consumer<G> expression) {
 			if (!_r_set) {
 				expression.accept(_g);
 			}
