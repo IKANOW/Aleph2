@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,7 @@ public class DataBucketBean {
 	 * @return the node list rules
 	 */
 	public List<String> node_list_rules() {
-		return node_list_rules;
+		return Collections.unmodifiableList(node_list_rules);
 	}
 	
 	private Boolean multi_node_enabled;
@@ -135,14 +136,14 @@ public class DataBucketBean {
 	 * @return the bucket_aliases
 	 */
 	public Set<String> aliases() {
-		return aliases;
+		return Collections.unmodifiableSet(aliases);
 	}
 	/** A list of buckets in this multi-buckets
 	 *  (Nested multi-buckets are currently not supported)
 	 * @return multi_group_children
 	 */
 	public Set<String> multi_bucket_children() {
-		return multi_bucket_children;
+		return Collections.unmodifiableSet(multi_bucket_children);
 	}
 	private Set<String> multi_bucket_children;
 	private Set<String> aliases;
@@ -162,7 +163,7 @@ public class DataBucketBean {
 	 * @return the harvest_configs
 	 */
 	public List<HarvestControlMetadataBean> harvest_configs() {
-		return harvest_configs;
+		return Collections.unmodifiableList(harvest_configs);
 	}
 	
 	private String harvest_technology_name_or_id;
@@ -177,7 +178,7 @@ public class DataBucketBean {
 	 * @return the enrichment_configs
 	 */
 	public List<EnrichmentControlMetadataBean> batch_enrichment_configs() {
-		return batch_enrichment_configs;
+		return Collections.unmodifiableList(batch_enrichment_configs);
 	}
 	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
 	 *  to pass a single enrichment topology that is applied - this gives the developers much more control
@@ -192,7 +193,7 @@ public class DataBucketBean {
 	 * @return the enrichment_configs
 	 */
 	public List<EnrichmentControlMetadataBean> streaming_enrichment_configs() {
-		return streaming_enrichment_configs;
+		return Collections.unmodifiableList(streaming_enrichment_configs);
 	}
 	
 	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
@@ -236,7 +237,7 @@ public class DataBucketBean {
 	private DataSchemaBean data_schema;	
 	
 	public Map<String, String> data_locations() {
-		return data_locations;
+		return Collections.unmodifiableMap(data_locations);
 	}	
 	private Map<String, String> data_locations;
 	

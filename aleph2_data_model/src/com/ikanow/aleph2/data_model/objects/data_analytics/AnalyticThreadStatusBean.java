@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import scala.Tuple2;
 
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** Represents generic analytic thread status
@@ -87,27 +89,27 @@ public class AnalyticThreadStatusBean {
 	 * @return the current list of hostnames on which the analytics technology is running
 	 */
 	public List<String> node_affinity() {
-		return node_affinity;
+		return Collections.unmodifiableList(node_affinity);
 	}
 	
 	/** Each time a host performs an analytic activity (either -internal- technology or -external- module) it can update this date/status 
 	 * @return a map of hosts vs the last time they performed processing for this thread 
 	 */
 	public Map<String, BasicMessageBean> last_status_messages() {
-		return last_status_messages;
+		return Collections.unmodifiableMap(last_status_messages);
 	}
 	
 	/** Each time a host and data service write to a bucket it updates this date/status (from within the core) 
 	 * @return a map of host+service vs the status/date
 	 */
 	public Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages() {
-		return last_storage_status_messages;
+		return Collections.unmodifiableMap(last_storage_status_messages);
 	}
 	/** A set of recent log messages from the modules, keyed by host. The core will remove old messages in an unspecified FIFO 
 	 * @return multimap of recent analytics messages vs host and analytic module
 	 */
 	public Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages() {
-		return analytics_log_messages;
+		return Multimaps.unmodifiableMultimap(analytics_log_messages);
 	}
 	
 	private String _id;

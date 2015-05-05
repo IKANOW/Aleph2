@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 
@@ -87,7 +88,7 @@ public class BasicMessageBean {
 	 * @return the details (optional, for display purposes)
 	 */
 	public Map<String, String> details() {
-		return details;
+		return Collections.unmodifiableMap(details);
 	}
 	
 	private Date date;
