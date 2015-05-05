@@ -28,6 +28,8 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
  */
 public class DataBucketBean {
 
+	protected DataBucketBean() {}
+	
 	////////////////////////////////////////
 	
 	// General information

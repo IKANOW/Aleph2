@@ -31,7 +31,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  * @author acp
  */
 public class AnalyticThreadStatusBean {
-	public AnalyticThreadStatusBean() {}
+	protected AnalyticThreadStatusBean() {}
 	
 	/** User constructor
 	 */

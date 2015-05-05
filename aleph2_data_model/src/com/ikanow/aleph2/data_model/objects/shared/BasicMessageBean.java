@@ -26,7 +26,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class BasicMessageBean {
 
-	public BasicMessageBean() {}
+	protected BasicMessageBean() {}
 	
 	/** User constructor
 	 */

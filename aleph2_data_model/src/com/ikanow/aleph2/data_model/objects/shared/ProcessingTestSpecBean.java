@@ -22,7 +22,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class ProcessingTestSpecBean {
 
-	public ProcessingTestSpecBean() {}
+	protected ProcessingTestSpecBean() {}
 	
 	/** User constructor
 	 * @param requested_num_objects

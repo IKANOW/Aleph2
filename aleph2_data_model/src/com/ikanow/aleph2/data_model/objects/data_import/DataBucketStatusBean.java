@@ -32,7 +32,7 @@ import scala.Tuple2;
  */
 public class DataBucketStatusBean {
 
-	public DataBucketStatusBean() {}
+	protected DataBucketStatusBean() {}
 	
 	/** User constructor
 	 */

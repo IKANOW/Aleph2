@@ -28,7 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class DataSchemaBean {
 
-	public DataSchemaBean() {}
+	protected DataSchemaBean() {}
 	
 	/** User constructor
 	 */
@@ -115,7 +115,7 @@ public class DataSchemaBean {
 	 */
 	public static class StorageSchemaBean {
 		
-		public StorageSchemaBean() {}
+		protected StorageSchemaBean() {}
 		
 		/** User constructor
 		 */
@@ -176,7 +176,7 @@ public class DataSchemaBean {
 	 */
 	public static class DocumentSchemaBean {
 		
-		public DocumentSchemaBean() {}
+		protected DocumentSchemaBean() {}
 		
 		/** User constructor
 		 */
@@ -242,7 +242,7 @@ public class DataSchemaBean {
 	 */
 	public static class SearchIndexSchemaBean {
 		
-		public SearchIndexSchemaBean() {}
+		protected SearchIndexSchemaBean() {}
 		
 		/** User constructor
 		 */
@@ -284,7 +284,7 @@ public class DataSchemaBean {
 	 */
 	public static class ColumnarSchemaBean {
 		
-		public ColumnarSchemaBean() {}
+		protected ColumnarSchemaBean() {}
 		
 		/** User constructor
 		 */
@@ -376,7 +376,7 @@ public class DataSchemaBean {
 	 */
 	public static class TemporalSchemaBean {
 
-		public TemporalSchemaBean() {}
+		protected TemporalSchemaBean() {}
 		
 		/** User constructor
 		 */

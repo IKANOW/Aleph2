@@ -25,7 +25,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class DataLayerConfigurationBean {
 
-	public DataLayerConfigurationBean() {}
+	protected DataLayerConfigurationBean() {}
 	
 	/** User constructor
 	 */

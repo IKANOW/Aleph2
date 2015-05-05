@@ -22,7 +22,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class SharedLibraryBean {
 
-	public SharedLibraryBean() {}
+	protected SharedLibraryBean() {}
 	
 	/** User constructor
 	 */

@@ -26,7 +26,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class EnrichmentControlMetadataBean {
 	
-	public EnrichmentControlMetadataBean() {}
+	protected EnrichmentControlMetadataBean() {}
 	
 	/** User constructor
 	 */
