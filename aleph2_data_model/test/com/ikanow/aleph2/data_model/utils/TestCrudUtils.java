@@ -162,7 +162,10 @@ public class TestCrudUtils {
 	
 	private static <T> Tuple2<DBObject,DBObject> convertToMongoQuery(QueryComponent<T> query_in) {
 		LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> fields = query_in.getAll();
-
+		
+		// integration with test coverage
+		fields.removeAll("$jacocoData");
+		
 		//TODO ... handle top-level allOf vs anyOf
 		
 		final String andVsOr = "$and";
