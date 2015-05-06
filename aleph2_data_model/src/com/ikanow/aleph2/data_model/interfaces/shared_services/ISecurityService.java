@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Map;
 
-import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 
 public interface ISecurityService {

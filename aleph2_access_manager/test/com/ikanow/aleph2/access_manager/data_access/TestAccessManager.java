@@ -11,16 +11,12 @@ import org.junit.Test;
 import com.ikanow.aleph2.access_manager.data_access.AccessContext;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleUnboundService;
-import com.ikanow.aleph2.access_manager.data_access.util.ConfigUtil;
-import com.typesafe.config.Config;
 
 public class TestAccessManager {
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		//TODO load the config
-		Config test_config = ConfigUtil.loadTestConfig();
-		
+		//TODO load up what accessManager to test somehow (e.g. via config)
 	}
 
 	@AfterClass
@@ -39,7 +35,7 @@ public class TestAccessManager {
 	
 	@Test
 	public void testGetDefaultServices() {
-		AccessContext context = new AccessContext();
+		AccessContext context = new AccessContext(); //todo don't hardcode this access context
 		assertNotNull(context.getSecurityService());
 		
 		assertNotNull(context.getColumnarService());

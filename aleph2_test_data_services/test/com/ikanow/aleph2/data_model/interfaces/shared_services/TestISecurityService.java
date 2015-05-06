@@ -11,7 +11,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 
