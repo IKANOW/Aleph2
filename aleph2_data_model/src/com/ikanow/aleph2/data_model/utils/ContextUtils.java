@@ -24,6 +24,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -58,7 +59,6 @@ public class ContextUtils extends AbstractModule  {
 		}
 		return context;
 	}
-	//TODO getAnalyticsContext
 	
 	/**
 	 * Kicks off the injection by reading which access context we
@@ -103,5 +103,23 @@ public class ContextUtils extends AbstractModule  {
 		Class<? extends IAccessContext> class2 = (Class<? extends IAccessContext>) Class.forName((String) service);
 		logger.fine("Binding IAccessContext to " + class2.getCanonicalName());
 		bind(IAccessContext.class).to(class2);
+	}
+	
+	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
+	 * @param signature can either be the fully qualified class name, or "<FQ class name>:arbitrary_config_string", which is then passed to the context via IHarvestContext.initializeNewContext 
+	 * @return
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static @NonNull IAnalyticsContext getAnalyticsContext(@NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		String[] clazz_and_config = signature.split(":", 2);
+		@SuppressWarnings("unchecked")
+		Class<IAnalyticsContext> analytics_clazz = (Class<IAnalyticsContext>) Class.forName(clazz_and_config[0]);
+		IAnalyticsContext context = analytics_clazz.newInstance();
+		if (clazz_and_config.length > 1) {
+			context.initializeNewContext(clazz_and_config[1]);
+		}
+		return context;
 	}
 }

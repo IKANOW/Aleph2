@@ -49,11 +49,11 @@ public interface IManagementDbService {
 	 */
 	ICrudService<SharedLibraryBean> getSharedLibraryStore();
 	
-	//TODO: shared schemas
+	//TODO (ALEPH-19): shared schemas
 	
-	//TODO: other "shares" - including "bucket artefacts" like "documents", "spreadsheets", "knowledge graphs" 
+	//TODO (ALEPH-19): other "shares" - including "bucket artefacts" like "documents", "spreadsheets", "knowledge graphs" 
 	
-	//TODO: security and other things that we'll initially handle from IKANOW v1
+	//TODO (ALEPH-19, ALEPH-2): security and other things that we'll initially handle from IKANOW v1
 	
 	/** Gets or (lazily) creates a repository shared by all users of the specified library (eg Harvest Technology)
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)

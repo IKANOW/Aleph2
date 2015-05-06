@@ -15,8 +15,11 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,7 +43,7 @@ import net.sf.cglib.proxy.MethodProxy;
  * @author acp
  *
  */
-public class ObjectUtils {
+public class ObjectTemplateUtils {
 	
 	/**
 	 * Enables type-safe access to a single classes
@@ -119,6 +122,7 @@ public class ObjectUtils {
 					_naming_helper = from(_element);
 				}
 				Field f = _element.getClass().getDeclaredField(_naming_helper.field(getter));
+				f.setAccessible(true);
 				f.set(_element, val);
 			}
 			catch (Exception e) {
@@ -144,18 +148,21 @@ public class ObjectUtils {
 					.when(Map.class, c -> Collections.unmodifiableMap((Map<?,?>)c) )
 					.when(List.class, c -> Collections.unmodifiableList((List<?>)c) )
 					.when(Collection.class, c -> Collections.unmodifiableCollection((Collection<?>)c) )
-					.otherwise(o);
+					.otherwise(oo -> o);
 		}
 		
 		protected void cloneInitialFields(@NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
-				.map(f -> { try { return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
+				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
+				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
 				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
-		protected CloningHelper(@NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException {
-			_element = (T) element_clazz.newInstance();
+		protected CloningHelper(@NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
+			final Constructor<T> contructor = (Constructor<T>) element_clazz.getDeclaredConstructor();
+			contructor.setAccessible(true);
+			_element = (T) contructor.newInstance();
 		}
 		protected CloningHelper(@NonNull T to_clone) {
 			_element = to_clone;

@@ -27,6 +27,13 @@ import scala.Tuple2;
  */
 public interface IBasicSearchService<O> {
 
+	/** Count the number of objects matching a simple lucene-type query on the underlying data, where supported
+	 * @param query_string - A lucene formatted query
+	 * @param filter_string - A lucene formatted filter (doesn't affect scoring-based sort order, is sometimes faster)
+	 * @return a future containing the number of matching objects
+	 */
+	Future<Long> count(Optional<String> query_string, Optional<String> filter_string);
+	
 	/** Performs a simple lucene-type query on the underlying data, where supported
 	 * @param query_string - A lucene formatted query
 	 * @param filter_string - A lucene formatted filter (doesn't affect scoring-based sort order, is sometimes faster)

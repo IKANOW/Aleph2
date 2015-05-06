@@ -28,9 +28,9 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.ImmutableMap;
-import com.ikanow.aleph2.data_model.utils.TestObjectUtils.NestedTestBean.NestedNestedTestBean;
+import com.ikanow.aleph2.data_model.utils.TestObjectTemplateUtils.NestedTestBean.NestedNestedTestBean;
 
-public class TestObjectUtils {
+public class TestObjectTemplateUtils {
 
 	public static class TestBean {
 		public String testField() { return testField; } /** Test field */
@@ -41,9 +41,9 @@ public class TestObjectUtils {
 	@Test
 	public void testSingleMethodHelper() {
 		
-		String test1 = ObjectUtils.from(TestBean.class).field(TestBean::testField);
+		String test1 = ObjectTemplateUtils.from(TestBean.class).field(TestBean::testField);
 		TestBean t = new TestBean();
-		String test2 = ObjectUtils.from(t).field(TestBean::testField);
+		String test2 = ObjectTemplateUtils.from(t).field(TestBean::testField);
 		assertEquals("The type safe reference should resolve correctly (class ref)", "testField", test1);
 		assertEquals("The type safe reference should resolve correctly (object ref)", "testField", test2);
 	}
@@ -66,10 +66,10 @@ public class TestObjectUtils {
 	
 	@Test
 	public void testNestedMethodHelper() {
-		String test1 = ObjectUtils.from(NestedTestBean.class).field(NestedTestBean::testField);
-		String test2 = ObjectUtils.from(NestedTestBean.class)
+		String test1 = ObjectTemplateUtils.from(NestedTestBean.class).field(NestedTestBean::testField);
+		String test2 = ObjectTemplateUtils.from(NestedTestBean.class)
 							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class).field(NestedNestedTestBean::testField);
-		String test3 = ObjectUtils.from(NestedTestBean.class)
+		String test3 = ObjectTemplateUtils.from(NestedTestBean.class)
 							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class)
 							.nested(NestedNestedTestBean::nestedBean, NestedNestedTestBean.class)
 							.field(NestedNestedTestBean::testField);
@@ -77,7 +77,7 @@ public class TestObjectUtils {
 		NestedTestBean t1 = new NestedTestBean();
 		NestedNestedTestBean t2 = new NestedNestedTestBean();
 		
-		String test4 = ObjectUtils.from(t1).nested(NestedTestBean::nestedBean, t2).field(NestedNestedTestBean::nestedBean);
+		String test4 = ObjectTemplateUtils.from(t1).nested(NestedTestBean::nestedBean, t2).field(NestedNestedTestBean::nestedBean);
 		
 		assertEquals("The type safe reference should resolve correctly (class ref)", "testField", test1);
 		assertEquals("The type safe reference should resolve correctly (nested, class ref)", "testField", test2);
@@ -98,7 +98,7 @@ public class TestObjectUtils {
 	@Test
 	public void testBeanBuilder() {
 		
-		TestBuildBean test = ObjectUtils.build(TestBuildBean.class)
+		TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
 								.with(TestBuildBean::testField, "4")
 								.with("test2Field", "5")
 								.with("test4Fields", Arrays.asList("1", "2", "3"))
@@ -115,7 +115,7 @@ public class TestObjectUtils {
 	
 	@Test
 	public void testBeanBuilder_ContainersImmutable() {
-		TestBuildBean test = ObjectUtils.build(TestBuildBean.class)
+		TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
 				.with(TestBuildBean::testField, "4")
 				.with("test2Field", "5")
 				.with("test4Fields", Arrays.asList("1", "2", "3"))
@@ -149,7 +149,7 @@ public class TestObjectUtils {
 		to_clone.test6Fields = new HashMap<String, Integer>();
 		to_clone.test6Fields.put("6", 6);
 		
-		TestCloneBean test = ObjectUtils.clone(to_clone)
+		TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
 								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
 								.with(TestCloneBean::test3Field, "3")
@@ -184,7 +184,7 @@ public class TestObjectUtils {
 		to_clone.test6Fields = new HashMap<String, Integer>();
 		to_clone.test6Fields.put("6", 6);
 		
-		TestCloneBean test = ObjectUtils.clone(to_clone)
+		TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
 								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
 								.with(TestCloneBean::test3Field, "3")

@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class HarvestControlMetadataBean {
 	
-	public HarvestControlMetadataBean() {}
+	protected HarvestControlMetadataBean() {}
 	
 	public HarvestControlMetadataBean(@NonNull String name, @NonNull Boolean enabled, @Nullable List<String> library_ids_or_names,
 			@NonNull Map<String, Object> config) {
@@ -54,13 +55,13 @@ public class HarvestControlMetadataBean {
 	 * @return the library_ids_or_names
 	 */
 	public List<String> library_ids_or_names() {
-		return library_ids_or_names;
+		return Collections.unmodifiableList(library_ids_or_names);
 	}
 	/** The harvest-technology-specific configuration that controls the per-bucket import
 	 * @return the config
 	 */
 	public Map<String, Object> config() {
-		return config;
+		return Collections.unmodifiableMap(config);
 	}
 	private String name;
 	private Boolean enabled;

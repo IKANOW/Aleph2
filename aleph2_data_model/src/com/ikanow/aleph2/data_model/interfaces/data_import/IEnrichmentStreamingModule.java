@@ -28,7 +28,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
  */
 public interface IEnrichmentStreamingModule {
 
-	//TODO: something like
+	//TODO (ALEPH-4): something like
 	//void onConfigure(IEnrichmentModuleContext context, DataBucketBean bucket);
 	//void onInitialize(IEnrichmentModuleContext context, DataBucketBean bucket);
 	//void onObject(long id, JsonNode json, Optional<ByteArrayOutputStream> binary);

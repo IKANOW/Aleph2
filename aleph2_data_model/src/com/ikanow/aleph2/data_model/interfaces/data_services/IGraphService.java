@@ -19,7 +19,7 @@ import java.util.Optional;
 
 public interface IGraphService {
 
-	//TODO: implement tinkerpop?
+	//TODO (ALEPH-15): implement tinkerpop?
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

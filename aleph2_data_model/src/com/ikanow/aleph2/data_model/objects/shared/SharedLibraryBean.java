@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 
@@ -22,7 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class SharedLibraryBean {
 
-	public SharedLibraryBean() {}
+	protected SharedLibraryBean() {}
 	
 	/** User constructor
 	 */
@@ -91,7 +92,7 @@ public class SharedLibraryBean {
 	 * @return
 	 */
 	public Set<String> tags() {
-		return tags;
+		return Collections.unmodifiableSet(tags);
 	}
 	/** The set of access tokens, read access only - any admin has write access and nobody else
 	 * @return the set of access tokens

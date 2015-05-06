@@ -17,7 +17,7 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 
 public class AnnotationBean {
 
-	//TODO:
+	//TODO (ALEPH-13):
 	// tags
 	// source_url
 	// display_url
@@ -27,7 +27,7 @@ public class AnnotationBean {
 	// user comments
 	// user modifications
 	
-	//TODO need to get right a bunch of the things that were wrong in the original:
+	//TODO (ALEPH-13): need to get right a bunch of the things that were wrong in the original:
 	// - handle large objects more elegantly
 	// - (optionally) handle proximity, multiple references
 }

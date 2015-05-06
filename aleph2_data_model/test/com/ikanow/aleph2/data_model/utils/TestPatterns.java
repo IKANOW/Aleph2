@@ -29,7 +29,7 @@ public class TestPatterns {
 			.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
 			.when(Double.class, d -> "2: " + d.getClass().toString())
 			.when(Boolean.class, b -> b ? "true" : "false")
-			.otherwise("unknown");
+			.otherwise(oo -> "unknown");
 
 		assertEquals("Should fail condition and return on class match", "2: class java.lang.Double", s);
 		
@@ -39,7 +39,7 @@ public class TestPatterns {
 				.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
 				.when(Double.class, d -> "2: " + d.getClass().toString())
 				.when(Boolean.class, b -> b ? "true" : "false")
-				.otherwise("unknown");		
+				.otherwise(oo -> "unknown");		
 		
 		assertEquals("Should pass condition and return accordingly", "1: class java.lang.Double", s);
 		
@@ -99,5 +99,5 @@ public class TestPatterns {
 		
 		assertEquals("Should pass condition and assign accordingly", "1: class java.lang.Double 2: class java.lang.Double", _retVal);
 	}
-	//TODO: handle otherwise cases
+	//TODO (ALEPH-3): handle otherwise cases
 }

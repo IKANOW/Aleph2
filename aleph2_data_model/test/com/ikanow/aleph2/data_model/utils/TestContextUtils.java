@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.Rule;
@@ -29,8 +31,11 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -54,6 +59,25 @@ public class TestContextUtils {
 		assertTrue(context2 instanceof IHarvestContext);
 		assertEquals(((MockHarvestContext)context2).dummySignature, "test_signature:includes:");
 	}
+
+	@Test
+	public void testAnalyticsContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		
+		// 1) class by itself
+		IAnalyticsContext context1 = ContextUtils.getAnalyticsContext("com.ikanow.aleph2.data_model.utils.TestContextUtils$MockAnalyticsContext");
+
+		assertTrue(context1 instanceof MockAnalyticsContext);
+		assertTrue(context1 instanceof IAnalyticsContext);
+		assertEquals(((MockAnalyticsContext)context1).dummySignature, null);
+		
+		// 2) class + configuration
+		IAnalyticsContext context2 = ContextUtils.getAnalyticsContext("com.ikanow.aleph2.data_model.utils.TestContextUtils$MockAnalyticsContext:test_signature:includes:");
+		
+		assertTrue(context2 instanceof MockAnalyticsContext);
+		assertTrue(context2 instanceof IAnalyticsContext);
+		assertEquals(((MockAnalyticsContext)context2).dummySignature, "test_signature:includes:");
+	}
+	
 	
 	@Rule
 	public ExpectedException exception = ExpectedException.none();
@@ -64,6 +88,16 @@ public class TestContextUtils {
 		exception.expect(ClassNotFoundException.class);
 		
 		IHarvestContext context1 = ContextUtils.getHarvestContext("com.ikanow.aleph2.data_model.utils.TestContextUtils$DOES_NOT_EXIST");
+
+		context1.getClass();
+	}
+	
+	@Test
+	public void testAnalyticsContextCreationFailure() throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		
+		exception.expect(ClassNotFoundException.class);
+		
+		IAnalyticsContext context1 = ContextUtils.getAnalyticsContext("com.ikanow.aleph2.data_model.utils.TestContextUtils$DOES_NOT_EXIST");
 
 		context1.getClass();
 	}
@@ -171,4 +205,112 @@ public class TestContextUtils {
 		}
 		
 	}
+	public static class MockAnalyticsContext implements IAnalyticsContext {
+		
+		public MockAnalyticsContext() {}
+		
+		String dummySignature = null;
+
+		@Override
+		public <I> I getService(@NonNull Class<I> service_clazz,
+				@NonNull Optional<String> service_name) {
+			return null;
+		}
+
+		@Override
+		public Future<BasicMessageBean> subscribeToBucket(
+				@NonNull DataBucketBean bucket,
+				@NonNull Optional<String> stage,
+				Consumer<JsonNode> on_new_object_callback) {
+			return null;
+		}
+
+		@Override
+		public Future<BasicMessageBean> subscribeToAnalyticThread(
+				@NonNull AnalyticThreadBean analytic_thread,
+				@NonNull Optional<String> stage,
+				Consumer<JsonNode> on_new_object_callback) {
+			return null;
+		}
+
+		@Override
+		public Future<Stream<JsonNode>> getObjectStreamFromBucket(
+				@NonNull DataBucketBean bucket, @NonNull Optional<String> stage) {
+			return null;
+		}
+
+		@Override
+		public Stream<JsonNode> getObjectStreamFromAnalyticThread(
+				@NonNull AnalyticThreadBean analytic_thread,
+				@NonNull Optional<String> stage) {
+			return null;
+		}
+
+		@Override
+		public List<String> getAnalyticsContextLibraries(
+				@NonNull Optional<Set<Class<?>>> services) {
+			return null;
+		}
+
+		@Override
+		public String getAnalyticsContextSignature(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+			return null;
+		}
+
+		@Override
+		public Future<JsonNode> getGlobalAnalyticsTechnologyConfiguration() {
+			return null;
+		}
+
+		@Override
+		public Future<Map<String, String>> getAnalyticsLibraries(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getThreadObjectStore(
+				@NonNull Class<S> clazz,
+				@NonNull Optional<AnalyticThreadBean> analytic_thread,
+				@NonNull Optional<String> sub_collection,
+				boolean auto_apply_prefix) {
+			return null;
+		}
+
+		@Override
+		public Future<AnalyticThreadStatusBean> getThreadStatus(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+			return null;
+		}
+
+		@Override
+		public void logStatusForThreadOwner(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread,
+				@NonNull BasicMessageBean message, boolean roll_up_duplicates) {
+		}
+
+		@Override
+		public void logStatusForThreadOwner(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread,
+				@NonNull BasicMessageBean message) {
+		}
+
+		@Override
+		public void emergencyDisableThread(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+		}
+
+		@Override
+		public void emergencyQuarantineThread(
+				@NonNull Optional<AnalyticThreadBean> analytic_thread,
+				@NonNull String quarantine_duration) {
+		}
+
+		@Override
+		public void initializeNewContext(@NonNull String signature) {
+			dummySignature = signature;			
+		}
+	}
+	
 }

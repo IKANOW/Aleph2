@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,8 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
  */
 public class DataBucketBean {
 
+	protected DataBucketBean() {}
+	
 	////////////////////////////////////////
 	
 	// General information
@@ -97,6 +100,30 @@ public class DataBucketBean {
 	private Set<String> tags;
 	private AuthorizationBean access_rights;
 	private String poll_frequency;
+
+	////////////////////////////////////////
+
+	// Distribution across nodes in the cluster
+	
+	// There is quite a lot of flexibility in exactly where the harvester associated with a bucket can run, and on how many nodes
+	
+	/** Determines whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 *  - regardless, will only run on nodes meeting the rules specified in node_list_rules()
+	 * @return whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 */
+	public Boolean multi_node_enabled() {
+		return multi_node_enabled;
+	}
+	/** Each item is either a glob or regex (format: /regex/flags) which is compared against the nodes' hostnames to determine whether the associated bucket can run on that hostname
+	 * If a string is prefaced with the '-' then it is an exclude rule; if there is no prefix, or the prefix is '+' then it is an include rule. 
+	 * @return the node list rules
+	 */
+	public List<String> node_list_rules() {
+		return Collections.unmodifiableList(node_list_rules);
+	}
+	
+	private Boolean multi_node_enabled;
+	private List<String> node_list_rules;
 	
 	////////////////////////////////////////
 	
@@ -109,14 +136,14 @@ public class DataBucketBean {
 	 * @return the bucket_aliases
 	 */
 	public Set<String> aliases() {
-		return aliases;
+		return Collections.unmodifiableSet(aliases);
 	}
 	/** A list of buckets in this multi-buckets
 	 *  (Nested multi-buckets are currently not supported)
 	 * @return multi_group_children
 	 */
 	public Set<String> multi_bucket_children() {
-		return multi_bucket_children;
+		return Collections.unmodifiableSet(multi_bucket_children);
 	}
 	private Set<String> multi_bucket_children;
 	private Set<String> aliases;
@@ -136,7 +163,7 @@ public class DataBucketBean {
 	 * @return the harvest_configs
 	 */
 	public List<HarvestControlMetadataBean> harvest_configs() {
-		return harvest_configs;
+		return Collections.unmodifiableList(harvest_configs);
 	}
 	
 	private String harvest_technology_name_or_id;
@@ -151,7 +178,7 @@ public class DataBucketBean {
 	 * @return the enrichment_configs
 	 */
 	public List<EnrichmentControlMetadataBean> batch_enrichment_configs() {
-		return batch_enrichment_configs;
+		return Collections.unmodifiableList(batch_enrichment_configs);
 	}
 	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
 	 *  to pass a single enrichment topology that is applied - this gives the developers much more control
@@ -166,7 +193,7 @@ public class DataBucketBean {
 	 * @return the enrichment_configs
 	 */
 	public List<EnrichmentControlMetadataBean> streaming_enrichment_configs() {
-		return streaming_enrichment_configs;
+		return Collections.unmodifiableList(streaming_enrichment_configs);
 	}
 	
 	/** Instead of a list of modules that are applied to the bucket by the core, it is possible
@@ -210,7 +237,7 @@ public class DataBucketBean {
 	private DataSchemaBean data_schema;	
 	
 	public Map<String, String> data_locations() {
-		return data_locations;
+		return Collections.unmodifiableMap(data_locations);
 	}	
 	private Map<String, String> data_locations;
 	
