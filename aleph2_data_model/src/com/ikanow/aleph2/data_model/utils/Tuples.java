@@ -28,17 +28,17 @@ public class Tuples {
 	/** Create a generic n-tuple, where n is the number of args
 	 * @return a tuple of the designated size
 	 */
-	static <A, B> Tuple2<A, B> _2T(A a, B b) { return new Tuple2<A, B>(a, b); }
+	public static <A, B> Tuple2<A, B> _2T(A a, B b) { return new Tuple2<A, B>(a, b); }
 	/** Create a generic n-tuple, where n is the number of args
 	 * @return a tuple of the designated size
 	 */
-	static <A, B, C> Tuple3<A, B, C> _3T(A a, B b, C c) { return new Tuple3<A, B, C>(a, b, c); }
+	public static <A, B, C> Tuple3<A, B, C> _3T(A a, B b, C c) { return new Tuple3<A, B, C>(a, b, c); }
 	/** Create a generic n-tuple, where n is the number of args
 	 * @return a tuple of the designated size
 	 */
-	static <A, B, C, D> Tuple4<A, B, C, D> _4T(A a, B b, C c, D d) { return new Tuple4<A, B, C, D>(a, b, c, d); }
+	public static <A, B, C, D> Tuple4<A, B, C, D> _4T(A a, B b, C c, D d) { return new Tuple4<A, B, C, D>(a, b, c, d); }
 	/** Create a generic n-tuple, where n is the number of args
 	 * @return a tuple of the designated size
 	 */
-	static <A, B, C, D, E> Tuple5<A, B, C, D, E> _4T(A a, B b, C c, D d, E e) { return new Tuple5<A, B, C, D, E>(a, b, c, d, e); }
+	public static <A, B, C, D, E> Tuple5<A, B, C, D, E> _4T(A a, B b, C c, D d, E e) { return new Tuple5<A, B, C, D, E>(a, b, c, d, e); }
 }

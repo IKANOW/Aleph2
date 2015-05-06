@@ -103,6 +103,7 @@ public class ObjectTemplateUtils {
 		public <U> CloningHelper<T> with(@NonNull String fieldName, @NonNull U val) {
 			try {
 				Field f = _element.getClass().getDeclaredField(fieldName);
+				f.setAccessible(true);
 				f.set(_element, val);
 			}
 			catch (Exception e) {
