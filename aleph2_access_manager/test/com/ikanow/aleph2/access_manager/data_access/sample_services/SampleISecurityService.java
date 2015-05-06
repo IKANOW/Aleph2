@@ -2,11 +2,10 @@ package com.ikanow.aleph2.access_manager.data_access.sample_services;
 
 import java.util.Map;
 
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 
-public class SampleISecurityService implements ISecurityService, IDataService {
+public class SampleISecurityService implements ISecurityService {
 
 	@Override
 	public boolean hasPermission(Identity identity, Class<?> resourceClass,

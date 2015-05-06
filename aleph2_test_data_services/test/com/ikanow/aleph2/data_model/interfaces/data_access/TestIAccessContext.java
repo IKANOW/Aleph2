@@ -5,6 +5,9 @@ import static org.junit.Assert.*;
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
+import com.ikanow.aleph2.data_model.utils.ContextUtils;
+
 
 public class TestIAccessContext {
 
@@ -14,11 +17,11 @@ public class TestIAccessContext {
 
 	@Test
 	public void testGetDefaultServices() {
-		IAccessContext context = AccessDriver.getAccessContext();
-		assertNotNull(context.getColumnarDbService());
-		assertNotNull(context.getDocumentDbService());
+		IAccessContext context = ContextUtils.getAccessContext();
+		assertNotNull(context.getColumnarService());
+		assertNotNull(context.getDocumentService());
 		assertNotNull(context.getGeospatialService());
-		assertNotNull(context.getGraphDbService());
+		assertNotNull(context.getGraphService());
 		assertNotNull(context.getManagementDbService());
 		assertNotNull(context.getSearchIndexService());
 		assertNotNull(context.getSecurityService());
@@ -28,8 +31,14 @@ public class TestIAccessContext {
 	
 	@Test
 	public void testGetCustomServices() {
-		IAccessContext context = AccessDriver.getAccessContext();
-		assertNotNull(context.getDataService("SampleCustomService"));
+		IAccessContext context = ContextUtils.getAccessContext();
+		assertNotNull(context.getDataService(SampleCustomService.class));
+	}
+	
+	@Test
+	public void testServicesAreSingletons() {
+		IAccessContext context = ContextUtils.getAccessContext();
+		assertEquals(context.getSecurityService().hashCode(), context.getSecurityService().hashCode());
 	}
 
 }

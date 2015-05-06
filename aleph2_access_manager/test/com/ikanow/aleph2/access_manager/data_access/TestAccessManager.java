@@ -9,8 +9,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ikanow.aleph2.access_manager.data_access.AccessContext;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleUnboundService;
 import com.ikanow.aleph2.access_manager.data_access.util.ConfigUtil;
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
 import com.typesafe.config.Config;
 
 public class TestAccessManager {
@@ -39,13 +40,14 @@ public class TestAccessManager {
 	@Test
 	public void testGetDefaultServices() {
 		AccessContext context = new AccessContext();
-		assertNotNull(context.getColumnarDbService());
-		assertNotNull(context.getDocumentDbService());
+		assertNotNull(context.getSecurityService());
+		
+		assertNotNull(context.getColumnarService());
+		assertNotNull(context.getDocumentService());
 		assertNotNull(context.getGeospatialService());
-		assertNotNull(context.getGraphDbService());
+		assertNotNull(context.getGraphService());
 		assertNotNull(context.getManagementDbService());
 		assertNotNull(context.getSearchIndexService());
-		assertNotNull(context.getSecurityService());
 		assertNotNull(context.getStorageIndexService());
 		assertNotNull(context.getTemporalService());
 	}
@@ -53,13 +55,13 @@ public class TestAccessManager {
 	@Test
 	public void testGetCustomServices() {
 		AccessContext context = new AccessContext();
-		assertNotNull(context.getDataService("SampleCustomService"));
+		assertNotNull(context.getDataService(SampleCustomService.class));
 	}
 	
 	@Test
 	public void testGetCustomServiceDNE() {
 		AccessContext context = new AccessContext();
-		assertNull(context.getDataService("SampleCustomServiceDNE"));
+		assertNull(context.getDataService(SampleUnboundService.class)); //this class should not have a binding
 	}
 
 }

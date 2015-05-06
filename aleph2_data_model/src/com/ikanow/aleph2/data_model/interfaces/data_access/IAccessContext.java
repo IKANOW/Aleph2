@@ -15,7 +15,9 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-import com.ikanow.aleph2.data_model.interfaces.data_layers.IDataService;
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
@@ -33,27 +35,15 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
  *
  */
 public interface IAccessContext {	
-	enum DataServiceType {
-		ColumnarService,
-		DocumentService,
-		GeospatialService,
-		GraphService,
-		ManagementDbService,
-		SearchIndexService,
-		StorageService,
-		TemporalService,
-		SecurityService
-	}
 	
 	//generic get service interface
-	//public void setDataService(String serviceName, Provider<?> service);	
-	public IDataService getDataService(String serviceName);
+	public <I> I getDataService(@NonNull Class<I> service_clazz);
 	
 	//utility getters for common services
-	public IColumnarService getColumnarDbService();
-	public IDocumentService getDocumentDbService();
+	public IColumnarService getColumnarService();
+	public IDocumentService getDocumentService();
 	public IGeospatialService getGeospatialService();
-	public IGraphService getGraphDbService();	
+	public IGraphService getGraphService();	
 	public IManagementDbService getManagementDbService();
 	public ISearchIndexService getSearchIndexService();
 	public IStorageService getStorageIndexService();
@@ -61,4 +51,6 @@ public interface IAccessContext {
 	
 	//security service is related to data services
 	public ISecurityService getSecurityService();
+
+	public Injector getInjector();
 }

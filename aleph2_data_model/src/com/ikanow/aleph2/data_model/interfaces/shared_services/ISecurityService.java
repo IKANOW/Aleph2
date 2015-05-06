@@ -22,7 +22,7 @@ import com.ikanow.aleph2.data_model.objects.shared.Identity;
 
 public interface ISecurityService {
 
-	enum AccessType { read_only, read_write, unelevated_admin, admin };
+	//enum AccessType { read_only, read_write, unelevated_admin, admin };
 	
 	//TODO send: user-id, credentials, credentials type, desired tokens (*), return list of "role tokens"
 	// token:  role (owner/admin/rw/r), these are then associated with each artefact type
