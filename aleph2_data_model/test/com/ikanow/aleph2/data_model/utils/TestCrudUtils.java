@@ -105,9 +105,13 @@ public class TestCrudUtils {
 		BasicDBObject meta = new BasicDBObject();
 		
 		if (null != query_in.getLimit()) meta.put("$limit", query_in.getLimit());
-		BasicDBObject sort = (null == query_in.getOrderBy()) ? null : new BasicDBObject();
-		Optionals.ofNullable(query_in.getOrderBy()).stream()
-			.forEach(field_order -> sort.put(field_order._1(), field_order._2()));
+		final BasicDBObject sort = (BasicDBObject) Patterns.matchAndReturn(query_in.getOrderBy())
+				.when(l -> l == null, l -> null)
+				.otherwise(l -> {
+							BasicDBObject s = new BasicDBObject();
+							l.stream().forEach(field_order -> s.put(field_order._1(), field_order._2()));
+							return s;
+						});
 		if (null != sort) meta.put("$sort", sort);
 		
 		return Tuples._2T(query_out, meta);

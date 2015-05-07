@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 public interface IGraphService {
 
 	//TODO (ALEPH-15): implement tinkerpop?
@@ -27,5 +29,6 @@ public interface IGraphService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
+	@NonNull 
 	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }

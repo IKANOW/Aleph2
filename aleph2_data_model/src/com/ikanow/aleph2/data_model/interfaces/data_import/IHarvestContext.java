@@ -45,7 +45,8 @@ public interface IHarvestContext {
 	 * @param service_name - optional - if ommitted, this is the default service of this type
 	 * @return the requested service
 	 */
-	<I> I getService(@NonNull Class<I> service_clazz, @NonNull Optional<String> service_name);
+	@NonNull 
+	<I> Optional<I> getService(@NonNull Class<I> service_clazz, @NonNull Optional<String> service_name);
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
@@ -76,23 +77,27 @@ public interface IHarvestContext {
 	 * @services an optional set of service classes that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
+	@NonNull 
 	List<String> getHarvestContextLibraries(@NonNull Optional<Set<Class<?>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
+	@NonNull 
 	String getHarvestContextSignature(@NonNull Optional<DataBucketBean> bucket);
 
 	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) configuration
 	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"
 	 */
+	@NonNull 
 	Future<JsonNode> getGlobalHarvestTechnologyConfiguration();
 	
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
 	 */
+	@NonNull 
 	Future<Map<String, String>> getHarvestLibraries(@NonNull Optional<DataBucketBean> bucket);
 	
 	//////////////////////////////////////////////////////
@@ -106,12 +111,14 @@ public interface IHarvestContext {
 	 * @param auto_apply_prefix - if true then auto applies the prefix "harvest_" to the supplied sub-collection 
 	 * @return a generic object repository
 	 */
+	@NonNull 
 	<S> ICrudService<S> getBucketObjectStore(@NonNull Class<S> clazz, @NonNull Optional<DataBucketBean> bucket, @NonNull Optional<String> sub_collection, boolean auto_apply_prefix);
 	
 	/** (HarvestTechnology/HarvestModule) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a bean containing the harvests state and status
 	 */
+	@NonNull 
 	Future<DataBucketStatusBean> getBucketStatus(@NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
@@ -134,6 +141,7 @@ public interface IHarvestContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return the location in a string format that makes sense to the IAccessService
 	 */
+	@NonNull 
 	String getTempOutputLocation(@NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Once files are moved/written (preferably atomically) into this path, they become owned by the import manager
@@ -141,6 +149,7 @@ public interface IHarvestContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return the location in a string format that makes sense to the IStorageService
 	 */
+	@NonNull 
 	String getFinalOutputLocation(@NonNull Optional<DataBucketBean> bucket);	
 	
 	/** (HarvestTechnology/HarvestModule) Requests that the bucket be suspended - in addition to changing the bucket state, this will result in a call to IHarvestTechnologyModule.onSuspend

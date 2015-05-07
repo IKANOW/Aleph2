@@ -39,6 +39,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @param context The enrichment context passed in by the core
 	 * @return the topology and configuration for this streaming enrichment process
 	 */
+	@NonNull 
 	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(@NonNull DataBucketBean bean, @NonNull IEnrichmentModuleContext context);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - For every object submitted to the streaming topology, this function is applied to generate a simpler object more amenable to being passed around
@@ -47,6 +48,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @param incoming_object_string - it will often be the case that one of the tuple elements should be the entire message. If the framework has the object in string form, it will pass it in here to avoid a spurious serialization. If it does not, the client will have to deserialize the object if he wants it in the stream object.
 	 * @return an object representing the simplified object (eg in Storm the keys will be used to declare the fields)
 	 */
+	@NonNull 
 	LinkedHashMap<String, Object> decomposeIncomingObject(JsonNode incoming_object, Optional<String> incoming_object_string);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
@@ -55,5 +57,6 @@ public interface IEnrichmentStreamingTopology {
 	 * @param outgoing_object - the final object output via either the success or error endpoint
 	 * @return the final JsonNode to store
 	 */
+	@NonNull 
 	JsonNode rebuildObject(LinkedHashMap<String, Object> outgoing_object);
 }

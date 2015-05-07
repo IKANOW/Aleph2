@@ -122,8 +122,8 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <I> I getService(Class<I> service_clazz, Optional<String> service_name) {
-			return null;
+		public <I> Optional<I> getService(Class<I> service_clazz, Optional<String> service_name) {
+			return Optional.empty();
 		}
 
 		@Override

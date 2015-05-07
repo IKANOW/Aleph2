@@ -47,6 +47,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onNewSource(@NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
 	
 	/**
@@ -57,6 +58,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onUpdatedSource(@NonNull DataBucketBean old_bucket, @NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
 	
 	/**
@@ -66,6 +68,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onSuspend(@NonNull DataBucketBean to_suspend, @NonNull IHarvestContext context);
 	
 	/**
@@ -75,6 +78,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onResume(@NonNull DataBucketBean to_resume, @NonNull IHarvestContext context);
 	
 	/**
@@ -86,6 +90,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onPurge(@NonNull DataBucketBean to_purge, @NonNull IHarvestContext context);
 	
 	/**
@@ -98,6 +103,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onDelete(@NonNull DataBucketBean to_delete, @NonNull IHarvestContext context);
 	
 	/**
@@ -107,6 +113,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onPeriodicPoll(@NonNull DataBucketBean polled_bucket, @NonNull IHarvestContext context);
 	
 	/**
@@ -115,6 +122,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onHarvestComplete(@NonNull DataBucketBean completed_bucket, @NonNull IHarvestContext context);
 	
 	/**
@@ -126,5 +134,6 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response (only completes when the test is complete)
 	 */
+	@NonNull 
 	Future<BasicMessageBean> onTestSource(@NonNull DataBucketBean test_bucket, @NonNull ProcessingTestSpecBean test_spec, IHarvestContext context);		
 }

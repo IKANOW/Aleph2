@@ -30,6 +30,7 @@ public interface IDocumentService {
 	 * @param bucket The data bucket or multi-bucket
 	 * @return the CRUD service
 	 */
+	@NonNull 
 	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull DataBucketBean bucket);
 	
 	/** Returns a CRUD service for the specified buckets or multi-buckets
@@ -37,6 +38,7 @@ public interface IDocumentService {
 	 * @param bucket The collection of data buckets or multi-buckets
 	 * @return the CRUD service
 	 */
+	@NonNull 
 	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull Collection<DataBucketBean> buckets);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
@@ -45,5 +47,6 @@ public interface IDocumentService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
+	@NonNull 
 	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }

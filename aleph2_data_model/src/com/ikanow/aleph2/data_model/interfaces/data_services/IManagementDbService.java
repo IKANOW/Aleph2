@@ -47,6 +47,7 @@ public interface IManagementDbService {
 	/** Gets the store of shared JVM JAR libraries
 	 * @return the CRUD service for the shared libraries store
 	 */
+	@NonNull 
 	ICrudService<SharedLibraryBean> getSharedLibraryStore();
 	
 	//TODO (ALEPH-19): shared schemas
@@ -61,6 +62,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per library generic object store
 	 */
+	@NonNull 
 	<T> ICrudService<T> getPerLibraryState(@NonNull Class<T> clazz, @NonNull SharedLibraryBean library, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
@@ -72,11 +74,13 @@ public interface IManagementDbService {
 	/** Gets the store of data buckets
 	 * @return  the CRUD service for the bucket store
 	 */
+	@NonNull 
 	ICrudService<DataBucketBean> getDataBucketStore();
 	
 	/** Gets the store of data bucket statuses
 	 * @return  the CRUD service for the bucket status store
 	 */
+	@NonNull 
 	ICrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
@@ -85,6 +89,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per bucket generic object store
 	 */
+	@NonNull 
 	<T> ICrudService<T> getPerBucketState(@NonNull Class<T> clazz, @NonNull DataBucketBean bucket, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
@@ -94,6 +99,7 @@ public interface IManagementDbService {
 	/** Gets the store of analytic threads
 	 * @return the CRUD service for the analytic thread store
 	 */
+	@NonNull 
 	ICrudService<AnalyticThreadBean> getAnalyticThreadStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
@@ -102,6 +108,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
+	@NonNull 
 	<T> ICrudService<T> getPerAnalyticThreadState(@NonNull Class<T> clazz, @NonNull AnalyticThreadBean analytic_thread, @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
@@ -114,5 +121,6 @@ public interface IManagementDbService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
+	@NonNull 
 	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
 }
