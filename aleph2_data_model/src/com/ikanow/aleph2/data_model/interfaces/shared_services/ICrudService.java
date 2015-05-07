@@ -18,8 +18,11 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -53,18 +56,33 @@ public interface ICrudService<O> {
 	 *  If the "_id" field of the object is not set then it is assigned
 	 * @param new_object
 	 * @param replace_if_present if true then any object with the specified _id is overwritten
-	 * @return An optional containing the object, or Optional.empty() if not present 
+	 * @return A future containing the _id (filled in if not present in the object) - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Optional<O>> storeObject(@NonNull O new_object, boolean replace_if_present);
+	Future<Supplier<Object>> storeObject(@NonNull O new_object, boolean replace_if_present);
 
 	/** Stores the specified object in the database, failing if it is already present
 	 *  If the "_id" field of the object is not set then it is assigned
 	 * @param new_object
-	 * @return An optional containing the object, or Optional.empty() if not present 
+	 * @return A future containing the _id (filled in if not present in the object) - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Optional<O>> storeObject(@NonNull O new_object);
+	Future<Supplier<Object>> storeObject(@NonNull O new_object);
+	
+	/**
+	 * @param objects - a list of objects to insert
+	 * @param continue_on_error if true then duplicate objects are ignored (not inserted) but the store continues
+	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
+	 */
+	@NonNull 
+	Future<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(@NonNull List<O> new_objects, boolean continue_on_error);
+	
+	/**
+	 * @param objects - a list of objects to insert, failing out as soon as a duplicate is inserted 
+	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
+	 */
+	@NonNull 
+	Future<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(@NonNull List<O> new_objects);
 	
 	//////////////////////////////////////////////////////
 	
@@ -274,7 +292,7 @@ public interface ICrudService<O> {
 	// OTHER:
 	
 	/** Returns a simple searchable ("Lucene-like") view of the data
-	 * @return
+	 * @return a search service
 	 */
 	@NonNull 
 	Optional<IBasicSearchService<O>> getSearchService();
