@@ -88,19 +88,19 @@ public interface ICrudService<O> {
 	
 	// *R*ETRIEVE
 	
-	/** Registers that you wish to optimize sprecific queries
+	/** Registers that you wish to optimize specific queries
 	 * @param ordered_field_list a list of the fields in the query
-	 * @return a future describing if the optimization was successfully completed
+	 * @return a future describing if the optimization was successfully completed - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
 	Future<Boolean> optimizeQuery(@NonNull List<String> ordered_field_list);	
 
-	/** Registers that you wish to optimize sprecific queries
+	/** Registers that you wish to optimize specific queries
 	 * @param A specification that must be initialized via CrudUtils.anyOf(...) and then the desired fields added via .exists(<field or getter>)
-	 * @return a future describing if the optimization was successfully completed
+	 * @return a future describing if the optimization was successfully completed - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> optimizeQuery(CrudUtils.@NonNull QueryComponent<O> spec);		
+	Future<Boolean> optimizeQuery(CrudUtils.@NonNull SingleQueryComponent<O> spec);		
 	
 	/** Inform the system that a specific query optimization is no longer required
 	 * @param ordered_field_list a list of the fields in the query
