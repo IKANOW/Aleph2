@@ -95,9 +95,9 @@ public class TestCrudUtils {
 		
 		final String andVsOr = getOperatorName(query_in.getOp());
 		
-		final DBObject query_out = Patterns.matchAndReturn(query_in)
-				.when(SingleQueryComponent.class, q -> convertToMongoQuery_single(andVsOr, q))
-				.when(MultiQueryComponent.class, q -> convertToMongoQuery_multi(andVsOr, q))
+		final DBObject query_out = Patterns.matchAndReturn(query_in, DBObject.class)
+				.when((Class<SingleQueryComponent<T>>)(Class<?>)SingleQueryComponent.class, q -> convertToMongoQuery_single(andVsOr, q))
+				.when((Class<MultiQueryComponent<T>>)(Class<?>)MultiQueryComponent.class, q -> convertToMongoQuery_multi(andVsOr, q))
 				.otherwise(q -> (DBObject)new BasicDBObject());
 		
 		// Meta commands
