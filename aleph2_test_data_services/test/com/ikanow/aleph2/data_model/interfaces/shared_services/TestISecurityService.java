@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2015, The IKANOW Open Source Project.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import static org.junit.Assert.*;
@@ -40,7 +55,7 @@ public class TestISecurityService {
 
 	@After
 	public void tearDown() throws Exception {
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 	}
 	
 	private static void grantTestPermissions(Identity identity, ISecurityService security_service, String resourceIdentifier) {
@@ -48,9 +63,9 @@ public class TestISecurityService {
 		security_service.grantPermission(identity, testResourceName, resourceIdentifier, "READ");
 	}
 	
-	private static void revokeTestPermissions(Identity identity, ISecurityService security_service) {
-		security_service.clearPermission(TestISecurityService.class);
-		security_service.clearPermission(testResourceName);
+	private static void revokeTestPermissions(Identity identity, ISecurityService security_service, String resourceIdentifier) {
+		security_service.clearPermission(TestISecurityService.class, resourceIdentifier);
+		security_service.clearPermission(testResourceName, resourceIdentifier);
 	}
 
 	/**
@@ -60,7 +75,7 @@ public class TestISecurityService {
 	@Test
 	public void testHasPermission() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, null, "READ"));
@@ -85,7 +100,7 @@ public class TestISecurityService {
 	@Test
 	public void testClearPermission() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, null, "READ"));
@@ -98,16 +113,16 @@ public class TestISecurityService {
 		assertTrue(security_service.hasPermission(test_identity, testResourceName, null, "READ"));
 		
 		//clear the rules and make sure they no longer work
-		security_service.clearPermission(TestISecurityService.class);		
+		security_service.clearPermission(TestISecurityService.class, null);		
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, null, "READ"));
-		security_service.clearPermission(testResourceName);
+		security_service.clearPermission(testResourceName, null);
 		assertFalse(security_service.hasPermission(test_identity, testResourceName, null, "READ"));
 	}
 	
 	@Test
 	public void testRevokePermission() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, null, "READ"));
@@ -129,7 +144,7 @@ public class TestISecurityService {
 	@Test
 	public void testHasPermissionIdentifier() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, testIdentifier, "READ"));
@@ -145,7 +160,7 @@ public class TestISecurityService {
 	@Test
 	public void testClearPermissionIdentifier() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, testIdentifier, "READ"));
@@ -158,16 +173,16 @@ public class TestISecurityService {
 		assertTrue(security_service.hasPermission(test_identity, testResourceName, testIdentifier, "READ"));
 		
 		//clear the rules and make sure they no longer work
-		security_service.clearPermission(TestISecurityService.class);		
+		security_service.clearPermission(TestISecurityService.class, testIdentifier);		
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, testIdentifier, "READ"));
-		security_service.clearPermission(testResourceName);
+		security_service.clearPermission(testResourceName, testIdentifier);
 		assertFalse(security_service.hasPermission(test_identity, testResourceName, testIdentifier, "READ"));
 	}
 	
 	@Test
 	public void testRevokePermissionIdentifier() {
 		//clear the rules so we know for sure there shouldn't be any
-		revokeTestPermissions(test_identity, security_service);
+		revokeTestPermissions(test_identity, security_service, null);
 		
 		//there shouldn't be a rule for our current class, so test it fails
 		assertFalse(security_service.hasPermission(test_identity, TestISecurityService.class, testIdentifier, "READ"));

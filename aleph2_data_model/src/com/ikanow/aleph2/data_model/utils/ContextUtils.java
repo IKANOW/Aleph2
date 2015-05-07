@@ -15,31 +15,32 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
+import com.google.inject.Inject;
+import com.ikanow.aleph2.data_model.interfaces.data_access.AccessModule;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
-public class ContextUtils extends AbstractModule  {
+/**
+ * A group of utilities for getting access to various other contexts such
+ * as the IAccessContext, IHarvestContext, IAnalyticsContext.
+ * 
+ * @author Burch
+ *
+ */
+public class ContextUtils {
 	private static IAccessContext accessContext = null;
-	private final String ACCESS_CONTEXT_CONFIG_NAME = "access_manager.service";
-	private final Logger logger = Logger.getLogger(this.getClass().getName());
 	
 	/**
-	 * The first time this class is called it will create the access context
+	 * Constructor injects the accessContext, is called from {@link AccessModule.initAccessContext}
+	 * 
+	 * @param accessContext
 	 */
-	static {
-		Injector injector = Guice.createInjector(new ContextUtils());
-		accessContext = injector.getInstance(IAccessContext.class);
+	@Inject
+	public ContextUtils(IAccessContext accessContext) {
+		ContextUtils.accessContext = accessContext;
 	}
 	
 	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
@@ -61,48 +62,15 @@ public class ContextUtils extends AbstractModule  {
 	}
 	
 	/**
-	 * Kicks off the injection by reading which access context we
-	 * should bind via the config file and creating an instance of that context.
+	 * Returns the currently configured access context object, for use in modules not part of the
+	 * Aleph2 dependency injection.
 	 * 
-	 * @return
+	 * @return the currently configured IAccessContext object
 	 */
 	public static IAccessContext getAccessContext() {
+		if ( accessContext == null )
+			AccessModule.initAccessContext();
 		return accessContext;
-	}
-	
-	@Override
-	protected void configure() {
-		try {
-			loadAccessContextFromConfig();
-		} catch (Exception e){
-			logger.log(Level.ALL, e.getMessage(), e);
-		}
-	}
-	
-	/**
-	 * Loads the config from disk/properties and then loads the access context
-	 * from the config supplied.
-	 * 
-	 * @throws Exception
-	 */
-	private void loadAccessContextFromConfig() throws Exception {
-		Config config = ConfigFactory.load();		
-		loadAccessContextFromConfig(config);	
-	}
-	
-	/**
-	 * Takes a config object and loads the config from ACCESS_CONTEXT_CONFIG_NAME.
-	 * 
-	 * @param config
-	 * @throws Exception
-	 */
-	private void loadAccessContextFromConfig(Config config) throws Exception {
-		String service = config.getString(ACCESS_CONTEXT_CONFIG_NAME);
-		//Convert string class name to actual class and bind to IAccessContext
-		@SuppressWarnings("unchecked")
-		Class<? extends IAccessContext> class2 = (Class<? extends IAccessContext>) Class.forName((String) service);
-		logger.fine("Binding IAccessContext to " + class2.getCanonicalName());
-		bind(IAccessContext.class).to(class2);
 	}
 	
 	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
