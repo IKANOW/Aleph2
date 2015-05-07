@@ -21,15 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -69,7 +61,11 @@ public class ObjectTemplateUtils {
 	 * @return Clone Helper, finish with done() to return the class
 	 */
 	public static <T> CloningHelper<T> clone(@NonNull T a) {
-		return new CloningHelper<T>(a);
+		try {
+			return new CloningHelper<T>(a);
+		} catch (Exception e) {
+			throw new RuntimeException("CloningHelper.clone", e);
+		}
 	}
 	/**Builds an immutable object using the specified value just to get the class (see clone to actually use the input variable)
 	 * @param a - the object determining the class to use
@@ -139,25 +135,12 @@ public class ObjectTemplateUtils {
 			return _element;
 		}
 		
-		protected static Object immutabilizeContainer(@NonNull Object o) {
-			//(eclipse doesn't need the conversions, but JDK8 does)
-			return Patterns.matchAndReturn(o)
-					.when(SortedSet.class, c -> Collections.unmodifiableSortedSet((SortedSet<?>)c) )
-					.when(Set.class, c -> Collections.unmodifiableSet((Set<?>)c) )
-					.when(NavigableMap.class, c -> Collections.unmodifiableNavigableMap((NavigableMap<?,?>)c) )
-					.when(SortedMap.class, c -> Collections.unmodifiableSortedMap((SortedMap<?,?>)c) )
-					.when(Map.class, c -> Collections.unmodifiableMap((Map<?,?>)c) )
-					.when(List.class, c -> Collections.unmodifiableList((List<?>)c) )
-					.when(Collection.class, c -> Collections.unmodifiableCollection((Collection<?>)c) )
-					.otherwise(oo -> o);
-		}
-		
 		protected void cloneInitialFields(@NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
+				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
-				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
+				.forEach(t -> { try { t._1().set(_element, t._2()); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
 		protected CloningHelper(@NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
@@ -165,8 +148,12 @@ public class ObjectTemplateUtils {
 			contructor.setAccessible(true);
 			_element = (T) contructor.newInstance();
 		}
-		protected CloningHelper(@NonNull T to_clone) {
-			_element = to_clone;
+		protected CloningHelper(@NonNull T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			@SuppressWarnings("unchecked")
+			final Constructor<T> contructor = (Constructor<T>) to_clone.getClass().getDeclaredConstructor();
+			contructor.setAccessible(true);
+			_element = (T) contructor.newInstance();
+			cloneInitialFields(to_clone);
 		}
 		protected final T _element;
 		protected MethodNamingHelper<T> _naming_helper = null;

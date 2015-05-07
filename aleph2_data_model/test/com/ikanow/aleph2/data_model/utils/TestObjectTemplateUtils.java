@@ -98,16 +98,30 @@ public class TestObjectTemplateUtils {
 	@Test
 	public void testBeanBuilder() {
 		
-		TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
+		final TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
 								.with(TestBuildBean::testField, "4")
 								.with("test2Field", "5")
 								.with("test4Fields", Arrays.asList("1", "2", "3"))
 								.done();
-		
+
 		assertEquals("testField should have been set", "4", test.testField());
 		assertEquals("test2Field should have been set", "5", test.test2Field);
 		assertEquals("test3Field should have not been set", null, test.test3Field());
-		assertThat("test4Fields should be this list", test.test4Fields, is(Arrays.asList("1", "2", "3")));		
+		assertThat("test4Fields should be this list", test.test4Fields, is(Arrays.asList("1", "2", "3")));
+		
+		// Alternative form:
+		
+		final TestBuildBean test2 = ObjectTemplateUtils.build(test)
+				.with(TestBuildBean::testField, "5")
+				.with("test2Field", "6")
+				.with("test4Fields", Arrays.asList("4", "5", "6"))
+				.done();
+		
+		assertEquals("testField should have been set", "5", test2.testField());
+		assertEquals("test2Field should have been set", "6", test2.test2Field);
+		assertEquals("test3Field should have not been set", null, test2.test3Field());
+		assertThat("test4Fields should be this list", test2.test4Fields, is(Arrays.asList("4", "5", "6")));
+		
 	}
 	
 	@Rule
@@ -115,7 +129,7 @@ public class TestObjectTemplateUtils {
 	
 	@Test
 	public void testBeanBuilder_ContainersImmutable() {
-		TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
+		final TestBuildBean test = ObjectTemplateUtils.build(TestBuildBean.class)
 				.with(TestBuildBean::testField, "4")
 				.with("test2Field", "5")
 				.with("test4Fields", Arrays.asList("1", "2", "3"))
@@ -135,12 +149,13 @@ public class TestObjectTemplateUtils {
 		String test4Field;
 		String test5Field;
 		Map<String, Integer> test6Fields;
+		
 	}
 	
 	@Test
 	public void testBeanCloner() {
 		
-		TestCloneBean to_clone = new TestCloneBean();
+		final TestCloneBean to_clone = new TestCloneBean();
 		to_clone.testField = "1"; // change
 		to_clone.test2Field = "2"; // null
 		to_clone.test3Field = null; // write
@@ -149,7 +164,7 @@ public class TestObjectTemplateUtils {
 		to_clone.test6Fields = new HashMap<String, Integer>();
 		to_clone.test6Fields.put("6", 6);
 		
-		TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
+		final TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
 								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
 								.with(TestCloneBean::test3Field, "3")
@@ -161,7 +176,7 @@ public class TestObjectTemplateUtils {
 										)
 								.done();
 		
-		HashMap<String, Integer> expected = new HashMap<String, Integer>();
+		final HashMap<String, Integer> expected = new HashMap<String, Integer>();
 		expected.put("6", 6);
 		expected.put("7", 7);
 		
@@ -175,7 +190,7 @@ public class TestObjectTemplateUtils {
 
 	@Test
 	public void testBeanCloner_ContainersImmutable() {
-		TestCloneBean to_clone = new TestCloneBean();
+		final TestCloneBean to_clone = new TestCloneBean();
 		to_clone.testField = "1"; // change
 		to_clone.test2Field = "2"; // null
 		to_clone.test3Field = null; // write
@@ -184,7 +199,7 @@ public class TestObjectTemplateUtils {
 		to_clone.test6Fields = new HashMap<String, Integer>();
 		to_clone.test6Fields.put("6", 6);
 		
-		TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
+		final TestCloneBean test = ObjectTemplateUtils.clone(to_clone)
 								.with(TestCloneBean::testField, "1b")
 								.with("test2Field", null)
 								.with(TestCloneBean::test3Field, "3")
@@ -195,10 +210,65 @@ public class TestObjectTemplateUtils {
 											.build()
 										)
 								.done();
+
+		// Check to_clone hasn't changed
+		assertEquals(to_clone.testField, "1");
 		
 		exception.expect(UnsupportedOperationException.class);
+		
 		test.test6Fields.put("INF", 0);
 	}
 
-
+	// Ended up not immutabilizing all these because you can lose too much information
+	// So need to decide on a case by case basis...
+	
+//	public static class TestCollectionBean {
+//		SortedSet<String> collectionTest1;
+//		Set<String> collectionTest2;
+//		Set<String> collectionTest2_change;
+//		NavigableMap<String, String> collectionTest3;
+//		SortedMap<String, String> collectionTest4;
+//		Map<String, String> collectionTest5;
+//		List<String> collectionTest6;
+//		Multimap<String, String> collectionTest7;
+//		ArrayDeque<String> collectionTest8;
+//	}	
+//	
+//	@Test
+//	public void collectionTest() {
+//		
+//		final TestCollectionBean test = new TestCollectionBean();
+//		test.collectionTest1 = new TreeSet<String>(Arrays.asList("a"));
+//		test.collectionTest2 = new HashSet<String>(Arrays.asList("b"));
+//		test.collectionTest2_change = new HashSet<String>(Arrays.asList("b2"));
+//		test.collectionTest3 = new ConcurrentSkipListMap<String, String>(); // (these are both navigable and sorted)
+//		test.collectionTest3.put("c1", "c2");
+//		test.collectionTest4 = new TreeMap<String, String>(); // (these are both navigable and sorted)
+//		test.collectionTest4.put("d1", "d2");
+//		test.collectionTest5 = new HashMap<String, String>(); // (these are both navigable and sorted)
+//		test.collectionTest5.put("e1", "e2");
+//		test.collectionTest6 = new ArrayList<String>(Arrays.asList("f"));
+//		test.collectionTest7 = TreeMultimap.create();
+//		test.collectionTest7.put("g1", "g2");
+//		test.collectionTest8 = new ArrayDeque<String>(Arrays.asList("h"));
+//		
+//		final TestCollectionBean cloned = ObjectTemplateUtils.clone(test).done();
+//		
+//		assertEquals(cloned.collectionTest1, test.collectionTest1);
+//		assertEquals(cloned.collectionTest2, test.collectionTest2);
+//		assertEquals(cloned.collectionTest3, test.collectionTest3);
+//		assertEquals(cloned.collectionTest4, test.collectionTest4);
+//		assertEquals(cloned.collectionTest5, test.collectionTest5);
+//		assertEquals(cloned.collectionTest6, test.collectionTest6);
+//		assertEquals(cloned.collectionTest7, test.collectionTest7);
+//		assertEquals(cloned.collectionTest8, test.collectionTest8);
+//		
+//		@SuppressWarnings("unused")
+//		final TestCollectionBean cloned2 = ObjectTemplateUtils.clone(test)
+//												.with("collectionTest2_change", new HashSet<String>(Arrays.asList("b3")))
+//												.done();
+//
+//		assertEquals(test.collectionTest2_change, new HashSet<String>(Arrays.asList("b2")));
+//	}
+	
 }
