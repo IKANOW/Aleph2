@@ -47,7 +47,8 @@ public class TestCrudUtils {
 	// Some utility code (which actually end up being the basis for the mongodb crud operator...)
 	
 	private static BasicDBObject operatorToMongoKey(String field, Tuple2<Operator, Tuple2<Object, Object>> operator_args) {
-		return Patterns.matchAndReturn(operator_args)
+		return Patterns.match(operator_args)
+				.<BasicDBObject>andReturn()
 				.when(op_args -> Operator.exists == op_args._1(), op_args -> new BasicDBObject(field, new BasicDBObject("$exists", op_args._2()._1())) )
 				
 				.when(op_args -> (Operator.any_of == op_args._1()), op_args -> new BasicDBObject(field, new BasicDBObject("$in", op_args._2()._1())) )
@@ -60,31 +61,32 @@ public class TestCrudUtils {
 					QueryBuilder qb = QueryBuilder.start(field);
 					if (null != op_args._2()._1()) qb = qb.greaterThan(op_args._2()._1());
 					if (null != op_args._2()._2()) qb = qb.lessThan(op_args._2()._2());
-					return qb.get(); 
+					return (BasicDBObject) qb.get(); 
 				})
 				.when(op_args -> Operator.range_open_closed == op_args._1(), op_args -> {
 					QueryBuilder qb = QueryBuilder.start(field);
 					if (null != op_args._2()._1()) qb = qb.greaterThan(op_args._2()._1());
 					if (null != op_args._2()._2()) qb = qb.lessThanEquals(op_args._2()._2());
-					return qb.get(); 
+					return (BasicDBObject) qb.get(); 
 				})
 				.when(op_args -> Operator.range_closed_closed == op_args._1(), op_args -> {
 					QueryBuilder qb = QueryBuilder.start(field);
 					if (null != op_args._2()._1()) qb = qb.greaterThanEquals(op_args._2()._1());
 					if (null != op_args._2()._2()) qb = qb.lessThanEquals(op_args._2()._2());
-					return qb.get(); 
+					return (BasicDBObject) qb.get(); 
 				})
 				.when(op_args -> Operator.range_closed_open == op_args._1(), op_args -> {
 					QueryBuilder qb = QueryBuilder.start(field);
 					if (null != op_args._2()._1()) qb = qb.greaterThanEquals(op_args._2()._1());
 					if (null != op_args._2()._2()) qb = qb.lessThan(op_args._2()._2());
-					return qb.get(); 
+					return (BasicDBObject) qb.get(); 
 				})
 				.otherwise(op_args -> new BasicDBObject());
 	}
 
 	private static String getOperatorName(Operator op_in) {		
-		return Patterns.matchAndReturn(op_in)
+		return Patterns.match(op_in)
+				.<String>andReturn()
 				.when(op -> Operator.any_of == op, op -> "$or")
 				.when(op -> Operator.all_of == op, op -> "$and")
 				.otherwise(op -> "$and");
@@ -95,7 +97,8 @@ public class TestCrudUtils {
 		
 		final String andVsOr = getOperatorName(query_in.getOp());
 		
-		final DBObject query_out = Patterns.matchAndReturn(query_in, DBObject.class)
+		final DBObject query_out = Patterns.match(query_in)
+				.<DBObject>andReturn()
 				.when((Class<SingleQueryComponent<T>>)(Class<?>)SingleQueryComponent.class, q -> convertToMongoQuery_single(andVsOr, q))
 				.when((Class<MultiQueryComponent<T>>)(Class<?>)MultiQueryComponent.class, q -> convertToMongoQuery_multi(andVsOr, q))
 				.otherwise(q -> (DBObject)new BasicDBObject());
@@ -105,7 +108,8 @@ public class TestCrudUtils {
 		BasicDBObject meta = new BasicDBObject();
 		
 		if (null != query_in.getLimit()) meta.put("$limit", query_in.getLimit());
-		final BasicDBObject sort = (BasicDBObject) Patterns.matchAndReturn(query_in.getOrderBy())
+		final BasicDBObject sort = Patterns.match(query_in.getOrderBy())
+				.<BasicDBObject>andReturn()
 				.when(l -> l == null, l -> null)
 				.otherwise(l -> {
 							BasicDBObject s = new BasicDBObject();
@@ -120,7 +124,9 @@ public class TestCrudUtils {
 	
 	private static <T> DBObject convertToMongoQuery_multi(String andVsOr, MultiQueryComponent<T> query_in) {
 		
-		return Patterns.matchAndReturn(query_in.getElements()).when(f -> f.isEmpty(), f -> new BasicDBObject())
+		return Patterns.match(query_in.getElements())
+				.<DBObject>andReturn()
+				.when(f -> f.isEmpty(), f -> new BasicDBObject())
 				.otherwise(f -> f.stream().collect(
 						new Collector<SingleQueryComponent<T>, BasicDBList, DBObject>() {
 							@Override
@@ -147,7 +153,9 @@ public class TestCrudUtils {
 		
 		// The actual query:
 
-		return Patterns.matchAndReturn(fields).when(f -> f.isEmpty(), f -> new BasicDBObject())
+		return Patterns.match(fields)
+				.<DBObject>andReturn()
+				.when(f -> f.isEmpty(), f -> new BasicDBObject())
 				.otherwise(f -> f.asMap().entrySet().stream()
 					.<Tuple2<String, Tuple2<Operator, Tuple2<Object, Object>>>>
 						flatMap(entry -> entry.getValue().stream().map( val -> Tuples._2T(entry.getKey(), val) ) )
@@ -160,7 +168,7 @@ public class TestCrudUtils {
 							@Override
 							public BiConsumer<BasicDBObject, Tuple2<String, Tuple2<Operator, Tuple2<Object, Object>>>> accumulator() {
 								return (acc, entry) -> {
-									Patterns.matchAndAct(acc.get(andVsOr))
+									Patterns.match(acc.get(andVsOr)).andAct()
 										.when(l -> (null == l), l -> {
 											BasicDBList dbl = new BasicDBList();
 											dbl.add(operatorToMongoKey(entry._1(), entry._2()));

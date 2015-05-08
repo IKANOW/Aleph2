@@ -24,7 +24,7 @@ public class TestPatterns {
 	@Test
 	public void MatchReturnTest_ClassAndConditions() {
 		Object o = new Double(5.0); 
-		String s = Patterns.matchAndReturn(o)
+		String s = Patterns.match(o).<String>andReturn()
 			.when(String.class, ss -> ss + ": string")
 			.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
 			.when(Double.class, d -> "2: " + d.getClass().toString())
@@ -34,7 +34,7 @@ public class TestPatterns {
 		assertEquals("Should fail condition and return on class match", "2: class java.lang.Double", s);
 		
 		o = new Double(3.0); 
-		s = Patterns.matchAndReturn(o)
+		s = Patterns.match(o).<String>andReturn()
 				.when(String.class, ss -> ss + ": string")
 				.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
 				.when(Double.class, d -> "2: " + d.getClass().toString())
@@ -51,7 +51,7 @@ public class TestPatterns {
 	public void MatchActTest_ClassAndConditions() {
 		Object o = new Double(5.0); 
 		_retVal = null;
-		Patterns.matchAndAct(o)
+		Patterns.match(o).andAct()
 			.when(String.class, ss -> _retVal = (ss + ": string"))
 			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
 			.when(Double.class, d -> _retVal = ("2: " + d.getClass().toString()))
@@ -62,7 +62,7 @@ public class TestPatterns {
 		
 		o = new Double(3.0); 
 		_retVal = null;
-		Patterns.matchAndAct(o)
+		Patterns.match(o).andAct()
 			.when(String.class, ss -> _retVal = (ss + ": string"))
 			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
 			.when(Double.class, d -> _retVal = ("2: " + d.getClass().toString()))
@@ -76,7 +76,7 @@ public class TestPatterns {
 	public void MatchActTest_ClassAndConditions_AllowMultiple() {
 		Object o = new Double(5.0); 
 		_retVal = null;
-		Patterns.matchAndAct(o)
+		Patterns.match(o).andAct()
 			.allowMultiple()
 			.when(String.class, ss -> _retVal = (ss + ": string"))
 			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
@@ -89,7 +89,7 @@ public class TestPatterns {
 		
 		o = new Double(3.0); 
 		_retVal = null;
-		Patterns.matchAndAct(o)
+		Patterns.match(o).andAct()
 			.allowMultiple()
 			.when(String.class, ss -> _retVal = (ss + ": string"))
 			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
