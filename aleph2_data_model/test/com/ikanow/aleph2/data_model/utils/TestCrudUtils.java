@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.EnumSet;
@@ -209,12 +210,14 @@ public class TestCrudUtils {
 		public Long long_field() { return long_field; }
 		public List<NestedTestBean> nested_list() { return nested_list; }
 		public Map<String, String> map() { return map; }
+		public NestedTestBean nested_object() { return nested_object; }
 		
 		protected TestBean() {}
 		private String string_field;
 		private Boolean bool_field;
 		private Long long_field;
 		private List<NestedTestBean> nested_list;
+		private NestedTestBean nested_object;
 		private Map<String, String> map;
 	}
 	
@@ -445,6 +448,52 @@ public class TestCrudUtils {
 		
 		assertEquals(expected_2.toString(), query_meta_2._1().toString());
 		assertEquals("{ }", query_meta_2._2().toString());
+		
+		// Nested objects
+		
+		TestBean t = new TestBean();
+		t.string_field = "a";
+		t.map = new HashMap<String, String>();
+		t.bool_field = true;
+		t.long_field = 1L;
+		t.nested_list = Arrays.asList();
+		TestBean.NestedTestBean nt2 = new TestBean.NestedTestBean();
+		nt2.nested_string_field = "xx";
+		t.nested_object = nt2;
+		TestBean.NestedNestedTestBean nnt = new TestBean.NestedNestedTestBean();
+		nnt.nested_nested_string_field = "i";
+		nt2.nested_object = nnt;
+		
+		final SingleQueryComponent<TestBean> query_comp_3 = CrudUtils.allOf(t)
+																.when(TestBean::long_field, 2)
+																	.nested(TestBean::nested_list,
+																			CrudUtils.allOf(TestBean.NestedTestBean.class)
+																				.when(TestBean.NestedTestBean::nested_string_field, "y")
+																				.nested(TestBean.NestedTestBean::nested_object,
+																						CrudUtils.allOf(TestBean.NestedNestedTestBean.class)
+																							.withNotPresent(TestBean.NestedNestedTestBean::nested_nested_string_field)
+																						)
+																				);
+		
+		final Tuple2<DBObject, DBObject> query_meta_3 = convertToMongoQuery(query_comp_3);
+		
+		final DBObject expected_3 = QueryBuilder.start().and(
+				QueryBuilder.start("long_field").is(2).get(),
+				QueryBuilder.start("long_field").is(1).get(),
+				QueryBuilder.start("nested_list.nested_string_field").is("y").get(),
+				QueryBuilder.start("nested_list.nested_object.nested_nested_string_field").exists(false).get(),
+
+				QueryBuilder.start("string_field").is("a").get(),
+				QueryBuilder.start("bool_field").is(true).get(),
+				QueryBuilder.start("nested_list").is(Arrays.asList()).get(),
+				QueryBuilder.start("nested_object.nested_string_field").is("xx").get(),
+				QueryBuilder.start("nested_object.nested_object.nested_nested_string_field").is("i").get(),
+				QueryBuilder.start("map").is(new HashMap<String, String>()).get()
+				
+				).get();		
+		
+		assertEquals(expected_3.toString(), query_meta_3._1().toString());
+		assertEquals("{ }", query_meta_3._2().toString());
 	}
 	
 	@Test

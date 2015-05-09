@@ -18,14 +18,17 @@ package com.ikanow.aleph2.data_model.utils;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
+import com.google.common.collect.Multimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.ikanow.aleph2.data_model.utils.ObjectTemplateUtils.MethodNamingHelper;
 
@@ -204,22 +207,11 @@ public class CrudUtils {
 		public LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> getAll() {
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
-			LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = LinkedHashMultimap.create();
+			final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = LinkedHashMultimap.create();
 			if (null != _extra) {
 				ret_val.putAll(_extra);
-			}
-			
-			Arrays.stream(_element.getClass().getDeclaredFields())
-				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-				.map(field_accessor -> {
-					try { 
-						field_accessor.setAccessible(true);
-						Object val = field_accessor.get(_element);
-						return val == null ? null : Tuples._2T(field_accessor.getName(), val);
-					} 
-					catch (Exception e) { return null; }
-				})
-				.filter(field_tuple -> null != field_tuple) 
+			}			
+			recursiveQueryBuilder_init(_element)
 				.forEach(field_tuple -> ret_val.put(field_tuple._1(), Tuples._2T(Operator.equals, Tuples._2T(field_tuple._2(), null)))); 
 			
 			return ret_val;
@@ -416,17 +408,7 @@ public class CrudUtils {
 			
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
-			Arrays.stream(nested_query_component._element.getClass().getDeclaredFields())
-				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-				.map(field_accessor -> { 
-					try { 
-						field_accessor.setAccessible(true);
-						Object val = field_accessor.get(nested_query_component._element);
-						return val == null ? null : Tuples._2T(field_accessor.getName(), val);
-					} 
-					catch (Exception e) { return null; }
-				})
-				.filter(field_tuple -> null != field_tuple) 
+			recursiveQueryBuilder_init(nested_query_component._element)
 				.forEach(field_tuple -> this.with(Operator.equals, field + "." + field_tuple._1(), Tuples._2T(field_tuple._2(), null))); 
 			
 			// Easy bit, add the extras
@@ -436,7 +418,7 @@ public class CrudUtils {
 			
 			return this;
 		}
-		
+				
 		/** Limits the number of returned objects (ignored if the query component is used in a multi-query)
 		 * @param limit the max number of objects to retrieve
 		 * @return the query component "helper"
@@ -490,5 +472,40 @@ public class CrudUtils {
 			_extra.put(field, Tuples._2T(op, in));
 			return this;
 		}
+		
+		//Recursive helper:
+		
+		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(Object bean) {
+			return 	Arrays.stream(bean.getClass().getDeclaredFields())
+					.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
+					.flatMap(field_accessor -> {
+						try { 
+							field_accessor.setAccessible(true);
+							Object val = field_accessor.get(bean);
+							
+							return Patterns.match(val)
+									.<Stream<Tuple2<String, Object>>>andReturn()
+									.when(v -> null == v, v -> Stream.empty())
+									.when(String.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									.when(Number.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									.when(Boolean.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									.when(Collection.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									.when(Map.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									.when(Multimap.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+									// OK if it's none of these supported types that we recognize, then assume it's a bean and recursively de-nest it
+									.otherwise(v -> recursiveQueryBuilder_recurse(field_accessor.getName(), v));
+						} 
+						catch (Exception e) { return null; }
+					});
+		}
+		
+		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(String parent_field, Object sub_bean) {
+			final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
+				//(all vs and inherited from parent so ignored here)			
+			
+			return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
+		}
+		
+
 	}	
 }
