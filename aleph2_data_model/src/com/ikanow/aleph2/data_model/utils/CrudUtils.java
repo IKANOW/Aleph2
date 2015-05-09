@@ -28,6 +28,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.ikanow.aleph2.data_model.utils.ObjectTemplateUtils.MethodNamingHelper;
@@ -54,34 +55,70 @@ public class CrudUtils {
 	public enum Operator { all_of, any_of, exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed, equals };
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
+	 *  Returns a type safe version that can be used in the raw JSON CRUD services
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleQueryComponent<T> allOf(Class<T> clazz) {
-		return new SingleQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
+	public static <T> SingleJsonQueryComponent<T> allOf_json(Class<T> clazz) {
+		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
+	}
+	
+	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
+	 *  Returns a type safe version that can be used in the raw JSON CRUD services
+	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
+	 * @param t - the starting set of fields (can be empty generated from default c'tor)
+	 * @return the query component "helper"
+	 */
+	public static <T> SingleJsonQueryComponent<T> allOf_json(T t) {
+		return new SingleJsonQueryComponent<T>(t, Operator.all_of);
+	}
+	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
+	 *  Returns a type safe version that can be used in the raw JSON CRUD services
+	 * @param clazz - the class of the template
+	 * @return the query component "helper"
+	 */
+	public static <T> SingleJsonQueryComponent<T> anyOf_json(Class<T> clazz) {
+		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
+	}
+	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
+	 *  Returns a type safe version that can be used in the raw JSON CRUD services
+	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
+	 * @param t- the starting set of fields (can be empty generated from default c'tor)
+	 * @return the query component "helper"
+	 */
+	public static <T> SingleJsonQueryComponent<T> anyOf_json(T t) {
+		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
+	}
+	
+	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
+	 * @param clazz - the class of the template
+	 * @return the query component "helper"
+	 */
+	public static <T> SingleBeanQueryComponent<T> allOf(Class<T> clazz) {
+		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
 	}
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
 	 * @param t - the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleQueryComponent<T> allOf(T t) {
-		return new SingleQueryComponent<T>(t, Operator.all_of);
+	public static <T> SingleBeanQueryComponent<T> allOf(T t) {
+		return new SingleBeanQueryComponent<T>(t, Operator.all_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleQueryComponent<T> anyOf(Class<T> clazz) {
-		return new SingleQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
+	public static <T> SingleBeanQueryComponent<T> anyOf(Class<T> clazz) {
+		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
 	 * @param t- the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleQueryComponent<T> anyOf(T t) {
-		return new SingleQueryComponent<T>(t, Operator.any_of);
+	public static <T> SingleBeanQueryComponent<T> anyOf(T t) {
+		return new SingleBeanQueryComponent<T>(t, Operator.any_of);
 	}
 	
 	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
@@ -175,25 +212,18 @@ public class CrudUtils {
 			_elements = new ArrayList<SingleQueryComponent<T>>(Arrays.asList(components)); 
 		}
 	}
-	/** Encapsulates a very simple query
+	
+	/** Encapsulates a very simple query - this top level all
 	 * @author acp
 	 * @param <T> the bean type being queried
 	 */
-	public static class  SingleQueryComponent<T> extends QueryComponent<T> {
+	public static class SingleQueryComponent<T> extends QueryComponent<T> {
 		
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
-		public T getElement() {
-			return _element;
-		}
-
 		public Operator getOp() {
 			return _op;
-		}
-
-		public LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> getExtra() {
-			return _extra;
 		}
 
 		public Long getLimit() {
@@ -217,96 +247,16 @@ public class CrudUtils {
 			return ret_val;
 		}
 		
+		protected Object getElement() {
+			return _element;
+		}
+
+		protected LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> getExtra() {
+			return _extra;
+		}
+
 		// Public interface - build
 		
-		public <U> SingleQueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull SingleQueryComponent<U> nested_query_component) {
-			buildNamingHelper();
-			return nested(_naming_helper.field(getter), nested_query_component);
-		}
-		/** Adds a collection field to the query - any of which can match
-		 * @param getter - the Java8 getter for the field
-		 * @param in - the collection of objects, any of which can match
-		 * @return the Query Component helper
-		 */
-		public SingleQueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
-			buildNamingHelper();
-			return with(Operator.any_of, _naming_helper.field(getter), Tuples._2T(in, null));
-		}
-		/** Adds a collection field to the query - all of which must match
-		 * @param getterthe Java8 getter for the field
-		 * @param in - the collection of objects, all of which must match
-		 * @return the Query Component helper
-		 */
-		public SingleQueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
-			buildNamingHelper();
-			return with(Operator.all_of, _naming_helper.field(getter), Tuples._2T(in, null));
-		}
-		/** Adds the requirement that the field be greater (or equal, if exclusive is false) than the specified lower bound
-		 * @param getter the field name (dot notation supported)
-		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
-		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
-		 * @return the Query Component helper
-		 */
-		public <U> SingleQueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean exclusive) {			
-			buildNamingHelper();
-			return rangeIn(_naming_helper.field(getter), lower_bound, exclusive, null, false);
-		}
-		/** Adds the requirement that the field be lesser (or equal, if exclusive is false) than the specified lower bound
-		 * @param getter - the field name (dot notation supported)
-		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
-		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
-		 * @return the Query Component helper
-		 */
-		public <U> SingleQueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean exclusive) {
-			buildNamingHelper();
-			return rangeIn(_naming_helper.field(getter), null, false, upper_bound, exclusive);
-		}
-		/** Adds the requirement that the field be within the two bounds (with exclusive/inclusive ie lower bound not included/included set by the 
-		 * @param getter - the field name (dot notation supported)
-		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
-		 * @param lower_exclusive - if true, then the bound is _not_ included, if true then it is
-		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
-		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
-		 * @return
-		 */
-		public <U> SingleQueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
-			buildNamingHelper();
-			return rangeIn(_naming_helper.field(getter), lower_bound, lower_exclusive, upper_bound, upper_exclusive);
-		}
-		/** Adds the requirement that a field not be set to the given value 
-		 * @param getter - the Java8 getter for the field
-		 * @param value - the value to be negated
-		 * @return the Query Component helper
-		 */
-		public <U> SingleQueryComponent<T> whenNot(@NonNull Function<T, ?> getter, U value) {
-			buildNamingHelper();
-			return with(Operator.equals, _naming_helper.field(getter), Tuples._2T(null, value));
-		}
-		/** Adds the requirement that a field be set to the given value 
-		 * @param getter - the Java8 getter for the field
-		 * @param value - the value to be negated
-		 * @return the Query Component helper
-		 */
-		public <U> SingleQueryComponent<T> when(@NonNull Function<T, ?> getter, U value) {
-			buildNamingHelper();
-			return with(Operator.equals, _naming_helper.field(getter), Tuples._2T(value, null));
-		}
-		/** Adds the requirement that a field be present 
-		 * @param getter - the Java8 getter for the field
-		 * @return the Query Component helper
-		 */
-		public SingleQueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
-			buildNamingHelper();
-			return with(Operator.exists, _naming_helper.field(getter), Tuples._2T(true, null));
-		}
-		/** Adds the requirement that a field be missing 
-		 * @param getter - the Java8 getter for the field
-		 * @return the Query Component helper
-		 */
-		public SingleQueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
-			buildNamingHelper();
-			return with(Operator.exists, _naming_helper.field(getter), Tuples._2T(false, null));
-		}
 		/** Adds a collection field to the query - any of which can match
 		 * @param getter - the field name (dot notation supported)
 		 * @param in - the collection of objects, any of which can match
@@ -399,10 +349,10 @@ public class CrudUtils {
 		public <U> SingleQueryComponent<T> when(String field, U value) {
 			return with(Operator.equals, field, Tuples._2T(value, null));
 		}
-		/**
-		 * @param field
+		/** Enables nested queries to be represented
+		 * @param field the parent field of the nested object
 		 * @param nested_query_component
-		 * @return
+		 * @return the Query Component helper
 		 */
 		public <U> SingleQueryComponent<T> nested(@NonNull String field, @NonNull SingleQueryComponent<U> nested_query_component) {
 			
@@ -444,15 +394,7 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		@SuppressWarnings("unchecked")
-		protected void buildNamingHelper() {
-			if (null == _naming_helper) {
-				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
-			}
-		}
-		
-		protected MethodNamingHelper<T> _naming_helper = null;
-		protected T _element = null;
+		protected Object _element = null;
 		protected Operator _op; 		
 		LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> _extra = null;
 		
@@ -460,7 +402,7 @@ public class CrudUtils {
 		protected Long _limit;
 		protected List<Tuple2<String, Integer>> _orderBy;
 		
-		protected SingleQueryComponent(T t, Operator op) {
+		protected SingleQueryComponent(Object t, Operator op) {
 			_element = t;
 			_op = op;
 		}
@@ -505,7 +447,263 @@ public class CrudUtils {
 			
 			return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
 		}
-		
+	}
 
-	}	
+	/** Helper class to generate queries for an object of type T represented by JSON
+	 * @author acp
+	 *
+	 * @param <T> - the underlying type
+	 */
+	@SuppressWarnings("unchecked")
+	public static class SingleJsonQueryComponent<T> extends SingleQueryComponent<JsonNode> {
+		
+		// Public - build
+		
+		/** Enables nested queries to be represented
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the parent field of the nested object
+		 * @param nested_query_component
+		 * @return the Query Component helper
+		 */
+		public <U> SingleJsonQueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull SingleQueryComponent<U> nested_query_component) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)nested(_naming_helper.field(getter), nested_query_component);
+		}
+		/** Adds a collection field to the query - any of which can match
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param in - the collection of objects, any of which can match
+		 * @return the Query Component helper
+		 */
+		public SingleJsonQueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.any_of, _naming_helper.field(getter), Tuples._2T(in, null));
+		}
+		/** Adds a collection field to the query - all of which must match
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter the Java8 getter for the field
+		 * @param in - the collection of objects, all of which must match
+		 * @return the Query Component helper
+		 */
+		public SingleJsonQueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.all_of, _naming_helper.field(getter), Tuples._2T(in, null));
+		}
+		/** Adds the requirement that the field be greater (or equal, if exclusive is false) than the specified lower bound
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter the field name (dot notation supported)
+		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> SingleJsonQueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean exclusive) {			
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, exclusive, null, false);
+		}
+		/** Adds the requirement that the field be lesser (or equal, if exclusive is false) than the specified lower bound
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the field name (dot notation supported)
+		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> SingleJsonQueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean exclusive) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), null, false, upper_bound, exclusive);
+		}
+		/** Adds the requirement that the field be within the two bounds (with exclusive/inclusive ie lower bound not included/included set by the 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the field name (dot notation supported)
+		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param lower_exclusive - if true, then the bound is _not_ included, if true then it is
+		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
+		 * @return
+		 */
+		public <U> SingleJsonQueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, lower_exclusive, upper_bound, upper_exclusive);
+		}
+		/** Adds the requirement that a field not be set to the given value 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param value - the value to be negated
+		 * @return the Query Component helper
+		 */
+		public <U> SingleJsonQueryComponent<T> whenNot(@NonNull Function<T, ?> getter, U value) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(null, value));
+		}
+		/** Adds the requirement that a field be set to the given value 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param value - the value to be negated
+		 * @return the Query Component helper
+		 */
+		public <U> SingleJsonQueryComponent<T> when(@NonNull Function<T, ?> getter, U value) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(value, null));
+		}
+		/** Adds the requirement that a field be present 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @return the Query Component helper
+		 */
+		public SingleJsonQueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(true, null));
+		}
+		/** Adds the requirement that a field be missing 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @return the Query Component helper
+		 */
+		public SingleJsonQueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (SingleJsonQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(false, null));
+		}
+		
+		// Implementation
+		
+		protected SingleJsonQueryComponent(Object t, Operator op) {
+			super(t, op);
+		}		
+		protected void buildNamingHelper() {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+			}
+		}
+		
+		protected MethodNamingHelper<T> _naming_helper = null;
+	}
+	
+	
+	/** Helper class to generate queries for an object of type T
+	 * @author acp
+	 *
+	 * @param <T> - the underlying type
+	 */
+	public static class SingleBeanQueryComponent<T> extends SingleQueryComponent<T> {
+		// Public - build
+		
+		/** Enables nested queries to be represented
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the parent field of the nested object
+		 * @param nested_query_component
+		 * @return the Query Component helper
+		 */
+		public <U> SingleBeanQueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull SingleQueryComponent<U> nested_query_component) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)nested(_naming_helper.field(getter), nested_query_component);
+		}
+		/** Adds a collection field to the query - any of which can match
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param in - the collection of objects, any of which can match
+		 * @return the Query Component helper
+		 */
+		public SingleBeanQueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.any_of, _naming_helper.field(getter), Tuples._2T(in, null));
+		}
+		/** Adds a collection field to the query - all of which must match
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getterthe Java8 getter for the field
+		 * @param in - the collection of objects, all of which must match
+		 * @return the Query Component helper
+		 */
+		public SingleBeanQueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.all_of, _naming_helper.field(getter), Tuples._2T(in, null));
+		}
+		/** Adds the requirement that the field be greater (or equal, if exclusive is false) than the specified lower bound
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter the field name (dot notation supported)
+		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> SingleBeanQueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean exclusive) {			
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, exclusive, null, false);
+		}
+		/** Adds the requirement that the field be lesser (or equal, if exclusive is false) than the specified lower bound
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the field name (dot notation supported)
+		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
+		 * @return the Query Component helper
+		 */
+		public <U> SingleBeanQueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean exclusive) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), null, false, upper_bound, exclusive);
+		}
+		/** Adds the requirement that the field be within the two bounds (with exclusive/inclusive ie lower bound not included/included set by the 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the field name (dot notation supported)
+		 * @param lower_bound - the lower bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param lower_exclusive - if true, then the bound is _not_ included, if true then it is
+		 * @param upper_bound - the upper bound - likely needs to be comparable, but not required by the API since that is up to the DB
+		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
+		 * @return
+		 */
+		public <U> SingleBeanQueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, lower_exclusive, upper_bound, upper_exclusive);
+		}
+		/** Adds the requirement that a field not be set to the given value 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param value - the value to be negated
+		 * @return the Query Component helper
+		 */
+		public <U> SingleBeanQueryComponent<T> whenNot(@NonNull Function<T, ?> getter, U value) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(null, value));
+		}
+		/** Adds the requirement that a field be set to the given value 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @param value - the value to be negated
+		 * @return the Query Component helper
+		 */
+		public <U> SingleBeanQueryComponent<T> when(@NonNull Function<T, ?> getter, U value) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(value, null));
+		}
+		/** Adds the requirement that a field be present 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @return the Query Component helper
+		 */
+		public SingleBeanQueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(true, null));
+		}
+		/** Adds the requirement that a field be missing 
+		 * NOTE: all getter variants must come before all string field variants
+		 * @param getter - the Java8 getter for the field
+		 * @return the Query Component helper
+		 */
+		public SingleBeanQueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (SingleBeanQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(false, null));
+		}
+		
+		// Implementation
+		
+		protected SingleBeanQueryComponent(T t, Operator op) {
+			super(t, op);
+		}
+		@SuppressWarnings("unchecked")
+		protected void buildNamingHelper() {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+			}
+		}
+		
+		protected MethodNamingHelper<T> _naming_helper = null;
+	}
+	
+	
 }
