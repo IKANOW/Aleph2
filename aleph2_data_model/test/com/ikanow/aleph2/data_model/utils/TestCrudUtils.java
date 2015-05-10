@@ -496,6 +496,13 @@ public class TestCrudUtils {
 		
 		assertEquals(expected_3.toString(), query_meta_3._1().toString());
 		assertEquals("{ }", query_meta_3._2().toString());
+		
+		// Test JSON version:
+		
+		final Tuple2<DBObject, DBObject> query_meta_3b = convertToMongoQuery(query_comp_3.toJsonComponent());
+		
+		assertEquals(expected_3.toString(), query_meta_3b._1().toString());
+		assertEquals("{ }", query_meta_3b._2().toString());		
 	}
 	
 	@Test

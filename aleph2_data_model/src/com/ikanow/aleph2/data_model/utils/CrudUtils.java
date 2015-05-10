@@ -257,6 +257,13 @@ public class CrudUtils {
 
 		// Public interface - build
 		
+		/** Converts this component to one that can be passed into a raw JsonNode version
+		 * @return the Json equivalent query component
+		 */
+		public SingleJsonQueryComponent<T> toJsonComponent() {
+			return new SingleJsonQueryComponent<T>(this);
+		}
+		
 		/** Adds a collection field to the query - any of which can match
 		 * @param getter - the field name (dot notation supported)
 		 * @param in - the collection of objects, any of which can match
@@ -454,6 +461,11 @@ public class CrudUtils {
 	 *
 	 * @param <T> - the underlying type
 	 */
+	/**
+	 * @author acp
+	 *
+	 * @param <T>
+	 */
 	@SuppressWarnings("unchecked")
 	public static class SingleJsonQueryComponent<T> extends SingleQueryComponent<JsonNode> {
 		
@@ -575,6 +587,18 @@ public class CrudUtils {
 		}
 		
 		protected MethodNamingHelper<T> _naming_helper = null;
+		
+		protected SingleJsonQueryComponent(SingleQueryComponent<T> copy) {
+			super(copy._element, copy._op);
+			
+			_element = copy._element;
+			_op = copy._op;
+			_extra = copy._extra;
+			
+			// Not supported when used in multi query
+			_limit = copy._limit;
+			_orderBy = copy._orderBy;			
+		}
 	}
 	
 	
