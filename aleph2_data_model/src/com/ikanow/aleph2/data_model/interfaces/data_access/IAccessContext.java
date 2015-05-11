@@ -143,8 +143,6 @@ public interface IAccessContext {
 	 * @return
 	 */
 	public ISecurityService getSecurityService();
-
-	public Injector getInjector();
 	
 	/////////////////////////////////////////////////////////////////////
 	
