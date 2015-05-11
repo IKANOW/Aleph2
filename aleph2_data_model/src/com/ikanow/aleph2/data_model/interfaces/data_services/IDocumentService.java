@@ -31,7 +31,7 @@ public interface IDocumentService {
 	 * @return the CRUD service
 	 */
 	@NonNull 
-	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull DataBucketBean bucket);
+	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull DataBucketBean bucket);
 	
 	/** Returns a CRUD service for the specified buckets or multi-buckets
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
@@ -39,7 +39,7 @@ public interface IDocumentService {
 	 * @return the CRUD service
 	 */
 	@NonNull 
-	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull Collection<DataBucketBean> buckets);
+	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull Collection<DataBucketBean> buckets);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -48,5 +48,5 @@ public interface IDocumentService {
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	@NonNull 
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

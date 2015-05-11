@@ -20,6 +20,7 @@ import java.util.Date;
 import java.util.Set;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class SharedLibraryBean {
 
@@ -27,9 +28,9 @@ public class SharedLibraryBean {
 	
 	/** User constructor
 	 */
-	public SharedLibraryBean(String _id, String display_name, @NonNull String path_name,
-			@NonNull LibraryType type, String subtype, @NonNull String owner_id,
-			Set<String> tags, @NonNull AuthorizationBean access_rights) {
+	public SharedLibraryBean(final @NonNull String _id, final @NonNull String display_name, final @NonNull String path_name,
+			final @NonNull LibraryType type, final @Nullable String subtype, final @NonNull String owner_id,
+			final @Nullable Set<String> tags, final @NonNull AuthorizationBean access_rights) {
 		super();
 		this._id = _id;
 		this.display_name = display_name;

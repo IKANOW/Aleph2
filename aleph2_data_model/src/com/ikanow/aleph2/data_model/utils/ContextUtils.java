@@ -29,7 +29,7 @@ public class ContextUtils {
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 */
-	public static @NonNull IHarvestContext getHarvestContext(@NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public static @NonNull IHarvestContext getHarvestContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		String[] clazz_and_config = signature.split(":", 2);
 		@SuppressWarnings("unchecked")
 		Class<IHarvestContext> harvest_clazz = (Class<IHarvestContext>) Class.forName(clazz_and_config[0]);
@@ -46,7 +46,7 @@ public class ContextUtils {
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 */
-	public static @NonNull IAnalyticsContext getAnalyticsContext(@NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public static @NonNull IAnalyticsContext getAnalyticsContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		String[] clazz_and_config = signature.split(":", 2);
 		@SuppressWarnings("unchecked")
 		Class<IAnalyticsContext> analytics_clazz = (Class<IAnalyticsContext>) Class.forName(clazz_and_config[0]);

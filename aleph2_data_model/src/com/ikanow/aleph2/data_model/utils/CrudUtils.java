@@ -59,7 +59,8 @@ public class CrudUtils {
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleJsonQueryComponent<T> allOf_json(Class<T> clazz) {
+	@NonNull
+	public static <T> SingleJsonQueryComponent<T> allOf_json(final @NonNull Class<T> clazz) {
 		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
 	}
 	
@@ -69,7 +70,8 @@ public class CrudUtils {
 	 * @param t - the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleJsonQueryComponent<T> allOf_json(T t) {
+	@NonNull
+	public static <T> SingleJsonQueryComponent<T> allOf_json(final @NonNull T t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.all_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
@@ -77,7 +79,8 @@ public class CrudUtils {
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleJsonQueryComponent<T> anyOf_json(Class<T> clazz) {
+	@NonNull
+	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull Class<T> clazz) {
 		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
@@ -86,7 +89,8 @@ public class CrudUtils {
 	 * @param t- the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleJsonQueryComponent<T> anyOf_json(T t) {
+	@NonNull
+	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull T t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
 	}
 	
@@ -94,7 +98,8 @@ public class CrudUtils {
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleBeanQueryComponent<T> allOf(Class<T> clazz) {
+	@NonNull
+	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull Class<T> clazz) {
 		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
 	}
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
@@ -102,14 +107,16 @@ public class CrudUtils {
 	 * @param t - the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleBeanQueryComponent<T> allOf(T t) {
+	@NonNull
+	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull T t) {
 		return new SingleBeanQueryComponent<T>(t, Operator.all_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleBeanQueryComponent<T> anyOf(Class<T> clazz) {
+	@NonNull
+	public static <T> SingleBeanQueryComponent<T> anyOf(final @NonNull Class<T> clazz) {
 		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
@@ -117,7 +124,8 @@ public class CrudUtils {
 	 * @param t- the starting set of fields (can be empty generated from default c'tor)
 	 * @return the query component "helper"
 	 */
-	public static <T> SingleBeanQueryComponent<T> anyOf(T t) {
+	@NonNull
+	public static <T> SingleBeanQueryComponent<T> anyOf(final @NonNull T t) {
 		return new SingleBeanQueryComponent<T>(t, Operator.any_of);
 	}
 	
@@ -126,7 +134,8 @@ public class CrudUtils {
 	 * @return the "multi" query component "helper"
 	 */
 	@SafeVarargs
-	public static <T> MultiQueryComponent<T> allOf(SingleQueryComponent<T>... components) {
+	@NonNull
+	public static <T> MultiQueryComponent<T> allOf(final @NonNull SingleQueryComponent<T>... components) {
 		return new MultiQueryComponent<T>(Operator.all_of, components);
 	}
 	
@@ -135,7 +144,8 @@ public class CrudUtils {
 	 * @return the "multi" query component "helper"
 	 */
 	@SafeVarargs
-	public static <T> MultiQueryComponent<T> anyOf(SingleQueryComponent<T>... components) {
+	@NonNull
+	public static <T> MultiQueryComponent<T> anyOf(final @NonNull SingleQueryComponent<T>... components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components);
 	}
 	
@@ -148,18 +158,22 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
+		@NonNull
 		public List<SingleQueryComponent<T>> getElements() {
 			return _elements;
 		}
 		
+		@NonNull
 		public Operator getOp() {
 			return _op;
 		}
 				
+		@NonNull
 		public Long getLimit() {
 			return _limit;
 		}
 
+		@NonNull
 		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
 		}
@@ -171,7 +185,8 @@ public class CrudUtils {
 		 * @return the "multi" query component "helper"
 		 */
 		@SafeVarargs
-		public final MultiQueryComponent<T> also(@NonNull SingleQueryComponent<T>... components) {
+		@NonNull
+		public final MultiQueryComponent<T> also(final @NonNull SingleQueryComponent<T>... components) {
 			_elements.addAll(Arrays.asList(components)); 
 			return this;
 		}
@@ -180,7 +195,8 @@ public class CrudUtils {
 		 * @param limit - the max number of objects to retrieve
 		 * @return the "multi" query component "helper"
 		 */
-		public MultiQueryComponent<T> limit(long limit) {
+		@NonNull
+		public MultiQueryComponent<T> limit(final long limit) {
 			_limit = limit;
 			return this;
 		}
@@ -189,7 +205,8 @@ public class CrudUtils {
 		 * @return the "multi" query component "helper"
 		 */
 		@SafeVarargs
-		final public MultiQueryComponent<T> orderBy(@NonNull Tuple2<String, Integer>... orderList) {
+		@NonNull
+		final public MultiQueryComponent<T> orderBy(final @NonNull Tuple2<String, Integer>... orderList) {
 			if (null == _orderBy) {
 				_orderBy = new ArrayList<Tuple2<String, Integer>>(Arrays.asList(orderList));
 			}
@@ -207,7 +224,7 @@ public class CrudUtils {
 		List<SingleQueryComponent<T>> _elements;
 		Operator _op;
 		
-		protected MultiQueryComponent(@NonNull Operator op, @SuppressWarnings("unchecked") SingleQueryComponent<T>... components) {
+		protected MultiQueryComponent(final @NonNull Operator op, final @SuppressWarnings("unchecked") SingleQueryComponent<T>... components) {
 			_op = op;
 			_elements = new ArrayList<SingleQueryComponent<T>>(Arrays.asList(components)); 
 		}
@@ -222,22 +239,26 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
+		@NonNull
 		public Operator getOp() {
 			return _op;
 		}
 
+		@NonNull
 		public Long getLimit() {
 			return _limit;
 		}
 
+		@NonNull
 		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
 		}
 		
-		public LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> getAll() {
+		@NonNull
+		public LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> getAll() {
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
-			final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = LinkedHashMultimap.create();
+			final LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> ret_val = LinkedHashMultimap.create();
 			if (null != _extra) {
 				ret_val.putAll(_extra);
 			}			
@@ -247,11 +268,13 @@ public class CrudUtils {
 			return ret_val;
 		}
 		
+		@NonNull
 		protected Object getElement() {
 			return _element;
 		}
 
-		protected LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> getExtra() {
+		@NonNull
+		protected LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> getExtra() {
 			return _extra;
 		}
 
@@ -260,6 +283,7 @@ public class CrudUtils {
 		/** Converts this component to one that can be passed into a raw JsonNode version
 		 * @return the Json equivalent query component
 		 */
+		@NonNull
 		public SingleJsonQueryComponent<T> toJsonComponent() {
 			return new SingleJsonQueryComponent<T>(this);
 		}
@@ -269,7 +293,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, any of which can match
 		 * @return the Query Component helper
 		 */
-		public SingleQueryComponent<T> withAny(@NonNull String field, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleQueryComponent<T> withAny(final @NonNull String field, final @NonNull Collection<?> in) {
 			return with(Operator.any_of, field, Tuples._2T(in, null));
 		}
 		/** Adds a collection field to the query - all of which must match
@@ -277,7 +302,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, all of which must match
 		 * @return the Query Component helper
 		 */
-		public SingleQueryComponent<T> withAll(@NonNull String field, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleQueryComponent<T> withAll(final @NonNull String field, final @NonNull Collection<?> in) {
 			return with(Operator.all_of, field, Tuples._2T(in, null));
 		}
 		
@@ -287,7 +313,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleQueryComponent<T> rangeAbove(@NonNull String field, @NonNull U lower_bound, boolean exclusive) {			
+		@NonNull
+		public <U> SingleQueryComponent<T> rangeAbove(final @NonNull String field, final @NonNull U lower_bound, final boolean exclusive) {			
 			return rangeIn(field, lower_bound, exclusive, null, false);
 		}
 		/** Adds the requirement that the field be lesser (or equal, if exclusive is false) than the specified lower bound
@@ -296,7 +323,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleQueryComponent<T> rangeBelow(@NonNull String field, @NonNull U upper_bound, boolean exclusive) {
+		@NonNull
+		public <U> SingleQueryComponent<T> rangeBelow(final @NonNull String field, final @NonNull U upper_bound, final boolean exclusive) {
 			return rangeIn(field, null, false, upper_bound, exclusive);
 		}
 		/** Adds the requirement that the field be within the two bounds (with exclusive/inclusive ie lower bound not included/included set by the 
@@ -307,7 +335,8 @@ public class CrudUtils {
 		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
 		 * @return
 		 */
-		public <U> SingleQueryComponent<T> rangeIn(@NonNull String field, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
+		@NonNull
+		public <U> SingleQueryComponent<T> rangeIn(final @NonNull String field, final @NonNull U lower_bound, final boolean lower_exclusive, final @NonNull U upper_bound, final boolean upper_exclusive) {
 			java.util.function.BiFunction<Boolean, Boolean, Operator> getRange =
 				(lower, upper) -> {
 					if (lower && upper) {
@@ -330,14 +359,16 @@ public class CrudUtils {
 		 * @param field - the field name (dot notation supported)
 		 * @return
 		 */
-		public SingleQueryComponent<T> withPresent(@NonNull String field) {
+		@NonNull
+		public SingleQueryComponent<T> withPresent(final @NonNull String field) {
 			return with(Operator.exists, field, Tuples._2T(true, null));
 		}
 		/** Adds the requirement that a field must not be present 
 		 * @param field - the field name (dot notation supported)
 		 * @return
 		 */
-		public SingleQueryComponent<T> withNotPresent(@NonNull String field) {
+		@NonNull
+		public SingleQueryComponent<T> withNotPresent(final @NonNull String field) {
 			return with(Operator.exists, field, Tuples._2T(false, null));
 		}
 		/** Adds the requirement that a field not be set to the given value 
@@ -345,7 +376,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleQueryComponent<T> whenNot(String field, U value) {
+		@NonNull
+		public <U> SingleQueryComponent<T> whenNot(final @NonNull String field, final @NonNull U value) {
 			return with(Operator.equals, field, Tuples._2T(null, value));
 		}
 		/** Adds the requirement that a field be set to the given value 
@@ -353,7 +385,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleQueryComponent<T> when(String field, U value) {
+		@NonNull
+		public <U> SingleQueryComponent<T> when(final @NonNull String field, final @NonNull U value) {
 			return with(Operator.equals, field, Tuples._2T(value, null));
 		}
 		/** Enables nested queries to be represented
@@ -361,7 +394,8 @@ public class CrudUtils {
 		 * @param nested_query_component
 		 * @return the Query Component helper
 		 */
-		public <U> SingleQueryComponent<T> nested(@NonNull String field, @NonNull SingleQueryComponent<U> nested_query_component) {
+		@NonNull
+		public <U> SingleQueryComponent<T> nested(final @NonNull String field, final @NonNull SingleQueryComponent<U> nested_query_component) {
 			
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
@@ -380,7 +414,8 @@ public class CrudUtils {
 		 * @param limit the max number of objects to retrieve
 		 * @return the query component "helper"
 		 */
-		public SingleQueryComponent<T> limit(long limit) {
+		@NonNull
+		public SingleQueryComponent<T> limit(final long limit) {
 			_limit = limit;
 			return this;
 		}
@@ -389,7 +424,8 @@ public class CrudUtils {
 		 * @return the "multi" query component "helper"
 		 */
 		@SafeVarargs
-		public final SingleQueryComponent<T> orderBy(@NonNull  Tuple2<String, Integer>... orderList) {
+		@NonNull
+		public final SingleQueryComponent<T> orderBy(final @NonNull Tuple2<String, Integer>... orderList) {
 			if (null == _orderBy) {
 				_orderBy = new ArrayList<Tuple2<String, Integer>>(Arrays.asList(orderList));
 			}
@@ -409,12 +445,14 @@ public class CrudUtils {
 		protected Long _limit;
 		protected List<Tuple2<String, Integer>> _orderBy;
 		
-		protected SingleQueryComponent(Object t, Operator op) {
+		@NonNull
+		protected SingleQueryComponent(final @NonNull Object t, final @NonNull Operator op) {
 			_element = t;
 			_op = op;
 		}
 		
-		protected SingleQueryComponent<T> with(@NonNull Operator op, @NonNull String field, Tuple2<Object, Object> in) {
+		@NonNull
+		protected SingleQueryComponent<T> with(final @NonNull Operator op, final @NonNull String field, Tuple2<Object, Object> in) {
 			if (null == _extra) {
 				_extra = LinkedHashMultimap.create();
 			}
@@ -424,7 +462,8 @@ public class CrudUtils {
 		
 		//Recursive helper:
 		
-		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(Object bean) {
+		@NonNull
+		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean) {
 			return 	Arrays.stream(bean.getClass().getDeclaredFields())
 					.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 					.flatMap(field_accessor -> {
@@ -448,7 +487,8 @@ public class CrudUtils {
 					});
 		}
 		
-		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(String parent_field, Object sub_bean) {
+		@NonNull
+		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(final @NonNull String parent_field, final @NonNull Object sub_bean) {
 			final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
 				//(all vs and inherited from parent so ignored here)			
 			
@@ -477,7 +517,8 @@ public class CrudUtils {
 		 * @param nested_query_component
 		 * @return the Query Component helper
 		 */
-		public <U> SingleJsonQueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull SingleQueryComponent<U> nested_query_component) {
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> nested(final @NonNull Function<T, ?> getter, final @NonNull SingleQueryComponent<U> nested_query_component) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)nested(_naming_helper.field(getter), nested_query_component);
 		}
@@ -487,7 +528,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, any of which can match
 		 * @return the Query Component helper
 		 */
-		public SingleJsonQueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleJsonQueryComponent<T> withAny(final @NonNull Function<T, ?> getter, final @NonNull Collection<?> in) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.any_of, _naming_helper.field(getter), Tuples._2T(in, null));
 		}
@@ -497,7 +539,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, all of which must match
 		 * @return the Query Component helper
 		 */
-		public SingleJsonQueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleJsonQueryComponent<T> withAll(final @NonNull Function<T, ?> getter, final @NonNull Collection<?> in) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.all_of, _naming_helper.field(getter), Tuples._2T(in, null));
 		}
@@ -508,7 +551,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleJsonQueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean exclusive) {			
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> rangeAbove(final @NonNull Function<T, ?> getter, final @NonNull U lower_bound, final boolean exclusive) {			
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, exclusive, null, false);
 		}
@@ -519,7 +563,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleJsonQueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean exclusive) {
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> rangeBelow(final @NonNull Function<T, ?> getter, final @NonNull U upper_bound, final boolean exclusive) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), null, false, upper_bound, exclusive);
 		}
@@ -532,7 +577,8 @@ public class CrudUtils {
 		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
 		 * @return
 		 */
-		public <U> SingleJsonQueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> rangeIn(final @NonNull Function<T, ?> getter, final @NonNull U lower_bound, final boolean lower_exclusive, final @NonNull U upper_bound, final boolean upper_exclusive) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, lower_exclusive, upper_bound, upper_exclusive);
 		}
@@ -542,7 +588,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleJsonQueryComponent<T> whenNot(@NonNull Function<T, ?> getter, U value) {
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> whenNot(final @NonNull Function<T, ?> getter, final @NonNull U value) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(null, value));
 		}
@@ -552,7 +599,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleJsonQueryComponent<T> when(@NonNull Function<T, ?> getter, U value) {
+		@NonNull
+		public <U> SingleJsonQueryComponent<T> when(final @NonNull Function<T, ?> getter, final @NonNull U value) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(value, null));
 		}
@@ -561,7 +609,8 @@ public class CrudUtils {
 		 * @param getter - the Java8 getter for the field
 		 * @return the Query Component helper
 		 */
-		public SingleJsonQueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
+		@NonNull
+		public SingleJsonQueryComponent<T> withPresent(final @NonNull Function<T, ?> getter) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(true, null));
 		}
@@ -570,14 +619,15 @@ public class CrudUtils {
 		 * @param getter - the Java8 getter for the field
 		 * @return the Query Component helper
 		 */
-		public SingleJsonQueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
+		@NonNull
+		public SingleJsonQueryComponent<T> withNotPresent(final @NonNull Function<T, ?> getter) {
 			buildNamingHelper();
 			return (SingleJsonQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(false, null));
 		}
 		
 		// Implementation
 		
-		protected SingleJsonQueryComponent(Object t, Operator op) {
+		protected SingleJsonQueryComponent(final @NonNull Object t, final @NonNull Operator op) {
 			super(t, op);
 		}		
 		protected void buildNamingHelper() {
@@ -588,7 +638,7 @@ public class CrudUtils {
 		
 		protected MethodNamingHelper<T> _naming_helper = null;
 		
-		protected SingleJsonQueryComponent(SingleQueryComponent<T> copy) {
+		protected SingleJsonQueryComponent(final @NonNull SingleQueryComponent<T> copy) {
 			super(copy._element, copy._op);
 			
 			_element = copy._element;
@@ -616,7 +666,8 @@ public class CrudUtils {
 		 * @param nested_query_component
 		 * @return the Query Component helper
 		 */
-		public <U> SingleBeanQueryComponent<T> nested(@NonNull Function<T, ?> getter, @NonNull SingleQueryComponent<U> nested_query_component) {
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> nested(final @NonNull Function<T, ?> getter, final @NonNull SingleQueryComponent<U> nested_query_component) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)nested(_naming_helper.field(getter), nested_query_component);
 		}
@@ -626,7 +677,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, any of which can match
 		 * @return the Query Component helper
 		 */
-		public SingleBeanQueryComponent<T> withAny(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleBeanQueryComponent<T> withAny(final @NonNull Function<T, ?> getter, final @NonNull Collection<?> in) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.any_of, _naming_helper.field(getter), Tuples._2T(in, null));
 		}
@@ -636,7 +688,8 @@ public class CrudUtils {
 		 * @param in - the collection of objects, all of which must match
 		 * @return the Query Component helper
 		 */
-		public SingleBeanQueryComponent<T> withAll(@NonNull Function<T, ?> getter, @NonNull Collection<?> in) {
+		@NonNull
+		public SingleBeanQueryComponent<T> withAll(final @NonNull Function<T, ?> getter, final @NonNull Collection<?> in) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.all_of, _naming_helper.field(getter), Tuples._2T(in, null));
 		}
@@ -647,7 +700,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleBeanQueryComponent<T> rangeAbove(@NonNull Function<T, ?> getter, @NonNull U lower_bound, boolean exclusive) {			
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> rangeAbove(final @NonNull Function<T, ?> getter, final @NonNull U lower_bound, final boolean exclusive) {			
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, exclusive, null, false);
 		}
@@ -658,7 +712,8 @@ public class CrudUtils {
 		 * @param exclusive - if true, then the bound is _not_ included, if true then it is 
 		 * @return the Query Component helper
 		 */
-		public <U> SingleBeanQueryComponent<T> rangeBelow(@NonNull Function<T, ?> getter, @NonNull U upper_bound, boolean exclusive) {
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> rangeBelow(final @NonNull Function<T, ?> getter, final @NonNull U upper_bound, final boolean exclusive) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), null, false, upper_bound, exclusive);
 		}
@@ -671,7 +726,8 @@ public class CrudUtils {
 		 * @param upper_exclusive - if true, then the bound is _not_ included, if true then it is
 		 * @return
 		 */
-		public <U> SingleBeanQueryComponent<T> rangeIn(@NonNull Function<T, ?> getter, U lower_bound, boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> rangeIn(final @NonNull Function<T, ?> getter, final @NonNull U lower_bound, final boolean lower_exclusive, U upper_bound, boolean upper_exclusive) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)rangeIn(_naming_helper.field(getter), lower_bound, lower_exclusive, upper_bound, upper_exclusive);
 		}
@@ -681,7 +737,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleBeanQueryComponent<T> whenNot(@NonNull Function<T, ?> getter, U value) {
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> whenNot(final @NonNull Function<T, ?> getter, final @NonNull U value) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(null, value));
 		}
@@ -691,7 +748,8 @@ public class CrudUtils {
 		 * @param value - the value to be negated
 		 * @return the Query Component helper
 		 */
-		public <U> SingleBeanQueryComponent<T> when(@NonNull Function<T, ?> getter, U value) {
+		@NonNull
+		public <U> SingleBeanQueryComponent<T> when(final @NonNull Function<T, ?> getter, final @NonNull U value) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.equals, _naming_helper.field(getter), Tuples._2T(value, null));
 		}
@@ -700,7 +758,8 @@ public class CrudUtils {
 		 * @param getter - the Java8 getter for the field
 		 * @return the Query Component helper
 		 */
-		public SingleBeanQueryComponent<T> withPresent(@NonNull Function<T, ?> getter) {
+		@NonNull
+		public SingleBeanQueryComponent<T> withPresent(final @NonNull Function<T, ?> getter) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(true, null));
 		}
@@ -709,14 +768,15 @@ public class CrudUtils {
 		 * @param getter - the Java8 getter for the field
 		 * @return the Query Component helper
 		 */
-		public SingleBeanQueryComponent<T> withNotPresent(@NonNull Function<T, ?> getter) {
+		@NonNull
+		public SingleBeanQueryComponent<T> withNotPresent(final @NonNull Function<T, ?> getter) {
 			buildNamingHelper();
 			return (SingleBeanQueryComponent<T>)with(Operator.exists, _naming_helper.field(getter), Tuples._2T(false, null));
 		}
 		
 		// Implementation
 		
-		protected SingleBeanQueryComponent(T t, Operator op) {
+		protected SingleBeanQueryComponent(final @NonNull T t, final Operator op) {
 			super(t, op);
 		}
 		@SuppressWarnings("unchecked")

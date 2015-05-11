@@ -212,7 +212,7 @@ public class TestContextUtils {
 		String dummySignature = null;
 
 		@Override
-		public <I> I getService(@NonNull Class<I> service_clazz,
+		public <I> Optional<I> getService(@NonNull Class<I> service_clazz,
 				@NonNull Optional<String> service_name) {
 			return null;
 		}

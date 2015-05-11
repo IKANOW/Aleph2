@@ -63,7 +63,7 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the per library generic object store
 	 */
 	@NonNull 
-	<T> ICrudService<T> getPerLibraryState(@NonNull Class<T> clazz, @NonNull SharedLibraryBean library, @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerLibraryState(final @NonNull Class<T> clazz, final @NonNull SharedLibraryBean library, final @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -90,7 +90,7 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the per bucket generic object store
 	 */
 	@NonNull 
-	<T> ICrudService<T> getPerBucketState(@NonNull Class<T> clazz, @NonNull DataBucketBean bucket, @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerBucketState(final @NonNull Class<T> clazz, final @NonNull DataBucketBean bucket, final @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -109,7 +109,7 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
 	@NonNull 
-	<T> ICrudService<T> getPerAnalyticThreadState(@NonNull Class<T> clazz, @NonNull AnalyticThreadBean analytic_thread, @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerAnalyticThreadState(final @NonNull Class<T> clazz, final @NonNull AnalyticThreadBean analytic_thread, final @NonNull Optional<String> sub_collection);
 	
 	////////////////////////////////////
 
@@ -122,5 +122,5 @@ public interface IManagementDbService {
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	@NonNull 
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
 }

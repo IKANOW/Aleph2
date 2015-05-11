@@ -35,7 +35,7 @@ public interface IBasicSearchService<O> {
 	 * @return a future containing the number of matching objects
 	 */
 	@NonNull 
-	Future<Long> count(Optional<String> query_string, Optional<String> filter_string);
+	Future<Long> count(final Optional<String> query_string, final Optional<String> filter_string);
 	
 	/** Performs a simple lucene-type query on the underlying data, where supported
 	 * @param query_string - A lucene formatted query
@@ -49,9 +49,9 @@ public interface IBasicSearchService<O> {
 	 */
 	@NonNull 
 	Future<Tuple2<Iterable<O>, Optional<Map<String, Collection<Tuple2<String, Long>>>>>> 
-		search(Optional<String> query_string, Optional<String> filter_string, Optional<Integer> limit,
-				Optional<Tuple2<String, Integer>> orderBy, Optional<Integer> skip, Optional<Collection<String>> return_fields,
-				Optional<Map<String, Long>> facet_fields);
+		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
+				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields,
+				final Optional<Map<String, Long>> facet_fields);
 
 	/** Performs a simple lucene-type query on the underlying data, where supported
 	 * @param query_string - A lucene formatted query
@@ -64,8 +64,8 @@ public interface IBasicSearchService<O> {
 	 */
 	@NonNull 
 	Future<Iterable<O>> 
-		search(Optional<String> query_string, Optional<String> filter_string, Optional<Integer> limit,
-				Optional<Tuple2<String, Integer>> orderBy, Optional<Integer> skip, Optional<Collection<String>> return_fields);
+		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
+				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields);
 	
 	/** Performs a simple lucene-type query on the underlying data, where supported
 	 * @param query_string - A lucene formatted query
@@ -74,7 +74,7 @@ public interface IBasicSearchService<O> {
 	 * @return a a collection of matching objects
 	 */
 	@NonNull 
-	Future<Iterable<O>> search(Optional<String> query_string, Optional<String> filter_string, Optional<Integer> limit);
+	Future<Iterable<O>> search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -83,5 +83,5 @@ public interface IBasicSearchService<O> {
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	@NonNull 
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
 }

@@ -31,9 +31,9 @@ public class EnrichmentControlMetadataBean {
 	
 	/** User constructor
 	 */
-	public EnrichmentControlMetadataBean(@NonNull String name,
-			@Nullable List<String> dependencies, @NonNull Boolean enabled,
-			@Nullable List<String> library_ids_or_names, @Nullable Map<String, Object> config) {
+	public EnrichmentControlMetadataBean(final @NonNull String name,
+			final @Nullable List<String> dependencies, @NonNull Boolean enabled,
+			final @Nullable List<String> library_ids_or_names, @Nullable Map<String, Object> config) {
 		super();
 		this.name = name;
 		this.dependencies = dependencies;

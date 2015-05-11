@@ -25,14 +25,14 @@ public interface IUuidService {
 	 * @return time-based UUID string
 	 */
 	@NonNull 
-	public String getTimeBasedUuid(long time);	
+	public String getTimeBasedUuid(final long time);	
 	
 	/** The time associated with the UUID
 	 * @param uuid - must be time based or the result is undefined
 	 * @return the time of the UUID in milliseconds from Unix Epoch
 	 */
 	@NonNull 
-	public long getTimeUuid(String uuid);
+	public long getTimeUuid(final @NonNull String uuid);
 	
 	/** Returns a random (type 3) UUID 
 	 * @return UUID string
@@ -45,19 +45,19 @@ public interface IUuidService {
 	 * @return a UUID based on the json-ification of the bean
 	 */
 	@NonNull 
-	public <T> String getContentBasedUuid(T bean);
+	public <T> String getContentBasedUuid(final @NonNull T bean);
 	
 	/** Generates a UUID "unique to" the specified JSON object (field order matters)
 	 * @param JSON object
 	 * @return a UUID based on the json-ification of the bean
 	 */
 	@NonNull 
-	public <T> String getContentBasedUuid(JsonNode json);
+	public <T> String getContentBasedUuid(final @NonNull JsonNode json);
 	
 	/** Generates a UUID "unique to" the specified "blob"
 	 * @param "blob"
 	 * @return a UUID based on the json-ification of the bean
 	 */
 	@NonNull 
-	public <T> String getContentBasedUuid(byte[] binary);
+	public <T> String getContentBasedUuid(final @NonNull byte[] binary);
 }

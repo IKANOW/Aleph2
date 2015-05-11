@@ -31,13 +31,13 @@ public class BasicMessageBean {
 	
 	/** User constructor
 	 */
-	public BasicMessageBean(@NonNull Date date,
-								@NonNull Boolean success,
-								@Nullable String source,
-								@Nullable String command,
-								@Nullable Integer message_code,
-								@NonNull String message,
-								@Nullable Map<String, String> details
+	public BasicMessageBean(final @NonNull Date date,
+			final @NonNull Boolean success,
+			final @Nullable String source,
+			final @Nullable String command,
+			final @Nullable Integer message_code,
+			final @NonNull String message,
+			final @Nullable Map<String, String> details
 								)
 	{
 		this.date = date;

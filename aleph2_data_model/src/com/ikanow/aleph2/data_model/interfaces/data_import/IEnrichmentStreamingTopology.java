@@ -40,7 +40,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @return the topology and configuration for this streaming enrichment process
 	 */
 	@NonNull 
-	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(@NonNull DataBucketBean bean, @NonNull IEnrichmentModuleContext context);
+	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final @NonNull DataBucketBean bean, final @NonNull IEnrichmentModuleContext context);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - For every object submitted to the streaming topology, this function is applied to generate a simpler object more amenable to being passed around
 	 * It is recommended to make the final element inserted be the entire object in string format (see incoming_object_string)
@@ -49,7 +49,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @return an object representing the simplified object (eg in Storm the keys will be used to declare the fields)
 	 */
 	@NonNull 
-	LinkedHashMap<String, Object> decomposeIncomingObject(JsonNode incoming_object, Optional<String> incoming_object_string);
+	LinkedHashMap<String, Object> decomposeIncomingObject(final @NonNull JsonNode incoming_object, final Optional<String> incoming_object_string);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
 	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 
@@ -58,5 +58,5 @@ public interface IEnrichmentStreamingTopology {
 	 * @return the final JsonNode to store
 	 */
 	@NonNull 
-	JsonNode rebuildObject(LinkedHashMap<String, Object> outgoing_object);
+	JsonNode rebuildObject(final @NonNull LinkedHashMap<String, Object> outgoing_object);
 }

@@ -28,5 +28,5 @@ public interface IGeospatialService {
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	@NonNull 
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
 }

@@ -30,22 +30,22 @@ public class DataLayerConfigurationBean {
 	
 	/** User constructor
 	 */
-	public DataLayerConfigurationBean(@Nullable String storage_service,
-			@Nullable Map<String, Object> storage_service_config,
-			@Nullable String columnar_db_service,
-			@Nullable Map<String, Object> columnar_db_service_config,
-			@Nullable String graph_db_service,
-			@Nullable Map<String, Object> graph_db_service_config,
-			@Nullable String geospatial_service,
-			@Nullable Map<String, Object> geospatial_service_config,
-			@Nullable String management_db_service,
-			@Nullable Map<String, Object> management_db_service_config,
-			@Nullable String document_db_service,
-			@Nullable Map<String, Object> document_db_service_config,
-			@Nullable String search_index_service,
-			@Nullable Map<String, Object> search_index_service_config,
-			@Nullable String temporal_service, 
-			@Nullable Map<String, Object> temporal_service_config)
+	public DataLayerConfigurationBean(final @Nullable String storage_service,
+			final @Nullable Map<String, Object> storage_service_config,
+			final @Nullable String columnar_db_service,
+			final @Nullable Map<String, Object> columnar_db_service_config,
+			final @Nullable String graph_db_service,
+			final @Nullable Map<String, Object> graph_db_service_config,
+			final @Nullable String geospatial_service,
+			final @Nullable Map<String, Object> geospatial_service_config,
+			final @Nullable String management_db_service,
+			final @Nullable Map<String, Object> management_db_service_config,
+			final @Nullable String document_db_service,
+			final @Nullable Map<String, Object> document_db_service_config,
+			final @Nullable String search_index_service,
+			final @Nullable Map<String, Object> search_index_service_config,
+			final @Nullable String temporal_service, 
+			final @Nullable Map<String, Object> temporal_service_config)
 	{
 		this.storage_service = storage_service;
 		this.storage_service_config = storage_service_config;

@@ -32,14 +32,14 @@ public class DataSchemaBean {
 	
 	/** User constructor
 	 */
-	public DataSchemaBean(@Nullable StorageSchemaBean storage_schema,
-			@Nullable DocumentSchemaBean document_schema,
-			@Nullable SearchIndexSchemaBean search_index_schema,
-			@Nullable ColumnarSchemaBean columnar_schema,
-			@Nullable TemporalSchemaBean temporal_schema,
-			@Nullable GeospatialSchemaBean geospatial_schema,
-			@Nullable GraphSchemaBean graph_schema,
-			@Nullable DataWarehouseSchemaBean data_warehouse_schema
+	public DataSchemaBean(final @Nullable StorageSchemaBean storage_schema,
+			final @Nullable DocumentSchemaBean document_schema,
+			final @Nullable SearchIndexSchemaBean search_index_schema,
+			final @Nullable ColumnarSchemaBean columnar_schema,
+			final @Nullable TemporalSchemaBean temporal_schema,
+			final @Nullable GeospatialSchemaBean geospatial_schema,
+			final @Nullable GraphSchemaBean graph_schema,
+			final @Nullable DataWarehouseSchemaBean data_warehouse_schema
 			)
 	{
 		this.storage_schema = storage_schema;
@@ -119,11 +119,11 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public StorageSchemaBean(@NonNull Boolean enabled, 
-				@Nullable String service_name,
-				@Nullable String grouping_time_period,
-				@Nullable String exist_age_max,
-				@Nullable Map<String, Object> technology_override_schema) {
+		public StorageSchemaBean(final @NonNull Boolean enabled, 
+				final @Nullable String service_name,
+				final @Nullable String grouping_time_period,
+				final @Nullable String exist_age_max,
+				final @Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.grouping_time_period = grouping_time_period;
@@ -180,11 +180,11 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public DocumentSchemaBean(@NonNull Boolean enabled, 
-				@Nullable String service_name,
-				@Nullable Boolean deduplicate,
-				@Nullable List<String> deduplication_fields,
-				@Nullable Map<String, Object> technology_override_schema) {
+		public DocumentSchemaBean(final @NonNull Boolean enabled, 
+				final @Nullable String service_name,
+				final @Nullable Boolean deduplicate,
+				final @Nullable List<String> deduplication_fields,
+				final @Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.deduplicate = deduplicate;
@@ -246,9 +246,9 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public SearchIndexSchemaBean(@NonNull Boolean enabled,
-				@Nullable String service_name,
-				@Nullable Map<String, Object> technology_override_schema) {
+		public SearchIndexSchemaBean(final @NonNull Boolean enabled,
+				final @Nullable String service_name,
+				final @Nullable Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
 			this.service_name = service_name;
@@ -288,14 +288,14 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public ColumnarSchemaBean(@NonNull Boolean enabled,
-				@Nullable String service_name,
-				@Nullable List<String> field_include_list,
-				@Nullable List<String> field_exclude_list, String field_include_regex,
-				@Nullable String field_exclude_regex,
-				@Nullable List<String> field_type_include_list,
-				@Nullable List<String> field_type_exclude_list,
-				@Nullable Map<String, Object> technology_override_schema) {
+		public ColumnarSchemaBean(final @NonNull Boolean enabled,
+				final @Nullable String service_name,
+				final @Nullable List<String> field_include_list,
+				final @Nullable List<String> field_exclude_list, String field_include_regex,
+				final @Nullable String field_exclude_regex,
+				final @Nullable List<String> field_type_include_list,
+				final @Nullable List<String> field_type_exclude_list,
+				final @Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.field_include_list = field_include_list;
