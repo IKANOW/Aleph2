@@ -45,28 +45,29 @@ public interface IHarvestContext {
 	 * @param service_name - optional - if ommitted, this is the default service of this type
 	 * @return the requested service
 	 */
-	<I> I getService(@NonNull Class<I> service_clazz, @NonNull Optional<String> service_name);
+	@NonNull 
+	<I> Optional<I> getService(final @NonNull Class<I> service_clazz, final @NonNull Optional<String> service_name);
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param object the object to emit represented by Jackson JsonNode
 	 */
-	void sendObjectToStreamingPipeline(@NonNull Optional<DataBucketBean> bucket, @NonNull JsonNode object);
+	void sendObjectToStreamingPipeline(final @NonNull Optional<DataBucketBean> bucket, final @NonNull JsonNode object);
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param object the object to emit in "pojo" format
 	 */
-	<T> void sendObjectToStreamingPipeline(@NonNull Optional<DataBucketBean> bucket, @NonNull T object);
+	<T> void sendObjectToStreamingPipeline(final @NonNull Optional<DataBucketBean> bucket, final @NonNull T object);
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param object the object to emit in (possibly nested) Map<String, Object> format
 	 */
-	void sendObjectToStreamingPipeline(@NonNull Optional<DataBucketBean> bucket, @NonNull Map<String, Object> object);
+	void sendObjectToStreamingPipeline(final @NonNull Optional<DataBucketBean> bucket, final @NonNull Map<String, Object> object);
 
 	//////////////////////////////////////////////////////
 	
@@ -76,24 +77,28 @@ public interface IHarvestContext {
 	 * @services an optional set of service classes that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
-	List<String> getHarvestContextLibraries(@NonNull Optional<Set<Class<?>>> services);
+	@NonNull 
+	List<String> getHarvestContextLibraries(final @NonNull Optional<Set<Class<?>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
-	String getHarvestContextSignature(@NonNull Optional<DataBucketBean> bucket);
+	@NonNull 
+	String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket);
 
 	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) configuration
 	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"
 	 */
+	@NonNull 
 	Future<JsonNode> getGlobalHarvestTechnologyConfiguration();
 	
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
 	 */
-	Future<Map<String, String>> getHarvestLibraries(@NonNull Optional<DataBucketBean> bucket);
+	@NonNull 
+	Future<Map<String, String>> getHarvestLibraries(final @NonNull Optional<DataBucketBean> bucket);
 	
 	//////////////////////////////////////////////////////
 	
@@ -106,13 +111,15 @@ public interface IHarvestContext {
 	 * @param auto_apply_prefix - if true then auto applies the prefix "harvest_" to the supplied sub-collection 
 	 * @return a generic object repository
 	 */
-	<S> ICrudService<S> getBucketObjectStore(@NonNull Class<S> clazz, @NonNull Optional<DataBucketBean> bucket, @NonNull Optional<String> sub_collection, boolean auto_apply_prefix);
+	@NonNull 
+	<S> ICrudService<S> getBucketObjectStore(final @NonNull Class<S> clazz, final @NonNull Optional<DataBucketBean> bucket, final @NonNull Optional<String> sub_collection, final boolean auto_apply_prefix);
 	
 	/** (HarvestTechnology/HarvestModule) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a bean containing the harvests state and status
 	 */
-	Future<DataBucketStatusBean> getBucketStatus(@NonNull Optional<DataBucketBean> bucket);
+	@NonNull 
+	Future<DataBucketStatusBean> getBucketStatus(final @NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
 	 * Note that the behavior of the context if called on another bucket than the one
@@ -121,38 +128,40 @@ public interface IHarvestContext {
 	 * @param message The message to log
 	 * @param roll_up_duplicates if set (default: true) then identical messages are not logged separately 
 	 */
-	void logStatusForBucketOwner(@NonNull Optional<DataBucketBean> bucket, @NonNull BasicMessageBean message, boolean roll_up_duplicates);
+	void logStatusForBucketOwner(final @NonNull Optional<DataBucketBean> bucket, final @NonNull BasicMessageBean message, final boolean roll_up_duplicates);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @param The message to log (duplicates are "rolled up")
 	 */
-	void logStatusForBucketOwner(@NonNull Optional<DataBucketBean> bucket, @NonNull BasicMessageBean message);
+	void logStatusForBucketOwner(final @NonNull Optional<DataBucketBean> bucket, final @NonNull BasicMessageBean message);
 	
 	/** (HarvestTechnology/HarvestModule) A safe location into which temp data can be written without being accessed by the data import manager 
 	 *  It is the responsibility of the harvest technology module to keep this area clean however.
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return the location in a string format that makes sense to the IAccessService
 	 */
-	String getTempOutputLocation(@NonNull Optional<DataBucketBean> bucket);
+	@NonNull 
+	String getTempOutputLocation(final @NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Once files are moved/written (preferably atomically) into this path, they become owned by the import manager
 	 *  and should no longer be modified by the harvest module 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return the location in a string format that makes sense to the IStorageService
 	 */
-	String getFinalOutputLocation(@NonNull Optional<DataBucketBean> bucket);	
+	@NonNull 
+	String getFinalOutputLocation(final @NonNull Optional<DataBucketBean> bucket);	
 	
 	/** (HarvestTechnology/HarvestModule) Requests that the bucket be suspended - in addition to changing the bucket state, this will result in a call to IHarvestTechnologyModule.onSuspend
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 */
-	void emergencyDisableBucket(@NonNull Optional<DataBucketBean> bucket);
+	void emergencyDisableBucket(final @NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Requests that the bucket be suspended for the specified duration - in addition to changing the bucket state, this will result in a call to IHarvestTechnologyModule.onSuspend
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param  quarantineDuration A string representing the duration for which to quarantine the data (eg "1 hour", "2 days", "3600")
 	 */
-	void emergencyQuarantineBucket(@NonNull Optional<DataBucketBean> bucket, @NonNull String quarantine_duration);
+	void emergencyQuarantineBucket(final @NonNull Optional<DataBucketBean> bucket, final @NonNull String quarantine_duration);
 
 	//////////////////////////////////////////////////////
 	
@@ -161,5 +170,5 @@ public interface IHarvestContext {
 	/** (Should never be called by clients) this is used by the infrastructure to set up external contexts
 	 * @param signature the string returned from getHarvestContextSignature
 	 */
-	void initializeNewContext(@NonNull String signature);	
+	void initializeNewContext(final @NonNull String signature);	
 }

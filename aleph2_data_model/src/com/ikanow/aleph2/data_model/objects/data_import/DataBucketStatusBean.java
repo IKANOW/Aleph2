@@ -39,17 +39,17 @@ public class DataBucketStatusBean {
 	/** User constructor
 	 */
 	public DataBucketStatusBean(
-			@NonNull String id,
-			@NonNull Boolean suspended,
-			@Nullable Date quarantined_until,
-			@NonNull Long num_objects,
-			@Nullable List<String> node_affinity,
-			@Nullable Map<String, BasicMessageBean> last_harvest_status_messages,
-			@Nullable Map<String, BasicMessageBean> last_enrichment_status_messages,
-			@Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
-			@Nullable Multimap<String, BasicMessageBean> harvest_log_messages,
-			@Nullable Multimap<String, BasicMessageBean> enrichment_log_messages,
-			@Nullable Multimap<String, BasicMessageBean> storage_log_messages) {
+			final @NonNull String id,
+			final @NonNull Boolean suspended,
+			final @Nullable Date quarantined_until,
+			final @NonNull Long num_objects,
+			final @Nullable List<String> node_affinity,
+			final @Nullable Map<String, BasicMessageBean> last_harvest_status_messages,
+			final @Nullable Map<String, BasicMessageBean> last_enrichment_status_messages,
+			final @Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
+			final @Nullable Multimap<String, BasicMessageBean> harvest_log_messages,
+			final @Nullable Multimap<String, BasicMessageBean> enrichment_log_messages,
+			final @Nullable Multimap<String, BasicMessageBean> storage_log_messages) {
 		super();
 		_id = id;
 		this.suspended = suspended;

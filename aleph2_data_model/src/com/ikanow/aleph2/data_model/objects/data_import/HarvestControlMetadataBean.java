@@ -29,8 +29,8 @@ public class HarvestControlMetadataBean {
 	
 	protected HarvestControlMetadataBean() {}
 	
-	public HarvestControlMetadataBean(@NonNull String name, @NonNull Boolean enabled, @Nullable List<String> library_ids_or_names,
-			@NonNull Map<String, Object> config) {
+	public HarvestControlMetadataBean(final @NonNull String name, final @NonNull Boolean enabled, final @Nullable List<String> library_ids_or_names,
+			final @NonNull Map<String, Object> config) {
 		this.name = name;
 		this.enabled = enabled;
 		this.library_ids_or_names = library_ids_or_names;

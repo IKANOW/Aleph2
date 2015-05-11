@@ -36,12 +36,12 @@ public interface IEnrichmentBatchModule {
 	 * @param bucket - the bucket for which this enrichment is taking place
 	 * @param final_stage - this is true if this is the final step before the object is stored
 	 */
-	void onStageInitialize(@NonNull IEnrichmentModuleContext context, DataBucketBean bucket, boolean final_stage);
+	void onStageInitialize(final @NonNull IEnrichmentModuleContext context, final  @NonNull DataBucketBean bucket, final boolean final_stage);
 	
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a list of (id, object, lazy binary stream) for processing 
 	 */
-	void onObjectBatch(@NonNull List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
+	void onObjectBatch(final @NonNull List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
 
 	/** Called when a stage is complete - enables tidying up and similar
 	 */

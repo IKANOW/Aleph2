@@ -38,14 +38,14 @@ public class AnalyticThreadStatusBean {
 	/** User constructor
 	 */
 	public AnalyticThreadStatusBean(
-			@NonNull String id,
-			@NonNull Boolean suspended,
-			@Nullable Date quarantined_until,
-			@NonNull Long num_objects,
-			@Nullable List<String> node_affinity,
-			@Nullable Map<String, BasicMessageBean> last_status_messages,
-			@Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
-			@Nullable Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages) {
+			final @NonNull String id,
+			final @NonNull Boolean suspended,
+			final @Nullable Date quarantined_until,
+			final @NonNull Long num_objects,
+			final @Nullable List<String> node_affinity,
+			final @Nullable Map<String, BasicMessageBean> last_status_messages,
+			final @Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
+			final @Nullable Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages) {
 		super();
 		_id = id;
 		this.suspended = suspended;

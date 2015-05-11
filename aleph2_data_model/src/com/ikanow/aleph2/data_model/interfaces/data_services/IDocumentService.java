@@ -30,14 +30,16 @@ public interface IDocumentService {
 	 * @param bucket The data bucket or multi-bucket
 	 * @return the CRUD service
 	 */
-	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull DataBucketBean bucket);
+	@NonNull 
+	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull DataBucketBean bucket);
 	
 	/** Returns a CRUD service for the specified buckets or multi-buckets
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket The collection of data buckets or multi-buckets
 	 * @return the CRUD service
 	 */
-	<O> ICrudService<O> getCrudService(@NonNull Class<O> clazz, @NonNull Collection<DataBucketBean> buckets);
+	@NonNull 
+	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull Collection<DataBucketBean> buckets);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -45,5 +47,6 @@ public interface IDocumentService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	@NonNull 
+	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

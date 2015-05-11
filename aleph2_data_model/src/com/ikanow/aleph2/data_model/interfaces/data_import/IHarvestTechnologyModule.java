@@ -37,7 +37,7 @@ public interface IHarvestTechnologyModule {
 	 * @param bucket - the bucket to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
 	 * @return true if this node can run this module's functionality
 	 */
-	boolean canRunOnThisNode(@NonNull DataBucketBean bucket);
+	boolean canRunOnThisNode(final @NonNull DataBucketBean bucket);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -47,7 +47,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onNewSource(@NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Handles changes to an existing bucket
@@ -57,7 +58,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onUpdatedSource(@NonNull DataBucketBean old_bucket, @NonNull DataBucketBean new_bucket, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing
@@ -66,7 +68,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onSuspend(@NonNull DataBucketBean to_suspend, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onSuspend(final @NonNull DataBucketBean to_suspend, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to re-activate a previously suspended bucket
@@ -75,7 +78,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onResume(@NonNull DataBucketBean to_resume, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onResume(final @NonNull DataBucketBean to_resume, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that all data for this bucket is to be purged
@@ -86,7 +90,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onPurge(@NonNull DataBucketBean to_purge, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onPurge(final @NonNull DataBucketBean to_purge, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that this bucket is being deleted.
@@ -98,7 +103,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onDelete(@NonNull DataBucketBean to_delete, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onDelete(final @NonNull DataBucketBean to_delete, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
@@ -107,7 +113,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onPeriodicPoll(@NonNull DataBucketBean polled_bucket, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onPeriodicPoll(final @NonNull DataBucketBean polled_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
@@ -115,7 +122,8 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	Future<BasicMessageBean> onHarvestComplete(@NonNull DataBucketBean completed_bucket, @NonNull IHarvestContext context);
+	@NonNull 
+	Future<BasicMessageBean> onHarvestComplete(final @NonNull DataBucketBean completed_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -126,5 +134,6 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response (only completes when the test is complete)
 	 */
-	Future<BasicMessageBean> onTestSource(@NonNull DataBucketBean test_bucket, @NonNull ProcessingTestSpecBean test_spec, IHarvestContext context);		
+	@NonNull 
+	Future<BasicMessageBean> onTestSource(final @NonNull DataBucketBean test_bucket, final @NonNull ProcessingTestSpecBean test_spec, final @NonNull IHarvestContext context);		
 }

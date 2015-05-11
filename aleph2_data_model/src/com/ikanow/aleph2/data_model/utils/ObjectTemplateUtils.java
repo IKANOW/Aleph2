@@ -21,18 +21,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
 import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.function.Function;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
@@ -50,7 +43,8 @@ public class ObjectTemplateUtils {
 	 * @param clazz - the containing class for the fields
 	 * @return a MethodNamingHelper for this class
 	 */
-	public static <T> MethodNamingHelper<T> from(@NonNull Class<T> clazz) {
+	@NonNull
+	public static <T> MethodNamingHelper<T> from(final @NonNull Class<T> clazz) {
 		return new MethodNamingHelper<T>(clazz, Optional.empty());
 	}
 	
@@ -60,7 +54,8 @@ public class ObjectTemplateUtils {
 	 * @return a MethodNamingHelper for this class
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> MethodNamingHelper<T> from(@NonNull T a) {
+	@NonNull
+	public static <T> MethodNamingHelper<T> from(final @NonNull T a) {
 		return new MethodNamingHelper<T>((Class<T>) a.getClass(), Optional.empty());
 	}
 	
@@ -68,14 +63,20 @@ public class ObjectTemplateUtils {
 	 * @param the object to clone
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	public static <T> CloningHelper<T> clone(@NonNull T a) {
-		return new CloningHelper<T>(a);
+	@NonNull
+	public static <T> CloningHelper<T> clone(final @NonNull T a) {
+		try {
+			return new CloningHelper<T>(a);
+		} catch (Exception e) {
+			throw new RuntimeException("CloningHelper.clone", e);
+		}
 	}
 	/**Builds an immutable object using the specified value just to get the class (see clone to actually use the input variable)
 	 * @param a - the object determining the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	public static <T> CloningHelper<T> build(@NonNull T a) {
+	@NonNull
+	public static <T> CloningHelper<T> build(final @NonNull T a) {
 		try {
 			return new CloningHelper<T>(a.getClass());
 		} catch (Exception e) {
@@ -86,7 +87,8 @@ public class ObjectTemplateUtils {
 	 * @param a - the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	public static <T> CloningHelper<T> build(@NonNull Class<T> clazz) {
+	@NonNull
+	public static <T> CloningHelper<T> build(final @NonNull Class<T> clazz) {
 		try {
 			return new CloningHelper<T>(clazz);
 		} catch (Exception e) {
@@ -94,15 +96,22 @@ public class ObjectTemplateUtils {
 		}
 	}	
 	
+	/** Intermediate class for cloning
+	 * @author acp
+	 *
+	 * @param <T> - the class being helped
+	 */
 	public static class CloningHelper<T> {
 		/**Set a field in a cloned/new object
 		 * @param fieldName The field to set
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
-		public <U> CloningHelper<T> with(@NonNull String fieldName, @NonNull U val) {
+		@NonNull
+		public <U> CloningHelper<T> with(final @NonNull String fieldName, final @NonNull U val) {
 			try {
 				Field f = _element.getClass().getDeclaredField(fieldName);
+				f.setAccessible(true);
 				f.set(_element, val);
 			}
 			catch (Exception e) {
@@ -116,7 +125,8 @@ public class ObjectTemplateUtils {
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
-		public <U> CloningHelper<T> with(@NonNull Function<T, ?> getter, @NonNull U val) {
+		@NonNull
+		public <U> CloningHelper<T> with(final @NonNull Function<T, ?> getter, final @NonNull U val) {
 			try {
 				if (null == _naming_helper) {
 					_naming_helper = from(_element);
@@ -134,38 +144,31 @@ public class ObjectTemplateUtils {
 		/** Finishes the building/cloning process
 		 * @return the final version of the element
 		 */
+		@NonNull
 		public T done() {
 			return _element;
 		}
 		
-		protected static Object immutabilizeContainer(@NonNull Object o) {
-			//(eclipse doesn't need the conversions, but JDK8 does)
-			return Patterns.matchAndReturn(o)
-					.when(SortedSet.class, c -> Collections.unmodifiableSortedSet((SortedSet<?>)c) )
-					.when(Set.class, c -> Collections.unmodifiableSet((Set<?>)c) )
-					.when(NavigableMap.class, c -> Collections.unmodifiableNavigableMap((NavigableMap<?,?>)c) )
-					.when(SortedMap.class, c -> Collections.unmodifiableSortedMap((SortedMap<?,?>)c) )
-					.when(Map.class, c -> Collections.unmodifiableMap((Map<?,?>)c) )
-					.when(List.class, c -> Collections.unmodifiableList((List<?>)c) )
-					.when(Collection.class, c -> Collections.unmodifiableCollection((Collection<?>)c) )
-					.otherwise(oo -> o);
-		}
-		
-		protected void cloneInitialFields(@NonNull T to_clone) {
+		protected void cloneInitialFields(final @NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(_element)); } catch (Exception e) { return null; } })
+				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); } catch (Exception e) { return null; } })
 				.filter(t -> (null != t) && (null != t._2()))
-				.forEach(t -> { try { t._1().set(_element, immutabilizeContainer(t._2())); } catch (Exception e) { } } );
+				.forEach(t -> { try { t._1().set(_element, t._2()); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
-		protected CloningHelper(@NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
+		protected CloningHelper(final @NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
 			final Constructor<T> contructor = (Constructor<T>) element_clazz.getDeclaredConstructor();
 			contructor.setAccessible(true);
 			_element = (T) contructor.newInstance();
 		}
-		protected CloningHelper(@NonNull T to_clone) {
-			_element = to_clone;
+		@NonNull
+		protected CloningHelper(final @NonNull T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			@SuppressWarnings("unchecked")
+			final Constructor<T> contructor = (Constructor<T>) to_clone.getClass().getDeclaredConstructor();
+			contructor.setAccessible(true);
+			_element = (T) contructor.newInstance();
+			cloneInitialFields(to_clone);
 		}
 		protected final T _element;
 		protected MethodNamingHelper<T> _naming_helper = null;
@@ -184,7 +187,7 @@ public class ObjectTemplateUtils {
 		protected T _recorder;
 		protected Optional<String> _parent_path;
 		@SuppressWarnings("unchecked")
-		protected MethodNamingHelper(@NonNull Class<T> clazz, Optional<String> parent_path) {
+		protected MethodNamingHelper(final @NonNull Class<T> clazz, final Optional<String> parent_path) {
 			Enhancer enhancer = new Enhancer();
 			enhancer.setSuperclass(clazz);
 			enhancer.setCallback(this);
@@ -192,8 +195,9 @@ public class ObjectTemplateUtils {
 			_parent_path = parent_path;
 		}
 		@Override
-		public Object intercept(Object object, Method method, Object[] args,
-				MethodProxy proxy) throws Throwable
+		@Nullable
+		public Object intercept(final Object object, final Method method, final Object[] args,
+				final MethodProxy proxy) throws Throwable
 		{
 			if (method.getName().equals("field")) {
 				return _name;
@@ -207,7 +211,8 @@ public class ObjectTemplateUtils {
 		 * @param getter - the method reference (T::<function>)
 		 * @return
 		 */
-		public String field(@NonNull Function<T, ?> getter) {
+		@NonNull
+		public String field(final @NonNull Function<T, ?> getter) {
 			getter.apply(_recorder);
 			return _name;
 		}
@@ -217,7 +222,8 @@ public class ObjectTemplateUtils {
 		 * @return a MethodNamingHelper for the nested class
 		 */
 		@SuppressWarnings("unchecked")
-		public <U> MethodNamingHelper<U> nested(@NonNull Function<T, ?> getter, @NonNull U from) {
+		@NonNull
+		public <U> MethodNamingHelper<U> nested(final @NonNull Function<T, ?> getter, final @NonNull U from) {
 			return (MethodNamingHelper<U>) nested(getter, from.getClass());			
 		}
 		/** Returns a nested fieldname in an object hierarchy
@@ -225,7 +231,8 @@ public class ObjectTemplateUtils {
 		 * @param nested_clazz - the class of the nested type
 		 * @return a MethodNamingHelper for the nested class
 		 */
-		public <U> MethodNamingHelper<U> nested(@NonNull Function<T, ?> getter, @NonNull Class<U> nested_clazz) {
+		@NonNull
+		public <U> MethodNamingHelper<U> nested(final @NonNull Function<T, ?> getter, final @NonNull Class<U> nested_clazz) {
 			String new_parent_path =  _parent_path.orElse("") + "." + field(getter) + ".";
 			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}

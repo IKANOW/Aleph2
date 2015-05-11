@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 public interface IStorageService {
 
 	/** Returns the root path for all Aleph2 DB related activities
@@ -32,5 +34,6 @@ public interface IStorageService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> T getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options);
+	@NonNull 
+	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
 }
