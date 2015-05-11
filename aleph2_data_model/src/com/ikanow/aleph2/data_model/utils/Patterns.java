@@ -232,7 +232,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		@NonNull
-		public <P> ActionMatcher<G> when(Class<P> clazz, Consumer<P> expression) {
+		public <P> ActionMatcher<G> when(final @NonNull Class<P> clazz, final @NonNull Consumer<P> expression) {
 			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
 				expression.accept(clazz.cast(_g));
 				_r_set = true;
