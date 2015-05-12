@@ -62,5 +62,11 @@
   		<artifactId>aleph2_data_model</artifactId>
   		<version>[0.0,)</version>
   	</dependency>
+  <dependency>
+	<groupId>com.typesafe.akka</groupId>
+	<artifactId>akka-actor_2.10</artifactId>
+	<version>2.3.10</version>
+</dependency>
   </dependencies>
+  
 </project>
