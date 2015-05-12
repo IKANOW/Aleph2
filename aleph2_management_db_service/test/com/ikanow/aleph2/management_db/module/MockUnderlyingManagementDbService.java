@@ -20,6 +20,7 @@ import java.util.Optional;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -37,7 +38,7 @@ public class MockUnderlyingManagementDbService implements IManagementDbService {
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + crud_factory);
 	}
 	
-	public ICrudService<SharedLibraryBean> getSharedLibraryStore() {
+	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
 		return null;
 	}
 
@@ -46,11 +47,11 @@ public class MockUnderlyingManagementDbService implements IManagementDbService {
 		return null;
 	}
 
-	public ICrudService<DataBucketBean> getDataBucketStore() {
+	public IManagementCrudService<DataBucketBean> getDataBucketStore() {
 		return null;
 	}
 
-	public ICrudService<DataBucketStatusBean> getDataBucketStatusStore() {
+	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
 		return null;
 	}
 
@@ -59,7 +60,7 @@ public class MockUnderlyingManagementDbService implements IManagementDbService {
 		return null;
 	}
 
-	public ICrudService<AnalyticThreadBean> getAnalyticThreadStore() {
+	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
 		return null;
 	}
 
