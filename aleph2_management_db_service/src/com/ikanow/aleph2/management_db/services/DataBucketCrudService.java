@@ -49,7 +49,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	@Inject
 	public DataBucketCrudService(
-			final @Named("management_db_service.underlying") IManagementDbService underlying_management_db)
+			final @Named("management_db_service") IManagementDbService underlying_management_db)
 	{
 		_underlying_management_db = underlying_management_db;
 

@@ -15,33 +15,45 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import com.google.inject.Inject;
+import com.google.inject.Module;
 import com.google.inject.name.Named;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
  *  and performs control activities (launching into Akka) and an additional layer of validation
  * @author acp
  */
-public class CoreManagementDbService implements IManagementDbService {
+public class CoreManagementDbService implements IManagementDbService, IExtraDependencyLoader {
 
 	protected final IManagementDbService _underlying_management_db;	
 	protected DataBucketCrudService _data_bucket_service;
+	
+	/** Default constructor needed for the Module view to work
+	 */
+	public CoreManagementDbService() {
+		_underlying_management_db = null;
+		_data_bucket_service = null;
+	}
 	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
 	 * @param data_bucket_service
 	 */
 	@Inject
-	public CoreManagementDbService(final @Named("management_db_service.underlying") IManagementDbService underlying_management_db,
+	public CoreManagementDbService(final @Named("management_db_service.core") IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service)
 	{
 		_underlying_management_db = underlying_management_db;
@@ -119,4 +131,18 @@ public class CoreManagementDbService implements IManagementDbService {
 		return null;
 	}
 
+	/** This service needs to load some additional classes via Guice. Here's the module that defines the bindings
+	 * @return
+	 */
+	public List<Module> getDependencyModules() {
+		return Arrays.asList((Module)new CoreManagementDbModule());
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader#youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules()
+	 */
+	@Override
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
+		// (done see above)		
+	}
 }

@@ -15,11 +15,15 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.module;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import com.google.inject.Inject;
+import com.google.inject.Module;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -27,7 +31,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule.MockUnderlyingCrudServiceFactory;
 
-public class MockUnderlyingManagementDbService implements IManagementDbService {
+public class MockUnderlyingManagementDbService implements IManagementDbService, IExtraDependencyLoader {
 
 	protected MockUnderlyingCrudServiceFactory _crud_factory;
 	
@@ -72,6 +76,21 @@ public class MockUnderlyingManagementDbService implements IManagementDbService {
 	public <T> T getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
 		return null;
+	}
+
+	/** This service needs to load some additional classes via Guice. Here's the module
+	 * @return
+	 */
+	public List<Module> getDependencyModules() {
+		return Arrays.asList(new MockUnderlyingManagementDbModule());
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader#youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules()
+	 */
+	@Override
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
+		// (done see above)		
 	}
 
 }

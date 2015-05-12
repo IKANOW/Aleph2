@@ -18,7 +18,6 @@ package com.ikanow.aleph2.management_db.module;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 import org.junit.Test;
 
@@ -30,17 +29,19 @@ import com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule.M
 import com.ikanow.aleph2.management_db.services.CoreManagementDbService;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 
+import fj.data.Either;
+
 public class TestStandaloneManagementDbModule {
 
-	@Inject @Named("management_db_service") IManagementDbService _core_management_db_service;
-	@Inject @Named("management_db_service.underlying") IManagementDbService _underlying_management_db_service;
+	@Inject @Named("management_db_service.core") IManagementDbService _core_management_db_service;
+	@Inject @Named("management_db_service") IManagementDbService _underlying_management_db_service;
 	@Inject DataBucketCrudService _data_bucket_crud_service;
 	
 	@Test
-	public void testStandaloneGuiceSetup() {
-		StandaloneMangementDbModule module = new StandaloneMangementDbModule(Optional.<String[]>of(
+	public void testStandaloneGuiceSetup() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		StandaloneManagementDbModule module = new StandaloneManagementDbModule((Either.<String[], String>left(
 				Arrays.asList("com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbService", 
-								"com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule").toArray(new String[0])));
+								"com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule").toArray(new String[0]))));
 		
 		Injector injector = module.getInjector();
 		

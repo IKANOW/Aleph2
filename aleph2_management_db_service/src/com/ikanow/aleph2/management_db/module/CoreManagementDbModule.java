@@ -19,7 +19,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Scopes;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 
@@ -29,13 +28,9 @@ import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
  */
 public class CoreManagementDbModule extends AbstractModule {
 
-	protected String _underlying_management_db_service_name = null;
-	
-	/** User constructor
-	 * @param underlying_management_db_service_name - the underlying management DB service (Eg com.ikanow.aleph2.management_db.mongodb.services.[Mock]MongoDbManagementDbService)
+	/** User constructor when called from StandaloneModuleManagement/the app - will just load the core service
 	 */
-	public CoreManagementDbModule(String underlying_management_db_service_name) {
-		_underlying_management_db_service_name = underlying_management_db_service_name;
+	public CoreManagementDbModule() {
 	}
 	
 	/** Guice injector
@@ -43,7 +38,7 @@ public class CoreManagementDbModule extends AbstractModule {
 	 */
 	@Inject
 	public CoreManagementDbModule(
-			@Named("management_db_service.underlying") IManagementDbService underlying_management_db
+			@Named("management_db_service") IManagementDbService underlying_management_db
 			)
 	{
 		//DEBUG
@@ -53,18 +48,9 @@ public class CoreManagementDbModule extends AbstractModule {
 	/* (non-Javadoc)
 	 * @see com.google.inject.AbstractModule#configure()
 	 */
-	@SuppressWarnings({ "unchecked" })
 	public void configure() {
 		
 		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);
-		try {
-			this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service.underlying"))
-					.to((Class<? extends IManagementDbService>) Class.forName(_underlying_management_db_service_name))
-					.in(Scopes.SINGLETON);
-					;
-		} catch (ClassNotFoundException e) {
-			throw new RuntimeException("No 'underlying' IManagementDbService defined: " + _underlying_management_db_service_name, e);
-		}		
 	}
 	
 }

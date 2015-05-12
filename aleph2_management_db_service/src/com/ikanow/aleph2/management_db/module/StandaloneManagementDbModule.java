@@ -31,13 +31,16 @@ import com.google.inject.name.Names;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.management_db.services.CoreManagementDbService;
 
+import fj.data.Either;
 import fj.data.List;
 
 /** Module enabling the management_db_service to be run standalone for testing purposes
  * @author acp
  */
-public class StandaloneMangementDbModule extends AbstractModule {
+public class StandaloneManagementDbModule extends AbstractModule {
 
+	//TODO (ALEPH-19): This is the "old" style of doing things, update to the nicer way once the data_model has been updated
+	
 	// (will have one of these 2 only)
 	protected IManagementDbService _management_db_service;
 	protected Injector _injector;
@@ -54,21 +57,25 @@ public class StandaloneMangementDbModule extends AbstractModule {
 	 * @param management_db_service - the injected core management db service object
 	 */
 	@Inject
-	protected StandaloneMangementDbModule(final @Named("management_db_service") IManagementDbService management_db_service) {
+	protected StandaloneManagementDbModule(final @Named("management_db_service.core") IManagementDbService management_db_service) {
 		_management_db_service = management_db_service;
 		
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": management_db_service=" + management_db_service);		
 	}
 
+	protected String _underlying_management_db_service_name = null;
+	
 	/** User constructor = to create a standalone app based on this service
 	 * @param modules - first one is the underlying service (eg com.ikanow.aleph2.management_db.mongodb.services.[Mock]MongoDbManagementDbService), then a list of additional modules to load (eg com.ikanow.aleph2.management_db.mongodb.module.[Mock]MongoDbManagementDbModule)
+	 * @throws ClassNotFoundException 
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
 	 */
-	public StandaloneMangementDbModule(Optional<String[]> modules) {
-		if (modules.isPresent()) {
+	public StandaloneManagementDbModule(Either<String[], String> modulesOrServiceName) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		if (modulesOrServiceName.isLeft()) {
 			
-			
-			Iterable<Module> list = List.<String>iterableList(Arrays.asList(modules.get()))
+			Iterable<Module> list = List.<String>iterableList(Arrays.asList(modulesOrServiceName.left().value()))
 													.drop(1)
 													.map(m -> {
 														try {
@@ -78,22 +85,42 @@ public class StandaloneMangementDbModule extends AbstractModule {
 															throw new RuntimeException("Cast to module: " + m, e);
 														}
 													})
-													.cons(new CoreManagementDbModule(modules.get()[0]))
-													.cons(new StandaloneMangementDbModule(Optional.empty()))
+													.cons(new CoreManagementDbModule())
+													.cons(new StandaloneManagementDbModule(Either.<String[], String>right(modulesOrServiceName.left().value()[0])))
 													;
 			
 			_injector = Guice.createInjector(list);
 			
-			_injector.getInstance(StandaloneMangementDbModule.class);
+			_injector.getInstance(StandaloneManagementDbModule.class);
+		}
+		else {
+			_underlying_management_db_service_name = modulesOrServiceName.right().value();				
 		}
 	}
 
 	/* (non-Javadoc)
 	 * @see com.google.inject.AbstractModule#configure()
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	protected void configure() {
-		this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service")).to(CoreManagementDbService.class).in(Scopes.SINGLETON);
+		/**/
+		System.out.println("HERE?! " + this + " : " + _underlying_management_db_service_name);
+		
+		// Load the core service:
+		this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service.core")).to(CoreManagementDbService.class).in(Scopes.SINGLETON);
+		
+		// Load the underlying service
+		if (null != _underlying_management_db_service_name) { // (else )
+			try {
+				this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service"))
+						.to((Class<? extends IManagementDbService>) Class.forName(_underlying_management_db_service_name))
+						.in(Scopes.SINGLETON);
+						;
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException("No 'underlying' IManagementDbService defined: " + _underlying_management_db_service_name, e);
+			}
+		}			
 	}
 	
 }
