@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.management_db.module;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
