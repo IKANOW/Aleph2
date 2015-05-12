@@ -38,8 +38,17 @@ import com.ikanow.aleph2.data_model.utils.ObjectTemplateUtils.MethodNamingHelper
  */
 public class CrudUtils {
 
+	///////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////
+	
+	// CLASS INTERFACES
+	
+	/** Just an empty parent of SingleQueryComponent (SingleBeanQueryComponent, SingleJsonQueryComponent) and MultiQueryComponent
+	 * @author acp
+	 *
+	 * @param <T>
+	 */
 	public static abstract class QueryComponent<T> {
-		// Just an empty parent of SingleQueryComponent and MultiQueryComponent
 		private QueryComponent() {}
 		
 		// Public interface - read
@@ -51,8 +60,30 @@ public class CrudUtils {
 
 		public abstract List<Tuple2<String, Integer>> getOrderBy();
 	}
-	
+
+	// Operators for querying
 	public enum Operator { all_of, any_of, exists, range_open_open, range_closed_open, range_closed_closed, range_open_closed, equals };
+	
+	///////////////////////////////////////////////////////////////////
+	
+	public static abstract class UpdateComponent<T> {
+		// Just an empty parent of SingleQueryComponent and MultiQueryComponent
+		private UpdateComponent() {}
+		
+		/** All update elements  
+		 * @return the list of all update elements  
+		 */
+		@NonNull
+		public abstract LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> getAll();
+	}
+
+	// Operators for updating
+	public enum UpdateOperator { increment, set, unset, push, pop, push_deduplicate, clear }
+	
+	///////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////
+	
+	// FUNCTION INTERFACES
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 *  Returns a type safe version that can be used in the raw JSON CRUD services
@@ -94,6 +125,8 @@ public class CrudUtils {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
 	}
 	
+	///////////////////////////////////////////////////////////////////
+	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
@@ -129,6 +162,8 @@ public class CrudUtils {
 		return new SingleBeanQueryComponent<T>(t, Operator.any_of);
 	}
 	
+	///////////////////////////////////////////////////////////////////
+	
 	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
@@ -148,6 +183,31 @@ public class CrudUtils {
 	public static <T> MultiQueryComponent<T> anyOf(final @NonNull SingleQueryComponent<T>... components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components);
 	}
+
+	///////////////////////////////////////////////////////////////////
+
+	public static <T> BeanUpdateComponent<T> update(Class<T> clazz) {
+		return new BeanUpdateComponent<T>(ObjectTemplateUtils.build(clazz).done());
+	}
+	
+	public static <T> BeanUpdateComponent<T> update(T t) {
+		return new BeanUpdateComponent<T>(t);
+	}
+	
+	///////////////////////////////////////////////////////////////////
+	
+	public static <T> JsonUpdateComponent<T> update_json(Class<T> clazz) {
+		return new JsonUpdateComponent<T>(ObjectTemplateUtils.build(clazz).done());
+	}
+	
+	public static <T> JsonUpdateComponent<T> update_json(T t) {
+		return new JsonUpdateComponent<T>(t);
+	}
+
+	///////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////
+	
+	// CLASS INTERFACES
 	
 	/** Encapsulates a very set of queries, all ANDed or ORed together
 	 * @author acp
@@ -158,21 +218,33 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
+		/** A list of all the single query elements in a multi query 
+		 * @return a list of single query elements
+		 */
 		@NonNull
 		public List<SingleQueryComponent<T>> getElements() {
 			return _elements;
 		}
 		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getOp()
+		 */
 		@NonNull
 		public Operator getOp() {
 			return _op;
 		}
 				
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getLimit()
+		 */
 		@NonNull
 		public Long getLimit() {
 			return _limit;
 		}
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getOrderBy()
+		 */
 		@NonNull
 		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
@@ -230,6 +302,8 @@ public class CrudUtils {
 		}
 	}
 	
+	///////////////////////////////////////////////////////////////////
+	
 	/** Encapsulates a very simple query - this top level all
 	 * @author acp
 	 * @param <T> the bean type being queried
@@ -239,21 +313,33 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getOp()
+		 */
 		@NonNull
 		public Operator getOp() {
 			return _op;
 		}
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getLimit()
+		 */
 		@NonNull
 		public Long getLimit() {
 			return _limit;
 		}
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent#getOrderBy()
+		 */
 		@NonNull
 		public List<Tuple2<String, Integer>> getOrderBy() {
 			return _orderBy;
 		}
 		
+		/** All query elements in this SingleQueryComponent 
+		 * @return the list of all query elements in this SingleQueryComponent 
+		 */
 		@NonNull
 		public LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> getAll() {
 			// Take all the non-null fields from the raw object and add them as op_equals
@@ -268,11 +354,17 @@ public class CrudUtils {
 			return ret_val;
 		}
 		
+		/** The template spec used to generate an inital set
+		 * @return The template spec used to generate an inital set
+		 */
 		@NonNull
 		protected Object getElement() {
 			return _element;
 		}
 
+		/** Elements added on top of the template spec
+		 * @return a list of elements (not including those added via the build)
+		 */
 		@NonNull
 		protected LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> getExtra() {
 			return _extra;
@@ -458,43 +550,10 @@ public class CrudUtils {
 			}
 			_extra.put(field, Tuples._2T(op, in));
 			return this;
-		}
-		
-		//Recursive helper:
-		
-		@NonNull
-		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean) {
-			return 	Arrays.stream(bean.getClass().getDeclaredFields())
-					.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-					.flatMap(field_accessor -> {
-						try { 
-							field_accessor.setAccessible(true);
-							Object val = field_accessor.get(bean);
-							
-							return Patterns.match(val)
-									.<Stream<Tuple2<String, Object>>>andReturn()
-									.when(v -> null == v, v -> Stream.empty())
-									.when(String.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									.when(Number.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									.when(Boolean.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									.when(Collection.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									.when(Map.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									.when(Multimap.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-									// OK if it's none of these supported types that we recognize, then assume it's a bean and recursively de-nest it
-									.otherwise(v -> recursiveQueryBuilder_recurse(field_accessor.getName(), v));
-						} 
-						catch (Exception e) { return null; }
-					});
-		}
-		
-		@NonNull
-		protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(final @NonNull String parent_field, final @NonNull Object sub_bean) {
-			final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
-				//(all vs and inherited from parent so ignored here)			
-			
-			return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
-		}
+		}		
 	}
+	
+	///////////////////////////////////////////////////////////////////
 
 	/** Helper class to generate queries for an object of type T represented by JSON
 	 * @author acp
@@ -651,6 +710,7 @@ public class CrudUtils {
 		}
 	}
 	
+	///////////////////////////////////////////////////////////////////
 	
 	/** Helper class to generate queries for an object of type T
 	 * @author acp
@@ -788,6 +848,383 @@ public class CrudUtils {
 		
 		protected MethodNamingHelper<T> _naming_helper = null;
 	}
+
+	///////////////////////////////////////////////////////////////////	
 	
+	/** A component for a bean repo (rather than a raw JSON one)
+	 * @author acp
+	 *
+	 * @param <T> - the bean type in the repo
+	 */
+	public static class BeanUpdateComponent<T> extends CommonUpdateComponent<T> {
+		
+		// Builders
+		
+		/** Increments the field
+		 * @param field 
+		 * @param n - the number to add to the field's current value
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> increment(final @NonNull Function<T, ?> getter, final @NonNull Number n) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)with(UpdateOperator.increment, _naming_helper.field(getter), n);
+		}
+		
+		/** Sets the field
+		 * @param getter - the getter for this field
+		 * @param o
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> set(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)with(UpdateOperator.set, _naming_helper.field(getter), o);
+		}
+		
+		/** Unsets the field
+		 * @param getter - the getter for this field
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> unset(final @NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)with(UpdateOperator.unset, _naming_helper.field(getter), true);
+		}
+		
+		/** Pushes the field into the array with the field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is added
+		 * @param dedup - if true then the object is not added if it already exists
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> push(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)(dedup 
+					? with(UpdateOperator.push_deduplicate, _naming_helper.field(getter), o) 
+					: with(UpdateOperator.push, _naming_helper.field(getter), o));
+		}
+		
+		/** Removes the object or objects from the field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> pop(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)with(UpdateOperator.pop, _naming_helper.field(getter), o);
+		}
+		
+		/** Removes all objects from this field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@NonNull
+		public BeanUpdateComponent<T> clear(final @NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)with(UpdateOperator.clear, _naming_helper.field(getter), true);
+		}
+		
+		/** Nests an update
+		 * @param getter - the getter for this field
+		 * @param nested_object - the update component to nest against parent field
+		 * @return the update component builder
+		 */
+		@NonNull
+		public <U> BeanUpdateComponent<T> nested(final @NonNull Function<T, ?> getter, final @NonNull CommonUpdateComponent<U> nested_object) {
+			buildNamingHelper();
+			return (BeanUpdateComponent<T>)nested(_naming_helper.field(getter), nested_object);
+		}
+		
+		// Implementation
+		
+		protected Object _element;
+		protected BeanUpdateComponent(final @NonNull Object t) {
+			super(t);
+		}
+		@SuppressWarnings("unchecked")
+		protected void buildNamingHelper() {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+			}
+		}
+		protected MethodNamingHelper<T> _naming_helper = null;
+	}
+
+	/** A component for a raw JSON repo (rather than a bean one)
+	 * @author acp
+	 *
+	 * @param <T> - the bean type in the repo
+	 */
+	public static class JsonUpdateComponent<T> extends CommonUpdateComponent<JsonNode> {
+		
+		// Builders
+		
+		/** Increments the field
+		 * @param field 
+		 * @param n - the number to add to the field's current value
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> increment(final @NonNull Function<T, ?> getter, final @NonNull Number n) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)with(UpdateOperator.increment, _naming_helper.field(getter), n);
+		}
+		
+		/** Sets the field
+		 * @param getter - the getter for this field
+		 * @param o
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> set(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)with(UpdateOperator.set, _naming_helper.field(getter), o);
+		}
+		
+		/** Unsets the field
+		 * @param getter - the getter for this field
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> unset(final @NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)with(UpdateOperator.unset, _naming_helper.field(getter), true);
+		}
+		
+		/** Pushes the field into the array with the field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is added
+		 * @param dedup - if true then the object is not added if it already exists
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> push(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)(dedup 
+					? with(UpdateOperator.push_deduplicate, _naming_helper.field(getter), o) 
+					: with(UpdateOperator.push, _naming_helper.field(getter), o));
+		}
+		
+		/** Removes the object or objects from the field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> pop(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)with(UpdateOperator.pop, _naming_helper.field(getter), o);
+		}
+		
+		/** Removes all objects from this field
+		 * @param getter - the getter for this field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public JsonUpdateComponent<T> clear(final @NonNull Function<T, ?> getter) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)with(UpdateOperator.clear, _naming_helper.field(getter), true);
+		}
+		
+		/** Nests an update
+		 * @param getter - the getter for this field
+		 * @param nested_object - the update component to nest against parent field
+		 * @return the update component builder
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public <U> JsonUpdateComponent<T> nested(final @NonNull Function<T, ?> getter, final @NonNull CommonUpdateComponent<U> nested_object) {
+			buildNamingHelper();
+			return (JsonUpdateComponent<T>)nested(_naming_helper.field(getter), nested_object);
+		}
+		
+		// Implementation
+		
+		protected JsonUpdateComponent(final @NonNull Object t) {
+			super(t);
+		}		
+		@SuppressWarnings("unchecked")
+		protected void buildNamingHelper() {
+			if (null == _naming_helper) {
+				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+			}
+		}
+		protected MethodNamingHelper<T> _naming_helper = null;
+	}
+
+	/** Common building and getting functions
+	 * @author acp
+	 *
+	 * @param <T> the type of the bean in the repository
+	 */
+	public static class CommonUpdateComponent<T> {
+
+		// Builders
 	
+		/** Increments the field
+		 * @param field 
+		 * @param n - the number to add to the field's current value
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> increment(final @NonNull String field, final @NonNull Number n) {
+			return with(UpdateOperator.increment, field, n);
+		}
+		
+		/** Sets the field
+		 * @param field
+		 * @param o
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> set(final @NonNull String field, final @NonNull Object o) {
+			return with(UpdateOperator.set, field, o);
+		}
+		
+		/** Unsets the field
+		 * @param field
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> unset(final @NonNull String field) {
+			return with(UpdateOperator.unset, field, true);
+		}
+		
+		/** Pushes the field into the array with the field
+		 * @param field
+		 * @param o - if o is a collection then each element is added
+		 * @param dedup - if true then the object is not added if it already exists
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> push(final @NonNull String field, final @NonNull Object o, final boolean dedup) {			
+			return dedup ? with(UpdateOperator.push_deduplicate, field, o) : with(UpdateOperator.push, field, o);
+		}
+		
+		/** Removes the object or objects from the field
+		 * @param field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> pop(final @NonNull String field, final @NonNull Object o) {
+			return with(UpdateOperator.pop, field, o);
+		}
+		
+		/** Removes all objects from this field
+		 * @param field
+		 * @param o - if o is a collection then each element is removed
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> clear(final @NonNull String field) {
+			return with(UpdateOperator.clear, field, true);
+		}
+		
+		/** Nests an update
+		 * @param field
+		 * @param nested_object - the update component to nest against parent field
+		 * @return the update component builder
+		 */
+		@NonNull
+		public <U> CommonUpdateComponent<T> nested(final @NonNull String field, final @NonNull CommonUpdateComponent<U> nested_object) {
+			
+			// Take all the non-null fields from the raw object and add them as op_equals
+			
+			recursiveQueryBuilder_init(nested_object._element)
+				.forEach(field_tuple -> this.with(UpdateOperator.set, field + "." + field_tuple._1(), field_tuple._2())); 
+			
+			// Easy bit, add the extras
+			
+			Optionals.ofNullable(nested_object._extra.entries()).stream()
+				.forEach(entry -> this._extra.put(field + "." + entry.getKey(), entry.getValue()));
+			
+			return this;
+		}
+		
+		// Public interface - read
+		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
+		
+		@NonNull
+		protected CommonUpdateComponent<T> with(final @NonNull UpdateOperator op, final @NonNull String field, Object in) {
+			if (null == _extra) {
+				_extra = LinkedHashMultimap.create();
+			}
+			_extra.put(field, Tuples._2T(op, in));
+			return this;
+		}
+		
+		/** All query elements in this SingleQueryComponent 
+		 * @return the list of all query elements in this SingleQueryComponent 
+		 */
+		@NonNull
+		public LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> getAll() {
+			// Take all the non-null fields from the raw object and add them as op_equals
+			
+			final LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> ret_val = LinkedHashMultimap.create();
+			if (null != _extra) {
+				ret_val.putAll(_extra);
+			}		
+			
+			recursiveQueryBuilder_init(_element)
+				.forEach(field_tuple -> ret_val.put(field_tuple._1(), Tuples._2T(UpdateOperator.set, field_tuple._2()))); 
+			
+			return ret_val;
+		}
+	
+		// Implementation
+		
+		protected final Object _element;
+		protected LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> _extra = null;
+		
+		protected CommonUpdateComponent(final @NonNull Object t) {
+			_element = t;
+		}				
+		//Recursive helper:
+		
+	}	
+	@NonNull
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean) {
+		return 	Arrays.stream(bean.getClass().getDeclaredFields())
+				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
+				.flatMap(field_accessor -> {
+					try { 
+						field_accessor.setAccessible(true);
+						Object val = field_accessor.get(bean);
+						
+						return Patterns.match(val)
+								.<Stream<Tuple2<String, Object>>>andReturn()
+								.when(v -> null == v, v -> Stream.empty())
+								.when(String.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Number.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Boolean.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Collection.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Map.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Multimap.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								// OK if it's none of these supported types that we recognize, then assume it's a bean and recursively de-nest it
+								.otherwise(v -> recursiveQueryBuilder_recurse(field_accessor.getName(), v));
+					} 
+					catch (Exception e) { return null; }
+				});
+	}
+	
+	@NonNull
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(final @NonNull String parent_field, final @NonNull Object sub_bean) {
+		final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
+			//(all vs and inherited from parent so ignored here)			
+		
+		return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
+	}
+
 }
