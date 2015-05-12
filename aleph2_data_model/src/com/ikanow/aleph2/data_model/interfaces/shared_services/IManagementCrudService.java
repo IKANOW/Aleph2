@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -26,19 +27,21 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 
-/** A generic interface to an "object" datastore with a "MongoDB like" interface
+/** Override of the CRUD service that provides a side channel with additional management information in its future
  * @author acp
  *
- * @param <T> the bean type served by this repository
+ * @param <T>
  */
-public interface ICrudService<O> {
+public interface IManagementCrudService<O> extends ICrudService<O> {
 
-	public static abstract class Cursor<O> implements Iterable<O>, AutoCloseable {
-		public abstract long count();
+	public abstract class ManagementFuture<A> implements Future<A> {
+		
+		@NonNull public abstract Collection<BasicMessageBean> getManagementResults();
 	}
 	
 	//////////////////////////////////////////////////////
@@ -52,6 +55,7 @@ public interface ICrudService<O> {
 	 * @return The filtered CRUD repo
 	 */
 	@NonNull 
+	@Override
 	ICrudService<O> getFilteredRepo(final @NonNull String authorization_fieldname, final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
 	
 	//////////////////////////////////////////////////////
@@ -65,7 +69,8 @@ public interface ICrudService<O> {
 	 * @return A future containing the _id (filled in if not present in the object) - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Supplier<Object>> storeObject(final @NonNull O new_object, final boolean replace_if_present);
+	@Override
+	ManagementFuture<Supplier<Object>> storeObject(final @NonNull O new_object, final boolean replace_if_present);
 
 	/** Stores the specified object in the database, failing if it is already present
 	 *  If the "_id" field of the object is not set then it is assigned
@@ -73,7 +78,8 @@ public interface ICrudService<O> {
 	 * @return A future containing the _id (filled in if not present in the object) - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Supplier<Object>> storeObject(final @NonNull O new_object);
+	@Override
+	ManagementFuture<Supplier<Object>> storeObject(final @NonNull O new_object);
 	
 	/**
 	 * @param objects - a list of objects to insert
@@ -81,14 +87,16 @@ public interface ICrudService<O> {
 	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<O> new_objects, final boolean continue_on_error);
+	@Override
+	ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<O> new_objects, final boolean continue_on_error);
 	
 	/**
 	 * @param objects - a list of objects to insert, failing out as soon as a duplicate is inserted 
 	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<O> new_objects);
+	@Override
+	ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<O> new_objects);
 	
 	//////////////////////////////////////////////////////
 	
@@ -99,21 +107,16 @@ public interface ICrudService<O> {
 	 * @return a future describing if the optimization was successfully completed - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> optimizeQuery(final @NonNull List<String> ordered_field_list);	
-
-	/** Inform the system that a specific query optimization is no longer required
-	 * @param ordered_field_list a list of the fields in the query
-	 * @return whether this optimization was registered in the first place
-	 */
-	@NonNull 
-	boolean deregisterOptimizedQuery(final @NonNull List<String> ordered_field_list);	
+	@Override
+	ManagementFuture<Boolean> optimizeQuery(final @NonNull List<String> ordered_field_list);	
 
 	/** Returns the object (in optional form to handle its not existing) given a simple object template that contains a unique search field (but other params are allowed)
 	 * @param unique_spec A specification (must describe at most one object) generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
 	 * @return A future containing an optional containing the object, or Optional.empty() - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Optional<O>> getObjectBySpec(final @NonNull QueryComponent<O> unique_spec);
+	@Override
+	ManagementFuture<Optional<O>> getObjectBySpec(final @NonNull QueryComponent<O> unique_spec);
 
 	/** Returns the object (in optional form to handle its not existing) given a simple object template that contains a unique search field (but other params are allowed)
 	 * @param unique_spec A specification (must describe at most one object) generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
@@ -122,14 +125,16 @@ public interface ICrudService<O> {
 	 * @return A future containing an optional containing the object, or Optional.empty()  - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Optional<O>> getObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final @NonNull List<String> field_list, final boolean include);
+	@Override
+	ManagementFuture<Optional<O>> getObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final @NonNull List<String> field_list, final boolean include);
 
 	/** Returns the object given the id
 	 * @param id the id of the object
 	 * @return A future containing an optional containing the object, or Optional.empty() - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Optional<O>> getObjectById(final @NonNull Object id);	
+	@Override
+	ManagementFuture<Optional<O>> getObjectById(final @NonNull Object id);	
 
 	/** Returns the object given the id
 	 * @param id the id of the object
@@ -138,14 +143,16 @@ public interface ICrudService<O> {
 	 * @return A future containing an optional containing the object, or Optional.empty() - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Optional<O>> getObjectById(final @NonNull Object id, final @NonNull List<String> field_list, final boolean include);	
+	@Override
+	ManagementFuture<Optional<O>> getObjectById(final @NonNull Object id, final @NonNull List<String> field_list, final boolean include);	
 	
 	/** Returns the list of objects specified by the spec (all fields returned)
 	 * @param spec A specification generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
 	 * @return A future containing a (possibly empty) list of Os - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Cursor<O>> getObjectsBySpec(final @NonNull QueryComponent<O> spec);
+	@Override
+	ManagementFuture<Cursor<O>> getObjectsBySpec(final @NonNull QueryComponent<O> spec);
 	
 	/** Returns the list of objects/order/limit specified by the spec. Note that the resulting object should be run within a try-with-resources or read fully.
 	 * @param spec A specification generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
@@ -154,21 +161,24 @@ public interface ICrudService<O> {
 	 * @return A future containing a (possibly empty) list of Os - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Cursor<O>> getObjectsBySpec(final @NonNull QueryComponent<O> spec, final @NonNull List<String> field_list, final boolean include);
+	@Override
+	ManagementFuture<Cursor<O>> getObjectsBySpec(final @NonNull QueryComponent<O> spec, final @NonNull List<String> field_list, final boolean include);
 
 	/** Counts the number of objects specified by the spec (all fields returned)
 	 * @param spec A specification generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
 	 * @return A future containing the number of matching objects - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Long> countObjectsBySpec(final @NonNull QueryComponent<O> spec);
+	@Override
+	ManagementFuture<Long> countObjectsBySpec(final @NonNull QueryComponent<O> spec);
 	
 	/** Counts the number of objects in the data store
 	 * @param spec A specification generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
 	 * @return A future containing the number of matching objects - accessing the future will also report on errors via ExecutionException 
 	 */
 	@NonNull 
-	Future<Long> countObjects();
+	@Override
+	ManagementFuture<Long> countObjects();
 	
 	//////////////////////////////////////////////////////
 	
@@ -180,7 +190,8 @@ public interface ICrudService<O> {
 	 * @return a future describing if the update was successful - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> updateObjectById(final @NonNull Object id, final @NonNull UpdateComponent<O> update);
+	@Override
+	ManagementFuture<Boolean> updateObjectById(final @NonNull Object id, final @NonNull UpdateComponent<O> update);
 
 	/** Updates the specified object
 	 * @param unique_spec A specification (must describe at most one object) generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
@@ -189,7 +200,8 @@ public interface ICrudService<O> {
 	 * @return a future describing if the update was successful - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> updateObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update);
+	@Override
+	ManagementFuture<Boolean> updateObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update);
 
 	/** Updates the specified object
 	 * @param spec A specification generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
@@ -198,7 +210,8 @@ public interface ICrudService<O> {
 	 * @return a future describing the number of objects updated - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Long> updateObjectsBySpec(final @NonNull QueryComponent<O> spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update);
+	@Override
+	ManagementFuture<Long> updateObjectsBySpec(final @NonNull QueryComponent<O> spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update);
 
 	/** Updates the specified object, returning the updated version
 	 * @param unique_spec A specification (must describe at most one object) generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
@@ -210,7 +223,8 @@ public interface ICrudService<O> {
 	 * @return a future containing the object, if found (or upserted) - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Optional<O>> updateAndReturnObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update, final Optional<Boolean> before_updated, final @NonNull List<String> field_list, final boolean include);
+	@Override
+	ManagementFuture<Optional<O>> updateAndReturnObjectBySpec(final @NonNull QueryComponent<O> unique_spec, final Optional<Boolean> upsert, final @NonNull UpdateComponent<O> update, final Optional<Boolean> before_updated, final @NonNull List<String> field_list, final boolean include);
 	
 	//////////////////////////////////////////////////////
 	
@@ -221,27 +235,31 @@ public interface ICrudService<O> {
 	 * @return a future describing if the delete was successful - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> deleteObjectById(final @NonNull Object id);
+	@Override
+	ManagementFuture<Boolean> deleteObjectById(final @NonNull Object id);
 
 	/** Deletes the specific object
 	 * @param unique_spec A specification (must describe at most one object) generated by CrudUtils.allOf(...) (all fields must be match) or CrudUtils.anyOf(...) (any fields must match) together with extra fields generated by .withAny(..), .withAll(..), present(...) or notPresent(...)   
 	 * @return a future describing if the delete was successful - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> deleteObjectBySpec(final @NonNull QueryComponent<O> unique_spec);
+	@Override
+	ManagementFuture<Boolean> deleteObjectBySpec(final @NonNull QueryComponent<O> unique_spec);
 
 	/** Deletes the specific object
 	 * @param A specification that must be initialized via CrudUtils.anyOf(...) and then the desired fields added via .exists(<field or getter>)
 	 * @return a future describing the number of objects updated - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Long> deleteObjectsBySpec(final @NonNull QueryComponent<O> spec);
+	@Override
+	ManagementFuture<Long> deleteObjectsBySpec(final @NonNull QueryComponent<O> spec);
 
 	/** Deletes the entire datastore and all documents, including mappings/indexes/metdata etc
 	 * @return a future describing if the delete was successful - accessing the future will also report on errors via ExecutionException
 	 */
 	@NonNull 
-	Future<Boolean> deleteDatastore();
+	@Override
+	ManagementFuture<Boolean> deleteDatastore();
 	
 	//////////////////////////////////////////////////////
 	
@@ -251,20 +269,7 @@ public interface ICrudService<O> {
 	 * @return the JsonNode-genericized version of this same CRUD service
 	 */
 	@NonNull
-	ICrudService<JsonNode> getRawCrudService();
+	@Override
+	IManagementCrudService<JsonNode> getRawCrudService();
 	
-	/** Returns a simple searchable ("Lucene-like") view of the data
-	 * @return a search service
-	 */
-	@NonNull 
-	Optional<IBasicSearchService<O>> getSearchService();
-	
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	@NonNull 
-	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
 }
