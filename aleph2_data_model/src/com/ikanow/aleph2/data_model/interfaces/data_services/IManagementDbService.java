@@ -20,6 +20,7 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -48,7 +49,7 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the shared libraries store
 	 */
 	@NonNull 
-	ICrudService<SharedLibraryBean> getSharedLibraryStore();
+	IManagementCrudService<SharedLibraryBean> getSharedLibraryStore();
 	
 	//TODO (ALEPH-19): shared schemas
 	
@@ -75,13 +76,13 @@ public interface IManagementDbService {
 	 * @return  the CRUD service for the bucket store
 	 */
 	@NonNull 
-	ICrudService<DataBucketBean> getDataBucketStore();
+	IManagementCrudService<DataBucketBean> getDataBucketStore();
 	
 	/** Gets the store of data bucket statuses
 	 * @return  the CRUD service for the bucket status store
 	 */
 	@NonNull 
-	ICrudService<DataBucketStatusBean> getDataBucketStatusStore();
+	IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
@@ -100,7 +101,7 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the analytic thread store
 	 */
 	@NonNull 
-	ICrudService<AnalyticThreadBean> getAnalyticThreadStore();
+	IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
