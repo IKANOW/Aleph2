@@ -78,7 +78,7 @@ public class CrudUtils {
 	}
 
 	// Operators for updating
-	public enum UpdateOperator { increment, set, unset, push, pop, push_deduplicate, clear }
+	public enum UpdateOperator { increment, set, unset, add, remove, add_deduplicate }
 	
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
@@ -899,11 +899,11 @@ public class CrudUtils {
 		 * @return the update component builder
 		 */
 		@NonNull
-		public BeanUpdateComponent<T> push(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
+		public BeanUpdateComponent<T> add(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
 			buildNamingHelper();
 			return (BeanUpdateComponent<T>)(dedup 
-					? with(UpdateOperator.push_deduplicate, _naming_helper.field(getter), o) 
-					: with(UpdateOperator.push, _naming_helper.field(getter), o));
+					? with(UpdateOperator.add_deduplicate, _naming_helper.field(getter), o) 
+					: with(UpdateOperator.add, _naming_helper.field(getter), o));
 		}
 		
 		/** Removes the object or objects from the field
@@ -912,20 +912,9 @@ public class CrudUtils {
 		 * @return the update component builder
 		 */
 		@NonNull
-		public BeanUpdateComponent<T> pop(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+		public BeanUpdateComponent<T> remove(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
 			buildNamingHelper();
-			return (BeanUpdateComponent<T>)with(UpdateOperator.pop, _naming_helper.field(getter), o);
-		}
-		
-		/** Removes all objects from this field
-		 * @param getter - the getter for this field
-		 * @param o - if o is a collection then each element is removed
-		 * @return the update component builder
-		 */
-		@NonNull
-		public BeanUpdateComponent<T> clear(final @NonNull Function<T, ?> getter) {
-			buildNamingHelper();
-			return (BeanUpdateComponent<T>)with(UpdateOperator.clear, _naming_helper.field(getter), true);
+			return (BeanUpdateComponent<T>)with(UpdateOperator.remove, _naming_helper.field(getter), o);
 		}
 		
 		/** Nests an update
@@ -1006,11 +995,11 @@ public class CrudUtils {
 		 */
 		@SuppressWarnings("unchecked")
 		@NonNull
-		public JsonUpdateComponent<T> push(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
+		public JsonUpdateComponent<T> add(final @NonNull Function<T, ?> getter, final @NonNull Object o, final boolean dedup) {			
 			buildNamingHelper();
 			return (JsonUpdateComponent<T>)(dedup 
-					? with(UpdateOperator.push_deduplicate, _naming_helper.field(getter), o) 
-					: with(UpdateOperator.push, _naming_helper.field(getter), o));
+					? with(UpdateOperator.add_deduplicate, _naming_helper.field(getter), o) 
+					: with(UpdateOperator.add, _naming_helper.field(getter), o));
 		}
 		
 		/** Removes the object or objects from the field
@@ -1020,21 +1009,9 @@ public class CrudUtils {
 		 */
 		@SuppressWarnings("unchecked")
 		@NonNull
-		public JsonUpdateComponent<T> pop(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
+		public JsonUpdateComponent<T> remove(final @NonNull Function<T, ?> getter, final @NonNull Object o) {
 			buildNamingHelper();
-			return (JsonUpdateComponent<T>)with(UpdateOperator.pop, _naming_helper.field(getter), o);
-		}
-		
-		/** Removes all objects from this field
-		 * @param getter - the getter for this field
-		 * @param o - if o is a collection then each element is removed
-		 * @return the update component builder
-		 */
-		@SuppressWarnings("unchecked")
-		@NonNull
-		public JsonUpdateComponent<T> clear(final @NonNull Function<T, ?> getter) {
-			buildNamingHelper();
-			return (JsonUpdateComponent<T>)with(UpdateOperator.clear, _naming_helper.field(getter), true);
+			return (JsonUpdateComponent<T>)with(UpdateOperator.remove, _naming_helper.field(getter), o);
 		}
 		
 		/** Nests an update
@@ -1108,8 +1085,8 @@ public class CrudUtils {
 		 * @return the update component builder
 		 */
 		@NonNull
-		public CommonUpdateComponent<T> push(final @NonNull String field, final @NonNull Object o, final boolean dedup) {			
-			return dedup ? with(UpdateOperator.push_deduplicate, field, o) : with(UpdateOperator.push, field, o);
+		public CommonUpdateComponent<T> add(final @NonNull String field, final @NonNull Object o, final boolean dedup) {			
+			return dedup ? with(UpdateOperator.add_deduplicate, field, o) : with(UpdateOperator.add, field, o);
 		}
 		
 		/** Removes the object or objects from the field
@@ -1118,18 +1095,8 @@ public class CrudUtils {
 		 * @return the update component builder
 		 */
 		@NonNull
-		public CommonUpdateComponent<T> pop(final @NonNull String field, final @NonNull Object o) {
-			return with(UpdateOperator.pop, field, o);
-		}
-		
-		/** Removes all objects from this field
-		 * @param field
-		 * @param o - if o is a collection then each element is removed
-		 * @return the update component builder
-		 */
-		@NonNull
-		public CommonUpdateComponent<T> clear(final @NonNull String field) {
-			return with(UpdateOperator.clear, field, true);
+		public CommonUpdateComponent<T> remove(final @NonNull String field, final @NonNull Object o) {
+			return with(UpdateOperator.remove, field, o);
 		}
 		
 		/** Indicates that the object should be deleted
@@ -1137,7 +1104,7 @@ public class CrudUtils {
 		 */
 		@NonNull
 		public CommonUpdateComponent<T> deleteObject() {
-			return with(UpdateOperator.clear, null, null);
+			return with(UpdateOperator.unset, "", null);
 		}		
 		
 		/** Nests an update
