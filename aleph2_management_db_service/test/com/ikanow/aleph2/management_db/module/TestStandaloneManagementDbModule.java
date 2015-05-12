@@ -33,7 +33,7 @@ import fj.data.Either;
 
 public class TestStandaloneManagementDbModule {
 
-	@Inject @Named("management_db_service.core") IManagementDbService _core_management_db_service;
+	@Inject @Named("management_db_service_core") IManagementDbService _core_management_db_service;
 	@Inject @Named("management_db_service") IManagementDbService _underlying_management_db_service;
 	@Inject DataBucketCrudService _data_bucket_crud_service;
 	

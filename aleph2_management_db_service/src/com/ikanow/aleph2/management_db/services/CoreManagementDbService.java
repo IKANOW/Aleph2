@@ -53,7 +53,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @param data_bucket_service
 	 */
 	@Inject
-	public CoreManagementDbService(final @Named("management_db_service.core") IManagementDbService underlying_management_db,
+	public CoreManagementDbService(final @Named("management_db_service_core") IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service)
 	{
 		_underlying_management_db = underlying_management_db;

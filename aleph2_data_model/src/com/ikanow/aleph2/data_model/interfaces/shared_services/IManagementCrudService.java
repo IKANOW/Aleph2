@@ -41,7 +41,7 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 
 	public abstract class ManagementFuture<A> implements Future<A> {
 		
-		@NonNull public abstract Collection<BasicMessageBean> getManagementResults();
+		@NonNull public abstract Future<Collection<BasicMessageBean>> getManagementResults();
 	}
 	
 	//////////////////////////////////////////////////////

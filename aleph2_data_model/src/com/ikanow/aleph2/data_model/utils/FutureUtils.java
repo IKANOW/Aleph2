@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -41,15 +42,10 @@ public class FutureUtils {
 		public ManagementFutureImpl(final @NonNull Future<T> delegate, Optional<Future<Collection<BasicMessageBean>>> side_channel) {
 			_delegate = delegate;
 			_management_side_channel = side_channel;
-			if (side_channel.isPresent()) {
-				//_checker = CompletableFuture
-			}
 		}
 		
 		protected final Future<T> _delegate;
 		protected final Optional<Future<Collection<BasicMessageBean>>> _management_side_channel;
-		/**/
-		//protected final CompletableFuture _checker;
 		
 		@Override
 		public boolean cancel(boolean mayInterruptIfRunning) {
@@ -78,21 +74,18 @@ public class FutureUtils {
 
 		@Override
 		public T get() throws InterruptedException, ExecutionException {
-			// TODO Auto-generated method stub
-			return null;
+			return _delegate.get();
 		}
 
 		@Override
 		public T get(long timeout, TimeUnit unit) throws InterruptedException,
 				ExecutionException, TimeoutException {
-			// TODO Auto-generated method stub
-			return null;
+			return _delegate.get(timeout, unit);
 		}
 
 		@Override
-		public @NonNull Collection<BasicMessageBean> getManagementResults() {
-			// TODO Auto-generated method stub
-			return null;
+		public @NonNull Future<Collection<BasicMessageBean>> getManagementResults() {
+			return _management_side_channel.orElse(CompletableFuture.completedFuture(Collections.emptyList()));
 		}
 		
 	}

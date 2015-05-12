@@ -56,7 +56,7 @@ public class StandaloneManagementDbModule extends AbstractModule {
 	 * @param management_db_service - the injected core management db service object
 	 */
 	@Inject
-	protected StandaloneManagementDbModule(final @Named("management_db_service.core") IManagementDbService management_db_service) {
+	protected StandaloneManagementDbModule(final @Named("management_db_service_core") IManagementDbService management_db_service) {
 		_management_db_service = management_db_service;
 		
 		//DEBUG
@@ -107,7 +107,7 @@ public class StandaloneManagementDbModule extends AbstractModule {
 		System.out.println("HERE?! " + this + " : " + _underlying_management_db_service_name);
 		
 		// Load the core service:
-		this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service.core")).to(CoreManagementDbService.class).in(Scopes.SINGLETON);
+		this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service_core")).to(CoreManagementDbService.class).in(Scopes.SINGLETON);
 		
 		// Load the underlying service
 		if (null != _underlying_management_db_service_name) { // (else )
