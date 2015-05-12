@@ -1068,7 +1068,7 @@ public class CrudUtils {
 	 *
 	 * @param <T> the type of the bean in the repository
 	 */
-	public static class CommonUpdateComponent<T> {
+	public static class CommonUpdateComponent<T> extends UpdateComponent<T> {
 
 		// Builders
 	
@@ -1131,6 +1131,14 @@ public class CrudUtils {
 		public CommonUpdateComponent<T> clear(final @NonNull String field) {
 			return with(UpdateOperator.clear, field, true);
 		}
+		
+		/** Indicates that the object should be deleted
+		 * @return the update component builder
+		 */
+		@NonNull
+		public CommonUpdateComponent<T> deleteObject() {
+			return with(UpdateOperator.clear, null, null);
+		}		
 		
 		/** Nests an update
 		 * @param field
