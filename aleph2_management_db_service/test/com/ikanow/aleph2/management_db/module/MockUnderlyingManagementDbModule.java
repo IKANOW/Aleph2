@@ -19,29 +19,41 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Scopes;
 
+/**
+ * @author acp
+ *
+ */
 public class MockUnderlyingManagementDbModule extends AbstractModule {
 
-	public static class MockUnderlyingCrudServiceFactory {
+	public static interface IMockUnderlyingCrudServiceFactory {
+		
+	}
+	public static class MockUnderlyingCrudServiceFactory implements IMockUnderlyingCrudServiceFactory {
 		
 	}
 	
 	public MockUnderlyingManagementDbModule() {}
 	
-	protected MockUnderlyingCrudServiceFactory _crud_service_factory;
+	protected IMockUnderlyingCrudServiceFactory _crud_service_factory;
 	
+	/** This isn't called unless this module is at the top level 
+	 * @param crud_service_factory
+	 */
 	@Inject
 	public MockUnderlyingManagementDbModule(
-			MockUnderlyingCrudServiceFactory crud_service_factory
+			IMockUnderlyingCrudServiceFactory crud_service_factory
 			)
 	{
 		_crud_service_factory = crud_service_factory;
-		/**/
-		System.out.println("Hello world from: " + this.getClass() + ": underlying=" + crud_service_factory);
+		//DEBUG
+		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + crud_service_factory);
 	}
 	
 	public void configure() {
+		this.bind(IMockUnderlyingCrudServiceFactory.class).to(MockUnderlyingCrudServiceFactory.class).in(Scopes.SINGLETON);
 		
-		this.bind(MockUnderlyingCrudServiceFactory.class).in(Scopes.SINGLETON);
+		/**/
+		this.bind(MockUnderlyingCrudServiceFactory.class);
 	}
 	
 }
