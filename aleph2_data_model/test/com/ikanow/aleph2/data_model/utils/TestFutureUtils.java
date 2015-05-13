@@ -42,7 +42,7 @@ public class TestFutureUtils {
 		// Test1 - very basic stuff
 		
 		final CompletableFuture<TestBean> pretest1 = 
-				CompletableFuture.completedFuture(ObjectTemplateUtils.build(TestBean.class).with("field1", "alskdjfhg").done());
+				CompletableFuture.completedFuture(BeanTemplateUtils.build(TestBean.class).with("field1", "alskdjfhg").done().get());
 		
 		ManagementFuture<TestBean> test1 = FutureUtils.createManagementFuture(pretest1);
 		
@@ -60,9 +60,9 @@ public class TestFutureUtils {
 		// Test2 - same but with a side channel 
 		
 		final CompletableFuture<TestBean> pretest2a = 
-				CompletableFuture.completedFuture(ObjectTemplateUtils.build(TestBean.class).with("field1", "zmxncvb").done());
+				CompletableFuture.completedFuture(BeanTemplateUtils.build(TestBean.class).with("field1", "zmxncvb").done().get());
 		
-		final BasicMessageBean bean_pretest2b = ObjectTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::command, "qpwoeirutry").done(); 
+		final BasicMessageBean bean_pretest2b = BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::command, "qpwoeirutry").done().get(); 
 		
 		final CompletableFuture<Collection<BasicMessageBean>> pretest2b = CompletableFuture.completedFuture(Arrays.asList(bean_pretest2b));
 
