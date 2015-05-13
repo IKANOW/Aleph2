@@ -17,6 +17,8 @@ package com.ikanow.aleph2.access_manager.data_access;
 
 import static org.junit.Assert.*;
 
+import java.util.Optional;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -26,12 +28,16 @@ import org.junit.Test;
 import com.ikanow.aleph2.access_manager.data_access.AccessContext;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleUnboundService;
+import com.typesafe.config.ConfigFactory;
 
 public class TestAccessManager {
 
+	private static AccessContext context;
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		//TODO load up what accessManager to test somehow (e.g. via config)
+		context = AccessMananger.initialize(ConfigFactory.load());
 	}
 
 	@AfterClass
@@ -50,7 +56,6 @@ public class TestAccessManager {
 	
 	@Test
 	public void testGetDefaultServices() {
-		AccessContext context = new AccessContext(); //todo don't hardcode this access context
 		assertNotNull(context.getSecurityService());
 		
 		assertNotNull(context.getColumnarService());
@@ -65,14 +70,11 @@ public class TestAccessManager {
 	
 	@Test
 	public void testGetCustomServices() {
-		AccessContext context = new AccessContext();
-		assertNotNull(context.getDataService(SampleCustomService.class));
+		assertNotNull(context.getDataService(SampleCustomService.class, Optional.empty()));
 	}
 	
 	@Test
 	public void testGetCustomServiceDNE() {
-		AccessContext context = new AccessContext();
-		assertNull(context.getDataService(SampleUnboundService.class)); //this class should not have a binding
+		assertNull(context.getDataService(SampleUnboundService.class, Optional.empty())); //this class should not have a binding
 	}
-
 }

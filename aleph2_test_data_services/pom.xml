@@ -3,23 +3,10 @@
   <groupId>aleph2_test_data_services</groupId>
   <artifactId>aleph2_test_data_services</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <build>
-    <sourceDirectory>src</sourceDirectory>
-    <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
   <dependencies>
   	<dependency>
-  		<groupId>aleph2_security_service_ikanow_v1</groupId>
-  		<artifactId>aleph2_security_service_ikanow_v1</artifactId>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_data_model</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
   	<dependency>
@@ -28,8 +15,8 @@
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_data_model</artifactId>
+  		<groupId>aleph2_security_service_ikanow_v1</groupId>
+  		<artifactId>aleph2_security_service_ikanow_v1</artifactId>
   		<version>0.0.1-SNAPSHOT</version>
   	</dependency>
   </dependencies>

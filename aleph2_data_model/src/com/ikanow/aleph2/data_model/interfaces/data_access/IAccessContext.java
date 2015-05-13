@@ -52,10 +52,10 @@ public interface IAccessContext {
 	 * Enables access to the data services available in the system.  The currently
 	 * configured instance of the class passed in will be returned if it exists, null otherwise.
 	 * 
-	 * @param service_clazz The class of the resource you want to access e.g. ISecurityService.class
+	 * @param serviceClazz The class of the resource you want to access e.g. ISecurityService.class
 	 * @return the data service requested or null if it does not exist
 	 */
-	public <I> I getDataService(@NonNull Class<I> service_clazz);
+	public <I> I getDataService(@NonNull Class<I> serviceClazz, @NonNull Optional<String> serviceName);
 
 	/////////////////////////////////////////////////////////////////////
 	

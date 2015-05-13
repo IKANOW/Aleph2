@@ -12,3 +12,13 @@ data_service.SecurityService.interface=com.ikanow.aleph2.data_model.interfaces.s
 data_service.SecurityService.service=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleISecurityService
 #add a custom service
 data_service.SampleCustomService.service=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService
+data_service.SampleCustomService.modules="something,somethingelse"
+
+
+
+#nested service examples
+data_service.SampleNestedCustomServiceOne.interface=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService
+data_service.SampleNestedCustomServiceOne.service=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne
+data_service.SampleNestedCustomServiceOne.default=true
+data_service.SampleNestedCustomServiceTwo.interface=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService
+data_service.SampleNestedCustomServiceTwo.service=com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceTwo

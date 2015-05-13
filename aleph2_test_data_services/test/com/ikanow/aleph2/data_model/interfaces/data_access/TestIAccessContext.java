@@ -17,19 +17,24 @@ package com.ikanow.aleph2.data_model.interfaces.data_access;
 
 import static org.junit.Assert.*;
 
+import java.util.Optional;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.ikanow.aleph2.access_manager.data_access.AccessContext;
+import com.ikanow.aleph2.access_manager.data_access.AccessMananger;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import com.typesafe.config.ConfigFactory;
 
 
 public class TestIAccessContext {
 
 	@BeforeClass
 	public static void setupBeforeClass() throws Exception {
-		//AccessModule.initAccessContext();
+		AccessMananger.initialize(ConfigFactory.load());	
 	}
 	
 	@AfterClass
@@ -53,7 +58,9 @@ public class TestIAccessContext {
 	@Test
 	public void testGetCustomServices() {
 		IAccessContext context = ContextUtils.getAccessContext();
-		assertNotNull(context.getDataService(SampleCustomService.class));
+		Optional<String> opt = Optional.empty();
+		//TODO getDataService needs a null for custom services
+		assertNotNull(context.getDataService(SampleCustomService.class, opt));
 	}
 	
 	@Test
