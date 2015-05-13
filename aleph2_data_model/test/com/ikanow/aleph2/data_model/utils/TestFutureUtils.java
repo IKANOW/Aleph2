@@ -15,13 +15,72 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import static org.junit.Assert.*;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.junit.Test;
+
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class TestFutureUtils {
 
+	public static class TestBean {
+		String field1;
+	}
+	
 	@Test
-	public void testFutureUtils() {
+	public void testFutureUtils() throws InterruptedException, ExecutionException, TimeoutException {
 		
+		// Test1 - very basic stuff
+		
+		final CompletableFuture<TestBean> pretest1 = 
+				CompletableFuture.completedFuture(ObjectTemplateUtils.build(TestBean.class).with("field1", "alskdjfhg").done());
+		
+		ManagementFuture<TestBean> test1 = FutureUtils.createManagementFuture(pretest1);
+		
+		assertEquals(Collections.emptyList(), test1.getManagementResults().get());
+		
+		assertEquals(pretest1.get().field1, test1.get().field1);
+		
+		assertEquals(pretest1.isDone(), test1.isDone());
+		assertEquals(pretest1.isCancelled(), test1.isCancelled());		
+		assertEquals(false, test1.cancel(true));
+		assertEquals(pretest1.isCancelled(), test1.isCancelled());		
+		
+		assertEquals(pretest1.get().field1, test1.get(1000, TimeUnit.SECONDS).field1);		
+		
+		// Test2 - same but with a side channel 
+		
+		final CompletableFuture<TestBean> pretest2a = 
+				CompletableFuture.completedFuture(ObjectTemplateUtils.build(TestBean.class).with("field1", "zmxncvb").done());
+		
+		final BasicMessageBean bean_pretest2b = ObjectTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::command, "qpwoeirutry").done(); 
+		
+		final CompletableFuture<Collection<BasicMessageBean>> pretest2b = CompletableFuture.completedFuture(Arrays.asList(bean_pretest2b));
+
+		ManagementFuture<TestBean> test2 = FutureUtils.createManagementFuture(pretest2a, pretest2b);
+		
+		assertEquals(pretest2a.get().field1, test2.get().field1);		
+		assertEquals(pretest2a.isDone(), test2.isDone());
+		assertEquals(pretest2a.isCancelled(), test2.isCancelled());		
+		assertEquals(false, test2.cancel(true));
+		assertEquals(pretest2a.isCancelled(), test2.isCancelled());				
+		assertEquals(pretest2a.get().field1, test2.get(1000, TimeUnit.SECONDS).field1);
+
+		assertEquals(pretest2b.get(), test2.getManagementResults().get());		
+		assertEquals(pretest2b.isDone(), test2.getManagementResults().isDone());
+		assertEquals(pretest2b.isCancelled(), test2.getManagementResults().isCancelled());		
+		assertEquals(false, test2.getManagementResults().cancel(true));
+		assertEquals(pretest2b.isCancelled(), test2.getManagementResults().isCancelled());				
+		assertEquals(pretest2b.get(), test2.getManagementResults().get(1000, TimeUnit.SECONDS));
 	}
 	
 }
