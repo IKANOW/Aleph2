@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -132,18 +132,18 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<JsonNode> getGlobalHarvestTechnologyConfiguration() {
+		public CompletableFuture<JsonNode> getGlobalHarvestTechnologyConfiguration() {
 			return null;
 		}
 
 		@Override
-		public Future<Map<String, String>> getHarvestLibraries(
+		public CompletableFuture<Map<String, String>> getHarvestLibraries(
 				Optional<DataBucketBean> bucket) {
 			return null;
 		}
 
 		@Override
-		public Future<DataBucketStatusBean> getBucketStatus(
+		public CompletableFuture<DataBucketStatusBean> getBucketStatus(
 				Optional<DataBucketBean> bucket) {
 			return null;
 		}
@@ -218,7 +218,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<BasicMessageBean> subscribeToBucket(
+		public CompletableFuture<BasicMessageBean> subscribeToBucket(
 				@NonNull DataBucketBean bucket,
 				@NonNull Optional<String> stage,
 				Consumer<JsonNode> on_new_object_callback) {
@@ -226,7 +226,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<BasicMessageBean> subscribeToAnalyticThread(
+		public CompletableFuture<BasicMessageBean> subscribeToAnalyticThread(
 				@NonNull AnalyticThreadBean analytic_thread,
 				@NonNull Optional<String> stage,
 				Consumer<JsonNode> on_new_object_callback) {
@@ -234,7 +234,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<Stream<JsonNode>> getObjectStreamFromBucket(
+		public CompletableFuture<Stream<JsonNode>> getObjectStreamFromBucket(
 				@NonNull DataBucketBean bucket, @NonNull Optional<String> stage) {
 			return null;
 		}
@@ -259,12 +259,12 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<JsonNode> getGlobalAnalyticsTechnologyConfiguration() {
+		public CompletableFuture<JsonNode> getGlobalAnalyticsTechnologyConfiguration() {
 			return null;
 		}
 
 		@Override
-		public Future<Map<String, String>> getAnalyticsLibraries(
+		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
 				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}
@@ -279,7 +279,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Future<AnalyticThreadStatusBean> getThreadStatus(
+		public CompletableFuture<AnalyticThreadStatusBean> getThreadStatus(
 				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}

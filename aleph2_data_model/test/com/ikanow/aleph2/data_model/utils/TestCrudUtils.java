@@ -44,6 +44,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateOperator;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
@@ -207,8 +208,10 @@ public class TestCrudUtils {
 		public static class NestedTestBean {
 			public String nested_string_field() { return nested_string_field; }
 			public NestedNestedTestBean nested_object() { return nested_object; }
+			public List<String> nested_string_list() { return nested_string_list; }
 			
 			private String nested_string_field;
+			private List<String> nested_string_list;
 			private NestedNestedTestBean nested_object;
 		}		
 		public String string_field() { return string_field; }
@@ -232,7 +235,7 @@ public class TestCrudUtils {
 		
 		// No meta:
 		
-		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(new TestBean()); 
+		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(BeanTemplate.of(new TestBean())); 
 		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 
@@ -243,12 +246,12 @@ public class TestCrudUtils {
 		
 		// Meta fields
 		
-		TestBean template2 = ObjectTemplateUtils.build(TestBean.class).with(TestBean::string_field, null).done();
+		BeanTemplate<TestBean> template2 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, null).done();
 		
 		final SingleQueryComponent<TestBean> query_comp_2 = CrudUtils.anyOf(template2)
 													.orderBy(Tuples._2T("test_field_1", 1), Tuples._2T("test_field_2", -1));		
 
-		assertEquals(template2, query_comp_2.getElement());				
+		assertEquals(template2.get(), query_comp_2.getElement());				
 		
 		final Tuple2<DBObject, DBObject> query_meta_2 = convertToMongoQuery(query_comp_2);
 		
@@ -266,7 +269,7 @@ public class TestCrudUtils {
 		
 		// Very simple
 
-		TestBean template1 = ObjectTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
+		BeanTemplate<TestBean> template1 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
 		
 		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(template1).when(TestBean::bool_field, true);
 		
@@ -420,7 +423,7 @@ public class TestCrudUtils {
 		
 		// 2 levels of nesting
 
-		TestBean.NestedTestBean nestedBean = ObjectTemplateUtils.build(TestBean.NestedTestBean.class).with("nested_string_field", "x").done();
+		BeanTemplate<TestBean.NestedTestBean> nestedBean = BeanTemplateUtils.build(TestBean.NestedTestBean.class).with("nested_string_field", "x").done();
 		
 		final SingleQueryComponent<TestBean> query_comp_2 = CrudUtils.allOf(TestBean.class)
 				.when(TestBean::string_field, "a")
@@ -471,7 +474,7 @@ public class TestCrudUtils {
 		nnt.nested_nested_string_field = "i";
 		nt2.nested_object = nnt;
 		
-		final SingleQueryComponent<TestBean> query_comp_3 = CrudUtils.allOf(t)
+		final SingleQueryComponent<TestBean> query_comp_3 = CrudUtils.allOf(BeanTemplate.of(t))
 																.when(TestBean::long_field, 2)
 																	.nested(TestBean::nested_list,
 																			CrudUtils.allOf(TestBean.NestedTestBean.class)
@@ -630,7 +633,7 @@ public class TestCrudUtils {
 		
 		// No meta:
 		
-		final SingleQueryComponent<JsonNode> query_comp_1 = CrudUtils.allOf_json(new TestBean()); 
+		final SingleQueryComponent<JsonNode> query_comp_1 = CrudUtils.allOf_json(BeanTemplate.of(new TestBean())); 
 		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 
@@ -641,12 +644,12 @@ public class TestCrudUtils {
 		
 		// Meta fields
 		
-		TestBean template2 = ObjectTemplateUtils.build(TestBean.class).with(TestBean::string_field, null).done();
+		BeanTemplate<TestBean> template2 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, null).done();
 		
 		final SingleQueryComponent<JsonNode> query_comp_2 = CrudUtils.anyOf_json(template2)
 													.orderBy(Tuples._2T("test_field_1", 1), Tuples._2T("test_field_2", -1));		
 
-		assertEquals(template2, query_comp_2.getElement());				
+		assertEquals(template2.get(), query_comp_2.getElement());				
 		
 		final Tuple2<DBObject, DBObject> query_meta_2 = convertToMongoQuery(query_comp_2);
 		
@@ -664,7 +667,7 @@ public class TestCrudUtils {
 		
 		// Very simple
 
-		TestBean template1 = ObjectTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
+		BeanTemplate<TestBean> template1 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
 		
 		final SingleQueryComponent<JsonNode> query_comp_1 = CrudUtils.allOf_json(template1).when(TestBean::bool_field, true);
 		
@@ -818,7 +821,7 @@ public class TestCrudUtils {
 		
 		// 2 levels of nesting
 
-		TestBean.NestedTestBean nestedBean = ObjectTemplateUtils.build(TestBean.NestedTestBean.class).with("nested_string_field", "x").done();
+		BeanTemplate<TestBean.NestedTestBean> nestedBean = BeanTemplateUtils.build(TestBean.NestedTestBean.class).with("nested_string_field", "x").done();
 		
 		final SingleQueryComponent<JsonNode> query_comp_2 = CrudUtils.allOf_json(TestBean.class)
 				.when(TestBean::string_field, "a")
@@ -869,7 +872,7 @@ public class TestCrudUtils {
 		nnt.nested_nested_string_field = "i";
 		nt2.nested_object = nnt;
 		
-		final SingleQueryComponent<JsonNode> query_comp_3 = CrudUtils.allOf_json(t)
+		final SingleQueryComponent<JsonNode> query_comp_3 = CrudUtils.allOf_json(BeanTemplate.of(t))
 																.when(TestBean::long_field, 2)
 																	.nested(TestBean::nested_list,
 																			CrudUtils.allOf_json(TestBean.NestedTestBean.class)
@@ -1048,8 +1051,40 @@ public class TestCrudUtils {
 	@Test
 	public void updateBeanTest() {
 		
+		//TODO need to handle adding a bean (will Jackson-ify if so)
+		//TODO need to handle adding JsonNode as the setter
+		
 		// Test 1
 		
+		final BeanTemplate<TestBean.NestedTestBean> nested1 = BeanTemplateUtils.build(TestBean.NestedTestBean.class)
+																	.with("nested_string_field", "test1").done(); //(2)
+		final UpdateComponent<TestBean> test1 = 
+				CrudUtils.update(TestBean.class)
+					.increment(TestBean::long_field, 4) //(1)
+					.nested(TestBean::nested_list, 
+							CrudUtils.update(nested1) //(2)
+								.unset(TestBean.NestedTestBean::nested_string_field) //(3a)
+								.remove(TestBean.NestedTestBean::nested_string_list, Arrays.asList("x", "y", "z")) //(4)
+								.add(TestBean.NestedTestBean::nested_string_list, "A", true) // (5)
+							)
+					.unset(TestBean::bool_field) //(3b)
+					.unset(TestBean::nested_object) //(3c)
+					.remove(TestBean::nested_list, CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
+					;
+		
+		final DBObject result1 = createUpdateObject(test1);
+		
+		final String expected1 = "{ \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\" , \"y\" , \"z\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
+		// (see above for analysis of results) 
+		
+		assertEquals(expected1, result1.toString());
+		
+		//TODO all the variants of add/remove dedup true/false with collection/object/bean
+		// done: add|obj|true, remove|obj,coll todo: add|coll|true,false add|obj|false
+		//TODO delete object
+		
+		//TODO need new non-nested TestBean init with a field (make sure it becomes a set)
+		//TODO test nested field using dot-notation
 	}
 	
 	//////////////////////////
@@ -1125,7 +1160,4 @@ public class TestCrudUtils {
 			mutable.put(parent, new_dbo);
 		}
 	}
-	
-	
-	
 }

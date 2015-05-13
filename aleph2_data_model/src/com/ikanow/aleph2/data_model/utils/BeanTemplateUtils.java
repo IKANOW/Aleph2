@@ -36,7 +36,38 @@ import net.sf.cglib.proxy.MethodProxy;
  * @author acp
  *
  */
-public class ObjectTemplateUtils {
+public class BeanTemplateUtils {
+
+	/** Contains a partial bean
+	 * @author acp
+	 *
+	 * @param <T> - the bean type
+	 */
+	public static class BeanTemplate<T> {
+		
+		/** Creates a template from this full bean
+		 * @param o
+		 * @return
+		 */
+		public static <O> BeanTemplate<O> of(O o) { return new BeanTemplate<O>(o); }
+		
+		/** Gets an element of the bean 
+		 * @param getter
+		 * @return
+		 */
+		public <R> R get(final @NonNull Function<T, R> getter) {
+			return getter.apply(_element);
+		}
+		
+		/** If you are really sure you want this, gets the (probably partial) bean in this template
+		 * @return the (probably partial) bean in this template
+		 */
+		public T get() { return _element; }			
+				
+		// Private implementation
+		protected BeanTemplate(T element) { _element = element; }
+		protected T _element;
+	}
 	
 	/**
 	 * Enables type-safe access to a single classes
@@ -75,12 +106,13 @@ public class ObjectTemplateUtils {
 	 * @param a - the object determining the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
+	@SuppressWarnings("unchecked")
 	@NonNull
-	public static <T> CloningHelper<T> build(final @NonNull T a) {
+	public static <T> TemplateHelper<T> build(final @NonNull T a) {
 		try {
-			return new CloningHelper<T>(a.getClass());
+			return new TemplateHelper<T>((Class<T>) a.getClass());
 		} catch (Exception e) {
-			throw new RuntimeException("CloningHelper.build", e);
+			throw new RuntimeException("TemplateHelper.build", e);
 		}
 	}
 	/**Builds an immutable object of the specified class
@@ -88,27 +120,117 @@ public class ObjectTemplateUtils {
 	 * @return Clone Helper, finish with done() to return the class
 	 */
 	@NonNull
-	public static <T> CloningHelper<T> build(final @NonNull Class<T> clazz) {
+	public static <T> TemplateHelper<T> build(final @NonNull Class<T> clazz) {
 		try {
-			return new CloningHelper<T>(clazz);
+			return new TemplateHelper<T>(clazz);
 		} catch (Exception e) {
-			throw new RuntimeException("CloningHelper.build", e);
+			throw new RuntimeException("TemplateHelper.build", e);
 		}
 	}	
 	
+	/** Intermediate class for building tempaltes
+	 * @author acp
+	 *
+	 * @param <T> - the class being helped
+	 */
+	public static class TemplateHelper<T> extends CommonHelper<T> {
+		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.lang.String, java.lang.Object)
+		 */
+		@Override
+		public <U> @NonNull TemplateHelper<T> with(@NonNull String fieldName,
+				@NonNull U val) {
+			return (@NonNull TemplateHelper<T>) super.with(fieldName, val);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.util.function.Function, java.lang.Object)
+		 */
+		@Override
+		public <U> @NonNull TemplateHelper<T> with(
+				@NonNull Function<T, ?> getter, @NonNull U val) {
+			return (@NonNull TemplateHelper<T>) super.with(getter, val);
+		}
+
+		/** Finishes the cloning process - returning as a template
+		 * @return the final version of the element
+		 */
+		public BeanTemplate<T> done() {
+			return new BeanTemplate<T>(_element);
+		}
+		
+		// Implementation
+		
+		protected TemplateHelper(Class<T> clazz) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			super(clazz);
+		}
+		protected TemplateHelper(T element) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			super(element);
+		}
+	}
 	/** Intermediate class for cloning
 	 * @author acp
 	 *
 	 * @param <T> - the class being helped
 	 */
-	public static class CloningHelper<T> {
+	public static class CloningHelper<T> extends CommonHelper<T> {
+		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.lang.String, java.lang.Object)
+		 */
+		@Override
+		public <U> @NonNull CloningHelper<T> with(@NonNull String fieldName,
+				@NonNull U val) {
+			return (@NonNull CloningHelper<T>) super.with(fieldName, val);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.util.function.Function, java.lang.Object)
+		 */
+		@Override
+		public <U> @NonNull CloningHelper<T> with(
+				@NonNull Function<T, ?> getter, @NonNull U val) {
+			return (@NonNull CloningHelper<T>) super.with(getter, val);
+		}
+
+		/** Finishes the cloning process - returning as a template
+		 * @return the final version of the element
+		 */
+		public BeanTemplate<T> asTemplate() {
+			return new BeanTemplate<T>(_element);
+		}
+		
+		/** Finishes the building/cloning process
+		 * @return the final version of the element
+		 */
+		@NonNull
+		public T done() {
+			return _element;
+		}
+				
+		// Implementation
+		
+		protected CloningHelper(Class<T> clazz) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			super(clazz);
+		}
+		protected CloningHelper(T element) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+			super(element);
+		}		
+	}
+	/** Intermediate class for cloning or templating
+	 * @author acp
+	 *
+	 * @param <T> - the class being helped
+	 */
+	public static class CommonHelper<T> {
 		/**Set a field in a cloned/new object
 		 * @param fieldName The field to set
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
 		@NonNull
-		public <U> CloningHelper<T> with(final @NonNull String fieldName, final @NonNull U val) {
+		public <U> CommonHelper<T> with(final @NonNull String fieldName, final @NonNull U val) {
 			try {
 				Field f = _element.getClass().getDeclaredField(fieldName);
 				f.setAccessible(true);
@@ -126,7 +248,7 @@ public class ObjectTemplateUtils {
 		 * @return Clone Helper, finish with done() to return the class
 		 */
 		@NonNull
-		public <U> CloningHelper<T> with(final @NonNull Function<T, ?> getter, final @NonNull U val) {
+		public <U> CommonHelper<T> with(final @NonNull Function<T, ?> getter, final @NonNull U val) {
 			try {
 				if (null == _naming_helper) {
 					_naming_helper = from(_element);
@@ -141,14 +263,6 @@ public class ObjectTemplateUtils {
 			return this;
 		}		
 		
-		/** Finishes the building/cloning process
-		 * @return the final version of the element
-		 */
-		@NonNull
-		public T done() {
-			return _element;
-		}
-		
 		protected void cloneInitialFields(final @NonNull T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
@@ -157,13 +271,13 @@ public class ObjectTemplateUtils {
 				.forEach(t -> { try { t._1().set(_element, t._2()); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
-		protected CloningHelper(final @NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
+		protected CommonHelper(final @NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
 			final Constructor<T> contructor = (Constructor<T>) element_clazz.getDeclaredConstructor();
 			contructor.setAccessible(true);
 			_element = (T) contructor.newInstance();
 		}
 		@NonNull
-		protected CloningHelper(final @NonNull T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		protected CommonHelper(final @NonNull T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 			@SuppressWarnings("unchecked")
 			final Constructor<T> contructor = (Constructor<T>) to_clone.getClass().getDeclaredConstructor();
 			contructor.setAccessible(true);

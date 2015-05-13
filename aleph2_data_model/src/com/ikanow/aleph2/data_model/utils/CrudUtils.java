@@ -31,7 +31,8 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.LinkedHashMultimap;
-import com.ikanow.aleph2.data_model.utils.ObjectTemplateUtils.MethodNamingHelper;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 
 /** Very simple set of query builder utilties
  * @author acp
@@ -92,7 +93,7 @@ public class CrudUtils {
 	 */
 	@NonNull
 	public static <T> SingleJsonQueryComponent<T> allOf_json(final @NonNull Class<T> clazz) {
-		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
+		return new SingleJsonQueryComponent<T>(BeanTemplateUtils.build(clazz).done(), Operator.all_of);
 	}
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
@@ -102,7 +103,7 @@ public class CrudUtils {
 	 * @return the query component "helper"
 	 */
 	@NonNull
-	public static <T> SingleJsonQueryComponent<T> allOf_json(final @NonNull T t) {
+	public static <T> SingleJsonQueryComponent<T> allOf_json(final @NonNull BeanTemplate<T> t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.all_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
@@ -112,7 +113,7 @@ public class CrudUtils {
 	 */
 	@NonNull
 	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull Class<T> clazz) {
-		return new SingleJsonQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
+		return new SingleJsonQueryComponent<T>(BeanTemplateUtils.build(clazz).done(), Operator.any_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 *  Returns a type safe version that can be used in the raw JSON CRUD services
@@ -121,7 +122,7 @@ public class CrudUtils {
 	 * @return the query component "helper"
 	 */
 	@NonNull
-	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull T t) {
+	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull BeanTemplate<T> t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
 	}
 	
@@ -133,7 +134,7 @@ public class CrudUtils {
 	 */
 	@NonNull
 	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull Class<T> clazz) {
-		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.all_of);
+		return new SingleBeanQueryComponent<T>(BeanTemplateUtils.build(clazz).done(), Operator.all_of);
 	}
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
@@ -141,7 +142,7 @@ public class CrudUtils {
 	 * @return the query component "helper"
 	 */
 	@NonNull
-	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull T t) {
+	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull BeanTemplate<T> t) {
 		return new SingleBeanQueryComponent<T>(t, Operator.all_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
@@ -150,7 +151,7 @@ public class CrudUtils {
 	 */
 	@NonNull
 	public static <T> SingleBeanQueryComponent<T> anyOf(final @NonNull Class<T> clazz) {
-		return new SingleBeanQueryComponent<T>(ObjectTemplateUtils.build(clazz).done(), Operator.any_of);
+		return new SingleBeanQueryComponent<T>(BeanTemplateUtils.build(clazz).done(), Operator.any_of);
 	}
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 *  Recommend using the clazz version unless you are generating lots of different queries from a single template
@@ -158,7 +159,7 @@ public class CrudUtils {
 	 * @return the query component "helper"
 	 */
 	@NonNull
-	public static <T> SingleBeanQueryComponent<T> anyOf(final @NonNull T t) {
+	public static <T> SingleBeanQueryComponent<T> anyOf(final @NonNull BeanTemplate<T> t) {
 		return new SingleBeanQueryComponent<T>(t, Operator.any_of);
 	}
 	
@@ -186,22 +187,24 @@ public class CrudUtils {
 
 	///////////////////////////////////////////////////////////////////
 
-	public static <T> BeanUpdateComponent<T> update(Class<T> clazz) {
-		return new BeanUpdateComponent<T>(ObjectTemplateUtils.build(clazz).done());
+	public static <T> BeanUpdateComponent<T> update(@NonNull Class<T> clazz) {
+		return new BeanUpdateComponent<T>(BeanTemplateUtils.build(clazz).done());
 	}
 	
-	public static <T> BeanUpdateComponent<T> update(T t) {
+	public static <T> BeanUpdateComponent<T> update(@NonNull BeanTemplate<T> t) {
 		return new BeanUpdateComponent<T>(t);
 	}
 	
 	///////////////////////////////////////////////////////////////////
 	
-	public static <T> JsonUpdateComponent<T> update_json(Class<T> clazz) {
-		return new JsonUpdateComponent<T>(ObjectTemplateUtils.build(clazz).done());
+	@SuppressWarnings("unchecked")
+	public static <T> JsonUpdateComponent<T> update_json(@NonNull Class<T> clazz) {
+		return new JsonUpdateComponent<T>((BeanTemplate<Object>) BeanTemplateUtils.build(clazz).done());
 	}
 	
-	public static <T> JsonUpdateComponent<T> update_json(T t) {
-		return new JsonUpdateComponent<T>(t);
+	@SuppressWarnings("unchecked")
+	public static <T> JsonUpdateComponent<T> update_json(@NonNull BeanTemplate<T> t) {
+		return new JsonUpdateComponent<T>((BeanTemplate<Object>) t);
 	}
 
 	///////////////////////////////////////////////////////////////////
@@ -538,8 +541,8 @@ public class CrudUtils {
 		protected List<Tuple2<String, Integer>> _orderBy;
 		
 		@NonNull
-		protected SingleQueryComponent(final @NonNull Object t, final @NonNull Operator op) {
-			_element = t;
+		protected SingleQueryComponent(final @NonNull BeanTemplate<?> t, final @NonNull Operator op) {
+			_element = t.get();
 			_op = op;
 		}
 		
@@ -686,19 +689,19 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		protected SingleJsonQueryComponent(final @NonNull Object t, final @NonNull Operator op) {
+		protected SingleJsonQueryComponent(final @NonNull BeanTemplate<T> t, final @NonNull Operator op) {
 			super(t, op);
 		}		
 		protected void buildNamingHelper() {
 			if (null == _naming_helper) {
-				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+				_naming_helper = BeanTemplateUtils.from((Class<T>) _element.getClass());
 			}
 		}
 		
 		protected MethodNamingHelper<T> _naming_helper = null;
 		
 		protected SingleJsonQueryComponent(final @NonNull SingleQueryComponent<T> copy) {
-			super(copy._element, copy._op);
+			super(BeanTemplate.of(copy._element), copy._op);
 			
 			_element = copy._element;
 			_op = copy._op;
@@ -836,13 +839,13 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		protected SingleBeanQueryComponent(final @NonNull T t, final Operator op) {
+		protected SingleBeanQueryComponent(final @NonNull BeanTemplate<T> t, final Operator op) {
 			super(t, op);
 		}
 		@SuppressWarnings("unchecked")
 		protected void buildNamingHelper() {
 			if (null == _naming_helper) {
-				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+				_naming_helper = BeanTemplateUtils.from((Class<T>) _element.getClass());
 			}
 		}
 		
@@ -930,14 +933,14 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		protected Object _element;
-		protected BeanUpdateComponent(final @NonNull Object t) {
-			super(t);
+		@SuppressWarnings("unchecked")
+		protected BeanUpdateComponent(final @NonNull BeanTemplate<T> bean_template) {
+			super((BeanTemplate<Object>)bean_template);
 		}
 		@SuppressWarnings("unchecked")
 		protected void buildNamingHelper() {
 			if (null == _naming_helper) {
-				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+				_naming_helper = BeanTemplateUtils.from((Class<T>) _element.getClass());
 			}
 		}
 		protected MethodNamingHelper<T> _naming_helper = null;
@@ -1028,13 +1031,13 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		protected JsonUpdateComponent(final @NonNull Object t) {
+		protected JsonUpdateComponent(final @NonNull BeanTemplate<Object> t) {
 			super(t);
 		}		
 		@SuppressWarnings("unchecked")
 		protected void buildNamingHelper() {
 			if (null == _naming_helper) {
-				_naming_helper = ObjectTemplateUtils.from((Class<T>) _element.getClass());
+				_naming_helper = BeanTemplateUtils.from((Class<T>) _element.getClass());
 			}
 		}
 		protected MethodNamingHelper<T> _naming_helper = null;
@@ -1163,8 +1166,8 @@ public class CrudUtils {
 		protected final Object _element;
 		protected LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> _extra = null;
 		
-		protected CommonUpdateComponent(final @NonNull Object t) {
-			_element = t;
+		protected CommonUpdateComponent(final @NonNull BeanTemplate<Object> t) {
+			_element = t.get();
 		}				
 		//Recursive helper:
 		
@@ -1188,14 +1191,22 @@ public class CrudUtils {
 								.when(Map.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								.when(Multimap.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								// OK if it's none of these supported types that we recognize, then assume it's a bean and recursively de-nest it
-								.otherwise(v -> recursiveQueryBuilder_recurse(field_accessor.getName(), v));
+								.when(BeanTemplate.class, v -> recursiveQueryBuilder_recurse_beanTemplate(field_accessor.getName(), v))
+								.otherwise(v -> recursiveQueryBuilder_recurse_bean(field_accessor.getName(), v));
 					} 
 					catch (Exception e) { return null; }
 				});
 	}
 	
 	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(final @NonNull String parent_field, final @NonNull Object sub_bean) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse_bean(final @NonNull String parent_field, final @NonNull Object sub_bean) {
+		final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(BeanTemplate.of(sub_bean)).getAll();
+			//(all vs and inherited from parent so ignored here)			
+		
+		return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
+	}
+	@NonNull
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse_beanTemplate(final @NonNull String parent_field, final @NonNull BeanTemplate<?> sub_bean) {
 		final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
 			//(all vs and inherited from parent so ignored here)			
 		
