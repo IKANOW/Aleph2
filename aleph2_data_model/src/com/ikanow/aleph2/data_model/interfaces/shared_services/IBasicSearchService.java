@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +35,7 @@ public interface IBasicSearchService<O> {
 	 * @return a future containing the number of matching objects
 	 */
 	@NonNull 
-	Future<Long> count(final Optional<String> query_string, final Optional<String> filter_string);
+	CompletableFuture<Long> count(final Optional<String> query_string, final Optional<String> filter_string);
 	
 	/** Performs a simple lucene-type query on the underlying data, where supported
 	 * @param query_string - A lucene formatted query
@@ -48,7 +48,7 @@ public interface IBasicSearchService<O> {
 	 * @return a 2-tuple - the first is a collection of matching objects, the second is a map of fields to facet on (value is the long
 	 */
 	@NonNull 
-	Future<Tuple2<Iterable<O>, Optional<Map<String, Collection<Tuple2<String, Long>>>>>> 
+	CompletableFuture<Tuple2<Iterable<O>, Optional<Map<String, Collection<Tuple2<String, Long>>>>>> 
 		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
 				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields,
 				final Optional<Map<String, Long>> facet_fields);
@@ -63,7 +63,7 @@ public interface IBasicSearchService<O> {
 	 * @return a a collection of matching objects
 	 */
 	@NonNull 
-	Future<Iterable<O>> 
+	CompletableFuture<Iterable<O>> 
 		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
 				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields);
 	
@@ -74,7 +74,7 @@ public interface IBasicSearchService<O> {
 	 * @return a a collection of matching objects
 	 */
 	@NonNull 
-	Future<Iterable<O>> search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit);
+	CompletableFuture<Iterable<O>> search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

@@ -15,7 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -48,7 +48,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Handles changes to an existing bucket
@@ -59,7 +59,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing
@@ -69,7 +69,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onSuspend(final @NonNull DataBucketBean to_suspend, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onSuspend(final @NonNull DataBucketBean to_suspend, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to re-activate a previously suspended bucket
@@ -79,7 +79,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onResume(final @NonNull DataBucketBean to_resume, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onResume(final @NonNull DataBucketBean to_resume, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that all data for this bucket is to be purged
@@ -91,7 +91,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onPurge(final @NonNull DataBucketBean to_purge, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onPurge(final @NonNull DataBucketBean to_purge, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Notification that this bucket is being deleted.
@@ -104,7 +104,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onDelete(final @NonNull DataBucketBean to_delete, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onDelete(final @NonNull DataBucketBean to_delete, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
@@ -114,7 +114,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onPeriodicPoll(final @NonNull DataBucketBean polled_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onPeriodicPoll(final @NonNull DataBucketBean polled_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
@@ -123,7 +123,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onHarvestComplete(final @NonNull DataBucketBean completed_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onHarvestComplete(final @NonNull DataBucketBean completed_bucket, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -135,5 +135,5 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response (only completes when the test is complete)
 	 */
 	@NonNull 
-	Future<BasicMessageBean> onTestSource(final @NonNull DataBucketBean test_bucket, final @NonNull ProcessingTestSpecBean test_spec, final @NonNull IHarvestContext context);		
+	CompletableFuture<BasicMessageBean> onTestSource(final @NonNull DataBucketBean test_bucket, final @NonNull ProcessingTestSpecBean test_spec, final @NonNull IHarvestContext context);		
 }

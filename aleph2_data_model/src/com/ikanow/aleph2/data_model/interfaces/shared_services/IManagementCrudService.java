@@ -15,10 +15,8 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -27,10 +25,10 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
-import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 /** Override of the CRUD service that provides a side channel with additional management information in its future
  * @author acp
@@ -39,11 +37,6 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
  */
 public interface IManagementCrudService<O> extends ICrudService<O> {
 
-	public abstract class ManagementFuture<A> implements Future<A> {
-		
-		@NonNull public abstract Future<Collection<BasicMessageBean>> getManagementResults();
-	}
-	
 	//////////////////////////////////////////////////////
 
 	// Authorization and project filtering:

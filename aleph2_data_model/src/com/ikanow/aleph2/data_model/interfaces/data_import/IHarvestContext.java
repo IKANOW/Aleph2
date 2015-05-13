@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -91,14 +91,14 @@ public interface IHarvestContext {
 	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"
 	 */
 	@NonNull 
-	Future<JsonNode> getGlobalHarvestTechnologyConfiguration();
+	CompletableFuture<JsonNode> getGlobalHarvestTechnologyConfiguration();
 	
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
 	 */
 	@NonNull 
-	Future<Map<String, String>> getHarvestLibraries(final @NonNull Optional<DataBucketBean> bucket);
+	CompletableFuture<Map<String, String>> getHarvestLibraries(final @NonNull Optional<DataBucketBean> bucket);
 	
 	//////////////////////////////////////////////////////
 	
@@ -119,7 +119,7 @@ public interface IHarvestContext {
 	 * @return A Future containing a bean containing the harvests state and status
 	 */
 	@NonNull 
-	Future<DataBucketStatusBean> getBucketStatus(final @NonNull Optional<DataBucketBean> bucket);
+	CompletableFuture<DataBucketStatusBean> getBucketStatus(final @NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
 	 * Note that the behavior of the context if called on another bucket than the one

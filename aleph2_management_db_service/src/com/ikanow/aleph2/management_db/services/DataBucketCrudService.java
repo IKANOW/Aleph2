@@ -35,6 +35,7 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 /**
  * @author acp
@@ -252,7 +253,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectById(java.lang.Object, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.@NonNull ManagementFuture<Boolean> updateObjectById(
+	public @NonNull ManagementFuture<Boolean> updateObjectById(
 			@NonNull Object id, @NonNull UpdateComponent<DataBucketBean> update) {
 		// TODO Auto-generated method stub
 		return null;
@@ -262,7 +263,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.@NonNull ManagementFuture<Boolean> updateObjectBySpec(
+	public @NonNull ManagementFuture<Boolean> updateObjectBySpec(
 			@NonNull QueryComponent<DataBucketBean> unique_spec,
 			Optional<Boolean> upsert,
 			@NonNull UpdateComponent<DataBucketBean> update) {
@@ -274,7 +275,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.@NonNull ManagementFuture<Long> updateObjectsBySpec(
+	public @NonNull ManagementFuture<Long> updateObjectsBySpec(
 			@NonNull QueryComponent<DataBucketBean> spec,
 			Optional<Boolean> upsert,
 			@NonNull UpdateComponent<DataBucketBean> update) {
@@ -286,7 +287,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateAndReturnObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent, java.util.Optional, java.util.List, boolean)
 	 */
 	@Override
-	public com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.@NonNull ManagementFuture<Optional<DataBucketBean>> updateAndReturnObjectBySpec(
+	public @NonNull ManagementFuture<Optional<DataBucketBean>> updateAndReturnObjectBySpec(
 			@NonNull QueryComponent<DataBucketBean> unique_spec,
 			Optional<Boolean> upsert,
 			@NonNull UpdateComponent<DataBucketBean> update,
