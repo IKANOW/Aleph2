@@ -29,14 +29,15 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
-import com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule.MockUnderlyingCrudServiceFactory;
+import com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule.IMockUnderlyingCrudServiceFactory;
 
 public class MockUnderlyingManagementDbService implements IManagementDbService, IExtraDependencyLoader {
 
-	protected MockUnderlyingCrudServiceFactory _crud_factory;
+	protected IMockUnderlyingCrudServiceFactory _crud_factory;
 	
 	@Inject
-	public MockUnderlyingManagementDbService(MockUnderlyingCrudServiceFactory crud_factory) {
+	public MockUnderlyingManagementDbService(
+			IMockUnderlyingCrudServiceFactory crud_factory) {
 		_crud_factory = crud_factory;
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + crud_factory);

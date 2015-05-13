@@ -74,8 +74,8 @@ public class StandaloneManagementDbModule extends AbstractModule {
 	public StandaloneManagementDbModule(Either<String[], String> modulesOrServiceName) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		if (modulesOrServiceName.isLeft()) {
 			
-			Iterable<Module> list = List.<String>iterableList(Arrays.asList(modulesOrServiceName.left().value()))
-													.drop(1)
+			Iterable<Module> list = List.<String>iterableList(Arrays.asList(modulesOrServiceName.left().value()))					
+													.drop(1)													
 													.map(m -> {
 														try {
 															return (Module)((Class.forName(m)).newInstance());
@@ -103,9 +103,6 @@ public class StandaloneManagementDbModule extends AbstractModule {
 	@SuppressWarnings("unchecked")
 	@Override
 	protected void configure() {
-		/**/
-		System.out.println("HERE?! " + this + " : " + _underlying_management_db_service_name);
-		
 		// Load the core service:
 		this.bind(IManagementDbService.class).annotatedWith(Names.named("management_db_service_core")).to(CoreManagementDbService.class).in(Scopes.SINGLETON);
 		

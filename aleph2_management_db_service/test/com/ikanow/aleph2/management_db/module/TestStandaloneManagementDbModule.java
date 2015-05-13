@@ -62,7 +62,20 @@ public class TestStandaloneManagementDbModule {
 		
 		assertFalse("underlying_management_db_service._crud_factory shold not be null", underlying_management_db_service._crud_factory == null);
 		assertEquals(MockUnderlyingCrudServiceFactory.class, underlying_management_db_service._crud_factory.getClass());
-		
-		
+	}
+	
+	@Test
+	public void testStandaloneGuiceSetup_shouldFail() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		try {
+			@SuppressWarnings("unused")
+			StandaloneManagementDbModule module = new StandaloneManagementDbModule((Either.<String[], String>left(
+					Arrays.asList("com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbService").toArray(new String[0]))));
+			
+			assertFalse("Exception was thrown should have been thrown", true);
+		}
+		catch (Exception e) {
+			assertEquals("class com.google.inject.CreationException", e.getClass().toString());
+		}
+		// ie missing the module load, so won't know about CRUD factory		
 	}
 }
