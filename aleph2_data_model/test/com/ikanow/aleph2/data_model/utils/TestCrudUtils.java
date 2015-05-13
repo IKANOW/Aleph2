@@ -207,8 +207,10 @@ public class TestCrudUtils {
 		public static class NestedTestBean {
 			public String nested_string_field() { return nested_string_field; }
 			public NestedNestedTestBean nested_object() { return nested_object; }
+			public List<String> nested_string_list() { return nested_string_list; }
 			
 			private String nested_string_field;
+			private List<String> nested_string_list;
 			private NestedNestedTestBean nested_object;
 		}		
 		public String string_field() { return string_field; }
@@ -1048,8 +1050,41 @@ public class TestCrudUtils {
 	@Test
 	public void updateBeanTest() {
 		
+		//TODO need to handle adding a bean (will Jackson-ify if so)
+		//TODO need to handle adding JsonNode as the setter
+		
 		// Test 1
 		
+		final TestBean.NestedTestBean nested1 = new TestBean.NestedTestBean();
+		nested1.nested_string_field = "test1"; //(2)
+		
+		final UpdateComponent<TestBean> test1 = 
+				CrudUtils.update(TestBean.class)
+					.increment(TestBean::long_field, 4) //(1)
+					.nested(TestBean::nested_list, 
+							CrudUtils.update(nested1) //(2)
+								.unset(TestBean.NestedTestBean::nested_string_field) //(3a)
+								.remove(TestBean.NestedTestBean::nested_string_list, Arrays.asList("x", "y", "z")) //(4)
+								.add(TestBean.NestedTestBean::nested_string_list, "A", true) // (5)
+							)
+					.unset(TestBean::bool_field) //(3b)
+					.unset(TestBean::nested_object) //(3c)
+					.remove(TestBean::nested_list, CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
+					;
+		
+		final DBObject result1 = createUpdateObject(test1);
+		
+		final String expected1 = "{ \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\" , \"y\" , \"z\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
+		// (see above for analysis of results) 
+		
+		assertEquals(expected1, result1.toString());
+		
+		//TODO all the variants of add/remove dedup true/false with collection/object/bean
+		// done: add|obj|true, remove|obj,coll todo: add|coll|true,false add|obj|false
+		//TODO delete object
+		
+		//TODO need new non-nested TestBean init with a field (make sure it becomes a set)
+		//TODO test nested field using dot-notation
 	}
 	
 	//////////////////////////
@@ -1125,7 +1160,4 @@ public class TestCrudUtils {
 			mutable.put(parent, new_dbo);
 		}
 	}
-	
-	
-	
 }

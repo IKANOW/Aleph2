@@ -930,7 +930,6 @@ public class CrudUtils {
 		
 		// Implementation
 		
-		protected Object _element;
 		protected BeanUpdateComponent(final @NonNull Object t) {
 			super(t);
 		}
