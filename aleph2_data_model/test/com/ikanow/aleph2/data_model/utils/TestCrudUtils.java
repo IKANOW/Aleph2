@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,9 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import java.util.stream.Collector.Characteristics;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -39,6 +42,8 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.Operator;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateOperator;
 import com.mongodb.BasicDBList;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
@@ -202,8 +207,10 @@ public class TestCrudUtils {
 		public static class NestedTestBean {
 			public String nested_string_field() { return nested_string_field; }
 			public NestedNestedTestBean nested_object() { return nested_object; }
+			public List<String> nested_string_list() { return nested_string_list; }
 			
 			private String nested_string_field;
+			private List<String> nested_string_list;
 			private NestedNestedTestBean nested_object;
 		}		
 		public String string_field() { return string_field; }
@@ -615,8 +622,10 @@ public class TestCrudUtils {
 	}
 
 	///////////////////////////////////////////////////////////////////////	
-	
-	//TODO (ALEPH-22) - write test code for the JsonNode builders (basically just duplicate the above tests I think?)
+	///////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////	
+
+	// JSON TESTING (C/P FROM ABOVE)
 	
 	@Test
 	public void emptyQuery_json() {
@@ -1002,5 +1011,153 @@ public class TestCrudUtils {
 		assertEquals("{ \"$limit\" : 5}", query_meta_5._2().toString());		
 		assertEquals(expected_meta_2.toString(), query_meta_6._2().toString());
 	}
+	///////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////	
+	///////////////////////////////////////////////////////////////////////	
+
+//	public static class TestBean {
+//		public static class NestedNestedTestBean {
+//			public String nested_nested_string_field() { return nested_nested_string_field; }
+//			
+//			private String nested_nested_string_field;
+//		}
+//		public static class NestedTestBean {
+//			public String nested_string_field() { return nested_string_field; }
+//			public NestedNestedTestBean nested_object() { return nested_object; }
+//			
+//			private String nested_string_field;
+//			private NestedNestedTestBean nested_object;
+//		}		
+//		public String string_field() { return string_field; }
+//		public Boolean bool_field() { return bool_field; }
+//		public Long long_field() { return long_field; }
+//		public List<NestedTestBean> nested_list() { return nested_list; }
+//		public Map<String, String> map() { return map; }
+//		public NestedTestBean nested_object() { return nested_object; }
+//		
+//		protected TestBean() {}
+//		private String string_field;
+//		private Boolean bool_field;
+//		private Long long_field;
+//		private List<NestedTestBean> nested_list;
+//		private NestedTestBean nested_object;
+//		private Map<String, String> map;
+//	}
 	
+	
+	// UPDATE TESTING - BEAN 
+	
+	@Test
+	public void updateBeanTest() {
+		
+		//TODO need to handle adding a bean (will Jackson-ify if so)
+		//TODO need to handle adding JsonNode as the setter
+		
+		// Test 1
+		
+		final TestBean.NestedTestBean nested1 = new TestBean.NestedTestBean();
+		nested1.nested_string_field = "test1"; //(2)
+		
+		final UpdateComponent<TestBean> test1 = 
+				CrudUtils.update(TestBean.class)
+					.increment(TestBean::long_field, 4) //(1)
+					.nested(TestBean::nested_list, 
+							CrudUtils.update(nested1) //(2)
+								.unset(TestBean.NestedTestBean::nested_string_field) //(3a)
+								.remove(TestBean.NestedTestBean::nested_string_list, Arrays.asList("x", "y", "z")) //(4)
+								.add(TestBean.NestedTestBean::nested_string_list, "A", true) // (5)
+							)
+					.unset(TestBean::bool_field) //(3b)
+					.unset(TestBean::nested_object) //(3c)
+					.remove(TestBean::nested_list, CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
+					;
+		
+		final DBObject result1 = createUpdateObject(test1);
+		
+		final String expected1 = "{ \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\" , \"y\" , \"z\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
+		// (see above for analysis of results) 
+		
+		assertEquals(expected1, result1.toString());
+		
+		//TODO all the variants of add/remove dedup true/false with collection/object/bean
+		// done: add|obj|true, remove|obj,coll todo: add|coll|true,false add|obj|false
+		//TODO delete object
+		
+		//TODO need new non-nested TestBean init with a field (make sure it becomes a set)
+		//TODO test nested field using dot-notation
+	}
+	
+	//////////////////////////
+	
+	// Utils
+	
+	// (c/p from MongoDbUtils)
+	
+	/** Create a MongoDB update object
+	 * @param update - the generic specification
+	 * @param add increments numbers or adds to sets/lists
+	 * @param remove decrements numbers of removes from sets/lists
+	 * @return the mongodb object
+	 */
+	@SuppressWarnings("unchecked")
+	public static <O> DBObject createUpdateObject(final @NonNull UpdateComponent<O> update) {
+		
+		return update.getAll().entries().stream().collect(
+					Collector.of(
+						BasicDBObject::new,
+						(acc, kv) -> {
+							Patterns.match(kv.getValue()._2()).andAct()
+								// Delete operator, bunch of things have to happen for safety
+								.when(o -> ((UpdateOperator.unset == kv.getValue()._1()) && kv.getKey().isEmpty() && (null == kv.getValue()._2())), 
+										o -> acc.put("$unset", null))
+								//Increment
+								.when(Number.class, n -> (UpdateOperator.increment == kv.getValue()._1()), 
+										n -> nestedPut(acc, "$inc", kv.getKey(), n))
+								// Set
+								.when(o -> (UpdateOperator.set == kv.getValue()._1()), 
+										o -> nestedPut(acc, "$set", kv.getKey(), o))
+								// Unset
+								.when(o -> (UpdateOperator.unset == kv.getValue()._1()), 
+										o -> nestedPut(acc, "$unset", kv.getKey(), 1))
+								// Add items/item to list
+								.when(Collection.class, c -> (UpdateOperator.add == kv.getValue()._1()), 
+										c -> nestedPut(acc, "$push", kv.getKey(), new BasicDBObject("$each", c)))
+								.when(o -> (UpdateOperator.add == kv.getValue()._1()), 
+										o -> nestedPut(acc, "$push", kv.getKey(), o))
+								// Add item/items to set
+								.when(Collection.class, c -> (UpdateOperator.add_deduplicate == kv.getValue()._1()), 
+										c -> nestedPut(acc, "$addToSet", kv.getKey(), new BasicDBObject("$each", c)))
+								.when(o -> (UpdateOperator.add_deduplicate == kv.getValue()._1()), 
+										o -> nestedPut(acc, "$addToSet", kv.getKey(), o))
+								// Remove items from list by query
+								.when(QueryComponent.class, q -> (UpdateOperator.remove == kv.getValue()._1()), 
+										q -> nestedPut(acc, "$pull", kv.getKey(), convertToMongoQuery(q)._1()))
+								// Remove items/item from list
+								.when(Collection.class, c -> (UpdateOperator.remove == kv.getValue()._1()), 
+										c -> nestedPut(acc, "$pullAll", kv.getKey(), c))
+								.when(o -> (UpdateOperator.remove == kv.getValue()._1()), 
+										o -> nestedPut(acc, "$pullAll", kv.getKey(), Arrays.asList(o)))
+								.otherwise(() -> {}); // (do nothing)
+						},
+						(a, b) -> { a.putAll(b.toMap()); return a; },
+						Characteristics.UNORDERED)); 
+	}
+
+	/** Inserts an object into field1.field2, creating objects along the way
+	 * @param mutable the mutable object into which the the nested field is inserted
+	 * @param parent the top level fieldname
+	 * @param nested the nested fieldname 
+	 * @param to_insert the object to insert
+	 */
+	protected static void nestedPut(final @NonNull BasicDBObject mutable, final @NonNull String parent, final @NonNull String nested, final @NonNull Object to_insert) {
+		final DBObject dbo = (DBObject) mutable.get(parent);
+		if (null != dbo) {
+			dbo.put(nested, to_insert);
+		}
+		else {
+			BasicDBObject new_dbo = new BasicDBObject();
+			new_dbo.put(nested, to_insert);
+			mutable.put(parent, new_dbo);
+		}
+	}
 }

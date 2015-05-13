@@ -33,4 +33,44 @@
       </plugin>
     </plugins>
   </build>
+  <dependencies>
+	<dependency>
+	    <groupId>jdk.tools</groupId>
+	    <artifactId>jdk.tools</artifactId>
+	    <version>${java.version}</version>
+	    <scope>system</scope>
+	    <systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>
+	</dependency>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_data_model</artifactId>
+  		<version>[0.0,)</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.12</version>
+  		<scope>test</scope>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.typesafe.akka</groupId>
+  		<artifactId>akka-actor_2.11</artifactId>
+  		<version>2.3.10</version>
+  	</dependency>
+	<dependency>
+	    <groupId>org.functionaljava</groupId>
+	    <artifactId>functionaljava</artifactId>
+	    <version>4.2</version>
+	</dependency>
+	<dependency>
+	    <groupId>org.functionaljava</groupId>
+	    <artifactId>functionaljava-java8</artifactId>
+	    <version>4.2</version>
+	</dependency>
+	<dependency>
+		<groupId>com.google.inject</groupId>
+		<artifactId>guice</artifactId>
+		<version>3.0</version>
+	</dependency>
+  </dependencies>
 </project>
