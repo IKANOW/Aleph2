@@ -36,9 +36,13 @@ public class ContextUtils {
 		return accessContext;
 	}
 	
+	/**
+	 * Returns the currently configured access context object, for use in modules not part of the
+	 * Aleph 2 dependency injection.  
+	 * 
+	 * @return
+	 */
 	public static IServiceContext getServiceContext() {
-		//TODO: instead of getter/setter for these, should I just
-		//have them call AccessManager.init(context) if these are null?
 		return serviceContext;
 	}
 	
