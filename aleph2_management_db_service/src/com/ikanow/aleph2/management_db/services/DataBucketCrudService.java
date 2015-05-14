@@ -17,11 +17,14 @@ package com.ikanow.aleph2.management_db.services;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
+import akka.actor.ActorRef;
+import akka.pattern.Patterns;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
@@ -48,6 +51,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
 	
+	protected final ActorContext _actor_context;
+	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
 	 */
@@ -58,6 +63,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 
+		_actor_context = ActorContext.get();
+		
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
 	}
@@ -94,7 +101,37 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object)
 	 */
 	public ManagementFuture<Supplier<Object>> storeObject(DataBucketBean new_object) {
-		// TODO Auto-generated method stub
+		try {
+			// TODO Auto-generated method stub
+			
+			//TODO Bucket validation
+			
+			// OK if the bucket is validated we can store it (and create a status object)
+					
+			CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object);
+			
+			//TODO more checks if something has gone wrong (eg already exists)
+			try {
+				Object id = ret_val.get().get();
+			}
+			catch (Exception e) {
+				// Almost certainly means that the object exists 
+			}			
+			
+			// OK if we're here then it's time to notify any interested harvesters
+			
+			final ActorRef actor = _actor_context.getActorSystem().actorOf(null, "TODO");
+			
+			final long STORE_OBJECT_TIMEOUT = 5000L;
+			
+			//TODO xxx is a serializable from the data model containing the 
+			scala.concurrent.Future<?> reply = Patterns.ask(actor, "xxx", STORE_OBJECT_TIMEOUT);
+			
+			//TODO wrap this future in a management future
+		}
+		catch (Exception e) { // This is unexpected, pass it along in the future
+			//TODO
+		}
 		return null;
 	}
 
