@@ -12,11 +12,18 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.inject.CreationException;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomNestedService;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne;
-import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceNestedOne;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServicePrivate;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo;
 import com.ikanow.aleph2.access_manager.data_access.util.ConfigUtil;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -39,16 +46,17 @@ public class TestAccessManagerInjection {
 	}
 
 	@Test
-	public void testNestedInjection() {
+	public void testNestedInjection() throws Exception {
 		//TODO setup the injection I want, need to test some nested injection
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		configMap.put("data_service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
-		configMap.put("data_service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
-		configMap.put("data_service.SampleNestedCustomServiceOne.default", true);		
-		AccessContext context = ConfigUtil.loadTestConfig(configMap);
+		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
+		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
+		configMap.put("service.SampleNestedCustomServiceOne.default", true);	
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
 		
-		SampleICustomNestedService service_one = context.getDataService(SampleICustomNestedService.class, Optional.of("SampleNestedCustomServiceOne"));
-		SampleICustomNestedService service_two = context.getDataService(SampleICustomNestedService.class, Optional.of("SampleNestedCustomServiceTwo"));
+		ICustomNestedService service_one = context.getService(ICustomNestedService.class, Optional.of("SampleNestedCustomServiceOne"));
+		ICustomNestedService service_two = context.getService(ICustomNestedService.class, Optional.of("SampleNestedCustomServiceTwo"));
 		assertNotEquals(service_one.hashCode(), service_two.hashCode());
 		
 	}
@@ -59,48 +67,153 @@ public class TestAccessManagerInjection {
 	@Test
 	public void testTwoDefaultsFail() {
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		configMap.put("data_service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
-		configMap.put("data_service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
-		configMap.put("data_service.SampleNestedCustomServiceOne.default", true);	
-		configMap.put("data_service.SampleNestedCustomServiceUnderlying.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
-		configMap.put("data_service.SampleNestedCustomServiceUnderlying.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceUnderlying");
-		configMap.put("data_service.SampleNestedCustomServiceUnderlying.default", true);
+		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
+		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
+		configMap.put("service.SampleNestedCustomServiceOne.default", true);	
+		configMap.put("service.SampleNestedCustomServiceUnderlying.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
+		configMap.put("service.SampleNestedCustomServiceUnderlying.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceUnderlying");
+		configMap.put("service.SampleNestedCustomServiceUnderlying.default", true);
 		boolean threwException = false;
 		try {
-			ConfigUtil.loadTestConfig(configMap);
-		} catch (CreationException ex ){
+			AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+			ContextUtils.getServiceContext();
+		} catch (Exception ex ){
 			threwException = true;
 		}
 		assertTrue(threwException);
 	}
 	
 	@Test
-	public void testNoDefaultAutoSet() {
+	public void testNoDefaultAutoSet() throws Exception {
 		//test that the default services names are set as default unless they get overrode
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		configMap.put("data_service.SecurityService.interface", "com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService");
-		configMap.put("data_service.SecurityService.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleISecurityService");				
-		AccessContext context = ConfigUtil.loadTestConfig(configMap);
+		configMap.put("service.SecurityService.interface", "com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService");
+		configMap.put("service.SecurityService.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleISecurityService");				
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
 		
-		assertNotNull( context.getDataService(ISecurityService.class, Optional.empty()));
+		assertNotNull( context.getService(ISecurityService.class, Optional.empty()));
+	}
+	
+	/**
+	 * Test that we can have 2 services loaded with the same interface (they
+	 * must use different annotations so they don't collide).
+	 * @throws Exception 
+	 * 
+	 */
+	@Test
+	public void testTwoServicesWithSameInterface() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
+		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		configMap.put("service.SampleNestedCustomServiceTwo.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
+		configMap.put("service.SampleNestedCustomServiceTwo.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo");
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
+		
+		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));
+		ICustomService service_two = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceTwo"));
+		//They will be separate instances so they will not hash to the same code, but should be the same parent class		
+		assertNotEquals(service_one.getClass(), service_two.getClass());
+		assertNotEquals(service_one.hashCode(), service_two.hashCode());
+		assertNotNull((SampleCustomServiceOne)service_one);
+		assertNotNull((SampleCustomServiceTwo)service_two);
 	}
 	
 	@Test
-	public void testDefaultAndNamed() {
+	public void testDefaultAndNamed() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		configMap.put("data_service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
-		configMap.put("data_service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
-		configMap.put("data_service.SampleNestedCustomServiceOne.default", true);		
-		AccessContext context = ConfigUtil.loadTestConfig(configMap);
+		configMap.put("service.SampleCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
+		configMap.put("service.SampleCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		configMap.put("service.SampleCustomServiceOne.default", true);		
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
 		
-		SampleICustomNestedService service_one = context.getDataService(SampleICustomNestedService.class, Optional.of("SampleNestedCustomServiceOne"));
-		SampleICustomNestedService service_two = context.getDataService(SampleICustomNestedService.class, Optional.empty());
+		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleCustomServiceOne"));
+		ICustomService service_two = context.getService(ICustomService.class, Optional.empty());
 		//They will be separate instances so they will not hash to the same code, but should be the same parent class
 		assertEquals(service_one.getClass(), service_two.getClass());
 		
 		//this is making the same check as above, just being explicit for brevity
-		SampleCustomNestedServiceOne service_one_casted = (SampleCustomNestedServiceOne) service_one;
+		SampleCustomServiceOne service_one_casted = (SampleCustomServiceOne) service_one;
 		assertEquals(service_one_casted.getClass(), service_two.getClass());
 	}
+	
+	/**
+	 * Creates 2 services that bind custom dependencies to the same interface but
+	 * 2 different implementations, make sure they each get the correct implementation.
+	 * @throws Exception 
+	 * 
+	 */
+	@Test
+	public void testNestedDependenciesDontCollide() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();		
+		configMap.put("service.SampleCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		configMap.put("service.SampleCustomServiceOne.default", true);			
+		configMap.put("service.SampleCustomServiceTwo.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo");
+		configMap.put("service.SampleCustomServiceTwo.default", true);
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
+		
+		SampleCustomServiceOne service_one = context.getService(SampleCustomServiceOne.class, Optional.empty());
+		System.out.println(service_one.dep.getANumber());
+		SampleCustomServiceTwo service_two = context.getService(SampleCustomServiceTwo.class, Optional.empty());
+		
+		assertNotEquals(service_one.dep.getANumber(), service_two.dep.getANumber());
+	}
+	
+	/**
+	 * SampleCustomServiceOne will set up a binding to IDepedency with the annotation "SampleDepOne"
+	 * SampleCustomServicePrivate will try inject that same IDependency "SampleDepOne"
+	 * 
+	 */
+	@Test
+	public void testPrivateDepedencies() {
+		Map<String, Object> configMap = new HashMap<String, Object>();		
+		configMap.put("service.SampleCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		configMap.put("service.SampleCustomServiceOne.default", true);			
+		configMap.put("service.SampleCustomServicePrivate.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServicePrivate");
+		configMap.put("service.SampleCustomServicePrivate.default", true);
+		
+		boolean threwException = false; 
+		try {
+			AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+			IServiceContext context = ContextUtils.getServiceContext();
+		} catch (Exception ex) {
+			threwException = true;
+		}
+		assertTrue(threwException);
+	}
 
+	@Test
+	public void testInjectOtherService() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();		
+		configMap.put("service.SampleCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		configMap.put("service.SampleCustomServiceOne.default", true);			
+		configMap.put("service.SampleCustomServiceNestedOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceNestedOne");
+		configMap.put("service.SampleCustomServiceNestedOne.default", true);
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
+		
+		SampleCustomServiceOne service_one = context.getService(SampleCustomServiceOne.class, Optional.empty());
+		System.out.println(service_one.dep.getANumber());
+		SampleCustomServiceNestedOne service_nested = context.getService(SampleCustomServiceNestedOne.class, Optional.empty());
+		
+		assertEquals(service_one.dep.getANumber(), service_nested.other_service.dep.getANumber());
+	}
+	
+	@Test
+	public void testServicesAreSingletons() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
+		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
+		IServiceContext context = ContextUtils.getServiceContext();
+		
+		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));
+		ICustomService service_two = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));
+		
+		//They should be the same instance	
+		assertEquals(service_one.hashCode(), service_two.hashCode());
+	}
 }

@@ -13,44 +13,65 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.access_manager.data_access;
 
 import static org.junit.Assert.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ikanow.aleph2.access_manager.data_access.AccessContext;
-import com.ikanow.aleph2.access_manager.data_access.AccessMananger;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
+import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleUnboundService;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.typesafe.config.ConfigFactory;
 
+public class TestServiceContext {
 
-public class TestIAccessContext {
-
-	@BeforeClass
-	public static void setupBeforeClass() throws Exception {
-		AccessMananger.initialize(ConfigFactory.load());	
-	}
+	//private static IServiceContext context;
 	
+	@BeforeClass
+	public static void setUpBeforeClass() throws Exception {
+	}
+
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 	}
 
+	@Before
+	public void setUp() throws Exception {
+	}
+
+	@After
+	public void tearDown() throws Exception {
+	}	
+	
+	
 	@Test
-	public void testGetDefaultServices() {
+	public void testGetDefaultServices() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("data_service.SecurityService.interface", "com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService");
+		configMap.put("data_service.SecurityService.service", "com.test.SampleSecurityService");	
+		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
 		IServiceContext context = ContextUtils.getServiceContext();
+		
+		
+		assertNotNull(context.getSecurityService());
+		
 		assertNotNull(context.getColumnarService());
 		assertNotNull(context.getDocumentService());
 		assertNotNull(context.getGeospatialService());
 		assertNotNull(context.getGraphService());
 		assertNotNull(context.getManagementDbService());
 		assertNotNull(context.getSearchIndexService());
-		assertNotNull(context.getSecurityService());
 		assertNotNull(context.getStorageIndexService());
 		assertNotNull(context.getTemporalService());
 	}
@@ -58,15 +79,12 @@ public class TestIAccessContext {
 	@Test
 	public void testGetCustomServices() {
 		IServiceContext context = ContextUtils.getServiceContext();
-		Optional<String> opt = Optional.empty();
-		//TODO getDataService needs a null for custom services
-		assertNotNull(context.getService(SampleCustomService.class, opt));
+		assertNotNull(context.getService(SampleCustomService.class, Optional.empty()));
 	}
 	
 	@Test
-	public void testServicesAreSingletons() {
+	public void testGetCustomServiceDNE() {
 		IServiceContext context = ContextUtils.getServiceContext();
-		assertEquals(context.getSecurityService().hashCode(), context.getSecurityService().hashCode());
+		assertNull(context.getService(SampleUnboundService.class, Optional.empty())); //this class should not have a binding
 	}
-
 }

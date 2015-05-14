@@ -23,8 +23,8 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class ConfigUtil {
-	public static AccessContext loadTestConfig(Map<String, Object> configMap) {
-		Config config = ConfigFactory.parseMap( configMap );
-		return AccessMananger.initialize(config);
-	}
+//	public static AccessContext loadTestConfig(Map<String, Object> configMap) {
+//		Config config = ConfigFactory.parseMap( configMap );
+//		return AccessMananger.initialize(config);
+//	}
 }

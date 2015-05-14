@@ -92,7 +92,6 @@ public class PropertiesUtils {
 					entry.getKey(), 
 					Optional.ofNullable(PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".interface", null)), 
 					PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".service", null),
-					Optional.ofNullable(PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".modules", null)),
 					PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".default", false))
 			)
 			.collect( Collectors.toList());

@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 
@@ -39,7 +40,7 @@ public class TestISecurityService {
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		security_service = ContextUtils.getAccessContext().getSecurityService();
+		security_service = ContextUtils.getServiceContext().getSecurityService();
 		token_basic_auth = new HashMap<String, Object>();
 		token_basic_auth.put("Authorization", "Basic dXNlcjpwYXNzd29yZA=="); //basic auth "Basic user:password"
 		test_identity = security_service.getIdentity(token_basic_auth);

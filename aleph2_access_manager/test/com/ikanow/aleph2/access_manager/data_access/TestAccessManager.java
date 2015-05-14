@@ -37,7 +37,7 @@ public class TestAccessManager {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		//TODO load up what accessManager to test somehow (e.g. via config)
-		context = AccessMananger.initialize(ConfigFactory.load());
+		//context = AccessMananger.initialize(ConfigFactory.load());
 	}
 
 	@AfterClass
@@ -51,30 +51,4 @@ public class TestAccessManager {
 	@After
 	public void tearDown() throws Exception {
 	}	
-	
-	//TODO I should probably be loading up a different config just for tests
-	
-	@Test
-	public void testGetDefaultServices() {
-		assertNotNull(context.getSecurityService());
-		
-		assertNotNull(context.getColumnarService());
-		assertNotNull(context.getDocumentService());
-		assertNotNull(context.getGeospatialService());
-		assertNotNull(context.getGraphService());
-		assertNotNull(context.getManagementDbService());
-		assertNotNull(context.getSearchIndexService());
-		assertNotNull(context.getStorageIndexService());
-		assertNotNull(context.getTemporalService());
-	}
-	
-	@Test
-	public void testGetCustomServices() {
-		assertNotNull(context.getDataService(SampleCustomService.class, Optional.empty()));
-	}
-	
-	@Test
-	public void testGetCustomServiceDNE() {
-		assertNull(context.getDataService(SampleUnboundService.class, Optional.empty())); //this class should not have a binding
-	}
 }
