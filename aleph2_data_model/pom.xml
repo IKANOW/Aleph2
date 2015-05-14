@@ -132,5 +132,11 @@
   		<artifactId>guice-assistedinject</artifactId>
   		<version>3.0</version>
   	</dependency>
+  	<dependency>
+  		<groupId>org.mongojack</groupId>
+  		<artifactId>mongojack</artifactId>
+  		<version>2.1.0</version>
+  		<scope>test</scope>
+  	</dependency>
   </dependencies>
 </project>
