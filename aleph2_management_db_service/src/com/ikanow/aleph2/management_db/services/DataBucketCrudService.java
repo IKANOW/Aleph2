@@ -112,6 +112,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			//TODO more checks if something has gone wrong (eg already exists)
 			try {
+				@SuppressWarnings("unused")
 				Object id = ret_val.get().get();
 			}
 			catch (Exception e) {
@@ -125,6 +126,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final long STORE_OBJECT_TIMEOUT = 5000L;
 			
 			//TODO xxx is a serializable from the data model containing the 
+			@SuppressWarnings("unused")
 			scala.concurrent.Future<?> reply = Patterns.ask(actor, "xxx", STORE_OBJECT_TIMEOUT);
 			
 			//TODO wrap this future in a management future

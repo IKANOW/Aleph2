@@ -132,6 +132,42 @@ public class CrudUtils {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
 	}
 	
+	/** Converts a bean version of a query across to a JSON one
+	 * @param bean_version - the original query component
+	 * @return
+	 */
+	public static <T> QueryComponent<JsonNode> to_json(final @NonNull QueryComponent<T> bean_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of an update across to a JSON one
+	 * @param bean_version - the original update component
+	 * @return
+	 */
+	public static <T> UpdateComponent<JsonNode> to_json(final @NonNull UpdateComponent<T> bean_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of a query across to a JSON one
+	 * @param bean_version - the original query component
+	 * @return
+	 */
+	public static <T> QueryComponent<T> from_json(final @NonNull QueryComponent<JsonNode> json_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of an update across to a JSON one
+	 * @param bean_version - the original update component
+	 * @return
+	 */
+	public static <T> UpdateComponent<T> from_json(final @NonNull UpdateComponent<JsonNode> json_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
 	///////////////////////////////////////////////////////////////////
 	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
