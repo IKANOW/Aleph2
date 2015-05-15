@@ -31,12 +31,14 @@ public class DataImportManager {
 
 	public void start() {		
         // Create the 'greeter' actor
+		logger.info("DataImportManager starting...");
 		system = ActorSystem.create("data_import_manager");
 		folderWatchActor = system.actorOf(Props.create(FolderWatcherActor.class), "folderWatch");
+		
 	}
 
 	public void stop() {
-		// TODO Auto-generated method stub
+		logger.info("DataImportManager stopping...");
 		folderWatchActor.tell(PoisonPill.getInstance(), ActorRef.noSender());
 	}
 

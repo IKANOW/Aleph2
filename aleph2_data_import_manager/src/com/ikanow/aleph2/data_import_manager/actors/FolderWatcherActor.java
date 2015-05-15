@@ -19,8 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
-
 import scala.concurrent.duration.Duration;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
