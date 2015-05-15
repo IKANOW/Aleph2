@@ -15,11 +15,29 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.services;
 
-public class DataImportManager {
+import org.apache.log4j.Logger;
 
-	public void start() {
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.PoisonPill;
+import akka.actor.Props;
+
+import com.ikanow.aleph2.data_import_manager.actors.FolderWatcherActor;
+
+public class DataImportManager {
+	private static final Logger logger = Logger.getLogger(DataImportManager.class);
+    private ActorSystem system = null;
+    protected ActorRef folderWatchActor = null;
+
+	public void start() {		
+        // Create the 'greeter' actor
+		system = ActorSystem.create("data_import_manager");
+		folderWatchActor = system.actorOf(Props.create(FolderWatcherActor.class), "folderWatch");
+	}
+
+	public void stop() {
 		// TODO Auto-generated method stub
-		
+		folderWatchActor.tell(PoisonPill.getInstance(), ActorRef.noSender());
 	}
 
 }

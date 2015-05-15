@@ -45,7 +45,7 @@ public class DefaultModule  {
 		if (this.properties == null) {
 			this.properties = new Properties();
 
-			String configPath = System.getProperty("configPath", ".test");
+			String configPath = System.getProperty("configPath", "module.properties");
 			String propertiesFileName = configPath + "/"+configFileName;
 			try {
 				InputStream inStream = DefaultModule.class.getResourceAsStream(propertiesFileName);

@@ -21,8 +21,9 @@ import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
 
 public class DataImportManagerMain {
 
+	private static Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
+
 	public static void start(){
-		Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
 		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
 		dataImportManager.start();		
 	}
@@ -39,12 +40,24 @@ public class DataImportManagerMain {
 	}
 	*/
 
+	public static void stop(){
+		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
+		dataImportManager.stop();		
+	}
+
 	public static void main(String[] args) {
 		if(args!=null && args.length>0){
+			if("stop".equalsIgnoreCase(args[1])){
+				Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
+				DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
+				dataImportManager.stop();		
+				
+			}
 			//setConfig(args[0]);
 			// set config if it is ot already set
 		}
 		start();
+		stop();
 	}
 
 }

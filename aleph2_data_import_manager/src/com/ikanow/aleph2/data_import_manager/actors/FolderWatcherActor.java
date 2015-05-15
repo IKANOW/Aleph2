@@ -17,29 +17,38 @@ package com.ikanow.aleph2.data_import_manager.actors;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
+
+import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
+
 import scala.concurrent.duration.Duration;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
 public class FolderWatcherActor extends UntypedActor {
+	private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
 
 	private final Cancellable tick = getContext()
 			.system()
 			.scheduler()
-			.schedule(Duration.create(500, TimeUnit.MILLISECONDS),
-					Duration.create(1000, TimeUnit.MILLISECONDS), getSelf(),
+			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
+					Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(),
 					"tick", getContext().dispatcher(), null);
 
 	@Override
 	public void postStop() {
+		logger.debug("postStop");
 		tick.cancel();
 	}
 
 	@Override
 	public void onReceive(Object message) throws Exception {
-		if (message.equals("tick")) {
-			// do something useful here
-		} else {
+		if ("tick".equals(message)) {
+			logger.debug("Tick message received");
+		}else 	if ("stop".equals(message)) {
+				logger.debug("Stop message received");
+				tick.cancel();
+			} else {
 			unhandled(message);
 		}
 	}
