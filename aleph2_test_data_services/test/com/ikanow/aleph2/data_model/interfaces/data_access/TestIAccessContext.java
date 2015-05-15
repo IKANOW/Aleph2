@@ -22,11 +22,11 @@ import java.util.Optional;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.omg.IOP.ServiceContext;
 
-import com.ikanow.aleph2.access_manager.data_access.AccessContext;
-import com.ikanow.aleph2.access_manager.data_access.AccessMananger;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.ConfigFactory;
 
 
@@ -34,7 +34,6 @@ public class TestIAccessContext {
 
 	@BeforeClass
 	public static void setupBeforeClass() throws Exception {
-		AccessMananger.initialize(ConfigFactory.load());	
 	}
 	
 	@AfterClass
@@ -43,7 +42,7 @@ public class TestIAccessContext {
 
 	@Test
 	public void testGetDefaultServices() {
-		IServiceContext context = ContextUtils.getServiceContext();
+		IServiceContext context = new ModuleUtils.ServiceContext();
 		assertNotNull(context.getColumnarService());
 		assertNotNull(context.getDocumentService());
 		assertNotNull(context.getGeospatialService());
@@ -57,7 +56,7 @@ public class TestIAccessContext {
 	
 	@Test
 	public void testGetCustomServices() {
-		IServiceContext context = ContextUtils.getServiceContext();
+		IServiceContext context = new ModuleUtils.ServiceContext();
 		Optional<String> opt = Optional.empty();
 		//TODO getDataService needs a null for custom services
 		assertNotNull(context.getService(SampleCustomService.class, opt));
@@ -65,7 +64,7 @@ public class TestIAccessContext {
 	
 	@Test
 	public void testServicesAreSingletons() {
-		IServiceContext context = ContextUtils.getServiceContext();
+		IServiceContext context = new ModuleUtils.ServiceContext();
 		assertEquals(context.getSecurityService().hashCode(), context.getSecurityService().hashCode());
 	}
 
