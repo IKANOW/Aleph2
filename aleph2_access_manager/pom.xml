@@ -24,4 +24,11 @@
       </plugin>
     </plugins>
   </build>
+  <dependencies>  
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_data_model</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
+  	</dependency>
+  </dependencies>
 </project>

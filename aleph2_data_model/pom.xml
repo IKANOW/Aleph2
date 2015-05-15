@@ -115,7 +115,18 @@
   		<groupId>org.scala-lang</groupId>
   		<artifactId>scala-library</artifactId>
   		<version>2.11.6</version>
-  	</dependency>
+  	</dependency>  	
+  	<dependency>
+		<groupId>com.google.inject</groupId>
+		<artifactId>guice</artifactId>
+		<version>3.0</version>
+	</dependency>
+	<dependency>
+		<groupId>com.typesafe</groupId>
+		<artifactId>config</artifactId>
+		<version>1.2.1</version>
+	</dependency>
+	
   	<dependency>
   		<groupId>org.mongodb</groupId>
   		<artifactId>mongo-java-driver</artifactId>
@@ -133,6 +144,16 @@
   		<version>3.0</version>
   	</dependency>
   	<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.3</version>
+  </dependency>
+  <dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.3</version>
+  </dependency>
+  	<dependency>
   		<groupId>org.mongojack</groupId>
   		<artifactId>mongojack</artifactId>
   		<version>2.1.0</version>
@@ -143,10 +164,5 @@
   		<artifactId>MetaModel-core</artifactId>
   		<version>4.3.3</version>
   	</dependency>
-  	<dependency>
-		<groupId>log4j</groupId>
-		<artifactId>log4j</artifactId>
-		<version>1.2.17</version>
-	</dependency>
   </dependencies>
 </project>

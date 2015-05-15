@@ -17,10 +17,23 @@ package com.ikanow.aleph2.data_model.utils;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
 public class ContextUtils {
+	private static IAccessContext accessContext = null;
+	
+	/**
+	 * Returns the currently configured access context object, for use in modules not part of the
+	 * Aleph2 dependency injection.
+	 * 
+	 * @return the currently configured IAccessContext object
+	 */
+	public static IAccessContext getAccessContext() {		
+		return accessContext;
+	}
 	
 	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
 	 * @param signature can either be the fully qualified class name, or "<FQ class name>:arbitrary_config_string", which is then passed to the context via IHarvestContext.initializeNewContext 
@@ -55,5 +68,9 @@ public class ContextUtils {
 			context.initializeNewContext(clazz_and_config[1]);
 		}
 		return context;
+	}
+
+	public static void setAccessContext(IAccessContext ac) {
+		accessContext = ac;
 	}
 }

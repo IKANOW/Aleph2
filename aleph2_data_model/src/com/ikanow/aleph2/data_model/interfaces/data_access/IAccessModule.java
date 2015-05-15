@@ -1,21 +1,25 @@
-/*******************************************************************************
- * Copyright 2015, The IKANOW Open Source Project.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *   http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access;
 
-public interface IAccessModule {
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-	//TODO (ALEPH-1)
+/**
+ * Interface that applications wanted to consume data services of the
+ * Aleph platform should inherit.  Once the application has been loaded,
+ * initialize will be called via the AccessManager passing the current 
+ * IAccessContext object that will give access to the currently loaded data services.
+ * 
+ * @author Burch
+ *
+ */
+public interface IAccessModule {
+	/**
+	 * This method will be called once when an application is
+	 * loaded into the Aleph platform.  The IAccessContext should
+	 * be saved locally so it can be accessed as needed.  The access
+	 * context can be retrieved alternatively via 
+	 * {@link com.ikanow.aleph2.data_model.utils.ContextUtils.getAccessContext()}
+	 * 
+	 * @param accessContext
+	 */
+	public void initialize(@NonNull IAccessContext accessContext);
 }

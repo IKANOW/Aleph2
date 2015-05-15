@@ -27,12 +27,24 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
-/** A context library that is always passed to the AccessModules via injection 
- * @author acp
- */
-public interface IAccessContext {
+import com.google.inject.Injector;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
-	//TODO (ALEPH-1):
+/**
+ * Gives an app access to all the currently configured data services.
+ * 
+ * @author Burch
+ *
+ */
+public interface IAccessContext extends IServiceContext {		
 	
 	/////////////////////////////////////////////////////////////////////
 	

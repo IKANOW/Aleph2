@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.shared_services;
+package com.ikanow.aleph2.access_manager.data_access.sample_services;
 
-/** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
- * @author acp
- */
-public interface ICoreDistributedServices {
-
-	//TODO (ALEPH-18)
+public class SampleUnboundService {
+	public SampleUnboundService(String someArgument) {
+		//just need a non empty constructor to prevent auto binding
+	}
 }
