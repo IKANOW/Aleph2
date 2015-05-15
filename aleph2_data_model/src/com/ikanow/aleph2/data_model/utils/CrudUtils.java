@@ -71,6 +71,12 @@ public class CrudUtils {
 		// Just an empty parent of SingleQueryComponent and MultiQueryComponent
 		private UpdateComponent() {}
 		
+		/** Returns the class type of the update component
+		 * @return the Class of the component
+		 */
+		@NonNull
+		public abstract Class<T> getElementClass();
+		
 		/** All update elements  
 		 * @return the list of all update elements  
 		 */
@@ -124,6 +130,42 @@ public class CrudUtils {
 	@NonNull
 	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull BeanTemplate<T> t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
+	}
+	
+	/** Converts a bean version of a query across to a JSON one
+	 * @param bean_version - the original query component
+	 * @return
+	 */
+	public static <T> QueryComponent<JsonNode> to_json(final @NonNull QueryComponent<T> bean_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of an update across to a JSON one
+	 * @param bean_version - the original update component
+	 * @return
+	 */
+	public static <T> UpdateComponent<JsonNode> to_json(final @NonNull UpdateComponent<T> bean_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of a query across to a JSON one
+	 * @param bean_version - the original query component
+	 * @return
+	 */
+	public static <T> QueryComponent<T> from_json(final @NonNull QueryComponent<JsonNode> json_version) {
+		//TODO (ALEPH-22)
+		return null;
+	}
+	
+	/** Converts a bean version of an update across to a JSON one
+	 * @param bean_version - the original update component
+	 * @return
+	 */
+	public static <T> UpdateComponent<T> from_json(final @NonNull UpdateComponent<JsonNode> json_version) {
+		//TODO (ALEPH-22)
+		return null;
 	}
 	
 	///////////////////////////////////////////////////////////////////
@@ -351,7 +393,7 @@ public class CrudUtils {
 			if (null != _extra) {
 				ret_val.putAll(_extra);
 			}			
-			recursiveQueryBuilder_init(_element)
+			recursiveQueryBuilder_init(_element, true)
 				.forEach(field_tuple -> ret_val.put(field_tuple._1(), Tuples._2T(Operator.equals, Tuples._2T(field_tuple._2(), null)))); 
 			
 			return ret_val;
@@ -494,7 +536,7 @@ public class CrudUtils {
 			
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
-			recursiveQueryBuilder_init(nested_query_component._element)
+			recursiveQueryBuilder_init(nested_query_component._element, true)
 				.forEach(field_tuple -> this.with(Operator.equals, field + "." + field_tuple._1(), Tuples._2T(field_tuple._2(), null))); 
 			
 			// Easy bit, add the extras
@@ -1120,7 +1162,7 @@ public class CrudUtils {
 			
 			// Take all the non-null fields from the raw object and add them as op_equals
 			
-			recursiveQueryBuilder_init(nested_object._element)
+			recursiveQueryBuilder_init(nested_object._element, false)
 				.forEach(field_tuple -> this.with(UpdateOperator.set, field + "." + field_tuple._1(), field_tuple._2())); 
 			
 			// Easy bit, add the extras
@@ -1133,6 +1175,16 @@ public class CrudUtils {
 		
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
+		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent#getElementClass()
+		 */
+		@SuppressWarnings("unchecked")
+		@NonNull
+		@Override
+		public Class<T> getElementClass() {
+			return (@NonNull Class<T>) _element.getClass();
+		}
 		
 		@NonNull
 		protected CommonUpdateComponent<T> with(final @NonNull UpdateOperator op, final @NonNull String field, Object in) {
@@ -1155,7 +1207,7 @@ public class CrudUtils {
 				ret_val.putAll(_extra);
 			}		
 			
-			recursiveQueryBuilder_init(_element)
+			recursiveQueryBuilder_init(_element, false)
 				.forEach(field_tuple -> ret_val.put(field_tuple._1(), Tuples._2T(UpdateOperator.set, field_tuple._2()))); 
 			
 			return ret_val;
@@ -1173,7 +1225,11 @@ public class CrudUtils {
 		
 	}	
 	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean, boolean denest) {
+		//TODO (ALEPH-22) sometimes you need to nest the functionality and sometimes you don't... (eg updates normally not? queries normally
+		// but actually the behavior is different .. to test this desnest==false, need to bring mongojack into the test context
+		// so can test it for MongoDB
+		
 		return 	Arrays.stream(bean.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.flatMap(field_accessor -> {
@@ -1187,26 +1243,21 @@ public class CrudUtils {
 								.when(String.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								.when(Number.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								.when(Boolean.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
-								.when(Collection.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(Collection.class, l -> Stream.of(Tuples._2T(field_accessor.getName(), l))) // (note can't denest objects/bean templates, that will exception out)
 								.when(Map.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								.when(Multimap.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
 								// OK if it's none of these supported types that we recognize, then assume it's a bean and recursively de-nest it
-								.when(BeanTemplate.class, v -> recursiveQueryBuilder_recurse_beanTemplate(field_accessor.getName(), v))
-								.otherwise(v -> recursiveQueryBuilder_recurse_bean(field_accessor.getName(), v));
+								.when(BeanTemplate.class, v -> denest, v -> recursiveQueryBuilder_recurse(field_accessor.getName(), v))
+								.when(BeanTemplate.class, v -> Stream.of(Tuples._2T(field_accessor.getName(), v)))
+								.when(v -> denest, v -> recursiveQueryBuilder_recurse(field_accessor.getName(), BeanTemplate.of(v)))
+								.otherwise(v -> Stream.of(Tuples._2T(field_accessor.getName(), BeanTemplate.of(v))));
 					} 
 					catch (Exception e) { return null; }
 				});
 	}
 	
 	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse_bean(final @NonNull String parent_field, final @NonNull Object sub_bean) {
-		final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(BeanTemplate.of(sub_bean)).getAll();
-			//(all vs and inherited from parent so ignored here)			
-		
-		return ret_val.entries().stream().map(e -> Tuples._2T(parent_field + "." + e.getKey(), e.getValue()._2()._1()));
-	}
-	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse_beanTemplate(final @NonNull String parent_field, final @NonNull BeanTemplate<?> sub_bean) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_recurse(final @NonNull String parent_field, final @NonNull BeanTemplate<?> sub_bean) {
 		final LinkedHashMultimap<String, @NonNull Tuple2<Operator, Tuple2<Object, Object>>> ret_val = CrudUtils.allOf(sub_bean).getAll();
 			//(all vs and inherited from parent so ignored here)			
 		
