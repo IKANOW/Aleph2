@@ -15,40 +15,30 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
-import org.apache.curator.RetryPolicy;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import static org.junit.Assert.*;
 
-import com.google.inject.Inject;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooDefs;
+import org.junit.Before;
+import org.junit.Test;
+
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 
-/** Implementation class for full Curator service
- * @author acp
- *
- */
-public class CoreDistributedServices implements ICoreDistributedServices {
+public class TestMockCoreDistributedServices {
 
-	protected final CuratorFramework _curator_framework;
+	protected ICoreDistributedServices _core_distributed_services;
 	
-	/** Guice-invoked constructor
-	 * @throws Exception 
-	 */
-	@Inject
-	public CoreDistributedServices() throws Exception {
-		//TODO read connection string in from configuration
-		String connection_string = null;
-		RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
-		_curator_framework = CuratorFrameworkFactory.newClient(connection_string, retry_policy);
-		_curator_framework.start();		
+	@Before
+	public void setupMockCoreDistributedServices() throws Exception {
+		_core_distributed_services = new MockCoreDistributedServices();
 	}
 	
-	/** Returns a connection to the Curator server
-	 * @return
-	 */
-	@NonNull
-	public CuratorFramework getCuratorFramework() {
-		return _curator_framework;
+	@Test
+	public void testMockCoreDistributedServices() throws KeeperException, InterruptedException, Exception {		
+		final CuratorFramework curator = _core_distributed_services.getCuratorFramework();		
+        String path = curator.getZookeeperClient().getZooKeeper().create("/test", new byte[]{1,2,3}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        assertEquals(path, "/test");
 	}
 }
