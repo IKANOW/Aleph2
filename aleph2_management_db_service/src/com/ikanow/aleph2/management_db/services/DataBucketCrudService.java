@@ -51,7 +51,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
 	
-	protected final ActorContext _actor_context;
+	protected final ManagementDbActorContext _actor_context;
 	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
@@ -63,7 +63,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 
-		_actor_context = ActorContext.get();
+		_actor_context = ManagementDbActorContext.get();
 		
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);

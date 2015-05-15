@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.access_manager.data_access.sample_services;
+package com.ikanow.aleph2.management_db.utils;
 
-public class SampleUnboundService {
-	public SampleUnboundService(String someArgument) {
-		//just need a non empty constructor to prevent auto binding
-	}
+/** Core Management DB errors
+ * @author acp
+ */
+public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
+
 }

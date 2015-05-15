@@ -27,24 +27,18 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
-import com.google.inject.Injector;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
-
 /**
  * Gives an app access to all the currently configured data services.
  * 
  * @author Burch
  *
  */
-public interface IAccessContext extends IServiceContext {		
+public interface IAccessContext extends IServiceContext {	
+	
+	/** (Should never be called by clients) this is used by the infrastructure to set up external contexts
+	 * @param signature the string returned from getHarvestContextSignature
+	 */
+	void initializeNewContext(String string);
 	
 	/////////////////////////////////////////////////////////////////////
 	
@@ -78,6 +72,6 @@ public interface IAccessContext extends IServiceContext {
 	 * @param stage - if set to Optionals.empty() then occurs post processing. If set to "" then occurs pre-processing. Otherwise should be the name of a module - will listen immediately after that. 
 	 * @return a future returning stream of Json nodes as soon as the connection is established
 	 */
-	Stream<JsonNode> getObjectStreamFromAnalyticThread(@NonNull AnalyticThreadBean analytic_thread, @NonNull Optional<String> stage);
+	Stream<JsonNode> getObjectStreamFromAnalyticThread(@NonNull AnalyticThreadBean analytic_thread, @NonNull Optional<String> stage);	
 	
 }
