@@ -51,6 +51,7 @@ public class BucketActionDistributionActor extends UntypedActor {
 		// 2) Then message all of the actors who replied that they were interested and wait for the response
 		
 		//TODO or maybe do get an approx number via zookeeper? 
+		@SuppressWarnings("unused")
 		ActorSelection bucket_action_actors = _context.getActorSystem().actorSelection(ActorUtils.BUCKET_ACTION_ACTOR);
 		
 		// TODO Auto-generated method stub
