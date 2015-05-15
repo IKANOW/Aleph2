@@ -24,7 +24,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
 public class ContextUtils {
 	private static IAccessContext accessContext = null;
-	private static IServiceContext serviceContext = null;
 	
 	/**
 	 * Returns the currently configured access context object, for use in modules not part of the
@@ -34,16 +33,6 @@ public class ContextUtils {
 	 */
 	public static IAccessContext getAccessContext() {		
 		return accessContext;
-	}
-	
-	/**
-	 * Returns the currently configured access context object, for use in modules not part of the
-	 * Aleph 2 dependency injection.  
-	 * 
-	 * @return
-	 */
-	public static IServiceContext getServiceContext() {
-		return serviceContext;
 	}
 	
 	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
@@ -83,9 +72,5 @@ public class ContextUtils {
 
 	public static void setAccessContext(IAccessContext ac) {
 		accessContext = ac;
-	}
-	
-	public static void setServiceContext(IServiceContext sc) {
-		serviceContext = sc;
 	}
 }

@@ -14,17 +14,11 @@ import org.junit.Test;
 
 import com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomNestedService;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService;
-import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne;
-import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomService;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceNestedOne;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne;
-import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServicePrivate;
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo;
-import com.ikanow.aleph2.access_manager.data_access.util.ConfigUtil;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
-import com.ikanow.aleph2.data_model.utils.ContextUtils;
-import com.typesafe.config.Config;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.ConfigFactory;
 
 public class TestAccessManagerInjection {
@@ -51,9 +45,9 @@ public class TestAccessManagerInjection {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleICustomNestedService");
 		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomNestedServiceOne");
-		configMap.put("service.SampleNestedCustomServiceOne.default", true);	
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		configMap.put("service.SampleNestedCustomServiceOne.default", true);
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		ICustomNestedService service_one = context.getService(ICustomNestedService.class, Optional.of("SampleNestedCustomServiceOne"));
 		ICustomNestedService service_two = context.getService(ICustomNestedService.class, Optional.of("SampleNestedCustomServiceTwo"));
@@ -75,8 +69,8 @@ public class TestAccessManagerInjection {
 		configMap.put("service.SampleNestedCustomServiceUnderlying.default", true);
 		boolean threwException = false;
 		try {
-			AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-			ContextUtils.getServiceContext();
+			ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+			AccessContext context = new AccessContext();
 		} catch (Exception ex ){
 			threwException = true;
 		}
@@ -89,8 +83,8 @@ public class TestAccessManagerInjection {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SecurityService.interface", "com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService");
 		configMap.put("service.SecurityService.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleISecurityService");				
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		assertNotNull( context.getService(ISecurityService.class, Optional.empty()));
 	}
@@ -108,8 +102,8 @@ public class TestAccessManagerInjection {
 		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
 		configMap.put("service.SampleNestedCustomServiceTwo.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
 		configMap.put("service.SampleNestedCustomServiceTwo.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo");
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));
 		ICustomService service_two = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceTwo"));
@@ -126,8 +120,8 @@ public class TestAccessManagerInjection {
 		configMap.put("service.SampleCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
 		configMap.put("service.SampleCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
 		configMap.put("service.SampleCustomServiceOne.default", true);		
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleCustomServiceOne"));
 		ICustomService service_two = context.getService(ICustomService.class, Optional.empty());
@@ -152,8 +146,8 @@ public class TestAccessManagerInjection {
 		configMap.put("service.SampleCustomServiceOne.default", true);			
 		configMap.put("service.SampleCustomServiceTwo.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceTwo");
 		configMap.put("service.SampleCustomServiceTwo.default", true);
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		SampleCustomServiceOne service_one = context.getService(SampleCustomServiceOne.class, Optional.empty());
 		System.out.println(service_one.dep.getANumber());
@@ -177,8 +171,8 @@ public class TestAccessManagerInjection {
 		
 		boolean threwException = false; 
 		try {
-			AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-			IServiceContext context = ContextUtils.getServiceContext();
+			ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+			AccessContext context = new AccessContext();
 		} catch (Exception ex) {
 			threwException = true;
 		}
@@ -192,8 +186,8 @@ public class TestAccessManagerInjection {
 		configMap.put("service.SampleCustomServiceOne.default", true);			
 		configMap.put("service.SampleCustomServiceNestedOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceNestedOne");
 		configMap.put("service.SampleCustomServiceNestedOne.default", true);
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		SampleCustomServiceOne service_one = context.getService(SampleCustomServiceOne.class, Optional.empty());
 		System.out.println(service_one.dep.getANumber());
@@ -207,8 +201,8 @@ public class TestAccessManagerInjection {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleNestedCustomServiceOne.interface", "com.ikanow.aleph2.access_manager.data_access.sample_services.ICustomService");
 		configMap.put("service.SampleNestedCustomServiceOne.service", "com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustomServiceOne");
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		ICustomService service_one = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));
 		ICustomService service_two = context.getService(ICustomService.class, Optional.of("SampleNestedCustomServiceOne"));

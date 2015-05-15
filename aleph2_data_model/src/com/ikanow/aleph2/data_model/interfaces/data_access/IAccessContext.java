@@ -44,7 +44,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
  * @author Burch
  *
  */
-public interface IAccessContext {		
+public interface IAccessContext extends IServiceContext {		
 	
 	/////////////////////////////////////////////////////////////////////
 	

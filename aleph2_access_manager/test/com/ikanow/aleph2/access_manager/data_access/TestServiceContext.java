@@ -32,6 +32,7 @@ import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleCustom
 import com.ikanow.aleph2.access_manager.data_access.sample_services.SampleUnboundService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.ConfigFactory;
 
 public class TestServiceContext {
@@ -60,8 +61,8 @@ public class TestServiceContext {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("data_service.SecurityService.interface", "com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService");
 		configMap.put("data_service.SecurityService.service", "com.test.SampleSecurityService");	
-		AccessMananger.initialize(ConfigFactory.parseMap(configMap));
-		IServiceContext context = ContextUtils.getServiceContext();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		AccessContext context = new AccessContext();
 		
 		
 		assertNotNull(context.getSecurityService());
@@ -78,13 +79,13 @@ public class TestServiceContext {
 	
 	@Test
 	public void testGetCustomServices() {
-		IServiceContext context = ContextUtils.getServiceContext();
+		AccessContext context = new AccessContext();
 		assertNotNull(context.getService(SampleCustomService.class, Optional.empty()));
 	}
 	
 	@Test
 	public void testGetCustomServiceDNE() {
-		IServiceContext context = ContextUtils.getServiceContext();
+		AccessContext context = new AccessContext();
 		assertNull(context.getService(SampleUnboundService.class, Optional.empty())); //this class should not have a binding
 	}
 }
