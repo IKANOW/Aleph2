@@ -1,8 +1,22 @@
+/*******************************************************************************
+ * Copyright 2015, The IKANOW Open Source Project.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -12,41 +26,22 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigObject;
 
-public class PropertiesUtils {
-	private final static Logger logger = Logger.getLogger(PropertiesUtils.class.getName());		
+/**
+ * Utility functions related to accessing the properties file
+ * 
+ * @author Burch
+ *
+ */
+public class PropertiesUtils {	
 	
-//	public static void applyBindingsFromConfig(Config config, String dataServicesFragement, Binder binder) {
-//		//services are in the format
-//		//{dataServicesFragement}.{SERVICE_NAME}.interface={fullpath}
-//		//{dataServicesFragement}.{SERVICE_NAME}.service={fullpath}
-//		Map<Class<?>, Boolean> interfaceHasDefault = new HashMap<Class<?>, Boolean>();
-//		ConfigObject dataServiceConfig = config.getObject(dataServicesFragement);
-//		dataServiceConfig.entrySet()
-//			.forEach(entry -> {
-//				String service_name = entry.getKey();
-//				String interfaceClazzName = getConfigValue(config, dataServicesFragement+"."+service_name+".interface", null);
-//				String serviceClazzName = getConfigValue(config, dataServicesFragement+"."+service_name+".service", null);
-//				Boolean defaultService = getConfigValue(config, dataServicesFragement+"."+service_name+".default", false);
-//				Class interfaceClazz = null;
-//				try
-//				{
-//					if ( interfaceClazzName != null ) {						
-//						interfaceClazz = Class.forName(interfaceClazzName);
-//						//check if we've set a default for this interface yet
-//						if ( interfaceHasDefault.containsKey(interfaceClazz)) {
-//							logger.log(Level.ALL, "Error: " + interfaceClazzName + " already had a default set");
-//							//prevent bindings?
-//							binder.addError("Error: " + interfaceClazzName + " already had a default set");
-//						}
-//					}
-//					Class serviceClazz = Class.forName(serviceClazzName);
-//					bindDataService(serviceClazz, interfaceClazz, service_name, defaultService, binder);
-//				} catch (ClassNotFoundException ex) {
-//					logger.log(Level.ALL, "Error parsing config class names", ex);
-//				}
-//			});
-//	}
-	
+	/**
+	 * Helper function that returns a config value or the default if it can't be found (used for strings)
+	 * 
+	 * @param config
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
 	private static String getConfigValue(@NonNull Config config, @NonNull String key, @NonNull String defaultValue) {
 		String value;
 		try {
@@ -57,6 +52,14 @@ public class PropertiesUtils {
 		return value;
 	}
 	
+	/**
+	 * Helper function that returns a config value or the default if it can't be found (used for booleans)
+	 * 
+	 * @param config
+	 * @param key
+	 * @param defaultValue
+	 * @return
+	 */
 	private static boolean getConfigValue(@NonNull Config config, @NonNull String key, @NonNull boolean defaultValue) {
 		boolean value = defaultValue;
 		try {
@@ -66,23 +69,15 @@ public class PropertiesUtils {
 		}
 		return value;
 	}
-	
-//	@SuppressWarnings("unchecked")
-//	private static void bindDataService(@NonNull Class serviceClazz, Class interfaceClazz, @NonNull String bindingName, boolean isDefault, @NonNull Binder binder) {
-//		if ( interfaceClazz != null ) {
-//			logger.fine("Binding " + interfaceClazz.getName() + " to " + serviceClazz.getName());			
-//			binder.bind(interfaceClazz).annotatedWith(Names.named(bindingName)).to(serviceClazz);
-//			if ( isDefault )
-//				binder.bind(interfaceClazz).to(serviceClazz);
-//		}
-//		else {
-//			logger.fine("Binding Custom Class " + serviceClazz.getName());
-//			//binder.bind(serviceClazz).annotatedWith(Names.named(bindingName));
-//			if ( isDefault )
-//				binder.bind(serviceClazz);
-//		}
-//	}
 
+	/**
+	 * Reads in the config file and sends back a list of a config data service entries based on the
+	 * given configPrefix.  This is used by the ModuleUtils to get the requested modules to load.
+	 * 
+	 * @param config
+	 * @param configPrefix
+	 * @return
+	 */
 	public static List<ConfigDataServiceEntry> getDataServiceProperties(Config config, String configPrefix) {		
 		ConfigObject dataServiceConfig = config.getObject(configPrefix);
 		List<ConfigDataServiceEntry> toReturn = dataServiceConfig.entrySet()

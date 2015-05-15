@@ -18,21 +18,36 @@ package com.ikanow.aleph2.data_model.utils;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
+/**
+ * Offers alternative access to the contexts needed throughout the application.  In
+ * the future these will be available via injection.
+ * 
+ * @author Burch
+ *
+ */
 public class ContextUtils {
-	private static IAccessContext accessContext = null;
 	
 	/**
 	 * Returns the currently configured access context object, for use in modules not part of the
 	 * Aleph2 dependency injection.
 	 * 
 	 * @return the currently configured IAccessContext object
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
+	 * @throws ClassNotFoundException 
 	 */
-	public static IAccessContext getAccessContext() {		
-		return accessContext;
+	public static IAccessContext getAccessContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {		
+		String[] clazz_and_config = signature.split(":", 2);
+		@SuppressWarnings("unchecked")
+		Class<IAccessContext> access_clazz = (Class<IAccessContext>) Class.forName(clazz_and_config[0]);
+		IAccessContext context = access_clazz.newInstance();
+		if (clazz_and_config.length > 1) {
+			context.initializeNewContext(clazz_and_config[1]);
+		}
+		return context;
 	}
 	
 	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
@@ -68,9 +83,5 @@ public class ContextUtils {
 			context.initializeNewContext(clazz_and_config[1]);
 		}
 		return context;
-	}
-
-	public static void setAccessContext(IAccessContext ac) {
-		accessContext = ac;
 	}
 }

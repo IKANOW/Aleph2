@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * Copyright 2015, The IKANOW Open Source Project.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
 import java.lang.reflect.InvocationTargetException;
@@ -37,11 +52,23 @@ import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+/**
+ * Utility functions for loading modules into the system.  Typically is used
+ * by calling {@link #loadModulesFromConfig(Config)} this will create all
+ * the service injectors needed.  Services can then be retrieved from {@link #getService(Class, Optional)}
+ * or using any of the other Contexts that implement IServiceContext.
+ * 
+ * @author Burch
+ *
+ */
 public class ModuleUtils {		 
 	private final static String SERVICES_PROPERTY = "service";
-	private static Set<Class<?>> interfaceHasDefault = new HashSet<Class<?>>();
-	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService")); //TODO add default titles for the rest of the services
+	private static Set<Class<?>> interfaceHasDefault = null;
+	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService", "ColumnarService", 
+			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", 
+			"SearchIndexService", "StorageService", "TemporalService"));
 	private static Logger logger = LogManager.getLogger();	
+	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
 	
 	/**
@@ -54,11 +81,28 @@ public class ModuleUtils {
 	 * @throws Exception 
 	 */
 	public static void loadModulesFromConfig(@NonNull Config config) throws Exception {
+		interfaceHasDefault = new HashSet<Class<?>>();
 		Injector parent_injector = Guice.createInjector(); //TODO put any global injections we want here
 		//get any global classes we want from parent_injector.getInstance(class);
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);
 	}
 	
+	/**
+	 * Reads in the config file for properties of the format:
+	 * service.{Service name}.interface={full path to interface (optional)}
+	 * service.{Service name}.service={full path to service}
+	 * service.{Service name}.default={true|false (optional)}
+	 * 
+	 * Will then try to create injectors for each of these services that can be retrieved by their 
+	 * Service name.  If default is set to true they can be retrieved by their
+	 * interface/service directly.
+	 * 
+	 * @param config
+	 * @param parent_injector
+	 * @return
+	 * @throws Exception
+	 */
+	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
 			@NonNull Config config, Injector parent_injector) throws Exception {
 		Map<Key, Injector> injectors = new HashMap<Key, Injector>();
@@ -123,8 +167,9 @@ public class ModuleUtils {
 			injectorMap.put(getKey(interfaceClazz.get(), Optional.ofNullable(entry.annotationName)), child_injector);
 			if ( entry.isDefault )
 				injectorMap.put(getKey(interfaceClazz.get(), Optional.empty()), child_injector);
-		} else
-			injectorMap.put(getKey(serviceClazz, Optional.ofNullable(entry.annotationName)), child_injector);			
+		} else {
+			injectorMap.put(getKey(serviceClazz, Optional.empty()), child_injector);
+		}
 		return injectorMap;
 	}
 
@@ -136,6 +181,7 @@ public class ModuleUtils {
 	 * @param interfaceClazz An interface that wants to set the default binding.
 	 * @throws Exception
 	 */
+	@SuppressWarnings("rawtypes")
 	private static void validateOnlyOneDefault(Optional<Class> interfaceClazz) throws Exception {
 		if (interfaceHasDefault.contains(interfaceClazz.get()))
 			throw new Exception(interfaceClazz.get() + " already had a default binding, there can be only one.");
@@ -152,6 +198,7 @@ public class ModuleUtils {
 	 * @return
 	 * @throws ClassNotFoundException
 	 */
+	@SuppressWarnings("rawtypes")
 	private static Optional<Class> getInterfaceClass(Optional<String> interfaceName) throws ClassNotFoundException {
 		if ( interfaceName.isPresent() ) 
 			return Optional.of(Class.forName(interfaceName.get()));
@@ -172,17 +219,21 @@ public class ModuleUtils {
 	 * @throws IllegalArgumentException 
 	 * @throws IllegalAccessException 
 	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static List<Module> getExtraDepedencyModules(Class<?> serviceClazz) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
 		//if serviceClazz implements IExtraDepedency then add those bindings
 		if ( IExtraDependencyLoader.class.isAssignableFrom(serviceClazz) ) {
 			logger.debug("Loading Extra Depedency Modules");
 			List<Module> modules = new ArrayList<Module>();
-			modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", null).invoke(null, null));
+			Class[] param_types = new Class[0];
+			Object[] params = new Object[0];
+			modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", param_types).invoke(null, params));
 			return modules;
 		}
 		return Collections.emptyList();
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static Key getKey(@NonNull Class serviceClazz, @NonNull Optional<String> serviceName) {		
 		if ( serviceName.isPresent() )
 			return Key.get(serviceClazz, Names.named(serviceName.get()));
@@ -190,6 +241,16 @@ public class ModuleUtils {
 			return Key.get(serviceClazz);
 	}
 	
+	/**
+	 * Returns back an instance of the requested serviceClazz/annotation
+	 * if an injector exists for it.  If the injectors have not yet been
+	 * created will try to load them from the default config.
+	 * 
+	 * @param serviceClazz
+	 * @param serviceName
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <I> I getService(@NonNull Class<I> serviceClazz, @NonNull Optional<String> serviceName) {
 		if ( serviceInjectors == null ) {
 			try {
@@ -202,72 +263,138 @@ public class ModuleUtils {
 		return (I) serviceInjectors.get(key).getInstance(key);
 	}
 	
+	/**
+	 * Implementation of the IServiceContext class for easy usage
+	 * from the other contexts.
+	 * 
+	 * @author Burch
+	 *
+	 */
 	public static class ServiceContext implements IServiceContext {
 
+		/**
+		 * Delegates to the ModuleUtils get service call for the
+		 * requested class, serviceName.
+		 * 
+		 */
 		@Override
 		public <I> I getService(Class<I> serviceClazz,
 				Optional<String> serviceName) {
 			return ModuleUtils.getService(serviceClazz, serviceName);
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IColumnarService getColumnarService() {
 			return getService(IColumnarService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IDocumentService getDocumentService() {
 			return getService(IDocumentService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IGeospatialService getGeospatialService() {
 			return getService(IGeospatialService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IGraphService getGraphService() {
 			return getService(IGraphService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IManagementDbService getManagementDbService() {
 			return getService(IManagementDbService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public ISearchIndexService getSearchIndexService() {
 			return getService(ISearchIndexService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public IStorageService getStorageIndexService() {
 			return getService(IStorageService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public ITemporalService getTemporalService() {
 			return getService(ITemporalService.class, Optional.empty());
 		}
 
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
 		@Override
 		public ISecurityService getSecurityService() {
 			return getService(ISecurityService.class, Optional.empty());
 		}
 	}
 	
+	/**
+	 * Module that the config loader uses to bind the configured interfaces
+	 * to the given services.
+	 * 
+	 * @author Burch
+	 *
+	 */
 	public static class ServiceBinderModule extends AbstractModule {
 
+		@SuppressWarnings("rawtypes")
 		private Class serviceClass;
+		@SuppressWarnings("rawtypes")
 		private Optional<Class> interfaceClazz;
 		private Optional<String> annotationName;
 		
+		@SuppressWarnings("rawtypes")
 		public ServiceBinderModule(@NonNull Class serviceClazz, Optional<Class> interfaceClazz, Optional<String> annotationName) {
 			this.serviceClass = serviceClazz;
 			this.interfaceClazz = interfaceClazz;
 			this.annotationName = annotationName;
 		}
 		
+		/**
+		 * Configures the given interface/service against the following rules
+		 * A. If an interface is present
+		 * 		A1. Annotation Present: Bind to service with annotationName
+		 * 		A2. No Annotation Present: Bind to service
+		 * B. Otherwise just bind service, it cannot use the annotation because it must be requested directly from the classname
+		 */
+		@SuppressWarnings("unchecked")
 		@Override
 		protected void configure() {
 			if ( interfaceClazz.isPresent() ) {
