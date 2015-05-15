@@ -13,23 +13,13 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.module;
+package com.ikanow.aleph2.data_import_manager.services;
 
+public class DataImportManager {
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import com.google.inject.name.Names;
-import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
-import com.ikanow.aleph2.data_model.module.DefaultModule;
-
-public class DataImportManagerModule extends DefaultModule implements Module{
-
-	public void configure(Binder binder) {
-		Names.bindProperties(binder, getProperties());
-		binder.bind(DataImportManager.class).in(Scopes.SINGLETON);
-
+	public void start() {
+		// TODO Auto-generated method stub
+		
 	}
-
 
 }
