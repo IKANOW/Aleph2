@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import org.apache.metamodel.DataContext;
+import org.apache.metamodel.schema.Table;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
@@ -261,10 +263,28 @@ public interface ICrudService<O> {
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
+	 *  The exception is that ICrudService.IMetaModel will be available for many technologies and can
+	 *  typically be used safely.
+	 *  None of these underlying drivers support any user or project authentication or filtering
 	 * @param driver_class the class of the driver
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	@NonNull 
 	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
+	
+	/** A table-level interface to the CRUD store using the open MetaModel library
+	 * @author acp
+	 */
+	public static interface IMetaModel {
+		/** Returns the context for the database
+		 * @return the MetaModel context
+		 */
+		@NonNull DataContext getContext();
+		
+		/** Returns the store expressed as a MetaModel table
+		 * @return the MetaModel table
+		 */
+		@NonNull Table getTable();		
+	}
 }
