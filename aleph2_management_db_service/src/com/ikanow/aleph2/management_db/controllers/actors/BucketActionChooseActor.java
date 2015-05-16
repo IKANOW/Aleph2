@@ -43,13 +43,13 @@ import akka.actor.UntypedActor;
  * @author acp
  *
  */
-public class BucketActionDistributionActor extends UntypedActor {
+public class BucketActionChooseActor extends UntypedActor {
 
 	protected final ManagementDbActorContext _context;
 	
 	/** Should only ever be called by the actor system, not by users
 	 */
-	public BucketActionDistributionActor(final @NonNull Optional<FiniteDuration> timeout) {
+	public BucketActionChooseActor(final @NonNull Optional<FiniteDuration> timeout) {
 		_timeout = timeout.orElse(Duration.create(5, TimeUnit.SECONDS)); // (Default timeout 5s) 
 		_context = ManagementDbActorContext.get();
 	}
@@ -62,24 +62,33 @@ public class BucketActionDistributionActor extends UntypedActor {
 		
 		_state.updateState(
 			Patterns.match(untyped_message).<StateName>andReturn()
-					.when(BucketActionMessage.class, __ -> StateName.IDLE == _state.getState(),
+					.when(BucketActionMessage.class, __ -> StateName.IDLE == _state.getState(), 
 							m -> {
 								return this.onNewBucketActionMessage(m);
 							})
-					.when(BucketActionReplyMessage.BucketActionTimeoutMessage.class, __ -> StateName.AWAITING_REPLIES == _state.getState(),
+					.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
+							m -> {
+								_state.data_import_manager_set.remove(m.uuid());
+								return this.checkIfComplete();
+							})
+					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
+							m -> {
+								_state.data_import_manager_set.remove(m.uuid());
+								return this.checkIfComplete();
+							})
+					.when(BucketActionReplyMessage.BucketActionTimeoutMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
 							__ -> {
-								return this.sendReplyAndClose();
+								return this.pickAndSend();
 							})
-					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.AWAITING_REPLIES == _state.getState(),
+					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.AWAITING_REPLY == _state.getState(),
 							m -> {
-								_state.data_import_manager_set.remove(m.uuid());
-								return this.checkIfComplete();
+								//TODO: something bad has happened, start all over again (up to 3 times adding node to discard pile, then fail?)
+								return StateName.GETTING_CANDIDATES; //(or send error -> COMPLETE)
 							})
-					.when(BucketActionReplyMessage.BucketActionHandlerMessage.class, __ -> StateName.AWAITING_REPLIES == _state.getState(),
+					.when(BucketActionReplyMessage.BucketActionHandlerMessage.class, __ -> StateName.AWAITING_REPLY == _state.getState(),
 							m -> {
-								_state.reply_list.add(m.reply());
-								_state.data_import_manager_set.remove(m.uuid());
-								return this.checkIfComplete();
+								//TODO: format reply and send on
+								return StateName.COMPLETE;
 							})
 					.otherwise(m -> {
 						this.unhandled(m);
@@ -91,6 +100,12 @@ public class BucketActionDistributionActor extends UntypedActor {
 	///////////////////////////////////////////
 
 	// Actions
+	
+	@NonNull
+	protected StateName pickAndSend() {
+		//TODO
+		return StateName.AWAITING_REPLY;
+	}
 	
 	@NonNull
 	protected StateName onNewBucketActionMessage(final @NonNull BucketActionMessage message) {
@@ -115,7 +130,7 @@ public class BucketActionDistributionActor extends UntypedActor {
 						this.getSelf(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
 							_context.getActorSystem().dispatcher(), null);
 			
-			return StateName.AWAITING_REPLIES;
+			return StateName.GETTING_CANDIDATES;
 		}
 		catch (Exception e) {
 			throw new RuntimeException();
@@ -124,7 +139,7 @@ public class BucketActionDistributionActor extends UntypedActor {
 	@NonNull
 	protected StateName checkIfComplete() {
 		if (_state.data_import_manager_set.isEmpty()) {
-			return this.sendReplyAndClose();
+			return this.pickAndSend();
 		}
 		else {
 			return _state.getState();
@@ -134,8 +149,6 @@ public class BucketActionDistributionActor extends UntypedActor {
 	protected StateName sendReplyAndClose() {
 		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
 									this.getSelf());		
-		this.getContext().stop(this.self());
-		
 		return StateName.COMPLETE;
 	}
 
@@ -143,7 +156,7 @@ public class BucketActionDistributionActor extends UntypedActor {
 	
 	// State
 	
-	public enum StateName { IDLE, AWAITING_REPLIES, COMPLETE } 
+	public enum StateName { IDLE, GETTING_CANDIDATES, AWAITING_REPLY, COMPLETE } 
 	protected class MutableState {
 		protected StateName state_name;
 		

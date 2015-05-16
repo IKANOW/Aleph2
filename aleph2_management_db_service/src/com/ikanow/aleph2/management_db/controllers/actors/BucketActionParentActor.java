@@ -15,6 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
@@ -26,8 +29,14 @@ public class BucketActionParentActor extends UntypedActor {
 
 	/** Factory method for getting a distribution actor
 	 */
-	public ActorRef getNewDistributionActor() {
-		return this.getContext().actorOf(Props.create(BucketActionDistributionActor.class));
+	public ActorRef getNewDistributionActor(final @NonNull FiniteDuration timeout) {
+		return this.getContext().actorOf(Props.create(BucketActionDistributionActor.class, timeout));
+	}
+
+	/** Factory method for getting a "choose" actor (picks a destination randomly from a pool of replies)
+	 */
+	public ActorRef getNewChooseActor(final @NonNull FiniteDuration timeout) {
+		return this.getContext().actorOf(Props.create(BucketActionChooseActor.class, timeout));
 	}
 
 	/* (non-Javadoc)

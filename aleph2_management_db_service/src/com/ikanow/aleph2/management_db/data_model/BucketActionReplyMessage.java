@@ -26,8 +26,16 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public class BucketActionReplyMessage {
 
+	private BucketActionReplyMessage() {}
+	
+	/** System message indicating that not all messages have been replied to in time
+	 * @author acp
+	 */
 	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {}
 	
+	/** The message a BucketAction*Actor sends out when it is complete
+	 * @author acp
+	 */
 	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
 		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, final int timed_out) {
 			this.replies = replies;
@@ -39,6 +47,21 @@ public class BucketActionReplyMessage {
 		private final Integer timed_out;
 	}
 	
+	/** When a data import manager will accept a bucket action
+	 * @author acp
+	 */
+	public static class BucketActionWillAcceptMessage extends BucketActionReplyMessage {
+		
+		public BucketActionWillAcceptMessage(final @NonNull String uuid) {
+			this.uuid = uuid;
+		}
+		public String uuid() { return uuid; }
+		private final String uuid;
+	}
+	
+	/** When a data import manager cannot or does not wish to handle a bucket action message
+	 * @author acp
+	 */
 	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage {
 		
 		public BucketActionIgnoredMessage(final @NonNull String uuid) {
@@ -48,6 +71,9 @@ public class BucketActionReplyMessage {
 		private final String uuid;
 	}
 	
+	/** Encapsulates the reply from any requested bucket action
+	 * @author acp
+	 */
 	public static class BucketActionHandlerMessage extends BucketActionReplyMessage {
 		
 		public BucketActionHandlerMessage(final @NonNull String uuid, final @NonNull BasicMessageBean reply) {
