@@ -29,11 +29,14 @@ public class BucketActionReplyMessage {
 	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {}
 	
 	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
-		public BucketActionCollectedRepliesMessage(List<BasicMessageBean> replies) {
+		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, final int timed_out) {
 			this.replies = replies;
+			this.timed_out = timed_out;			
 		}		
 		public List<BasicMessageBean> replies() { return replies; }
+		public Integer timed_out() { return timed_out; }
 		private final List<BasicMessageBean> replies;
+		private final Integer timed_out;
 	}
 	
 	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage {

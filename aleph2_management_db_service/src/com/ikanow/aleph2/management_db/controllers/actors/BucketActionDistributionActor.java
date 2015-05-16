@@ -18,11 +18,14 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.concurrent.duration.Duration;
+import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.Patterns;
@@ -57,11 +60,13 @@ public class BucketActionDistributionActor extends UntypedActor {
 		protected final List<BasicMessageBean> reply_list;
 		protected final HashSet<String> data_import_manager_set;
 	}
-	final MutableState _state = new MutableState();	
+	final protected MutableState _state = new MutableState();
+	final protected FiniteDuration _timeout;
 	
 	/** Should only ever be called by the actor system, not by users
 	 */
-	public BucketActionDistributionActor() {
+	public BucketActionDistributionActor(final @NonNull Optional<FiniteDuration> timeout) {
+		_timeout = timeout.orElse(Duration.create(5, TimeUnit.SECONDS)); // (Default timeout 5s) 
 		_context = ManagementDbActorContext.get();
 	}
 	
@@ -133,7 +138,8 @@ public class BucketActionDistributionActor extends UntypedActor {
 		}
 	}
 	protected void sendReplyAndClose() {
-		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list), this.getSelf());		
+		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
+									this.getSelf());		
 		this.getContext().stop(this.self());
 	}
 
