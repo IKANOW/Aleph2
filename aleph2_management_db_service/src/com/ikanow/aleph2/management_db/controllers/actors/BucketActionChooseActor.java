@@ -27,7 +27,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
-import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -69,6 +68,7 @@ public class BucketActionChooseActor extends UntypedActor {
 					.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
 							m -> {
 								_state.data_import_manager_set.remove(m.uuid());
+								_state.reply_list.add(this.getSender());
 								return this.checkIfComplete();
 							})
 					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
@@ -147,8 +147,7 @@ public class BucketActionChooseActor extends UntypedActor {
 	}
 	@NonNull
 	protected StateName sendReplyAndClose() {
-		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
-									this.getSelf());		
+		//TODO single message
 		return StateName.COMPLETE;
 	}
 
@@ -170,12 +169,12 @@ public class BucketActionChooseActor extends UntypedActor {
 			return state_name;
 		}
 		public MutableState() {
-			reply_list = new LinkedList<BasicMessageBean>(); 
+			reply_list = new LinkedList<ActorRef>(); 
 			data_import_manager_set = new HashSet<String>();
 			state_name = StateName.IDLE;
 		}		
 		protected ActorRef original_sender = null;
-		protected final List<BasicMessageBean> reply_list;
+		protected final List<ActorRef> reply_list;
 		protected final HashSet<String> data_import_manager_set;
 	}
 	final protected MutableState _state = new MutableState();
