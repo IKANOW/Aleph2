@@ -37,6 +37,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.UntypedActor;
 
+//TODO (ALEPH-19): switch to AbstractActor if BucketActionDistributionAction testing goes well
+
 /** This actor's role is to send out the received bucket update messages, to marshal the replies
  *  and to send out a combined set of replies to the sender
  * @author acp
