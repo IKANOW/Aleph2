@@ -46,6 +46,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
@@ -66,7 +67,7 @@ public class ModuleUtils {
 	private static Set<Class<?>> interfaceHasDefault = null;
 	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService", "ColumnarService", 
 			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", 
-			"SearchIndexService", "StorageService", "TemporalService"));
+			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices"));
 	private static Logger logger = LogManager.getLogger();	
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
@@ -362,6 +363,15 @@ public class ModuleUtils {
 		@Override
 		public ISecurityService getSecurityService() {
 			return getService(ISecurityService.class, Optional.empty());
+		}
+
+		/**
+		 * Utility function that just calls {@link #getService(Class, Optional)}
+		 * 
+		 */
+		@Override
+		public ICoreDistributedServices getCoreDistributedServices() {
+			return getService(ICoreDistributedServices.class, Optional.empty());
 		}
 	}
 	
