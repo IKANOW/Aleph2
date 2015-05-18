@@ -55,10 +55,16 @@ public class BeanTemplateUtils {
 	 * @throws JsonMappingException 
 	 * @throws JsonParseException 
 	 */
-	static public <T> T from(Config bean_root, Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
-		ObjectMapper object_mapper = new ObjectMapper();
-		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
-		return object_mapper.readValue(bean_root.root().render(ConfigRenderOptions.concise()), bean_clazz);
+	@NonNull
+	static public <T> T from(@Nullable Config bean_root, @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+		if (null != bean_root) {
+			ObjectMapper object_mapper = new ObjectMapper();
+			object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+			return object_mapper.readValue(bean_root.root().render(ConfigRenderOptions.concise()), bean_clazz);
+		}
+		else {
+			return BeanTemplateUtils.build(bean_clazz).done().get();
+		}
 	}
 	
 	
