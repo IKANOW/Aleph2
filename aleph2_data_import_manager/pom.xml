@@ -13,6 +13,15 @@
         </excludes>
       </resource>
     </resources>
+   <testSourceDirectory>test</testSourceDirectory>    
+    <testResources>
+      <testResource>
+        <directory>test</directory>
+        <excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -25,6 +34,16 @@
     </plugins>
   </build>
   <dependencies>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_data_model</artifactId>
+  		<version>[0.0,)</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_core_distributed_services_library</artifactId>
+  		<version>[0.0,)</version>
+  	</dependency>
 	<dependency>
 	    <groupId>jdk.tools</groupId>
 	    <artifactId>jdk.tools</artifactId>
@@ -56,11 +75,6 @@
   		<groupId>org.apache.hadoop</groupId>
   		<artifactId>hadoop-client</artifactId>
   		<version>2.5.2</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_data_model</artifactId>
-  		<version>[0.0,)</version>
   	</dependency>
   <dependency>
 	<groupId>com.typesafe.akka</groupId>
