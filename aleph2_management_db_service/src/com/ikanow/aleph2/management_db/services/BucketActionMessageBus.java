@@ -23,6 +23,8 @@ import akka.event.japi.LookupEventBus;
 
 public class BucketActionMessageBus extends LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> {
 
+	//TODO (ALEPH-19): This needs to be the remote message bus ie handle clustering
+	
 	@Override
 	public String classify(BucketActionEventBusWrapper event) {
 		return ActorUtils.BUCKET_ACTION_EVENT_BUS;
