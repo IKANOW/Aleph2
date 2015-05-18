@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +28,14 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigRenderOptions;
+
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
 import net.sf.cglib.proxy.MethodProxy;
@@ -38,6 +47,21 @@ import net.sf.cglib.proxy.MethodProxy;
  */
 public class BeanTemplateUtils {
 
+	/** Creates a property bean from the supplied config object
+	 * @param bean_root - the root of the configuration tree that needs to be converted to bean
+	 * @param bean_clazz - the class of the properties bean
+	 * @return
+	 * @throws IOException 
+	 * @throws JsonMappingException 
+	 * @throws JsonParseException 
+	 */
+	static public <T> T from(Config bean_root, Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper object_mapper = new ObjectMapper();
+		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		return object_mapper.readValue(bean_root.root().render(ConfigRenderOptions.concise()), bean_clazz);
+	}
+	
+	
 	/** Contains a partial bean
 	 * @author acp
 	 *
