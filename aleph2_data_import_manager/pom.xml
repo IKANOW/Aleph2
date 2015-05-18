@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>aleph2_data_import_manager</groupId>
+  <groupId>com.ikanow.aleph2</groupId>
   <artifactId>aleph2_data_import_manager</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <build>
@@ -44,6 +44,11 @@
   		<artifactId>aleph2_core_distributed_services_library</artifactId>
   		<version>[0.0,)</version>
   	</dependency>
+   	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_storage_service_hdfs</artifactId>
+  		<version>[0.0,)</version>
+  	</dependency>  	
 	<dependency>
 	    <groupId>jdk.tools</groupId>
 	    <artifactId>jdk.tools</artifactId>
