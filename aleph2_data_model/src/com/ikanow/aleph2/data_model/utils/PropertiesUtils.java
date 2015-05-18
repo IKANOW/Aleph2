@@ -15,12 +15,15 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
@@ -77,6 +80,9 @@ public class PropertiesUtils {
 	 * @param config
 	 * @param configPrefix
 	 * @return
+	 * @throws IOException 
+	 * @throws JsonMappingException 
+	 * @throws JsonParseException 
 	 */
 	public static List<ConfigDataServiceEntry> getDataServiceProperties(Config config, String configPrefix) {		
 		ConfigObject dataServiceConfig = config.getObject(configPrefix);
