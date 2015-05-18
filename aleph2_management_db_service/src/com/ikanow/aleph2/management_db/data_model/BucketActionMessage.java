@@ -15,12 +15,32 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.data_model;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import akka.actor.ActorRef;
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 /** Just a top level message type for handling bucket actions 
  * @author acp
  */
 public class BucketActionMessage {
+	/** An internal class used to wrap event bus publications
+	 * @author acp
+	 */
+	public static class BucketActionEventBusWrapper {
+		public BucketActionEventBusWrapper(final @NonNull ActorRef sender, final @NonNull BucketActionMessage message) {
+			this.sender = sender;
+			this.message = message;
+		}	
+		@NonNull
+		public ActorRef sender() { return sender; };
+		@NonNull
+		public BucketActionMessage message() { return message; };
+		
+		protected final ActorRef sender;
+		protected final BucketActionMessage message;
+	}	
 
 	private BucketActionMessage() {}
 
@@ -28,7 +48,7 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
-		public BucketActionOfferMessage(DataBucketBean bucket) {
+		public BucketActionOfferMessage(DataBucketBean bucket, ActorRef sender) {
 			this.bucket = bucket;
 		}
 		public DataBucketBean bucket() { return bucket; };

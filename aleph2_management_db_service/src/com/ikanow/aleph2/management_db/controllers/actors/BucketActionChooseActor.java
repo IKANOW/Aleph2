@@ -19,12 +19,10 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_model.utils.Patterns;
@@ -34,7 +32,6 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
 import akka.actor.UntypedActor;
 
 //TODO (ALEPH-19): switch to AbstractActor if BucketActionDistributionAction testing goes well
@@ -46,13 +43,13 @@ import akka.actor.UntypedActor;
  */
 public class BucketActionChooseActor extends UntypedActor {
 
-	protected final ManagementDbActorContext _context;
+	protected final ManagementDbActorContext _system_context;
 	
 	/** Should only ever be called by the actor system, not by users
 	 */
 	public BucketActionChooseActor(final @NonNull Optional<FiniteDuration> timeout) {
-		_timeout = timeout.orElse(Duration.create(5, TimeUnit.SECONDS)); // (Default timeout 5s) 
-		_context = ManagementDbActorContext.get();
+		_timeout = timeout.orElse(BucketActionSupervisor.DEFAULT_TIMEOUT); // (Default timeout 5s) 
+		_system_context = ManagementDbActorContext.get();
 	}
 	
 	/* (non-Javadoc)
@@ -118,19 +115,17 @@ public class BucketActionChooseActor extends UntypedActor {
 			
 			// 1a) Check how many people are registered as listening from zookeeper/curator
 			
-			CuratorFramework curator = _context.getDistributedServices().getCuratorFramework();
+			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
-			_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ACTOR));
+			_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
 			
 			// 2) Then message all of the actors who replied that they were interested and wait for the response
 			
-			final ActorSelection bucket_action_actors = _context.getActorSystem().actorSelection(ActorUtils.BUCKET_ACTION_ACTOR);
+			_system_context.getBucketActionMessageBus().publish(new BucketActionMessage.BucketActionEventBusWrapper(this.self(), message));
 			
-			bucket_action_actors.tell(message, this.getSelf());
-			
-			_context.getActorSystem().scheduler().scheduleOnce(Duration.create(10, TimeUnit.SECONDS), 
+			_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
 						this.getSelf(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
-							_context.getActorSystem().dispatcher(), null);
+						_system_context.getActorSystem().dispatcher(), null);
 			
 			return StateName.GETTING_CANDIDATES;
 		}

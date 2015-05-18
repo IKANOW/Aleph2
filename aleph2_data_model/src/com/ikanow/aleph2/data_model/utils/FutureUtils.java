@@ -62,7 +62,16 @@ public class FutureUtils {
 			@SuppressWarnings("unchecked")
 			@Override
 			public T get() throws InterruptedException, ExecutionException {
-				return (T)f.value().get().get();
+				if (isDone()) {
+					return (T)f.value().get().get();
+				}
+				else {
+					try {
+						return (T) Await.result(f, Duration.Inf());
+					} catch (Exception e) {
+						throw new ExecutionException(e);
+					}
+				}
 			}
 	
 			@SuppressWarnings("unchecked")
