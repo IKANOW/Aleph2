@@ -27,8 +27,11 @@ public class ManagementDbActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public ManagementDbActorContext(ICoreDistributedServices distributed_services) {
+	public ManagementDbActorContext(ICoreDistributedServices distributed_services, 
+										BucketActionMessageBus bucket_action_message_bus)
+	{
 		_distributed_services = distributed_services;
+		_bucket_action_bus = bucket_action_message_bus;
 		if (null == _actor_system) {
 			_actor_system = ActorSystem.create();
 		}
@@ -54,9 +57,6 @@ public class ManagementDbActorContext {
 	 * @return the bucket action message bus
 	 */
 	public BucketActionMessageBus getBucketActionMessageBus() {
-		if (null == _bucket_action_bus) {
-			_bucket_action_bus = new BucketActionMessageBus();
-		}
 		return _bucket_action_bus;
 	}
 	
@@ -78,7 +78,7 @@ public class ManagementDbActorContext {
 	
 	protected static ActorSystem _actor_system;
 	protected static ActorRef _bucket_action_supervisor;
-	protected static BucketActionMessageBus _bucket_action_bus;
 	protected static ManagementDbActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
+	protected final BucketActionMessageBus _bucket_action_bus;
 }

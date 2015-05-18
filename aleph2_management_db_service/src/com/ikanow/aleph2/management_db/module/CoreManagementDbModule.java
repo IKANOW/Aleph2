@@ -50,7 +50,8 @@ public class CoreManagementDbModule extends AbstractModule {
 	 */
 	public void configure() {
 		
-		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);
+		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);		
+		//TODO (ALEPH-19): bind remote bucket action message bus to itself so context injection works
 	}
 	
 }

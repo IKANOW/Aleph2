@@ -35,6 +35,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
+import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -62,7 +63,8 @@ public class TestBucketActionDistributionActor {
 	public void testSetup() throws Exception {
 		@SuppressWarnings("unused")
 		ManagementDbActorContext singleton = new ManagementDbActorContext(
-				new MockCoreDistributedServices()
+				new MockCoreDistributedServices(),
+				new LocalBucketActionMessageBus()
 				);
 	}
 	
