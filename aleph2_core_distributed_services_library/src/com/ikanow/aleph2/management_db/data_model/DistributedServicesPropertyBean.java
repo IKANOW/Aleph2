@@ -24,8 +24,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class DistributedServicesPropertyBean {
 
 	// Constants for "raw" access
-	public static final String PROPERTIES_ROOT = "core_distributed_services"; 
-	public static final String ZOOKEEPER_CONNECTION = "core_distributed_services.zookeeper_connection"; 
+	public static final String PROPERTIES_ROOT = "CoreDistributedServices"; 
+	public static final String ZOOKEEPER_CONNECTION = "CoreDistributedServices.zookeeper_connection"; 
 	public static final String __DEFAULT_ZOOKEEPER_CONNECTION = "localhost:2181"; 
 	
 	/** User c'tor
