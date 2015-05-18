@@ -42,7 +42,7 @@ public class UuidUtils implements IUuidService {
 	/** Get a static reference to a default UUID library
 	 * @return
 	 */
-	static IUuidService get() {
+	public static IUuidService get() {
 		if (null == _singleton) {
 			_singleton = new UuidUtils();
 		}

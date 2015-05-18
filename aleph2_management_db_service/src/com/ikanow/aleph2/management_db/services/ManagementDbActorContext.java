@@ -4,22 +4,33 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 
 /** Possibly temporary class to provide minimal actor context, pending moving to Guice
  * @author acp
  */
+/**
+ * @author acp
+ *
+ */
+/**
+ * @author acp
+ *
+ */
 public class ManagementDbActorContext {
-
 	
 	/** Creates a new actor context
 	 */
 	@Inject
-	protected ManagementDbActorContext(ICoreDistributedServices distributed_services) {
+	public ManagementDbActorContext(ICoreDistributedServices distributed_services) {
 		_distributed_services = distributed_services;
 		if (null == _actor_system) {
-			_actor_system = ActorSystem.create("com.ikanow.aleph2.management_db.services.CoreManagementDbService");
+			_actor_system = ActorSystem.create();
 		}
 		_singleton = this;
 	}
@@ -30,6 +41,23 @@ public class ManagementDbActorContext {
 	@NonNull
 	public ActorSystem getActorSystem() {
 		return _actor_system;
+	}
+	
+	public ActorRef getBucketActionSupervisor() {
+		if (null == _bucket_action_supervisor) {
+			_bucket_action_supervisor = _actor_system.actorOf(Props.create(BucketActionSupervisor.class), ActorUtils.BUCKET_ACTION_SUPERVISOR);
+		}
+		return _bucket_action_supervisor;
+	}
+
+	/** Returns a static accessor to the bucket action message bus
+	 * @return the bucket action message bus
+	 */
+	public BucketActionMessageBus getBucketActionMessageBus() {
+		if (null == _bucket_action_bus) {
+			_bucket_action_bus = new BucketActionMessageBus();
+		}
+		return _bucket_action_bus;
 	}
 	
 	/** Returns the various distributed services present 
@@ -49,6 +77,8 @@ public class ManagementDbActorContext {
 	}
 	
 	protected static ActorSystem _actor_system;
+	protected static ActorRef _bucket_action_supervisor;
+	protected static BucketActionMessageBus _bucket_action_bus;
 	protected static ManagementDbActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
 }

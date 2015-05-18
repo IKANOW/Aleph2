@@ -19,13 +19,12 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.PartialFunction;
-import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import scala.runtime.BoxedUnit;
 
@@ -34,10 +33,10 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.sun.istack.internal.logging.Logger;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
 import akka.japi.pf.ReceiveBuilder;
 
 /** This actor's role is to send out the received bucket update messages, to marshal the replies
@@ -47,6 +46,8 @@ import akka.japi.pf.ReceiveBuilder;
  */
 public class BucketActionDistributionActor extends AbstractActor {
 
+	public static final Logger _logger = Logger.getLogger(BucketActionDistributionActor.class);
+	
 	///////////////////////////////////////////
 	
 	// State
@@ -73,7 +74,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 	/** Should only ever be called by the actor system, not by users
 	 */
 	public BucketActionDistributionActor(final @NonNull Optional<FiniteDuration> timeout) {
-		_timeout = timeout.orElse(Duration.create(10, TimeUnit.SECONDS)); // (Default timeout 5s) 
+		_timeout = timeout.orElse(BucketActionSupervisor.DEFAULT_TIMEOUT); // (Default timeout 5s) 
 		_system_context = ManagementDbActorContext.get();
 	}
 	
@@ -85,6 +86,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 			.match(BucketActionMessage.class, 
 				m -> {
 					this.broadcastAction(m);
+					this.checkIfComplete();
 				})
 			.build();
 			
@@ -129,26 +131,39 @@ public class BucketActionDistributionActor extends AbstractActor {
 			
 			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
-			_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ACTOR));
+			try {
+				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+			}
+			catch (NoNodeException e) { 
+				// This is OK
+				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+			}
+			
+			//(log)
+			_logger.info("message_id=" + message
+					+ "; actor_id=" + this.self().toString()
+					+ "; candidates_found=" + _state.data_import_manager_set.size());
 			
 			// 2) Then message all of the actors who replied that they were interested and wait for the response
-			
-			final ActorSelection bucket_action_actors = _system_context.getActorSystem().actorSelection(ActorUtils.BUCKET_ACTION_ACTOR);
-			
-			bucket_action_actors.tell(message, this.self());
-			
-			// 2b) Schedule a timeout
-			
-			_system_context.getActorSystem().scheduler().scheduleOnce(Duration.create(10, TimeUnit.SECONDS), 
-						this.self(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
-							_system_context.getActorSystem().dispatcher(), null);
 
-			// 3) Transition state
+			if (!_state.data_import_manager_set.isEmpty()) {
 			
-			context().become(_stateAwaitingReplies);
+				_system_context.getBucketActionMessageBus().publish(new BucketActionMessage.BucketActionEventBusWrapper(this.self(), message));
+				
+				// 2b) Schedule a timeout
+				
+				_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
+							this.self(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
+								_system_context.getActorSystem().dispatcher(), null);
+	
+				// 3) Transition state
+				
+				context().become(_stateAwaitingReplies);
+			}
+			//(else we're going to insta terminate anyway)
 		}
 		catch (Exception e) {
-			throw new RuntimeException();
+			throw new RuntimeException(e);
 		}
 	}	
 	protected void checkIfComplete() {
@@ -157,6 +172,10 @@ public class BucketActionDistributionActor extends AbstractActor {
 		}
 	}
 	protected void sendReplyAndClose() {
+		//(log)
+		_logger.info("actor_id=" + this.self().toString()
+				+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size());
+		
 		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
 									this.self());		
 		this.getContext().stop(this.self());
