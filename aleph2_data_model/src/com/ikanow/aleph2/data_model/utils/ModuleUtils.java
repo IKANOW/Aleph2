@@ -83,7 +83,7 @@ public class ModuleUtils {
 	 */
 	public static void loadModulesFromConfig(@NonNull Config config) throws Exception {
 		interfaceHasDefault = new HashSet<Class<?>>();
-		Injector parent_injector = Guice.createInjector(); //TODO put any global injections we want here
+		Injector parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
 		//get any global classes we want from parent_injector.getInstance(class);
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);
 	}
@@ -417,5 +417,20 @@ public class ModuleUtils {
 			}		
 		}
 
+	}
+	
+	/**
+	 * Default IServiceContext binding module.
+	 * 
+	 * @author Burch
+	 *
+	 */
+	public static class ServiceModule extends AbstractModule {
+
+		@Override
+		protected void configure() {
+			bind(IServiceContext.class).to(ServiceContext.class);
+		}
+		
 	}
 }

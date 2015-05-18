@@ -30,6 +30,7 @@ import org.junit.Test;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceTwo;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleServiceContextService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.typesafe.config.ConfigFactory;
@@ -187,5 +188,18 @@ public class TestModuleUtils {
 		
 		SampleCustomServiceOne service_one = ModuleUtils.getService(SampleCustomServiceOne.class, Optional.empty());
 		assertNotNull(service_one);
+	}
+	
+	@Test
+	public void testInjectServiceContext() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());
+		configMap.put("service.SampleServiceContextService.service", SampleServiceContextService.class.getCanonicalName());	
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		
+		SampleServiceContextService service_one = ModuleUtils.getService(SampleServiceContextService.class, Optional.empty());
+		assertNotNull(service_one);
+		assertNotNull(service_one.getServiceContext());
+		assertNotNull(service_one.getServiceContext().getService(SampleCustomServiceOne.class, Optional.empty()));
 	}
 }
