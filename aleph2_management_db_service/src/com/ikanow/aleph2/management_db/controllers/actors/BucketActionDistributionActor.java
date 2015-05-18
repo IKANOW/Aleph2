@@ -81,8 +81,8 @@ public class BucketActionDistributionActor extends AbstractActor {
 	
 	// State Transitions
 	
-	private PartialFunction<Object, BoxedUnit> _stateIdle = ReceiveBuilder.
-			match(BucketActionMessage.class, 
+	private PartialFunction<Object, BoxedUnit> _stateIdle = ReceiveBuilder
+			.match(BucketActionMessage.class, 
 				m -> {
 					this.broadcastAction(m);
 				})
