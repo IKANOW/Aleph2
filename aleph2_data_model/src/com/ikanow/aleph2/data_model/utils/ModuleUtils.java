@@ -49,6 +49,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -430,6 +431,7 @@ public class ModuleUtils {
 		@Override
 		protected void configure() {
 			bind(IServiceContext.class).to(ServiceContext.class);
+			bind(IUuidService.class).toInstance(UuidUtils.get());
 		}
 		
 	}
