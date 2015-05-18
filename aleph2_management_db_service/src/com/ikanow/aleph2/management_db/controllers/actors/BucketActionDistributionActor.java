@@ -86,7 +86,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 				m -> {
 					this.broadcastAction(m);
 				})
-				.build();
+			.build();
 			
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReplies = ReceiveBuilder
 			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
