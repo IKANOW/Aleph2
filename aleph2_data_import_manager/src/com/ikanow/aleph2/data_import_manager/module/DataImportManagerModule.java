@@ -16,24 +16,17 @@
 package com.ikanow.aleph2.data_import_manager.module;
 
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
-import com.google.inject.name.Names;
 import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
-import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
-import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleServiceContextService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
-import com.ikanow.aleph2.data_model.module.DefaultModule;
-import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.management_db.services.CoreDistributedServices;
+import com.ikanow.aleph2.storage_service_hdfs.services.HDFSStorageService;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -44,9 +37,13 @@ public class DataImportManagerModule implements Module{
 		try {			
 			// TODO rename differently than  default
 			Config config = ConfigFactory.defaultApplication();					
-			ModuleUtils.loadModulesFromConfig(config);
-		    //ICoreDistributedServices core_distributed_services = ModuleUtils.getService(ICoreDistributedServices.class, Optional.empty());
-
+			//ModuleUtils.loadModulesFromConfig(config);
+		   // ICoreDistributedServices core_distributed_services = ModuleUtils.getService(ICoreDistributedServices.class, Optional.empty());
+		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
+		    //IStorageService storageService = ModuleUtils.getService(IStorageService.class, Optional.empty());
+		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
+			binder.bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
+			binder.bind(IStorageService.class).to(HDFSStorageService.class);
 		    binder.bind(DataImportManager.class).in(Scopes.SINGLETON);	
 
 			
