@@ -16,20 +16,45 @@
 package com.ikanow.aleph2.data_import_manager.module;
 
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleServiceContextService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.module.DefaultModule;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
-public class DataImportManagerModule extends DefaultModule implements Module{
+public class DataImportManagerModule implements Module{
+	private static Logger logger = LogManager.getLogger();	
 
 	public void configure(Binder binder) {
-		Names.bindProperties(binder, getProperties());
-		binder.bind(DataImportManager.class).in(Scopes.SINGLETON);
+		try {			
+			// TODO rename differently than  default
+			Config config = ConfigFactory.defaultApplication();					
+			ModuleUtils.loadModulesFromConfig(config);
+		    //ICoreDistributedServices core_distributed_services = ModuleUtils.getService(ICoreDistributedServices.class, Optional.empty());
 
+		    binder.bind(DataImportManager.class).in(Scopes.SINGLETON);	
+
+			
+		} catch (Exception e) {
+			logger.error(e);
+		}			
 	}
+	
 
 
 }

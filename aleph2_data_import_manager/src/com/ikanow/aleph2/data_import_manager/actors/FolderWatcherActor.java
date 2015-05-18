@@ -17,15 +17,29 @@ package com.ikanow.aleph2.data_import_manager.actors;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.log4j.Logger;
 
 import scala.concurrent.duration.Duration;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
-public class FolderWatcherActor extends UntypedActor {
-	private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 
+public class FolderWatcherActor extends UntypedActor {
+	
+
+    private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
+
+	protected CuratorFramework curator_framework;
+
+	protected IStorageService storage_service;
+
+    public FolderWatcherActor(IStorageService storage_service, CuratorFramework curator_framework){
+    	this.storage_service = storage_service;
+    	this.curator_framework = curator_framework;
+    }
+    
 	private final Cancellable tick = getContext()
 			.system()
 			.scheduler()

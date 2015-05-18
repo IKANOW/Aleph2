@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -229,7 +230,10 @@ public class ModuleUtils {
 			List<Module> modules = new ArrayList<Module>();
 			Class[] param_types = new Class[0];
 			Object[] params = new Object[0];
-			modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", param_types).invoke(null, params));
+			// TODO comment back in
+			Method m = serviceClazz.getMethod("getExtraDependencyModules", param_types);
+			modules.addAll((List<Module>) m.invoke(null));
+			modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", param_types).invoke(null));
 			return modules;
 		}
 		return Collections.emptyList();
