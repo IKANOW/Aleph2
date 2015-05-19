@@ -64,7 +64,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	/** Pass the local bindings module to the parent
 	 * @return
 	 */
-	public List<AbstractModule> getExtraDependencyModules() {
+	public static List<AbstractModule> getExtraDependencyModules() {
 		return Arrays.asList(new CoreDistributedServicesModule());
 	}
 	
