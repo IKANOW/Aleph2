@@ -19,6 +19,7 @@ package com.ikanow.aleph2.data_import_manager.module;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
@@ -30,26 +31,33 @@ import com.ikanow.aleph2.storage_service_hdfs.services.HDFSStorageService;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class DataImportManagerModule implements Module{
+public class DataImportManagerModule extends AbstractModule { 
 	private static Logger logger = LogManager.getLogger();	
 
-	public void configure(Binder binder) {
-		try {			
-			// TODO rename differently than  default
-			Config config = ConfigFactory.defaultApplication();					
-			//ModuleUtils.loadModulesFromConfig(config);
-		   // ICoreDistributedServices core_distributed_services = ModuleUtils.getService(ICoreDistributedServices.class, Optional.empty());
-		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
-		    //IStorageService storageService = ModuleUtils.getService(IStorageService.class, Optional.empty());
-		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
-			binder.bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
-			binder.bind(IStorageService.class).to(HDFSStorageService.class);
-		    binder.bind(DataImportManager.class).in(Scopes.SINGLETON);	
+//	public void configure(Binder binder) {
+//		try {			
+//			// TODO rename differently than  default
+//			Config config = ConfigFactory.defaultApplication();					
+//			//ModuleUtils.loadModulesFromConfig(config);
+//		   // ICoreDistributedServices core_distributed_services = ModuleUtils.getService(ICoreDistributedServices.class, Optional.empty());
+//		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
+//		    //IStorageService storageService = ModuleUtils.getService(IStorageService.class, Optional.empty());
+//		    //binder.bind(ICoreDistributedServices.class).toInstance(core_distributed_services);
+//			binder.bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
+//			binder.bind(IStorageService.class).to(HDFSStorageService.class);
+//		    binder.bind(DataImportManager.class).in(Scopes.SINGLETON);	
+//
+//			
+//		} catch (Exception e) {
+//			logger.error(e);
+//		}			
+//	}
 
-			
-		} catch (Exception e) {
-			logger.error(e);
-		}			
+	@Override
+	protected void configure() {
+		bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
+		bind(IStorageService.class).to(HDFSStorageService.class);
+	    bind(DataImportManager.class).in(Scopes.SINGLETON);	
 	}
 	
 

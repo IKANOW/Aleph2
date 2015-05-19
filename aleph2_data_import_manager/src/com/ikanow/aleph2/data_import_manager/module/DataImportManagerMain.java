@@ -15,14 +15,28 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.module;
 
+import java.util.Arrays;
+import java.util.Optional;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 
 public class DataImportManagerMain {
 
-	private static Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
+	//private static Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
+	private static Injector serverInjector;// = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
 
+	private static void createInjector() {
+		try {
+			serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void start(){
 		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
 		dataImportManager.start();		

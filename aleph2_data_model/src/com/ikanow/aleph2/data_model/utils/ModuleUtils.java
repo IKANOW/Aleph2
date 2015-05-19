@@ -72,6 +72,7 @@ public class ModuleUtils {
 	private static Logger logger = LogManager.getLogger();	
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
+	private static Injector parent_injector = null;
 	
 	/**
 	 * Loads up all the services it can find in the given config file.  Typically
@@ -84,7 +85,7 @@ public class ModuleUtils {
 	 */
 	public static void loadModulesFromConfig(@NonNull Config config) throws Exception {
 		interfaceHasDefault = new HashSet<Class<?>>();
-		Injector parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
+		parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
 		//get any global classes we want from parent_injector.getInstance(class);
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);
 	}
@@ -265,6 +266,20 @@ public class ModuleUtils {
 		return (I) serviceInjectors.get(key).getInstance(key);
 	}
 	
+	//TODO do we want to allow the loadServicesFromConfig() to be called multiple times, with different configs?
+	//call this function to get an injector for your class so you can create an instance rather
+	//than configure yourself in the config file
+	public static Injector createInjector(@NonNull List<Module> modules, @NonNull Optional<Config> config) throws Exception {
+		if ( parent_injector == null ) {
+			interfaceHasDefault = new HashSet<Class<?>>();
+			parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
+			if ( !config.isPresent() )
+				config = Optional.of(ConfigFactory.load());
+			serviceInjectors = loadServicesFromConfig(config.get(), parent_injector);
+		}
+		return parent_injector.createChildInjector(modules);
+	}
+	
 	/**
 	 * Implementation of the IServiceContext class for easy usage
 	 * from the other contexts.
@@ -430,7 +445,8 @@ public class ModuleUtils {
 
 		@Override
 		protected void configure() {
-			bind(IServiceContext.class).to(ServiceContext.class);
+			System.out.println("binding servicecontext");
+			bind(IServiceContext.class).to(ServiceContext.class).in(Scopes.SINGLETON);
 			bind(IUuidService.class).toInstance(UuidUtils.get());
 		}
 		

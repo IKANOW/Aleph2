@@ -25,10 +25,11 @@ import akka.actor.Props;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.actors.FolderWatcherActor;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 
-public class DataImportManager {
+public class DataImportManager  {
 	private static final Logger logger = Logger.getLogger(DataImportManager.class);
     private ActorSystem system = null;
     protected ActorRef folderWatchActor = null;
@@ -40,9 +41,13 @@ public class DataImportManager {
     IStorageService storage_service;
     
     @Inject
-    public DataImportManager( ICoreDistributedServices coreDistributedServices,IStorageService storage_service){
-    	this.core_distributed_services = coreDistributedServices;
+    public DataImportManager( IServiceContext service_context) {
+    	core_distributed_services = service_context.getCoreDistributedServices();
+    	storage_service = service_context.getStorageIndexService();
     }
+//    public DataImportManager( ICoreDistributedServices coreDistributedServices,IStorageService storage_service){
+//    	this.core_distributed_services = coreDistributedServices;
+//    }
     
 	public void start() {
         // Create the 'greeter' actor
@@ -58,5 +63,4 @@ public class DataImportManager {
 		logger.info("DataImportManager stopping...");
 		folderWatchActor.tell(PoisonPill.getInstance(), ActorRef.noSender());
 	}
-
 }
