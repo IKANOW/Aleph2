@@ -15,6 +15,8 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
+import java.util.Optional;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -28,7 +30,7 @@ import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.FolderWatcherActor;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 
 public class DataImportManager  {
 	private static final Logger logger = Logger.getLogger(DataImportManager.class);
@@ -43,7 +45,7 @@ public class DataImportManager  {
     
     @Inject
     public DataImportManager(@NonNull IServiceContext service_context) {
-    	core_distributed_services = service_context.getCoreDistributedServices();
+    	this.core_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
     	storage_service = service_context.getStorageIndexService();
     }
     

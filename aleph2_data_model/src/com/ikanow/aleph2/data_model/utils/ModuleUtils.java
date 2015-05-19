@@ -46,7 +46,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
@@ -394,15 +393,6 @@ public class ModuleUtils {
 		@Override
 		public ISecurityService getSecurityService() {
 			return getService(ISecurityService.class, Optional.empty());
-		}
-
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
-		@Override
-		public ICoreDistributedServices getCoreDistributedServices() {
-			return getService(ICoreDistributedServices.class, Optional.empty());
 		}
 	}
 	

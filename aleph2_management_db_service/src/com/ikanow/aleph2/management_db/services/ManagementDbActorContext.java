@@ -3,7 +3,7 @@ package com.ikanow.aleph2.management_db.services;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 

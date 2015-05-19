@@ -27,7 +27,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 
 /**
@@ -126,15 +125,6 @@ public interface IServiceContext {
 	* @return
 	*/
 	public ITemporalService getTemporalService();
-	
-	/**
-	 * Returns an instance of the currently configured core distributed services
-	 * 
-	 * This is a helper function that just calls {@link getDataService(Class<I>)}
-	 * 
-	 * @return
-	 */
-	public ICoreDistributedServices getCoreDistributedServices();
 	
 	/////////////////////////////////////////////////////////////////////
 	

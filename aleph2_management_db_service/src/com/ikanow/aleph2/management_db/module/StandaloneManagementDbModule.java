@@ -66,7 +66,7 @@ public class StandaloneManagementDbModule extends AbstractModule {
 	protected String _underlying_management_db_service_name = null;
 	
 	/** User constructor = to create a standalone app based on this service
-	 * @param modules - first one is the underlying service (eg com.ikanow.aleph2.management_db.mongodb.services.[Mock]MongoDbManagementDbService), then a list of additional modules to load (eg com.ikanow.aleph2.management_db.mongodb.module.[Mock]MongoDbManagementDbModule)
+	 * @param modules - first one is the underlying service (eg com.ikanow.aleph2.distributed_services.mongodb.services.[Mock]MongoDbManagementDbService), then a list of additional modules to load (eg com.ikanow.aleph2.distributed_services.mongodb.module.[Mock]MongoDbManagementDbModule)
 	 * @throws ClassNotFoundException 
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 

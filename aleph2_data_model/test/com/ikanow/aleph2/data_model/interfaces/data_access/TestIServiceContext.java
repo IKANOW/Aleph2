@@ -39,7 +39,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleColumnarService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleCoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleGeospatialService;
@@ -49,7 +48,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSearc
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleTemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICoreDistributedServices;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils.ServiceContext;
@@ -97,8 +95,6 @@ public class TestIServiceContext {
 		configMap.put("service.StorageService.service", SampleStorageService.class.getCanonicalName());
 		configMap.put("service.TemporalService.interface", ITemporalService.class.getCanonicalName());
 		configMap.put("service.TemporalService.service", SampleTemporalService.class.getCanonicalName());
-		configMap.put("service.CoreDistributedServices.interface", ICoreDistributedServices.class.getCanonicalName());
-		configMap.put("service.CoreDistributedServices.service", SampleCoreDistributedServices.class.getCanonicalName());
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
 		IServiceContext context = new ServiceContext();
 
@@ -111,7 +107,6 @@ public class TestIServiceContext {
 		assertNotNull(context.getStorageIndexService());
 		assertNotNull(context.getTemporalService());
 		assertNotNull(context.getSecurityService());
-		assertNotNull(context.getCoreDistributedServices());
 	}
 	
 	@Test

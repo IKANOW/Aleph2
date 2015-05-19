@@ -30,9 +30,6 @@ public class DataImportManagerModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-	    bind(DataImportManager.class).in(Scopes.SINGLETON);	
+	    bind(DataImportManager.class).in(Scopes.SINGLETON);
 	}
-	
-
-
 }

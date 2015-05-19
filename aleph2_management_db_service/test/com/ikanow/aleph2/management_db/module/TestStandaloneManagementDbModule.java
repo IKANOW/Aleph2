@@ -40,8 +40,8 @@ public class TestStandaloneManagementDbModule {
 	@Test
 	public void testStandaloneGuiceSetup() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		StandaloneManagementDbModule module = new StandaloneManagementDbModule((Either.<String[], String>left(
-				Arrays.asList("com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbService", 
-								"com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule").toArray(new String[0]))));
+				Arrays.asList("com.ikanow.aleph2.distributed_services.module.MockUnderlyingManagementDbService", 
+								"com.ikanow.aleph2.distributed_services.module.MockUnderlyingManagementDbModule").toArray(new String[0]))));
 		
 		Injector injector = module.getInjector();
 		
@@ -69,7 +69,7 @@ public class TestStandaloneManagementDbModule {
 		try {
 			@SuppressWarnings("unused")
 			StandaloneManagementDbModule module = new StandaloneManagementDbModule((Either.<String[], String>left(
-					Arrays.asList("com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbService").toArray(new String[0]))));
+					Arrays.asList("com.ikanow.aleph2.distributed_services.module.MockUnderlyingManagementDbService").toArray(new String[0]))));
 			
 			assertFalse("Exception was thrown should have been thrown", true);
 		}
