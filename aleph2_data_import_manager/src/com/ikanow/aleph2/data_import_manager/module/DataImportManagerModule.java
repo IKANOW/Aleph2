@@ -55,8 +55,8 @@ public class DataImportManagerModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
-		bind(IStorageService.class).to(HDFSStorageService.class);
+		//bind(ICoreDistributedServices.class).to(CoreDistributedServices.class);
+		//bind(IStorageService.class).to(HDFSStorageService.class);
 	    bind(DataImportManager.class).in(Scopes.SINGLETON);	
 	}
 	

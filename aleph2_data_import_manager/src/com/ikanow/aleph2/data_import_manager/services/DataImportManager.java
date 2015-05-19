@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import_manager.services;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.log4j.Logger;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -41,7 +42,7 @@ public class DataImportManager  {
     IStorageService storage_service;
     
     @Inject
-    public DataImportManager( IServiceContext service_context) {
+    public DataImportManager(@NonNull IServiceContext service_context) {
     	core_distributed_services = service_context.getCoreDistributedServices();
     	storage_service = service_context.getStorageIndexService();
     }

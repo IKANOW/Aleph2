@@ -26,15 +26,17 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 public class DataImportManagerMain {
 
 	//private static Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
-	private static Injector serverInjector;// = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
+	private static Injector serverInjector = createInjector();// = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
 
-	private static void createInjector() {
+	private static Injector createInjector() {
+		Injector injector = null;
 		try {
-			serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
+			injector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return injector;
 	}
 	
 	public static void start(){

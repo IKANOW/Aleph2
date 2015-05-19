@@ -445,7 +445,6 @@ public class ModuleUtils {
 
 		@Override
 		protected void configure() {
-			System.out.println("binding servicecontext");
 			bind(IServiceContext.class).to(ServiceContext.class).in(Scopes.SINGLETON);
 			bind(IUuidService.class).toInstance(UuidUtils.get());
 		}

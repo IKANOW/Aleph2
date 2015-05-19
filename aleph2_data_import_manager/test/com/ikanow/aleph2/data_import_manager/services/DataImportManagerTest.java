@@ -26,8 +26,6 @@ public class DataImportManagerTest {
 	
 	@Test
 	public void test() throws Exception {
-		//ModuleUtils.loadModulesFromConfig(ConfigFactory.load());
-		//DataImportManager dataImportManager = ModuleUtils.getService(DataImportManager.class, Optional.empty());
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
