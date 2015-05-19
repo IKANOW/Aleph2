@@ -25,6 +25,8 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import akka.actor.ActorSystem;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
@@ -38,6 +40,7 @@ import com.ikanow.aleph2.distributed_services.modules.CoreDistributedServicesMod
 public class CoreDistributedServices implements ICoreDistributedServices, IExtraDependencyLoader {
 
 	protected final CuratorFramework _curator_framework;
+	protected final ActorSystem _akka_system;
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -50,6 +53,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
 		_curator_framework = CuratorFrameworkFactory.newClient(connection_string, retry_policy);
 		_curator_framework.start();		
+		
+		_akka_system = ActorSystem.create();
 	}
 	
 	/** Returns a connection to the Curator server
@@ -71,5 +76,13 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
 		// done!
 		
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
+	 */
+	@Override
+	public @NonNull ActorSystem getAkkaSystem() {
+		return _akka_system;
 	}
 }

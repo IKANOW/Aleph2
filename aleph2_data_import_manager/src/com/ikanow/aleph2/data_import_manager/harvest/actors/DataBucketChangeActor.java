@@ -21,6 +21,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HostInformationUtils;
+import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -28,6 +29,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
@@ -40,6 +42,7 @@ import scala.Tuple2;
 import scala.runtime.BoxedUnit;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
 
 /** This actor is responsible for supervising the job of handling changes to data
@@ -52,7 +55,19 @@ public class DataBucketChangeActor extends AbstractActor {
 
 	// Services
 	
-	IManagementDbService _management_db;
+	protected final DataImportManagerActorContext _context;
+	protected final IManagementDbService _management_db;
+	protected final ICoreDistributedServices _core_distributed_services;
+	protected final ActorSystem _actor_system;
+	
+	/** The actor constructor - at some point all these things should be inserted by injection
+	 */
+	public DataBucketChangeActor() {
+		_context = DataImportManagerActorContext.get(); 
+		_core_distributed_services = _context.getDistributedServices();
+		_actor_system = _core_distributed_services.getAkkaSystem();
+		_management_db = _context.getServiceContext().getManagementDbService();
+	}
 	
 	///////////////////////////////////////////
 

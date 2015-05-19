@@ -22,6 +22,8 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import akka.actor.ActorSystem;
+
 import com.google.inject.Inject;
 
 /** Implementation class for standalone Curator instance
@@ -32,6 +34,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 
 	protected final TestingServer _test_server;
 	protected final CuratorFramework _curator_framework;
+	protected final ActorSystem _akka_system;
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -43,6 +46,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
 		_curator_framework = CuratorFrameworkFactory.newClient(_test_server.getConnectString(), retry_policy);
 		_curator_framework.start();		
+		
+		_akka_system = ActorSystem.create();
 	}	
 	 
 	/** Returns a connection to the Curator server
@@ -51,5 +56,13 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	@NonNull
 	public CuratorFramework getCuratorFramework() {
 		return _curator_framework;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
+	 */
+	@Override
+	public @NonNull ActorSystem getAkkaSystem() {
+		return _akka_system;
 	}
 }

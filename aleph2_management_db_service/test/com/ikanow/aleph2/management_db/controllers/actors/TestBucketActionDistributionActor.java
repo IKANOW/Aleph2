@@ -66,6 +66,7 @@ public class TestBucketActionDistributionActor {
 		@SuppressWarnings("unused")
 		ManagementDbActorContext singleton = new ManagementDbActorContext(
 				new MockCoreDistributedServices(),
+				null, //TODO (need a mock ServiceContext)
 				new LocalBucketActionMessageBus()
 				);
 	}

@@ -15,8 +15,13 @@
  ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
+//import kafka.javaapi.consumer.ConsumerConnector;
+//import kafka.javaapi.producer.Producer;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.checkerframework.checker.nullness.qual.NonNull;
+
+import akka.actor.ActorSystem;
 
 /** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
  * @author acp
@@ -28,12 +33,25 @@ public interface ICoreDistributedServices {
 	 */
 	@NonNull
 	CuratorFramework getCuratorFramework();
+		
+	/** Returns a connector to the Akka infrastructure
+	 * @return
+	 */
+	@NonNull
+	ActorSystem getAkkaSystem();
+
+	//TODO (ALEPH-19): need to decide on Kafka API
 	
-	/**/
-//	
+	/** Returns a Kafka producer
+	 * @return
+	 */
 //	@NonNull
-//	AkkaSystem getAkkaSystem();
-//	
+//	<T1, T2> Producer<T1, T2> getKafkaProducer();
+	
+	/** Returns a Kafka consumer of messages
+	 * @return
+	 */
 //	@NonNull
-//	Kafka getKafkaClient();
+//	ConsumerConnector getKafkaConsumer();
+	
 }
