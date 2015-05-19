@@ -46,9 +46,6 @@ public class DataImportManager  {
     	core_distributed_services = service_context.getCoreDistributedServices();
     	storage_service = service_context.getStorageIndexService();
     }
-//    public DataImportManager( ICoreDistributedServices coreDistributedServices,IStorageService storage_service){
-//    	this.core_distributed_services = coreDistributedServices;
-//    }
     
 	public void start() {
         // Create the 'greeter' actor

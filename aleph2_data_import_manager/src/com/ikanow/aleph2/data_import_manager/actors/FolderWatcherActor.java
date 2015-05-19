@@ -57,11 +57,17 @@ public class FolderWatcherActor extends UntypedActor {
 	public void onReceive(Object message) throws Exception {
 		if ("tick".equals(message)) {
 			logger.debug("Tick message received");
+			traverseFolders();
 		}else 	if ("stop".equals(message)) {
 				logger.debug("Stop message received");
 				tick.cancel();
 			} else {
 			unhandled(message);
 		}
+	}
+
+	protected void traverseFolders() {
+		
+		
 	}
 }

@@ -44,17 +44,6 @@ public class DataImportManagerMain {
 		dataImportManager.start();		
 	}
 
-/*	public static void setConfig(String config) {
-		if(config!=null){
-			// set config as property for guice
-			System.setProperty("configPath", config);
-			// initialize properties for mongodb driver
-			Globals.setIdentity(com.ikanow.infinit.e.data_model.Globals.Identity.IDENTITY_SERVICE);
-			Globals.overrideConfigLocation(config);
-			PropertyConfigurator.configure(Globals.getLogPropertiesLocation());
-		}
-	}
-	*/
 
 	public static void stop(){
 		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
