@@ -13,14 +13,14 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.management_db.modules;
+package com.ikanow.aleph2.distributed_services.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
-import com.ikanow.aleph2.management_db.data_model.DistributedServicesPropertyBean;
-import com.ikanow.aleph2.management_db.utils.ErrorUtils;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
+import com.ikanow.aleph2.distributed_services.utils.ErrorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 

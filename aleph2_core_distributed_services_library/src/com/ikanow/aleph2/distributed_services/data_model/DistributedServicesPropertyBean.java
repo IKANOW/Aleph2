@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.management_db.data_model;
+package com.ikanow.aleph2.distributed_services.data_model;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
