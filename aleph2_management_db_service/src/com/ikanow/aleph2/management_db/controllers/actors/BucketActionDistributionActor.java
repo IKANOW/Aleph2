@@ -178,6 +178,6 @@ public class BucketActionDistributionActor extends AbstractActor {
 		
 		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
 									this.self());		
-		this.getContext().stop(this.self());
+		this.context().stop(this.self());
 	}
 }

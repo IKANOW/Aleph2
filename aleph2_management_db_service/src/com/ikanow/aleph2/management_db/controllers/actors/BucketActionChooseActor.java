@@ -23,27 +23,47 @@ import java.util.Optional;
 import org.apache.curator.framework.CuratorFramework;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import scala.PartialFunction;
 import scala.concurrent.duration.FiniteDuration;
+import scala.runtime.BoxedUnit;
 
-import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
+import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
-
-//TODO (ALEPH-19): switch to AbstractActor if BucketActionDistributionAction testing goes well
+import akka.japi.pf.ReceiveBuilder;
 
 /** This actor's role is to send out the received bucket update messages, to marshal the replies
  *  and to send out a combined set of replies to the sender
  * @author acp
  *
  */
-public class BucketActionChooseActor extends UntypedActor {
+public class BucketActionChooseActor extends AbstractActor {
 
+	///////////////////////////////////////////
+	
+	// State
+	
+	protected class MutableState {
+		public MutableState() {
+			reply_list = new LinkedList<ActorRef>(); 
+			data_import_manager_set = new HashSet<String>();
+		}		
+		protected ActorRef original_sender = null;
+		protected final List<ActorRef> reply_list;
+		protected final HashSet<String> data_import_manager_set;
+	}
+	final protected MutableState _state = new MutableState();
+	final protected FiniteDuration _timeout;
+	
 	protected final ManagementDbActorContext _system_context;
+	
+	///////////////////////////////////////////
+	
+	// Constructor
 	
 	/** Should only ever be called by the actor system, not by users
 	 */
@@ -52,64 +72,72 @@ public class BucketActionChooseActor extends UntypedActor {
 		_system_context = ManagementDbActorContext.get();
 	}
 	
-	/* (non-Javadoc)
-	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
-	 */
-	@Override
-	public void onReceive(Object untyped_message) throws Exception {
+	///////////////////////////////////////////
+	
+	// State Transitions
+	
+	private PartialFunction<Object, BoxedUnit> _stateIdle = ReceiveBuilder
+			.match(BucketActionMessage.class, 
+				m -> {
+					this.broadcastAction(m);
+					this.checkIfComplete();
+				})
+			.build();
+
+	private PartialFunction<Object, BoxedUnit> _stateGettingCandidates = ReceiveBuilder
+			.match(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+				m -> {
+					_state.data_import_manager_set.remove(m.uuid());
+					_state.reply_list.add(this.sender());
+					this.checkIfComplete();
+				})
+			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
+				m -> {
+					_state.data_import_manager_set.remove(m.uuid());
+					this.checkIfComplete();
+				})
+			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
+				m -> {
+					this.pickAndSend();
+				})				
+			.build();
+	
+	private PartialFunction<Object, BoxedUnit> _stateAwaitingReply = ReceiveBuilder
+			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
+				m -> {
+					//TODO format and send on
+				})
+			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
+				m -> {
+					//TODO need to check this is the one I'm processing, abort and try again if so
+				})
+			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
+				m -> {
+					// Abort and try again if so
+				})				
+			.build();
 		
-		_state.updateState(
-			Patterns.match(untyped_message).<StateName>andReturn()
-					.when(BucketActionMessage.class, __ -> StateName.IDLE == _state.getState(), 
-							m -> {
-								return this.onNewBucketActionMessage(m);
-							})
-					.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
-							m -> {
-								_state.data_import_manager_set.remove(m.uuid());
-								_state.reply_list.add(this.getSender());
-								return this.checkIfComplete();
-							})
-					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
-							m -> {
-								_state.data_import_manager_set.remove(m.uuid());
-								return this.checkIfComplete();
-							})
-					.when(BucketActionReplyMessage.BucketActionTimeoutMessage.class, __ -> StateName.GETTING_CANDIDATES == _state.getState(),
-							__ -> {
-								return this.pickAndSend();
-							})
-					.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, __ -> StateName.AWAITING_REPLY == _state.getState(),
-							m -> {
-								//TODO: something bad has happened, start all over again (up to 3 times adding node to discard pile, then fail?)
-								return StateName.GETTING_CANDIDATES; //(or send error -> COMPLETE)
-							})
-					.when(BucketActionReplyMessage.BucketActionHandlerMessage.class, __ -> StateName.AWAITING_REPLY == _state.getState(),
-							m -> {
-								//TODO: format reply and send on
-								return StateName.COMPLETE;
-							})
-					.otherwise(m -> {
-						this.unhandled(m);
-						return _state.getState();
-					})
-				);
-	}
+	///////////////////////////////////////////
+
+	// Initial State
+	
+	 @Override
+	 public PartialFunction<Object, BoxedUnit> receive() {
+	    return _stateIdle;
+	 }
 	
 	///////////////////////////////////////////
 
 	// Actions
 	
-	@NonNull
-	protected StateName pickAndSend() {
+	protected void pickAndSend() {
 		//TODO
-		return StateName.AWAITING_REPLY;
+		this.context().become(_stateAwaitingReply);
 	}
 	
-	@NonNull
-	protected StateName onNewBucketActionMessage(final @NonNull BucketActionMessage message) {
+	protected void broadcastAction(final @NonNull BucketActionMessage message) {
 		try {
-			_state.original_sender = this.getSender();
+			_state.original_sender = this.sender();
 			
 			// 1) Get a list of potential actors 
 			
@@ -124,57 +152,23 @@ public class BucketActionChooseActor extends UntypedActor {
 			_system_context.getBucketActionMessageBus().publish(new BucketActionMessage.BucketActionEventBusWrapper(this.self(), message));
 			
 			_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
-						this.getSelf(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
+						this.self(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
 						_system_context.getActorSystem().dispatcher(), null);
 			
-			return StateName.GETTING_CANDIDATES;
+			this.context().become(_stateGettingCandidates);
 		}
 		catch (Exception e) {
 			throw new RuntimeException();
 		}
 	}	
-	@NonNull
-	protected StateName checkIfComplete() {
+	protected void checkIfComplete() {
 		if (_state.data_import_manager_set.isEmpty()) {
-			return this.pickAndSend();
-		}
-		else {
-			return _state.getState();
+			this.pickAndSend();
 		}
 	}
-	@NonNull
-	protected StateName sendReplyAndClose() {
+	protected void sendReplyAndClose() {
 		//TODO single message
-		return StateName.COMPLETE;
+		this.context().stop(this.self());
 	}
 
-	///////////////////////////////////////////
-	
-	// State
-	
-	public enum StateName { IDLE, GETTING_CANDIDATES, AWAITING_REPLY, COMPLETE } 
-	protected class MutableState {
-		protected StateName state_name;
-		
-		public void updateState(StateName new_state) {
-			state_name = new_state;
-			if (StateName.COMPLETE == new_state) {
-				getContext().stop(self());
-			}
-		}
-		public StateName getState() {
-			return state_name;
-		}
-		public MutableState() {
-			reply_list = new LinkedList<ActorRef>(); 
-			data_import_manager_set = new HashSet<String>();
-			state_name = StateName.IDLE;
-		}		
-		protected ActorRef original_sender = null;
-		protected final List<ActorRef> reply_list;
-		protected final HashSet<String> data_import_manager_set;
-	}
-	final protected MutableState _state = new MutableState();
-	final protected FiniteDuration _timeout;
-	
 }
