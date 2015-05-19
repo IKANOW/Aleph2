@@ -13,14 +13,14 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.module;
+package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
 
 import java.util.Arrays;
 import java.util.Optional;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import_manager.services.DataImportManager;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 
 public class DataImportManagerMain {
