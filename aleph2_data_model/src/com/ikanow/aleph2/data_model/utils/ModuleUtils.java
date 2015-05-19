@@ -84,10 +84,7 @@ public class ModuleUtils {
 	 * @throws Exception 
 	 */
 	public static void loadModulesFromConfig(@NonNull Config config) throws Exception {
-		interfaceHasDefault = new HashSet<Class<?>>();
-		parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
-		//get any global classes we want from parent_injector.getInstance(class);
-		serviceInjectors = loadServicesFromConfig(config, parent_injector);
+		initialize(config);		
 	}
 	
 	/**
@@ -107,7 +104,7 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
-			@NonNull Config config, Injector parent_injector) throws Exception {
+			@NonNull Config config, Injector parent_injector) throws Exception {				
 		Map<Key, Injector> injectors = new HashMap<Key, Injector>();
 		List<ConfigDataServiceEntry> serviceProperties = PropertiesUtils.getDataServiceProperties(config, SERVICES_PROPERTY);
 		List<Exception> exceptions = new ArrayList<Exception>();
@@ -150,7 +147,7 @@ public class ModuleUtils {
 	private static Map<Key, Injector> bindServiceEntry(@NonNull ConfigDataServiceEntry entry, @NonNull Injector parent_injector) throws Exception {
 		Map<Key, Injector> injectorMap = new HashMap<Key, Injector>();
 		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));		
-		logger.error("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault);
+		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault);
 		
 		Class serviceClazz = Class.forName(entry.serviceName);		
 		List<Module> modules = new ArrayList<Module>();
@@ -216,21 +213,25 @@ public class ModuleUtils {
 	 * 
 	 * @param serviceClazz
 	 * @return
-	 * @throws SecurityException 
-	 * @throws NoSuchMethodException 
-	 * @throws InvocationTargetException 
-	 * @throws IllegalArgumentException 
-	 * @throws IllegalAccessException 
+	 * @throws Exception 
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static List<Module> getExtraDepedencyModules(Class<?> serviceClazz) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+	private static List<Module> getExtraDepedencyModules(Class<?> serviceClazz) throws Exception {
 		//if serviceClazz implements IExtraDepedency then add those bindings
 		if ( IExtraDependencyLoader.class.isAssignableFrom(serviceClazz) ) {
 			logger.debug("Loading Extra Depedency Modules");
 			List<Module> modules = new ArrayList<Module>();
 			Class[] param_types = new Class[0];
-			Object[] params = new Object[0];
-			modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", param_types).invoke(null, params));
+			Object[] params = new Object[0];			
+			try {
+				modules.addAll((List<Module>) serviceClazz.getMethod("getExtraDependencyModules", param_types).invoke(null, params));
+			} catch (IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | NoSuchMethodException
+					| SecurityException e) {
+				logger.error("Module: " + serviceClazz.getSimpleName() + " implemented IExtraDependencyModule but forgot to create the static method getExtraDependencyModules():List<Module> double check you have this set up correctly.", e);
+				throw new Exception("Module: " + serviceClazz.getSimpleName() + " implemented IExtraDependencyModule but forgot to create the static method getExtraDependencyModules():List<Module> double check you have this set up correctly. \n" + e.getMessage());
+			}
+			
 			return modules;
 		}
 		return Collections.emptyList();
@@ -263,20 +264,34 @@ public class ModuleUtils {
 			}
 		}
 		Key key = getKey(serviceClazz, serviceName);
-		return (I) serviceInjectors.get(key).getInstance(key);
+		Injector injector = serviceInjectors.get(key);
+		if ( injector != null )
+			return (I) injector.getInstance(key);
+		else 
+			return null;
 	}
 	
-	//TODO do we want to allow the loadServicesFromConfig() to be called multiple times, with different configs?
-	//call this function to get an injector for your class so you can create an instance rather
-	//than configure yourself in the config file
-	public static Injector createInjector(@NonNull List<Module> modules, @NonNull Optional<Config> config) throws Exception {
-		if ( parent_injector == null ) {
-			interfaceHasDefault = new HashSet<Class<?>>();
-			parent_injector = Guice.createInjector(new ServiceModule()); //TODO put any global injections we want here
-			if ( !config.isPresent() )
-				config = Optional.of(ConfigFactory.load());
-			serviceInjectors = loadServicesFromConfig(config.get(), parent_injector);
-		}
+	private static void initialize(@NonNull Config config) throws Exception {	
+		logger.info("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
+		interfaceHasDefault = new HashSet<Class<?>>();
+		parent_injector = Guice.createInjector(new ServiceModule());		
+		serviceInjectors = loadServicesFromConfig(config, parent_injector);
+	}
+	
+	/**
+	 * Creates a child injector from our parent configured injector to allow applications to take
+	 * advantage of our injection without having to create a config file.  The typical reason to
+	 * do this is to inject the IServiceContext into your application so you can access the other
+	 * configured services via {@link com.ikanow.aleph2.data_model.interface.data_access.IServiceContext#getService()}
+	 * 
+	 * @param modules Any modules you wanted added to your child injector (put your bindings in these)
+	 * @param config If exists will reset injectors to create defaults via the config
+	 * @return
+	 * @throws Exception
+	 */
+	public static Injector createInjector(@NonNull List<Module> modules, @NonNull Optional<Config> config) throws Exception {		
+		if ( config.isPresent() )
+			initialize(config.get());
 		return parent_injector.createChildInjector(modules);
 	}
 	

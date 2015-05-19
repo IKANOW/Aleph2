@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -27,9 +28,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleBadExtraDepedencyService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceTwo;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleModule;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleServiceContextService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
@@ -201,5 +205,39 @@ public class TestModuleUtils {
 		assertNotNull(service_one);
 		assertNotNull(service_one.getServiceContext());
 		assertNotNull(service_one.getServiceContext().getService(SampleCustomServiceOne.class, Optional.empty()));
+	}
+	
+	@Test
+	public void testCreatingInjector() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		SampleCustomServiceOne service_one = injector.getInstance(SampleCustomServiceOne.class);
+		assertNotNull(service_one);
+		assertEquals(service_one.dep.getANumber(), 1);
+	}
+	
+	@Test
+	public void testForgotStaticModule() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleBadExtraDepedencyService.service", SampleBadExtraDepedencyService.class.getCanonicalName());	
+		boolean threwError = false;
+		try {
+			ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		} catch (Exception ex) {
+			threwError = true;
+		}
+		assertTrue(threwError);
+	}
+	
+	/**
+	 * We forgot to bind the module, should return null.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testGettingModuleThatDNE() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		assertNull(ModuleUtils.getService(SampleCustomServiceOne.class, Optional.empty()));
 	}
 }

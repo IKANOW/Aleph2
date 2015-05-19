@@ -127,6 +127,7 @@ public class TestIServiceContext {
 	@Test
 	public void testGetCustomServiceDNE() {
 		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleCustomServiceOne.service", "fake.service.path.DNEService");
 		boolean threwError = false;
 		try {
 			ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));

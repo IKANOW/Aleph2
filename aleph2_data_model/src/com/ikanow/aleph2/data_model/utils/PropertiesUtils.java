@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ import com.typesafe.config.ConfigObject;
  */
 public class PropertiesUtils {	
 	
-	/** Returns the sub-object of a config, or empty if
+	/** Returns the sub-config of a config, or empty if
 	 * @param config the configuration object
 	 * @param key the root key of the sub object
 	 * @return
@@ -46,6 +47,21 @@ public class PropertiesUtils {
 	public static Optional<Config> getSubConfig(final @NonNull Config config, final @NonNull String key) {
 		try {
 			return Optional.of(config.getConfig(key));
+		}
+		catch (Exception e) {
+			return Optional.empty();
+		}
+	}
+	
+	/** Returns the sub-object of a config, or empty if
+	 * @param config the configuration object
+	 * @param key the root key of the sub object
+	 * @return
+	 */
+	@NonNull
+	public static Optional<ConfigObject> getSubConfigObject(final @NonNull Config config, final @NonNull String key) {
+		try {
+			return Optional.of(config.getObject(key));
 		}
 		catch (Exception e) {
 			return Optional.empty();
@@ -99,18 +115,23 @@ public class PropertiesUtils {
 	 * @throws JsonMappingException 
 	 * @throws JsonParseException 
 	 */
-	public static List<ConfigDataServiceEntry> getDataServiceProperties(final Config config, final String configPrefix) {		
-		final ConfigObject dataServiceConfig = config.getObject(configPrefix);
-		List<ConfigDataServiceEntry> toReturn = dataServiceConfig.entrySet()
-			.stream()
-			.map(entry -> 
-				new ConfigDataServiceEntry(
-					entry.getKey(), 
-					Optional.ofNullable(PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".interface", null)), 
-					PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".service", null),
-					PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".default", false))
-			)
-			.collect( Collectors.toList());
-		return toReturn;
+	public static List<ConfigDataServiceEntry> getDataServiceProperties(final Config config, final String configPrefix) {
+		Optional<ConfigObject> sub_config = getSubConfigObject(config, configPrefix);
+		if ( sub_config.isPresent() ) {
+			final ConfigObject dataServiceConfig = sub_config.get(); //config.getObject(configPrefix);
+			List<ConfigDataServiceEntry> toReturn = dataServiceConfig.entrySet()
+				.stream()
+				.map(entry -> 
+					new ConfigDataServiceEntry(
+						entry.getKey(), 
+						Optional.ofNullable(PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".interface", null)), 
+						PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".service", null),
+						PropertiesUtils.getConfigValue(config, configPrefix+"."+entry.getKey()+".default", false))
+				)
+				.collect( Collectors.toList());		
+			return toReturn;
+		} else {
+			return Collections.emptyList();
+		}
 	}
 }
