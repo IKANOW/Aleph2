@@ -37,6 +37,21 @@ import com.typesafe.config.ConfigObject;
  */
 public class PropertiesUtils {	
 	
+	/** Returns the sub-object of a config, or empty if
+	 * @param config the configuration object
+	 * @param key the root key of the sub object
+	 * @return
+	 */
+	@NonNull
+	public static Optional<Config> getSubConfig(final @NonNull Config config, final @NonNull String key) {
+		try {
+			return Optional.of(config.getConfig(key));
+		}
+		catch (Exception e) {
+			return Optional.empty();
+		}
+	}
+	
 	/**
 	 * Helper function that returns a config value or the default if it can't be found (used for strings)
 	 * 
@@ -45,7 +60,7 @@ public class PropertiesUtils {
 	 * @param defaultValue
 	 * @return
 	 */
-	private static String getConfigValue(@NonNull Config config, @NonNull String key, @NonNull String defaultValue) {
+	private static String getConfigValue(final @NonNull Config config, final @NonNull String key, final @NonNull String defaultValue) {
 		String value;
 		try {
 			value = config.getString(key);
@@ -63,7 +78,7 @@ public class PropertiesUtils {
 	 * @param defaultValue
 	 * @return
 	 */
-	private static boolean getConfigValue(@NonNull Config config, @NonNull String key, @NonNull boolean defaultValue) {
+	private static boolean getConfigValue(final @NonNull Config config, final @NonNull String key, final @NonNull boolean defaultValue) {
 		boolean value = defaultValue;
 		try {
 			value = config.getBoolean(key);
@@ -84,8 +99,8 @@ public class PropertiesUtils {
 	 * @throws JsonMappingException 
 	 * @throws JsonParseException 
 	 */
-	public static List<ConfigDataServiceEntry> getDataServiceProperties(Config config, String configPrefix) {		
-		ConfigObject dataServiceConfig = config.getObject(configPrefix);
+	public static List<ConfigDataServiceEntry> getDataServiceProperties(final Config config, final String configPrefix) {		
+		final ConfigObject dataServiceConfig = config.getObject(configPrefix);
 		List<ConfigDataServiceEntry> toReturn = dataServiceConfig.entrySet()
 			.stream()
 			.map(entry -> 

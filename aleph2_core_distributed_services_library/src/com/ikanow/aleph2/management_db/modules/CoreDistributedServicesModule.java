@@ -18,6 +18,7 @@ package com.ikanow.aleph2.management_db.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.management_db.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.management_db.utils.ErrorUtils;
 import com.typesafe.config.Config;
@@ -41,8 +42,9 @@ public class CoreDistributedServicesModule extends AbstractModule {
 		Config config = ConfigFactory.load();				
 		DistributedServicesPropertyBean bean;
 		try {
-			bean = BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class);
-		} catch (Exception e) {
+			bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DistributedServicesPropertyBean.PROPERTIES_ROOT).orElse(null), DistributedServicesPropertyBean.class);
+		} 
+		catch (Exception e) {
 			throw new RuntimeException(ErrorUtils.get(ErrorUtils.INVALID_CONFIG_ERROR,
 					DistributedServicesPropertyBean.class.toString(),
 					config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT)
