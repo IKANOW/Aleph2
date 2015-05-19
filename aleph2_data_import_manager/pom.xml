@@ -44,6 +44,11 @@
   		<artifactId>aleph2_core_distributed_services_library</artifactId>
   		<version>[0.0,)</version>
   	</dependency>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_management_db_service</artifactId>
+  		<version>[0.0,)</version>
+  	</dependency>
    	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_storage_service_hdfs</artifactId>
@@ -86,6 +91,12 @@
 	<artifactId>akka-actor_2.11</artifactId>
 	<version>2.3.10</version>
 </dependency>
+	<dependency>
+		<groupId>org.mockito</groupId>
+		<artifactId>mockito-core</artifactId>
+		<version>1.10.19</version>
+		<scope>test</scope>
+	</dependency>
   </dependencies>
   
 </project>

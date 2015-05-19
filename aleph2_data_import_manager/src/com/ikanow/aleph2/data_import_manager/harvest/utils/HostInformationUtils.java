@@ -13,26 +13,25 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
+package com.ikanow.aleph2.data_import_manager.harvest.utils;
 
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+/** Provides static information about the host and process
+ * @author acp
+ *
+ */
+public class HostInformationUtils {
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
-
-public class DataImportManagerModule extends AbstractModule { 
-	@SuppressWarnings("unused")
-	private static Logger logger = LogManager.getLogger();	
-
-
-	@Override
-	protected void configure() {
-	    bind(DataImportManager.class).in(Scopes.SINGLETON);	
+	private final static String _uuid;
+	static {
+		_uuid = UuidUtils.get().getRandomUuid();
 	}
 	
-
-
+	/** Returns a UUID unique to this process
+	 * @return the UUID (type 1)
+	 */
+	public static String getProcessUuid() {
+		return _uuid;
+	}
 }

@@ -88,7 +88,7 @@ public class BasicMessageBean {
 	 * @return the details (optional, for display purposes)
 	 */
 	public Map<String, String> details() {
-		return Collections.unmodifiableMap(details);
+		return details == null ? null : Collections.unmodifiableMap(details);
 	}
 	
 	private Date date;

@@ -48,10 +48,10 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
-		public BucketActionOfferMessage(DataBucketBean bucket, ActorRef sender) {
+		public BucketActionOfferMessage(final @NonNull DataBucketBean bucket) {
 			this.bucket = bucket;
 		}
-		public DataBucketBean bucket() { return bucket; };
+		@NonNull public DataBucketBean bucket() { return bucket; };
 		private final DataBucketBean bucket;
 	}	
 	
@@ -59,6 +59,10 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
-		//TODO (ALEPH-19)
+		public NewBucketActionMessage(final @NonNull DataBucketBean bucket) {
+			this.bucket = bucket;
+		}
+		@NonNull public DataBucketBean bucket() { return bucket; };
+		private final DataBucketBean bucket;
 	}
 }

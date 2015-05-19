@@ -13,26 +13,17 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
+package com.ikanow.aleph2.data_import_manager.harvest.utils;
 
+import static org.junit.Assert.*;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.junit.Test;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
+public class TestHostInformationUtils {
 
-public class DataImportManagerModule extends AbstractModule { 
-	@SuppressWarnings("unused")
-	private static Logger logger = LogManager.getLogger();	
-
-
-	@Override
-	protected void configure() {
-	    bind(DataImportManager.class).in(Scopes.SINGLETON);	
+	@Test
+	public void testUuidGenerator() {
+		
+		assertEquals(HostInformationUtils.getProcessUuid(), HostInformationUtils.getProcessUuid());
 	}
-	
-
-
 }

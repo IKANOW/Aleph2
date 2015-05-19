@@ -30,6 +30,8 @@ import org.junit.Test;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
@@ -71,7 +73,8 @@ public class TestBucketActionDistributionActor {
 	@Test
 	public void distributionTest_noActors() throws InterruptedException, ExecutionException {
 		
-		NewBucketActionMessage test_message = new NewBucketActionMessage();
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+												BeanTemplateUtils.build(DataBucketBean.class).done().get());
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -106,7 +109,8 @@ public class TestBucketActionDistributionActor {
 		
 		// Now do the test
 		
-		NewBucketActionMessage test_message = new NewBucketActionMessage();
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+				BeanTemplateUtils.build(DataBucketBean.class).done().get());
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -147,7 +151,8 @@ public class TestBucketActionDistributionActor {
 		
 		// Now do the test
 		
-		NewBucketActionMessage test_message = new NewBucketActionMessage();
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+				BeanTemplateUtils.build(DataBucketBean.class).done().get());
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();

@@ -48,7 +48,7 @@ public class SharedLibraryBean {
 	/** The management DB id of the shared library (unchangeable, unlike the name)
 	 * @return the library _id
 	 */
-	public String id() {
+	public String _id() {
 		return _id;
 	}
 	/** When this bucket was first created
