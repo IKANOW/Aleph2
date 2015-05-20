@@ -28,6 +28,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
 /**
  * Helper class to give access to all the configured services available
@@ -138,6 +139,17 @@ public interface IServiceContext {
 	*/
 	public ISecurityService getSecurityService();
 
+	/////////////////////////////////////////////////////////////////////
+	
+	//security service is related to data services
+	/**
+	* Returns an instance of the global configuration parameters
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public GlobalPropertiesBean getGlobalProperties();
 	
 
 }

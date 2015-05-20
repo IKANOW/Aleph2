@@ -32,11 +32,13 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleBadExtraDepedencyService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceThree;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceTwo;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleModule;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleServiceContextService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.typesafe.config.ConfigFactory;
 
 public class TestModuleUtils {
@@ -214,6 +216,32 @@ public class TestModuleUtils {
 		assertNotNull(service_one);
 		assertEquals(service_one.dep.getANumber(), 1);
 	}
+	
+	@Test
+	public void testInjectGlobalConfig_defaults() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
+		assertNotNull(service_troi);
+		assertEquals(service_troi._globals.local_cached_jar_dir(), GlobalPropertiesBean.__DEFAULT_LOCAL_CACHED_JARS_DIR);
+		assertEquals(service_troi._globals.local_root_dir(), GlobalPropertiesBean.__DEFAULT_LOCAL_ROOT_DIR);
+		assertEquals(service_troi._globals.local_yarn_config_dir(), GlobalPropertiesBean.__DEFAULT_LOCAL_YARN_CONFIG_DIR);
+	}
+	
+	@Test
+	public void testInjectGlobalConfig_specified() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("Globals.local_cached_jar_dir", "a");
+		configMap.put("Globals.local_root_dir", "b");
+		configMap.put("Globals.local_yarn_config_dir", "c");
+		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
+		assertNotNull(service_troi);
+		assertEquals(service_troi._globals.local_cached_jar_dir(), "a");
+		assertEquals(service_troi._globals.local_root_dir(), "b");
+		assertEquals(service_troi._globals.local_yarn_config_dir(), "c");
+	}
+	
 	
 	@Test
 	public void testForgotStaticModule() throws Exception {

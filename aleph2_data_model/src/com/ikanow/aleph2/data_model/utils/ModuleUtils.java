@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyL
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -72,6 +73,7 @@ public class ModuleUtils {
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
 	private static Injector parent_injector = null;
+	private static GlobalPropertiesBean globals = new GlobalPropertiesBean(null, null, null); // (all defaults)
 	
 	/**
 	 * Loads up all the services it can find in the given config file.  Typically
@@ -273,10 +275,14 @@ public class ModuleUtils {
 	}
 	
 	private static void initialize(@NonNull Config config) throws Exception {	
+		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
+		synchronized (ModuleUtils.class) {
+			globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
+		}
 		logger.info("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
 		interfaceHasDefault = new HashSet<Class<?>>();
 		parent_injector = Guice.createInjector(new ServiceModule());		
-		serviceInjectors = loadServicesFromConfig(config, parent_injector);
+		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
 	}
 	
 	/**
@@ -398,6 +404,11 @@ public class ModuleUtils {
 		public ISecurityService getSecurityService() {
 			return getService(ISecurityService.class, Optional.empty());
 		}
+
+		@Override
+		public GlobalPropertiesBean getGlobalProperties() {
+			return globals;
+		}
 	}
 	
 	/**
@@ -456,6 +467,7 @@ public class ModuleUtils {
 		protected void configure() {
 			bind(IServiceContext.class).to(ServiceContext.class).in(Scopes.SINGLETON);
 			bind(IUuidService.class).toInstance(UuidUtils.get());
+			bind(GlobalPropertiesBean.class).toInstance(globals);
 		}
 		
 	}

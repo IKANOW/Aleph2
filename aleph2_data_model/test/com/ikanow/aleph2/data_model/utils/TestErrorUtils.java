@@ -93,5 +93,14 @@ public class TestErrorUtils {
 			assertEquals("This is test 7: [null: RuntimeException]:[TestErrorUtils.java:88:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test5);			
 		}		
 		
+		try {
+			throw new RuntimeException("test 8a");
+		}
+		catch (Exception e) {
+			final String test8 = TestErrorUtilsOverride.getLongForm("{0}", e);
+			
+			assertEquals("[test 8a: RuntimeException]:[TestErrorUtils.java:97:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test8);			
+		}		
+		
 	}
 }
