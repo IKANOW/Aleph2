@@ -289,6 +289,8 @@ public class ModuleUtils {
 	 * @throws Exception
 	 */
 	public static Injector createInjector(@NonNull List<Module> modules, @NonNull Optional<Config> config) throws Exception {		
+		if ( parent_injector == null && !config.isPresent() )
+			config = Optional.of(ConfigFactory.load());
 		if ( config.isPresent() )
 			initialize(config.get());
 		return parent_injector.createChildInjector(modules);
