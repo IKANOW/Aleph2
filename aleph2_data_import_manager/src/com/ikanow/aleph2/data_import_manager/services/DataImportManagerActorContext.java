@@ -4,6 +4,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 
 import akka.actor.ActorSystem;
@@ -23,6 +24,16 @@ public class DataImportManagerActorContext {
 		_singleton = this;
 	}
 
+	/** Returns the global properties bean
+	 * @return the global properties bean
+	 */
+	@NonNull
+	public GlobalPropertiesBean getGlobalProperties() {
+		return _service_context.getGlobalProperties();
+	}
+	
+	
+	
 	/** Returns the global service context
 	 * @return the global service context
 	 */
