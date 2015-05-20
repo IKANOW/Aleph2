@@ -15,16 +15,22 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.log4j.Logger;
 
 import scala.concurrent.duration.Duration;
+import akka.actor.ActorSystem;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
+import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 
 public class FolderWatcherActor extends UntypedActor {
 	
@@ -32,12 +38,18 @@ public class FolderWatcherActor extends UntypedActor {
     private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
 
 	protected CuratorFramework curator_framework;
-
 	protected IStorageService storage_service;
+	protected final DataImportManagerActorContext _context;
+	protected final IManagementDbService _management_db;
+	protected final ICoreDistributedServices _core_distributed_services;
+	protected final ActorSystem _actor_system;
 
-    public FolderWatcherActor(IStorageService storage_service, CuratorFramework curator_framework){
-    	this.storage_service = storage_service;
-    	this.curator_framework = curator_framework;
+    public FolderWatcherActor(){
+    	_context = DataImportManagerActorContext.get(); 
+    	_core_distributed_services = _context.getDistributedServices();
+    	this.curator_framework = _core_distributed_services.getCuratorFramework();
+    	_actor_system = _core_distributed_services.getAkkaSystem();
+    	_management_db = _context.getServiceContext().getManagementDbService();
     }
     
 	private final Cancellable tick = getContext()
@@ -67,6 +79,8 @@ public class FolderWatcherActor extends UntypedActor {
 	}
 
 	protected void traverseFolders() {
+		AbstractFileSystem fs = storage_service.getUnderlyingPlatformDriver(AbstractFileSystem.class,Optional.<String>empty());
+		String rootPath = storage_service.getRootPath();
 		
 		
 	}

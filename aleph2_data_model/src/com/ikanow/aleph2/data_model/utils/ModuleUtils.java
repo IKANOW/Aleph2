@@ -114,12 +114,14 @@ public class ModuleUtils {
 				try {
 					injectors.putAll(bindServiceEntry(entry, parent_injector));
 				} catch (Exception e) {
-					logger.error("Error during service binding");
+					logger.error("Error during service binding",e);
 					exceptions.add(e);
 				}
 			});
-		if ( exceptions.size() > 0 )
+		if ( exceptions.size() > 0 ){
+			//logger.error("exceptions occured during loading services from config file.",e);
 			throw new Exception(exceptions.size() + " exceptions occured during loading services from config file.");
+		}
 		return injectors;
 	}
 	
