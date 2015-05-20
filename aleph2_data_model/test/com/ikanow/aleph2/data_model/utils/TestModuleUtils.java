@@ -163,8 +163,7 @@ public class TestModuleUtils {
 		configMap.put("service.SampleCustomServiceTwo.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceTwo.service", SampleCustomServiceTwo.class.getCanonicalName());
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
-		SampleCustomServiceOne service_one = (SampleCustomServiceOne) ModuleUtils.getService(ICustomService.class, Optional.of(SampleCustomServiceOne.class.getSimpleName()));
-		System.out.println(service_one.dep.getANumber());
+		SampleCustomServiceOne service_one = (SampleCustomServiceOne) ModuleUtils.getService(ICustomService.class, Optional.of(SampleCustomServiceOne.class.getSimpleName()));		
 		SampleCustomServiceTwo service_two = (SampleCustomServiceTwo) ModuleUtils.getService(ICustomService.class, Optional.of(SampleCustomServiceTwo.class.getSimpleName()));
 		
 		assertNotEquals(service_one.dep.getANumber(), service_two.dep.getANumber());
