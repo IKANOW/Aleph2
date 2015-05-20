@@ -19,8 +19,6 @@ import java.util.Date;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import akka.actor.ActorRef;
-
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 
@@ -28,7 +26,8 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 
 	public static final String NO_TECHNOLOGY_NAME_OR_ID = "No harvest technology name or id in bucket {0}";
 	public static final String HARVEST_TECHNOLOGY_NAME_NOT_FOUND = "No valid harvest technology {0} found for bucket {1}";
-	
+	public static final String SHARED_LIBRARY_NAME_NOT_FOUND = "Shared library {1} not found: {0}";
+	 
 	///////////////////////////////////////////////////////////////////////////
 	
 	/** Builds a fairly generic error message to return 
@@ -37,13 +36,13 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	 * @param message - the original message that spawned this error
 	 * @return
 	 */
-	public static <M> BasicMessageBean buildErrorMessage(final @NonNull ActorRef handler, final @NonNull M message,
+	public static <M> BasicMessageBean buildErrorMessage(final @NonNull String handler, final @NonNull M message,
 			final @NonNull String error, final @NonNull Object... params)
 	{
 		return new BasicMessageBean(
 					new Date(), // date
 					false, // success
-					handler.toString(), //source TODO (ALEPH-19): should be host?
+					handler,
 					message.getClass().getSimpleName(), // command
 					null, // message code
 					params.length == 0 ? error : ErrorUtils.get(error, params), // error message, with optional formatting

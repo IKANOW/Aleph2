@@ -49,7 +49,7 @@ public class TestHarvestErrorUtils {
 		final String ref_name = ref.toString();
 		
 		final BasicMessageBean test1 = 
-				HarvestErrorUtils.buildErrorMessage(ref, new TestMessage(), "TEST ERROR NO PARAMS {0}");
+				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), "TEST ERROR NO PARAMS {0}");
 		
 		assertEquals(test1.command(), "TestMessage");
 		assertEquals((double)test1.date().getTime(), (double)((new Date()).getTime()), 1000.0);
@@ -60,7 +60,7 @@ public class TestHarvestErrorUtils {
 		assertEquals(test1.success(), false);
 		
 		final BasicMessageBean test2 = 
-				HarvestErrorUtils.buildErrorMessage(ref, new TestMessage(), HarvestErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, 2L);
+				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), HarvestErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, 2L);
 		
 		assertEquals(test2.command(), "TestMessage");
 		assertEquals((double)test2.date().getTime(), (double)((new Date()).getTime()), 1000.0);
@@ -71,7 +71,7 @@ public class TestHarvestErrorUtils {
 		assertEquals(test2.success(), false);
 		
 		final BasicMessageBean test3 = 
-				HarvestErrorUtils.buildErrorMessage(ref, new TestMessage(), HarvestErrorUtils.HARVEST_TECHNOLOGY_NAME_NOT_FOUND, "3a", "3b");
+				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), HarvestErrorUtils.HARVEST_TECHNOLOGY_NAME_NOT_FOUND, "3a", "3b");
 		
 		assertEquals(test3.command(), "TestMessage");
 		assertEquals((double)test3.date().getTime(), (double)((new Date()).getTime()), 1000.0);
