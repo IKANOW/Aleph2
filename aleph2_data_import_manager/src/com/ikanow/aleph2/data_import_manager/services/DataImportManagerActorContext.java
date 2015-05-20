@@ -1,5 +1,7 @@
 package com.ikanow.aleph2.data_import_manager.services;
 
+import java.util.Optional;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
@@ -17,10 +19,10 @@ public class DataImportManagerActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public DataImportManagerActorContext(ICoreDistributedServices distributed_services, IServiceContext service_context)
+	public DataImportManagerActorContext(IServiceContext service_context)
 	{
 		_service_context = service_context;
-		_distributed_services = distributed_services;
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
 		_singleton = this;
 	}
 
