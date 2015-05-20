@@ -107,6 +107,7 @@ public class TestIServiceContext {
 		assertNotNull(context.getStorageIndexService());
 		assertNotNull(context.getTemporalService());
 		assertNotNull(context.getSecurityService());
+		assertNotNull(context.getGlobalProperties());
 	}
 	
 	@Test

@@ -402,6 +402,11 @@ public class ModuleUtils {
 		public ISecurityService getSecurityService() {
 			return getService(ISecurityService.class, Optional.empty());
 		}
+
+		@Override
+		public GlobalPropertiesBean getGlobalProperties() {
+			return globals;
+		}
 	}
 	
 	/**
