@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.objects.shared;
+package com.ikanow.aleph2.data_model.interfaces.data_access.samples;
 
-import java.util.Optional;
+import com.google.inject.Inject;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
+public class SampleCustomServiceThree implements ICustomService {
 
-public class ConfigDataServiceEntry
-{
-	public final String annotationName;
-	public final Optional<String> interfaceName;
-	public final String serviceName;
-	public final boolean isDefault;
+	public GlobalPropertiesBean _globals;
 	
-	public ConfigDataServiceEntry(@NonNull String annotationName, Optional<String> interfaceName, @NonNull String serviceName, boolean isDefault) {
-		this.annotationName = annotationName;
-		this.interfaceName = interfaceName;
-		this.serviceName = serviceName;
-		this.isDefault = isDefault;
+	@Inject
+	public SampleCustomServiceThree(GlobalPropertiesBean globals) {
+		this._globals = globals;
 	}
+	
 }
