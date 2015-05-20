@@ -1,0 +1,3 @@
+[submodule "test_dependencies"]
+	path = test_dependencies
+	url = git://github.com/IKANOW/Aleph2-contrib.git
