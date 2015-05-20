@@ -22,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
+import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
 
 public class DataImportManagerModule extends AbstractModule { 
 	@SuppressWarnings("unused")
@@ -31,6 +32,7 @@ public class DataImportManagerModule extends AbstractModule {
 	@Override
 	protected void configure() {
 	    bind(DataImportManager.class).in(Scopes.SINGLETON);
+	    bind(DataImportManagerActorContext.class).in(Scopes.SINGLETON);
 	    
 	}
 }
