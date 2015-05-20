@@ -17,6 +17,10 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Test;
 
 public class TestErrorUtils {
@@ -72,7 +76,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test5 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 5);
 			
-			assertEquals("This is test 5: [test 5a: RuntimeException]:[TestErrorUtils.java:70:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test5);			
+			assertEquals("This is test 5: [test 5a: RuntimeException]:[TestErrorUtils.java:74:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test5);			
 		}		
 		
 		try {
@@ -81,7 +85,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test6 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 6);
 			
-			assertEquals("This is test 6: [test 6a: RuntimeException]:[TestErrorUtils.java:79:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils] ([test 6b: RuntimeException]:[TestErrorUtils.java:79:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils])", test6);			
+			assertEquals("This is test 6: [test 6a: RuntimeException]:[TestErrorUtils.java:83:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils] ([test 6b: RuntimeException]:[TestErrorUtils.java:83:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils])", test6);			
 		}
 		
 		try {
@@ -90,7 +94,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test5 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 7);
 			
-			assertEquals("This is test 7: [null: RuntimeException]:[TestErrorUtils.java:88:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test5);			
+			assertEquals("This is test 7: [null: RuntimeException]:[TestErrorUtils.java:92:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test5);			
 		}		
 		
 		try {
@@ -99,8 +103,22 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test8 = TestErrorUtilsOverride.getLongForm("{0}", e);
 			
-			assertEquals("[test 8a: RuntimeException]:[TestErrorUtils.java:97:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test8);			
+			assertEquals("[test 8a: RuntimeException]:[TestErrorUtils.java:101:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testErrorUtils]", test8);			
 		}		
 		
+	}
+	
+	@Test
+	public void testLongErrorDuringLambda() {
+		List<String> output = new ArrayList<String>();
+		List<Object> list = Arrays.asList("some item");
+		list.stream().forEach(item -> {
+			try {
+				throw new Exception("Exception in Lambda");
+			} catch (Exception ex) {
+				output.add( ErrorUtils.getLongForm("Test: {0}", ex) );				
+			}			
+		});
+		assertTrue(output.get(0).startsWith("Test: [Exception in Lambda: Exception]:"));		
 	}
 }

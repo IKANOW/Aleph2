@@ -96,21 +96,32 @@ public class ErrorUtils {
 					sb.append("[").append(el.getLineNumber()).append(":").append(el.getMethodName()).append("]");
 					n++; // (allow more of these)
 				}//TESTED
-				else if (el.getFileName().equals(lastFileName)) { // different methods in the same class					
-					sb.append("[").append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
-					n += 2;
-				}//(c/p of other clauses)
-				else {
-					sb.append("[").append(el.getFileName()).append(":").append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
-					n += 3;
-				}//TESTED
+				else if ( el.getFileName() != null ) {
+					if ( el.getFileName().equals(lastFileName)) { // different methods in the same class					
+						sb.append("[").append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
+						n += 2;
+					}//(c/p of other clauses)
+					else {
+						sb.append("[").append(el.getFileName()).append(":").append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
+						n += 3;
+					}//TESTED
+				}
+				else { //filename is null, i've only noticed this occur in lambdas
+					sb.append("[").append(el.getLineNumber()).append(":");
+					sb.append(ErrorUtils.stripLambdaMethodNumber(el.getClassName()));
+					sb.append(":").append(el.getMethodName()).append("]");
+					n++;
+				}
 				lastMethodName = el.getMethodName();
 				lastClassName = el.getClassName();
 				lastFileName = el.getFileName();
 			}
 			else if (0 == n) {
 				firstEl = el;
-				sb.append("[").append(el.getFileName()).append(":").append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
+				sb.append("[");
+				if ( el.getFileName() != null ) //lambdas don't have filenames
+					sb.append(el.getFileName()).append(":");
+				sb.append(el.getLineNumber()).append(":").append(el.getClassName()).append(":").append(el.getMethodName()).append("]");
 				n += 3;
 			}//TESTED
 			else if (null != firstEl) {
@@ -122,5 +133,20 @@ public class ErrorUtils {
 		}
 		return sb.toString();
 	}	
+	
+	/**
+	 * Lambdas make up a method name so it's not v helpful, strips it off
+	 * e.g. com.ikanow.aleph2.data_model.utils.TestErrorUtils$$Lambda$1/1301664418
+	 * becomes com.ikanow.aleph2.data_model.utils.TestErrorUtils$$Lambda$1
+	 * 
+	 * @param methodName
+	 * @return
+	 */
+	private static String stripLambdaMethodNumber(String methodName) {
+		int indexOfSlash = methodName.lastIndexOf("/");
+		if (indexOfSlash < 0 )
+			return methodName;
+		return methodName.substring(0, indexOfSlash);
+	}
 	
 }
