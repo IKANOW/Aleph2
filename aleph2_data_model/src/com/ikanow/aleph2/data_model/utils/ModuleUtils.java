@@ -73,7 +73,8 @@ public class ModuleUtils {
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
 	private static Injector parent_injector = null;
-	private static GlobalPropertiesBean globals = new GlobalPropertiesBean(null, null, null); // (all defaults)
+	private static GlobalPropertiesBean globals = BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get();
+		//(do it this way to avoid having to keep changing this test every time globals changes)
 	
 	/**
 	 * Loads up all the services it can find in the given config file.  Typically
