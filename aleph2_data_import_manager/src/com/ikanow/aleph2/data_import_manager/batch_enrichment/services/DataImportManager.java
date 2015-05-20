@@ -15,11 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
-import java.util.Optional;
-
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -28,34 +24,28 @@ import akka.actor.Props;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.FolderWatcherActor;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
-import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
 
 public class DataImportManager  {
 	private static final Logger logger = Logger.getLogger(DataImportManager.class);
     private ActorSystem system = null;
     protected ActorRef folderWatchActor = null;
     
-//    @Inject
-    ICoreDistributedServices core_distributed_services;
 
-//    @Inject
-    IStorageService storage_service;
-    
+	protected final DataImportManagerActorContext _context;
+
     @Inject
-    public DataImportManager(@NonNull IServiceContext service_context) {
-    	this.core_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
-    	storage_service = service_context.getStorageIndexService();
+    public DataImportManager(DataImportManagerActorContext context) {
+    	this._context = context;
     }
     
 	public void start() {
         // Create the 'greeter' actor
 		logger.info("DataImportManager starting...");
-		system = ActorSystem.create("data_import_manager");
-		CuratorFramework curatorFramework = core_distributed_services.getCuratorFramework();
+//		system = ActorSystem.create("data_import_manager");
+//		CuratorFramework curatorFramework = core_distributed_services.getCuratorFramework();
 		
-		Props props = Props.create(FolderWatcherActor.class,storage_service,curatorFramework);
+		Props props = Props.create(FolderWatcherActor.class);
 		folderWatchActor = system.actorOf(props,"folderWatch");
 	}
 
