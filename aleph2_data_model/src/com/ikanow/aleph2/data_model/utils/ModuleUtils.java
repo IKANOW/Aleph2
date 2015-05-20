@@ -112,7 +112,7 @@ public class ModuleUtils {
 				try {
 					injectors.putAll(bindServiceEntry(entry, parent_injector));
 				} catch (Exception e) {
-					logger.error("Error during service binding", e);
+					logger.error("Error during service binding");
 					exceptions.add(e);
 				}
 			});
@@ -227,7 +227,7 @@ public class ModuleUtils {
 			} catch (IllegalAccessException | IllegalArgumentException
 					| InvocationTargetException | NoSuchMethodException
 					| SecurityException e) {
-				logger.error("Module: " + serviceClazz.getSimpleName() + " implemented IExtraDependencyModule but forgot to create the static method getExtraDependencyModules():List<Module> double check you have this set up correctly.", e);
+				logger.error("Module: " + serviceClazz.getSimpleName() + " implemented IExtraDependencyModule but forgot to create the static method getExtraDependencyModules():List<Module> double check you have this set up correctly.");
 				throw new Exception("Module: " + serviceClazz.getSimpleName() + " implemented IExtraDependencyModule but forgot to create the static method getExtraDependencyModules():List<Module> double check you have this set up correctly. \n" + e.getMessage());
 			}
 			
