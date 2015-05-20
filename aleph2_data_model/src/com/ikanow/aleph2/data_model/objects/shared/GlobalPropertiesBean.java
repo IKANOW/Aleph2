@@ -20,20 +20,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class GlobalPropertiesBean {
 
 	public static final String PROPERTIES_ROOT = "Globals"; 	
-	public static final String __DEFAULT_LOCAL_ROOT_DIR = "/opt/aleph2-home"; 	
-	public static final String __DEFAULT_LOCAL_YARN_CONFIG_DIR = "/opt/aleph2-home/yarn-config"; 	
-	public static final String __DEFAULT_LOCAL_CACHED_JARS_DIR = "/opt/aleph2-home/cached-jars"; 	
+	public static final String __DEFAULT_LOCAL_ROOT_DIR = "/opt/aleph2-home/"; 	
+	public static final String __DEFAULT_LOCAL_YARN_CONFIG_DIR = "/opt/aleph2-home/yarn-config/"; 	
+	public static final String __DEFAULT_LOCAL_CACHED_JARS_DIR = "/opt/aleph2-home/cached-jars/"; 	
+	public static final String __DEFAULT_DISTRIBUTED_ROOT_DIR = "/apps/aleph2/"; 	
 	
 	/** User constructor
 	 * @param local_root_dir
 	 * @param local_yarn_config_dir
 	 */
 	public GlobalPropertiesBean(final @Nullable String local_root_dir, 
-			final @Nullable String local_yarn_config_dir, final @Nullable String local_cached_jar_dir)
+			final @Nullable String local_yarn_config_dir, final @Nullable String local_cached_jar_dir, 
+			final @Nullable String distributed_root_dir
+			)
 	{
 		this.local_root_dir = local_root_dir;
 		this.local_yarn_config_dir = local_yarn_config_dir;
 		this.local_cached_jar_dir = local_cached_jar_dir;
+		this.distributed_root_dir = distributed_root_dir;
 	}
 	
 	/** Constructor for Jackson
@@ -44,6 +48,11 @@ public class GlobalPropertiesBean {
 	 * @return
 	 */
 	public String local_root_dir() { return null == local_root_dir ? __DEFAULT_LOCAL_ROOT_DIR : local_root_dir; }
+	
+	/** This is the root for all distributed directories
+	 * @return
+	 */
+	public String distributed_root_dir() { return null == distributed_root_dir ? __DEFAULT_DISTRIBUTED_ROOT_DIR : distributed_root_dir; }
 	
 	/** Use this for all Hadoop/YARN related configuration files
 	 * @return the local root directory
@@ -58,4 +67,5 @@ public class GlobalPropertiesBean {
 	private String local_root_dir;
 	private String local_yarn_config_dir;
 	private String local_cached_jar_dir;
+	private String distributed_root_dir;
 }

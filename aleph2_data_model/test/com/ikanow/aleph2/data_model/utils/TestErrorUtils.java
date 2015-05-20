@@ -119,6 +119,6 @@ public class TestErrorUtils {
 				output.add( ErrorUtils.getLongForm("Test: {0}", ex) );				
 			}			
 		});
-		assertEquals("Test: [Exception in Lambda: Exception]:[TestErrorUtils.java:117:com.ikanow.aleph2.data_model.utils.TestErrorUtils:lambda$0][-1:com.ikanow.aleph2.data_model.utils.TestErrorUtils$$Lambda$1:accept][TestErrorUtils.java:115:com.ikanow.aleph2.data_model.utils.TestErrorUtils:testLongErrorDuringLambda]", output.get(0));
+		assertTrue(output.get(0).startsWith("Test: [Exception in Lambda: Exception]:"));		
 	}
 }
