@@ -121,7 +121,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final @NonNull IManagementDbService management_db)
 	{
 		if (null == bucket.harvest_technology_name_or_id()) {
-			return Either.left(HarvestErrorUtils.buildErrorMessage(handler, message,
+			return Either.left(HarvestErrorUtils.buildErrorMessage(handler.toString(), message,
 					HarvestErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, bucket.full_name()
 					));
 		}
@@ -136,7 +136,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			}
 			else {
 				return Either.left(
-						HarvestErrorUtils.buildErrorMessage(handler, message,
+						HarvestErrorUtils.buildErrorMessage(handler.toString(), message,
 								HarvestErrorUtils.HARVEST_TECHNOLOGY_NAME_NOT_FOUND, 
 									bucket.harvest_technology_name_or_id(), bucket.full_name()
 								)); 
@@ -144,7 +144,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 		catch (Exception e) {
 			return Either.left(
-					HarvestErrorUtils.buildErrorMessage(handler, message, HarvestErrorUtils.getLongForm("{0}", e)));
+					HarvestErrorUtils.buildErrorMessage(handler.toString(), message, HarvestErrorUtils.getLongForm("{0}", e)));
 		}
 	}
 	
