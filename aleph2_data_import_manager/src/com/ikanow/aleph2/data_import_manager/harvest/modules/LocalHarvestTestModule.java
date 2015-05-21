@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -35,6 +37,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -67,7 +70,16 @@ public class LocalHarvestTestModule {
 	
 	public void start(String source_key, String harvest_tech_jar_path, String... commands) throws Exception {
 		if ((null == commands) || (0 == commands.length)) {
-			//TODO run from CLI
+			try (Scanner scanner = new Scanner(System.in)) {
+				while (true) {
+					System.out.println("Enter command (or help/exit): ");
+					String command = scanner.nextLine();
+					if (command.equals("exit")) {
+						System.exit(0);
+					}
+					run_command(source_key, harvest_tech_jar_path, command);
+				}
+			}
 		}
 		else for (String command: commands) {
 			run_command(source_key, harvest_tech_jar_path, command);
@@ -131,7 +143,6 @@ public class LocalHarvestTestModule {
 		DataBucketBean bucket = createBucketFromSource(result.get());
 		
 		// OK now we simply create an instance of the harvester and invoke it
-		//TODO (ALEPH-19): currently harvest is null
 		
 		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
@@ -139,13 +150,63 @@ public class LocalHarvestTestModule {
 						Optional.of(new File(harvest_tech_jar_path).getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", command);						
 						
+		//TODO (ALEPH-19): currently harvest context is null
+		final IHarvestContext context = null;
+		
 		if (ret_val.isLeft()) {
 			System.out.println("Failed to instantiate harvester: " + ret_val.left().value().message());
 		}		
 		else {
-			final IHarvestTechnologyModule harvester = ret_val.right().value(); 
+			final IHarvestTechnologyModule harvester = ret_val.right().value();
 			if (command.equals("canRunOnThisNode")) {
-				System.out.println("canRunOnThisNode " + harvester.canRunOnThisNode(bucket));
+				System.out.println(command + ": " + harvester.canRunOnThisNode(bucket));
+			}
+			else {
+				CompletableFuture<BasicMessageBean> harvest_result = null; // (this is most of them)
+				if (command.equals("onDelete")) {
+					harvest_result = harvester.onDelete(bucket, context);
+				}
+				else if (command.equals("onHarvestComplete")) {
+					harvest_result = harvester.onHarvestComplete(bucket, context);
+				}
+				else if (command.equals("onNewSource")) {
+					harvest_result = harvester.onNewSource(bucket, context);
+				}
+				else if (command.equals("onPeriodicPoll")) {
+					harvest_result = harvester.onPeriodicPoll(bucket, context);
+				}
+				else if (command.equals("onPurge")) {
+					harvest_result = harvester.onPurge(bucket, context);
+				}
+				else if (command.equals("onResume")) {
+					harvest_result = harvester.onResume(bucket, context);
+				}
+				else if (command.equals("onSuspend")) {
+					harvest_result = harvester.onSuspend(bucket, context);
+				}
+				else if (command.equals("onTestSource")) {
+					harvest_result = harvester.onTestSource(bucket, null, context);
+				}
+				else if (command.equals("onUpdatedSource")) {
+					harvest_result = harvester.onUpdatedSource(bucket, bucket, context);
+				}
+				else {
+					if (command.equals("help")) {
+						System.out.println("Allowed commands: ");
+					}
+					else {
+						System.out.println("Command not recognized, allowed commands: ");
+					}
+					System.out.println(Arrays.asList(harvester.getClass().getMethods()).stream().map(m -> m.getName()).collect(Collectors.joining(",")));
+				}
+				if (null != harvest_result) {
+					System.out.println(command + ": success: " + harvest_result.get().success());
+					System.out.println(command + ": source: " + harvest_result.get().source());
+					System.out.println(command + ": message: " + harvest_result.get().message());
+				}
+				else {
+					System.out.println("(no return value)");
+				}
 			}
 		}
 	}
