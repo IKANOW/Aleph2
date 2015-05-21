@@ -118,7 +118,7 @@ public class PropertiesUtils {
 	public static List<ConfigDataServiceEntry> getDataServiceProperties(final Config config, final String configPrefix) {
 		Optional<ConfigObject> sub_config = getSubConfigObject(config, configPrefix);
 		if ( sub_config.isPresent() ) {
-			final ConfigObject dataServiceConfig = sub_config.get(); //config.getObject(configPrefix);
+			final ConfigObject dataServiceConfig = sub_config.get(); //config.getObject(configPrefix);			
 			List<ConfigDataServiceEntry> toReturn = dataServiceConfig.entrySet()
 				.stream()
 				.map(entry -> 

@@ -170,6 +170,14 @@ public class CrudUtils {
 	
 	///////////////////////////////////////////////////////////////////
 	
+	/** Returns a query component where all of the fields added using withAny/withAll/etc must match
+	 * @return the query component "helper"
+	 */
+	@NonNull
+	public static SingleQueryComponent<JsonNode> allOf() {
+		return new SingleQueryComponent<JsonNode>(null, Operator.all_of);
+	}
+	
 	/** Returns a query component where all of the fields in t (together with other fields added using withAny/withAll) must match
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
@@ -187,6 +195,15 @@ public class CrudUtils {
 	public static <T> SingleBeanQueryComponent<T> allOf(final @NonNull BeanTemplate<T> t) {
 		return new SingleBeanQueryComponent<T>(t, Operator.all_of);
 	}
+	
+	/** Returns a query component where any of the fields added using withAny/withAll/etc can match
+	 * @return the query component "helper"
+	 */
+	@NonNull
+	public static SingleQueryComponent<JsonNode> anyOf() {
+		return new SingleQueryComponent<JsonNode>(null, Operator.any_of);
+	}
+	
 	/** Returns a query component where any of the fields in t (together with other fields added using withAny/withAll) can match
 	 * @param clazz - the class of the template
 	 * @return the query component "helper"
@@ -583,8 +600,8 @@ public class CrudUtils {
 		protected List<Tuple2<String, Integer>> _orderBy;
 		
 		@NonNull
-		protected SingleQueryComponent(final @NonNull BeanTemplate<?> t, final @NonNull Operator op) {
-			_element = t.get();
+		protected SingleQueryComponent(final BeanTemplate<?> t, final @NonNull Operator op) {
+			_element = t == null ? null : t.get();
 			_op = op;
 		}
 		
@@ -1225,7 +1242,10 @@ public class CrudUtils {
 		
 	}	
 	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @NonNull Object bean, boolean denest) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final Object bean, boolean denest) {
+		if (null == bean) { // (for handling JSON, where you don't have a bean)
+			return Stream.of();
+		}
 		//TODO (ALEPH-22) sometimes you need to nest the functionality and sometimes you don't... (eg updates normally not? queries normally
 		// but actually the behavior is different .. to test this desnest==false, need to bring mongojack into the test context
 		// so can test it for MongoDB
