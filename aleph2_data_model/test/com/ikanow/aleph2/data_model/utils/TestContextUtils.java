@@ -117,7 +117,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getHarvestContextSignature(Optional<DataBucketBean> bucket) {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, @NonNull Optional<Set<Class<?>>> services) {
 			return null;
 		}
 

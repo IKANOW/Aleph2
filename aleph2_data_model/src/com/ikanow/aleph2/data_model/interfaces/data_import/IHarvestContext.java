@@ -85,7 +85,7 @@ public interface IHarvestContext {
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
 	@NonNull 
-	String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket);
+	String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket, @NonNull Optional<Set<Class<?>>> services);
 
 	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) configuration
 	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"

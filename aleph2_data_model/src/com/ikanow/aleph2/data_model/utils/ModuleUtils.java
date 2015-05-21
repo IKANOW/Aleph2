@@ -67,7 +67,7 @@ public class ModuleUtils {
 	private final static String SERVICES_PROPERTY = "service";
 	private static Set<Class<?>> interfaceHasDefault = null;
 	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService", "ColumnarService", 
-			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", 
+			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", "ManagementDbService",
 			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices"));
 	private static Logger logger = LogManager.getLogger();	
 	@SuppressWarnings("rawtypes")
@@ -377,7 +377,8 @@ public class ModuleUtils {
 		 */
 		@Override
 		public IManagementDbService getManagementDbService() {
-			return getService(IManagementDbService.class, Optional.empty());
+			//TODO: need to think about this? The user should specify ManagementDbService (CoreManagementDbService is fixed, but should get this one I think?)
+			return getService(IManagementDbService.class, Optional.of("CoreManagementDbService"));
 		}
 
 		/**
