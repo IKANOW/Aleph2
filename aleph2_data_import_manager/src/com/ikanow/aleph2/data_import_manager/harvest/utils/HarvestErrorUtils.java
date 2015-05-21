@@ -44,7 +44,7 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 					new Date(), // date
 					false, // success
 					handler,
-					message.getClass().getSimpleName(), // command
+					message instanceof String ? message.toString() : message.getClass().getSimpleName(), // command
 					null, // message code
 					params.length == 0 ? error : ErrorUtils.get(error, params), // error message, with optional formatting
 					null // details

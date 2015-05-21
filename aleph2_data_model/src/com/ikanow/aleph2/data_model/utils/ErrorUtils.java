@@ -23,6 +23,12 @@ import com.google.common.collect.ObjectArrays;
 
 public class ErrorUtils {
 
+	// Generic error messages
+	
+	public static final String INVALID_CONFIG_ERROR = "Invalid configuration for {0}: {1}";	
+	
+	// Interface
+	
 	/** Returns a formatting error string
 	 * @param template - the template message in MessageFormat
 	 * @param vars - the set of substituion variables
@@ -78,7 +84,13 @@ public class ErrorUtils {
 		String lastFileName = null;
 		StackTraceElement firstEl = null;
 		StackTraceElement lastEl = null;
-		sb.append("[").append(t.getMessage()).append(": ").append(t.getClass().getSimpleName()).append("]:");
+		String message = "unknown_message_too_large";
+		try {
+			message = t.getMessage();
+		}
+		catch (Exception e) {} // just carry on
+		sb.append("[").append(message).append(": ").append(t.getClass().getSimpleName()).append("]:");
+		
 		for (StackTraceElement el: t.getStackTrace()) {
 			if (el.getClassName().contains("com.ikanow.") && (n < 20)) {
 				if ((lastEl != null) && (lastEl != firstEl)) { // last non-ikanow element before the ikanow bit

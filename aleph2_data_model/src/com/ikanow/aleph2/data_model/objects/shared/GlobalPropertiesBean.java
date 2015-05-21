@@ -23,7 +23,7 @@ public class GlobalPropertiesBean {
 	public static final String __DEFAULT_LOCAL_ROOT_DIR = "/opt/aleph2-home/"; 	
 	public static final String __DEFAULT_LOCAL_YARN_CONFIG_DIR = "/opt/aleph2-home/yarn-config/"; 	
 	public static final String __DEFAULT_LOCAL_CACHED_JARS_DIR = "/opt/aleph2-home/cached-jars/"; 	
-	public static final String __DEFAULT_DISTRIBUTED_ROOT_DIR = "/apps/aleph2/"; 	
+	public static final String __DEFAULT_DISTRIBUTED_ROOT_DIR = "/app/aleph2/"; 	
 	
 	/** User constructor
 	 * @param local_root_dir

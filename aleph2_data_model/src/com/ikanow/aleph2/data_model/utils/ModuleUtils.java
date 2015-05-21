@@ -75,6 +75,16 @@ public class ModuleUtils {
 	private static Injector parent_injector = null;
 	private static GlobalPropertiesBean globals = BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get();
 		//(do it this way to avoid having to keep changing this test every time globals changes)
+	private static Config saved_config = null;
+	
+	/** Returns the static config set up by a call to loadModulesFromConfig or createInjector
+	 *  INTENDED TO BE CALLED FROM guice_submodule.configure() (or later of course, though you should be using injected beans by then)
+	 * @return the user config (or whatever is on the classpath as a fallback)
+	 */
+	@NonNull
+	public static Config getStaticConfig() {
+		return Optional.ofNullable(saved_config).orElse(ConfigFactory.load());
+	}
 	
 	/**
 	 * Loads up all the services it can find in the given config file.  Typically
@@ -274,7 +284,8 @@ public class ModuleUtils {
 			return null;
 	}
 	
-	private static void initialize(@NonNull Config config) throws Exception {	
+	private static void initialize(@NonNull Config config) throws Exception {
+		saved_config = config;
 		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
 		synchronized (ModuleUtils.class) {
 			globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);

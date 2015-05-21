@@ -18,11 +18,11 @@ package com.ikanow.aleph2.distributed_services.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
-import com.ikanow.aleph2.distributed_services.utils.ErrorUtils;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 public class CoreDistributedServicesModule extends AbstractModule {
 
@@ -39,7 +39,7 @@ public class CoreDistributedServicesModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		
-		Config config = ConfigFactory.load();				
+		Config config = ModuleUtils.getStaticConfig();				
 		DistributedServicesPropertyBean bean;
 		try {
 			bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DistributedServicesPropertyBean.PROPERTIES_ROOT).orElse(null), DistributedServicesPropertyBean.class);

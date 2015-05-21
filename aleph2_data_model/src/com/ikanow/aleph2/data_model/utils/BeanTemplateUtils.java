@@ -32,6 +32,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigRenderOptions;
@@ -56,7 +57,7 @@ public class BeanTemplateUtils {
 	 * @throws JsonParseException 
 	 */
 	@NonNull
-	static public <T> T from(@Nullable Config bean_root, @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+	static public <T> T from(final @Nullable Config bean_root, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
 		if (null != bean_root) {
 			ObjectMapper object_mapper = new ObjectMapper();
 			object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
@@ -66,7 +67,6 @@ public class BeanTemplateUtils {
 			return BeanTemplateUtils.build(bean_clazz).done().get();
 		}
 	}
-	
 	
 	/** Contains a partial bean
 	 * @author acp
@@ -98,6 +98,34 @@ public class BeanTemplateUtils {
 		protected BeanTemplate(T element) { _element = element; }
 		protected T _element;
 	}
+	
+	/** Returns a bean of the designated type from the JSON (note: not very high performance, should only be used for management-type operations)
+	 * @param json
+	 * @param bean_clazz
+	 * @return
+	 * @throws JsonParseException
+	 * @throws JsonMappingException
+	 * @throws IOException
+	 */
+	@NonNull 
+	static public <T> T from(final @NonNull JsonNode json, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+		return build(json, bean_clazz).done().get();
+	}	
+	
+	/** Returns a template builder of the designated type from the JSON (note: not very high performance, should only be used for management-type operations)
+	 * @param json
+	 * @param bean_clazz
+	 * @return
+	 * @throws JsonParseException
+	 * @throws JsonMappingException
+	 * @throws IOException
+	 */
+	@NonNull 
+	static public <T> TemplateHelper<T> build(final @NonNull JsonNode json, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper object_mapper = new ObjectMapper();
+		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		return build(object_mapper.treeToValue(json, bean_clazz));		
+	}	
 	
 	/**
 	 * Enables type-safe access to a single classes
