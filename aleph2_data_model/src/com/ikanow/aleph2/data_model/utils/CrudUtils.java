@@ -230,8 +230,8 @@ public class CrudUtils {
 	 */
 	@SafeVarargs
 	@NonNull
-	public static <T> MultiQueryComponent<T> allOf(final @NonNull SingleQueryComponent<T>... components) {
-		return new MultiQueryComponent<T>(Operator.all_of, components);
+	public static <T> MultiQueryComponent<T> allOf(final @NonNull SingleQueryComponent<T> component1, @NonNull SingleQueryComponent<T>... components) {
+		return new MultiQueryComponent<T>(Operator.all_of, component1, components);
 	}
 	
 	/** Returns a "multi" query component where any of the QueryComponents in the list (and added via andAlso) can match (NOTE: each component *internally* can use ORs or ANDs)
@@ -240,8 +240,8 @@ public class CrudUtils {
 	 */
 	@SafeVarargs
 	@NonNull
-	public static <T> MultiQueryComponent<T> anyOf(final @NonNull SingleQueryComponent<T>... components) {
-		return new MultiQueryComponent<T>(Operator.any_of, components);
+	public static <T> MultiQueryComponent<T> anyOf(final @NonNull SingleQueryComponent<T> component1, @NonNull SingleQueryComponent<T>... components) {
+		return new MultiQueryComponent<T>(Operator.any_of, component1, components);
 	}
 
 	///////////////////////////////////////////////////////////////////
@@ -358,9 +358,12 @@ public class CrudUtils {
 		List<SingleQueryComponent<T>> _elements;
 		Operator _op;
 		
-		protected MultiQueryComponent(final @NonNull Operator op, final @SuppressWarnings("unchecked") SingleQueryComponent<T>... components) {
+		@SafeVarargs
+		protected MultiQueryComponent(final @NonNull Operator op, final @NonNull SingleQueryComponent<T> component1, SingleQueryComponent<T>... components) {
 			_op = op;
-			_elements = new ArrayList<SingleQueryComponent<T>>(Arrays.asList(components)); 
+			_elements = new ArrayList<SingleQueryComponent<T>>(null == components ? 1 : (1 + components.length));
+			_elements.add(component1);
+			if (null != components) _elements.addAll(Arrays.asList(components));
 		}
 	}
 	
