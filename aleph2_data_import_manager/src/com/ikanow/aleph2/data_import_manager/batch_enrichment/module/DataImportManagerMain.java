@@ -18,6 +18,9 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
 import java.util.Arrays;
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
@@ -25,15 +28,17 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 
 public class DataImportManagerMain {
 
+	private static Logger logger = LogManager.getLogger();	
 	private static Injector serverInjector = createInjector();
 
 	public static Injector createInjector() {
+		
+
 		Injector injector = null;
 		try {
 			injector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Error creating injector from DataImportManagerModule:",e);	
 		}
 		return injector;
 	}
@@ -61,7 +66,6 @@ public class DataImportManagerMain {
 			// set config if it is ot already set
 		}
 		start();
-		stop();
 	}
 
 }

@@ -19,17 +19,20 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
 import scala.concurrent.duration.Duration;
-import akka.actor.ActorSystem;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
 import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 
 public class FolderWatcherActor extends UntypedActor {
@@ -38,50 +41,98 @@ public class FolderWatcherActor extends UntypedActor {
     private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
 
 	protected CuratorFramework curator_framework;
-	protected IStorageService storage_service;
 	protected final DataImportManagerActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
-	protected final ActorSystem _actor_system;
+	protected final IStorageService storage_service;
+	protected GlobalPropertiesBean _global_properties_Bean = null; 
+	protected Path _bucket_path = null;
+	protected FileContext fileContext = null;
+	protected Path dataPath = null;
 
-    public FolderWatcherActor(){
-    	_context = DataImportManagerActorContext.get(); 
-    	_core_distributed_services = _context.getDistributedServices();
+    public FolderWatcherActor(IStorageService storage_service){
+    	this._context = DataImportManagerActorContext.get(); 
+    	this._global_properties_Bean = _context.getGlobalProperties();
+    	logger.debug("_global_properties_Bean"+_global_properties_Bean);
+    	this._core_distributed_services = _context.getDistributedServices();    	
     	this.curator_framework = _core_distributed_services.getCuratorFramework();
-    	_actor_system = _core_distributed_services.getAkkaSystem();
-    	_management_db = _context.getServiceContext().getManagementDbService();
+    	this._management_db = _context.getServiceContext().getManagementDbService();
+    	this.storage_service = storage_service;
+		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020"));
+		this.dataPath = new Path(_global_properties_Bean.distributed_root_dir()+"/data");
+		this._bucket_path = detectBucketPath();
     }
     
-	private final Cancellable tick = getContext()
-			.system()
-			.scheduler()
-			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
-					Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(),
-					"tick", getContext().dispatcher(), null);
-
+	
+    private  Cancellable tick = null;
+    
 	@Override
 	public void postStop() {
 		logger.debug("postStop");
-		tick.cancel();
+		if(tick!=null){
+			tick.cancel();
+		}
 	}
 
 	@Override
 	public void onReceive(Object message) throws Exception {
+		if ("start".equals(message)) {
+			logger.debug("Start message received");
+			tick = getContext()
+			.system()
+			.scheduler()
+			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
+					Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(),
+					"tick", getContext().dispatcher(), null);				
+
+		}else
 		if ("tick".equals(message)) {
 			logger.debug("Tick message received");
 			traverseFolders();
 		}else 	if ("stop".equals(message)) {
 				logger.debug("Stop message received");
-				tick.cancel();
+				if(tick!=null){
+					tick.cancel();
+				}	
 			} else {
+				logger.debug("unhandeld message:"+message);
 			unhandled(message);
 		}
 	}
 
 	protected void traverseFolders() {
-		AbstractFileSystem fs = storage_service.getUnderlyingPlatformDriver(AbstractFileSystem.class,Optional.<String>empty());
-		String rootPath = storage_service.getRootPath();
-		
-		
+		logger.debug("bucket_Path:"+_bucket_path);
+		try {
+			FileStatus[] statuss = fileContext.util().listStatus(detectBucketPath());
+			logger.debug(statuss.length);
+			String dataPathStr = dataPath.toString();
+			
+			for (int i = 0; i < statuss.length; i++) {
+				String bucketPathStr = statuss[i].getPath().toString();				
+			    String bucketId = bucketPathStr.substring(bucketPathStr.indexOf(dataPathStr)+dataPathStr.length());
+			    logger.debug("dataPath:"+dataPathStr+" ,Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
+			    // TODO create or send message to BatchBucketActors
+			    
+			} // for			
+		} catch (Exception e) {
+			logger.error("traverseFolders Caught Exception:",e);
+		}
+
+	}
+	
+	protected Path detectBucketPath(){
+		logger.debug("detectBucketPath");
+		if(_bucket_path==null){
+			try {
+			// looking for managed_bucket underneath /app/aleph2/data
+			Path p = DirUtils.findOneSubdirectory(fileContext, dataPath, "managed_bucket");
+			// assuming managed_bucket is two levels underneath all buckets dirs, e.g. <bucket_path>/<bucket_name>/managed
+			_bucket_path = p.getParent().getParent();
+			logger.debug("Detected bucket Path:"+p);
+			} catch (Exception e) {
+				logger.error("detectBucketPath Caught Exception",e);
+			} 
+		}
+		return _bucket_path;
 	}
 }

@@ -22,6 +22,9 @@ import org.apache.logging.log4j.Logger;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
+import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.storage_service_hdfs.services.HDFSStorageService;
 
 public class DataImportManagerModule extends AbstractModule { 
 	@SuppressWarnings("unused")
@@ -31,6 +34,8 @@ public class DataImportManagerModule extends AbstractModule {
 	@Override
 	protected void configure() {
 	    bind(DataImportManager.class).in(Scopes.SINGLETON);
+	    bind(DataImportManagerActorContext.class).in(Scopes.SINGLETON);
+	    bind(IStorageService.class).to(HDFSStorageService.class).in(Scopes.SINGLETON);
 	    
 	}
 }
