@@ -68,6 +68,17 @@ public class BeanTemplateUtils {
 		}
 	}
 	
+	/** Converts a bean to its JsonNode representation (not high performance)
+	 * @param bean - the bean to convert to JSON
+	 * @return - the JSON
+	 */
+	@NonNull 
+	static public <T> JsonNode toJson(final @NonNull T bean) {
+		ObjectMapper object_mapper = new ObjectMapper();
+		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		return object_mapper.valueToTree(bean);		
+	}
+	
 	/** Contains a partial bean
 	 * @author acp
 	 *
