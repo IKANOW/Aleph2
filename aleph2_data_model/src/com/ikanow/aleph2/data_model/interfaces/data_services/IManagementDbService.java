@@ -24,6 +24,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 /** The interface to the management database
@@ -110,8 +112,19 @@ public interface IManagementDbService {
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
 	@NonNull 
-	<T> ICrudService<T> getPerAnalyticThreadState(final @NonNull Class<T> clazz, final @NonNull AnalyticThreadBean analytic_thread, final @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerAnalyticThreadState(final @NonNull Class<T> clazz, final @NonNull AnalyticThreadBean analytic_thread, final @NonNull Optional<String> sub_collection);	
 	
+	////////////////////////////////////
+
+	/** Returns a copy of the management DB that is filtered based on the client (user) and project rights
+	 * @param authorization_fieldname the fieldname in the bean that determines where the per-bean authorization is held
+	 * @param client_auth Optional specification of the user's access rights
+	 * @param project_auth Optional specification of the projects's access rights
+	 * @return The filtered CRUD repo
+	 */
+	@NonNull 
+	IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
+		
 	////////////////////////////////////
 
 	// X] Misc

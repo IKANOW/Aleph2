@@ -19,9 +19,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.google.inject.name.Named;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
@@ -29,6 +30,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
@@ -39,30 +42,55 @@ import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 public class CoreManagementDbService implements IManagementDbService, IExtraDependencyLoader {
 
 	protected final IManagementDbService _underlying_management_db;	
-	protected DataBucketCrudService _data_bucket_service;
+	protected final DataBucketCrudService _data_bucket_service;
 	
-	/** Default constructor needed for the Module view to work
-	 */
-	public CoreManagementDbService() {
-		_underlying_management_db = null;
-		_data_bucket_service = null;
-	}
+	protected final Optional<AuthorizationBean> _auth;
+	protected final Optional<ProjectBean> _project;	
 	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
 	 * @param data_bucket_service
 	 */
 	@Inject
-	public CoreManagementDbService(final @Named("management_db_service_core") IManagementDbService underlying_management_db,
+	public CoreManagementDbService(final IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service)
 	{
 		_underlying_management_db = underlying_management_db;
 		_data_bucket_service = data_bucket_service;
 
+		_auth = Optional.empty();
+		_project = Optional.empty();
+		
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
 
+	}
+	
+	/** User constructor for building a cloned version with different auth settings
+	 * @param crud_factory 
+	 * @param auth_fieldname
+	 * @param auth
+	 * @param project
+	 */
+	public CoreManagementDbService(final IManagementDbService underlying_management_db,
+			final DataBucketCrudService data_bucket_service,
+			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project) {
+		_underlying_management_db = underlying_management_db;
+		_data_bucket_service = data_bucket_service;
+		
+		_auth = auth;
+		_project = project;		
+	}
+	
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getFilteredDb(java.lang.String, java.util.Optional, java.util.Optional)
+	 */
+	@NonNull 
+	public IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth)
+	{
+		return new CoreManagementDbService(_underlying_management_db, _data_bucket_service, client_auth, project_auth);
 	}
 	
 	/* (non-Javadoc)

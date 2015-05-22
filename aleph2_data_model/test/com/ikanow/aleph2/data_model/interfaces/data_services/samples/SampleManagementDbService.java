@@ -25,6 +25,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public class SampleManagementDbService implements IManagementDbService {
@@ -81,6 +83,14 @@ public class SampleManagementDbService implements IManagementDbService {
 	@Override
 	public <T> @NonNull T getUnderlyingPlatformDriver(
 			@NonNull Class<T> driver_class, Optional<String> driver_options) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public @NonNull IManagementDbService getFilteredDb(
+			Optional<AuthorizationBean> client_auth,
+			Optional<ProjectBean> project_auth) {
 		// TODO Auto-generated method stub
 		return null;
 	}
