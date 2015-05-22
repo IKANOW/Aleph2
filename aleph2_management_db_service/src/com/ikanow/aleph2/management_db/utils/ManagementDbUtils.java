@@ -47,7 +47,7 @@ public class ManagementDbUtils {
 				else if (o instanceof ICrudService) {
 					return wrap((ICrudService<?>)o);
 				}
-				else { // (should never be called)
+				else { // (for get underlying driver)
 					return o;
 				}
 			}

@@ -28,6 +28,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
+import com.mongodb.DBCollection;
 
 public class TestManagementDbUtils {
 
@@ -92,7 +93,13 @@ public class TestManagementDbUtils {
 		
 		assertTrue("Management utils are empty", response_2.getManagementResults().get().isEmpty());
 		
-		assertEquals("test", response_2.get().get().get("_id").asText());				
+		assertEquals("test", response_2.get().get().get("_id").asText());
+		
+		// (finally - left alone altogether)
+		
+		DBCollection dbc = wrapped_service.getUnderlyingPlatformDriver(DBCollection.class, Optional.empty());
+		
+		assertEquals(dbc.getName(), "test");
 	}
 	
 }
