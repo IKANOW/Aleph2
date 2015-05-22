@@ -376,8 +376,7 @@ public class ModuleUtils {
 		 * 
 		 */
 		@Override
-		public IManagementDbService getManagementDbService() {
-			//TODO: need to think about this? The user should specify ManagementDbService (CoreManagementDbService is fixed, but should get this one I think?)
+		public IManagementDbService getCoreManagementDbService() {
 			return getService(IManagementDbService.class, Optional.of("CoreManagementDbService"));
 		}
 

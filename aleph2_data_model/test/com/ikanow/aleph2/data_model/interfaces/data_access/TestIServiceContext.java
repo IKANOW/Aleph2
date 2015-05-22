@@ -89,6 +89,8 @@ public class TestIServiceContext {
 		configMap.put("service.GraphService.service", SampleGraphService.class.getCanonicalName());
 		configMap.put("service.ManagementDbService.interface", IManagementDbService.class.getCanonicalName());
 		configMap.put("service.ManagementDbService.service", SampleManagementDbService.class.getCanonicalName());
+		configMap.put("service.CoreManagementDbService.interface", IManagementDbService.class.getCanonicalName());
+		configMap.put("service.CoreManagementDbService.service", SampleManagementDbService.class.getCanonicalName());
 		configMap.put("service.SearchIndexService.interface", ISearchIndexService.class.getCanonicalName());
 		configMap.put("service.SearchIndexService.service", SampleSearchIndexService.class.getCanonicalName());
 		configMap.put("service.StorageService.interface", IStorageService.class.getCanonicalName());
@@ -102,7 +104,7 @@ public class TestIServiceContext {
 		assertNotNull(context.getDocumentService());
 		assertNotNull(context.getGeospatialService());
 		assertNotNull(context.getGraphService());
-		assertNotNull(context.getManagementDbService());
+		assertNotNull(context.getCoreManagementDbService());
 		assertNotNull(context.getSearchIndexService());
 		assertNotNull(context.getStorageIndexService());
 		assertNotNull(context.getTemporalService());

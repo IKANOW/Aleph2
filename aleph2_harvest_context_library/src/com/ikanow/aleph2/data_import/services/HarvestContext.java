@@ -53,7 +53,7 @@ public class HarvestContext implements IHarvestContext {
 	HarvestContext(IServiceContext service_context) {
 		_state = State.IN_TECHNOLOGY;
 		_service_context = service_context;
-		_core_management_db = service_context.getManagementDbService(); // (actually returns the _core_ management db service)
+		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
 	}
 	

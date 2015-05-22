@@ -92,13 +92,13 @@ public interface IServiceContext {
 	public IGraphService getGraphService();
 	
 	/**
-	* Returns an instance of the currently configured mangement db service.
+	* Returns an instance of the currently configured _core_ mangement db service (which sits above the actual technology configured for the management db service via service.ManagementDbService.*).
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
 	* 
 	* @return
 	*/
-	public IManagementDbService getManagementDbService();
+	public IManagementDbService getCoreManagementDbService();
 	
 	/**
 	* Returns an instance of the currently configured search index service.

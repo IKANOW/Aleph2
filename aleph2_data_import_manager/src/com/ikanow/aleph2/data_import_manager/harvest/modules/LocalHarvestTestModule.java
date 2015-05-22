@@ -64,7 +64,7 @@ public class LocalHarvestTestModule {
 	 */
 	@Inject
 	public LocalHarvestTestModule(IServiceContext service_context) {
-		_management_db_service = service_context.getManagementDbService();
+		_management_db_service = service_context.getCoreManagementDbService();
 		_globals = service_context.getGlobalProperties();
 	}
 	
