@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
@@ -40,8 +41,6 @@ import org.mongojack.internal.object.BsonObjectGenerator;
 
 import scala.Tuple2;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -49,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Maps;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.BeanUpdateComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.Operator;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -285,13 +285,24 @@ public class TestCrudUtils {
 		BeanTemplate<TestBean> template1 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
 		
 		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(template1).when(TestBean::bool_field, true);
+
+		final SingleQueryComponent<JsonNode> query_comp_1_json1 = query_comp_1.toJson();		
 		
 		final SingleQueryComponent<TestBean> query_comp_1b = CrudUtils.allOf(TestBean.class)
 				.when("bool_field", true)
 				.when("string_field", "string_field");
 		
+		final SingleQueryComponent<JsonNode> query_comp_1b_json1 = query_comp_1b.toJson();
+		
+		final SingleQueryComponent<JsonNode> query_comp_1b_json2= CrudUtils.allOf()
+																	.when("bool_field", true)
+																	.when("string_field", "string_field");
+		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
+		final Tuple2<DBObject, DBObject> query_meta_1_json = convertToMongoQuery(query_comp_1_json1);
 		final Tuple2<DBObject, DBObject> query_meta_1b = convertToMongoQuery(query_comp_1b);
+		final Tuple2<DBObject, DBObject> query_meta_1b_json1 = convertToMongoQuery(query_comp_1b_json1);
+		final Tuple2<DBObject, DBObject> query_meta_1b_json2 = convertToMongoQuery(query_comp_1b_json2);
 		
 		final DBObject expected_1 = QueryBuilder.start().and(
 						QueryBuilder.start("bool_field").is(true).get(),
@@ -299,7 +310,10 @@ public class TestCrudUtils {
 							).get();
 		
 		assertEquals(expected_1.toString(), query_meta_1._1().toString());
+		assertEquals(expected_1.toString(), query_meta_1_json._1().toString());
 		assertEquals(expected_1.toString(), query_meta_1b._1().toString());
+		assertEquals(expected_1.toString(), query_meta_1b_json1._1().toString());
+		assertEquals(expected_1.toString(), query_meta_1b_json2._1().toString());
 		assertEquals("{ }", query_meta_1._2().toString());
 		
 		// Includes extra + all the checks except the range checks
@@ -313,6 +327,8 @@ public class TestCrudUtils {
 				.whenNot(TestBean::long_field, 13)
 				.limit(100);
 
+		final SingleQueryComponent<JsonNode> query_comp_2_json1 = query_comp_2.toJson();
+		
 		final SingleQueryComponent<TestBean> query_comp_2b = CrudUtils.anyOf(TestBean.class)
 				.when("string_field", "string_field")
 				.withPresent("bool_field")
@@ -321,9 +337,23 @@ public class TestCrudUtils {
 				.withAll("long_field", Arrays.asList(10, 11, 12))
 				.whenNot("long_field", 13)
 				.limit(100);		
+
+		final SingleQueryComponent<JsonNode> query_comp_2b_json1 = query_comp_2b.toJson();
+		final SingleQueryComponent<JsonNode> query_comp_2b_json2 = CrudUtils.anyOf()
+				.when("string_field", "string_field")
+				.withPresent("bool_field")
+				.withNotPresent("long_field")
+				.withAny("string_field", Arrays.asList("test1a", "test1b"))
+				.withAll("long_field", Arrays.asList(10, 11, 12))
+				.whenNot("long_field", 13)
+				.limit(100);		
+		
 		
 		final Tuple2<DBObject, DBObject> query_meta_2 = convertToMongoQuery(query_comp_2);
+		final Tuple2<DBObject, DBObject> query_meta_2_json1 = convertToMongoQuery(query_comp_2_json1);
 		final Tuple2<DBObject, DBObject> query_meta_2b = convertToMongoQuery(query_comp_2b);
+		final Tuple2<DBObject, DBObject> query_meta_2b_json1 = convertToMongoQuery(query_comp_2b_json1);
+		final Tuple2<DBObject, DBObject> query_meta_2b_json2 = convertToMongoQuery(query_comp_2b_json2);
 		
 		final DBObject expected_2 = QueryBuilder.start().or(
 										QueryBuilder.start("string_field").is("string_field").get(),
@@ -335,8 +365,12 @@ public class TestCrudUtils {
 									).get();
 		
 		assertEquals(expected_2.toString(), query_meta_2._1().toString());
+		assertEquals(expected_2.toString(), query_meta_2_json1._1().toString());
 		assertEquals(expected_2.toString(), query_meta_2b._1().toString());
+		assertEquals(expected_2.toString(), query_meta_2b_json1._1().toString());
+		assertEquals(expected_2.toString(), query_meta_2b_json2._1().toString());
 		assertEquals("{ \"$limit\" : 100}", query_meta_2._2().toString());		
+		assertEquals("{ \"$limit\" : 100}", query_meta_2_json1._2().toString());		
 	}
 	
 	@Test
@@ -516,13 +550,6 @@ public class TestCrudUtils {
 		
 		assertEquals(expected_3.toString(), query_meta_3._1().toString());
 		assertEquals("{ }", query_meta_3._2().toString());
-		
-		// Test JSON version:
-		
-		final Tuple2<DBObject, DBObject> query_meta_3b = convertToMongoQuery(query_comp_3.toJsonComponent());
-		
-		assertEquals(expected_3.toString(), query_meta_3b._1().toString());
-		assertEquals("{ }", query_meta_3b._2().toString());		
 	}
 	
 	@Test
@@ -1067,7 +1094,7 @@ public class TestCrudUtils {
 		
 		final BeanTemplate<TestBean.NestedTestBean> nested1 = BeanTemplateUtils.build(TestBean.NestedTestBean.class)
 																	.with("nested_string_field", "test1").done(); //(2)
-		final UpdateComponent<TestBean> test1 = 
+		final BeanUpdateComponent<TestBean> test1 = 
 				CrudUtils.update(TestBean.class)
 					.add(TestBean::string_fields, "AA", false) //(0)
 					.increment(TestBean::long_field, 4) //(1)
@@ -1082,12 +1109,18 @@ public class TestCrudUtils {
 					.remove(TestBean::nested_list, CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
 					;
 		
+		assertEquals(TestBean.class, test1.getElementClass());
+		
+		final UpdateComponent<JsonNode> test1_json = test1.toJson();
+		
 		final DBObject result1 = createUpdateObject(test1);
+		final DBObject result1_json = createUpdateObject(test1_json);
 		
 		final String expected1 = "{ \"$push\" : { \"string_fields\" : \"AA\"} , \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\" , \"y\" , \"z\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
 		// (see above for analysis of results) 
 		
 		assertEquals(expected1, result1.toString());
+		assertEquals(expected1, result1_json.toString());
 		
 		// Test 1b - string fields
 		
@@ -1107,13 +1140,33 @@ public class TestCrudUtils {
 					.unset("nested_object") //(3c)
 					.remove("nested_list", CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
 					;
+
+		final UpdateComponent<JsonNode> test1b_json1 = 
+				CrudUtils.update()
+					.add("string_fields", "AA", false) //(0)
+					.increment("long_field", 4) //(1)
+					.nested("nested_list", 
+							CrudUtils.update(nested1b) //(2)
+								.unset("nested_string_field") //(3a)
+								.remove("nested_string_list", Arrays.asList("x", "y", "z")) //(4)
+								.add("nested_string_list", "A", true) // (5)
+							)
+					.unset("bool_field") //(3b)
+					.unset("nested_object") //(3c)
+					.remove("nested_list", CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
+					;
+		final UpdateComponent<JsonNode> test1b_json2 = test1b.toJson();
 		
 		final DBObject result1b = createUpdateObject(test1b);
+		final DBObject result1b_json1 = createUpdateObject(test1b_json1);
+		final DBObject result1b_json2 = createUpdateObject(test1b_json2);
 		
 		final String expected1b = "{ \"$push\" : { \"string_fields\" : \"AA\"} , \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\" , \"y\" , \"z\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
 		// (see above for analysis of results) 
 		
 		assertEquals(expected1b, result1b.toString());
+		assertEquals(expected1b, result1b_json1.toString());
+		assertEquals(expected1b, result1b_json2.toString());
 		
 		// Test2 - more coverage
 		
@@ -1154,8 +1207,7 @@ public class TestCrudUtils {
 				.with("nested_string_field", "test4b").done(); //(2)
 		
 		//convert to JsonNode:
-		final ObjectMapper object_mapper = MongoJackModule.configure(new ObjectMapper());
-		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		final ObjectMapper object_mapper = MongoJackModule.configure(BeanTemplateUtils.configureMapper(Optional.empty()));
 		JsonNode nested4a_json = object_mapper.valueToTree(nested4a.get());
 		JsonNode nested4b_json = object_mapper.valueToTree(nested4b.get());
 		
@@ -1163,10 +1215,18 @@ public class TestCrudUtils {
 				CrudUtils.update(TestBean.class)
 					.set(TestBean::nested_object, nested4a_json)
 					.add(TestBean::nested_list, Arrays.asList(nested4a_json, nested4b_json), false);
-				
-		final DBObject result4 = createUpdateObject(test4);
 		
-		assertEquals("{ \"$set\" : { \"nested_object\" : { \"nested_string_field\" : \"test4a\"}} , \"$push\" : { \"nested_list\" : { \"$each\" : [ { \"nested_string_field\" : \"test4a\"} , { \"nested_string_field\" : \"test4b\"}]}}}", result4.toString());
+		final UpdateComponent<JsonNode> test4_json =
+				CrudUtils.update()
+					.set("nested_object", nested4a_json)
+					.add("nested_list", Arrays.asList(nested4a_json, nested4b_json), false);
+		
+		final DBObject result4 = createUpdateObject(test4);
+		final DBObject result4_json = createUpdateObject(test4_json);
+		String expected4 = "{ \"$set\" : { \"nested_object\" : { \"nested_string_field\" : \"test4a\"}} , \"$push\" : { \"nested_list\" : { \"$each\" : [ { \"nested_string_field\" : \"test4a\"} , { \"nested_string_field\" : \"test4b\"}]}}}";
+		
+		assertEquals(expected4, result4.toString());
+		assertEquals(expected4, result4_json.toString());
 	}
 		
 	//////////////////////////
@@ -1328,8 +1388,7 @@ public class TestCrudUtils {
 	 */
 	@SuppressWarnings("unchecked")
 	public static <O> DBObject createUpdateObject(final @NonNull UpdateComponent<O> update) {
-		final ObjectMapper object_mapper = MongoJackModule.configure(new ObjectMapper());
-		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		final ObjectMapper object_mapper = MongoJackModule.configure(BeanTemplateUtils.configureMapper(Optional.empty()));
 		
 		return update.getAll().entries().stream()
 					.map(kv -> Patterns.match(kv.getValue()._2())

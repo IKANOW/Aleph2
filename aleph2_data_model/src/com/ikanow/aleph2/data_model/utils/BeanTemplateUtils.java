@@ -28,6 +28,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -59,8 +60,7 @@ public class BeanTemplateUtils {
 	@NonNull
 	static public <T> T from(final @Nullable Config bean_root, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
 		if (null != bean_root) {
-			ObjectMapper object_mapper = new ObjectMapper();
-			object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 			return object_mapper.readValue(bean_root.root().render(ConfigRenderOptions.concise()), bean_clazz);
 		}
 		else {
@@ -74,8 +74,7 @@ public class BeanTemplateUtils {
 	 */
 	@NonNull 
 	static public <T> JsonNode toJson(final @NonNull T bean) {
-		ObjectMapper object_mapper = new ObjectMapper();
-		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		return object_mapper.valueToTree(bean);		
 	}
 	
@@ -133,8 +132,7 @@ public class BeanTemplateUtils {
 	 */
 	@NonNull 
 	static public <T> TemplateHelper<T> build(final @NonNull JsonNode json, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
-		ObjectMapper object_mapper = new ObjectMapper();
-		object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		return build(object_mapper.treeToValue(json, bean_clazz));		
 	}	
 	
@@ -419,5 +417,17 @@ public class BeanTemplateUtils {
 			String new_parent_path =  _parent_path.orElse("") + "." + field(getter) + ".";
 			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}
+	}
+	
+	/** Configures a mapper with the desired properties for use in Aleph2
+	 * @param configure_me - leave this empty to create a new mapper, or add one to configure an existing mapper
+	 * @return
+	 */
+	@NonNull
+	public static ObjectMapper configureMapper(final @NonNull Optional<ObjectMapper> configure_me) {
+		final ObjectMapper mapper = configure_me.orElse(new ObjectMapper());
+		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		mapper.setSerializationInclusion(Include.NON_NULL);
+		return mapper;
 	}
 }

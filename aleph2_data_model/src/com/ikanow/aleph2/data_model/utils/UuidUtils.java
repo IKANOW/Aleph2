@@ -16,12 +16,11 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Date;
+import java.util.Optional;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.eaio.uuid.UUIDGen;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
@@ -33,8 +32,7 @@ public class UuidUtils implements IUuidService {
 	/** Internal c'tor
 	 */
 	protected UuidUtils() {
-		_object_mapper = new ObjectMapper();
-		_object_mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);				
+		_object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	}
 	
 	protected static UuidUtils _singleton = null;

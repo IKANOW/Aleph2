@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import scala.Tuple2;
 
@@ -71,11 +72,21 @@ public class CrudUtils {
 		// Just an empty parent of SingleQueryComponent and MultiQueryComponent
 		private UpdateComponent() {}
 		
-		/** Returns the class type of the update component
-		 * @return the Class of the component
+		/** Converts a bean version of a query across to a JSON one, ie if you want to build a query using type checking
+		 *  but then want to apply to a "raw" (JSON) CRUD repo
+		 * @param bean_version - the original query component
+		 * @return
 		 */
+		@SuppressWarnings("unchecked")
 		@NonNull
-		public abstract Class<T> getElementClass();
+		public UpdateComponent<JsonNode> toJson() {
+			try { // (ie just returns a shallow clone, which is exactly what I want)
+				return (UpdateComponent<JsonNode>)this.clone();
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
 		
 		/** All update elements  
 		 * @return the list of all update elements  
@@ -130,42 +141,6 @@ public class CrudUtils {
 	@NonNull
 	public static <T> SingleJsonQueryComponent<T> anyOf_json(final @NonNull BeanTemplate<T> t) {
 		return new SingleJsonQueryComponent<T>(t, Operator.any_of);
-	}
-	
-	/** Converts a bean version of a query across to a JSON one
-	 * @param bean_version - the original query component
-	 * @return
-	 */
-	public static <T> QueryComponent<JsonNode> to_json(final @NonNull QueryComponent<T> bean_version) {
-		//TODO (ALEPH-22)
-		return null;
-	}
-	
-	/** Converts a bean version of an update across to a JSON one
-	 * @param bean_version - the original update component
-	 * @return
-	 */
-	public static <T> UpdateComponent<JsonNode> to_json(final @NonNull UpdateComponent<T> bean_version) {
-		//TODO (ALEPH-22)
-		return null;
-	}
-	
-	/** Converts a bean version of a query across to a JSON one
-	 * @param bean_version - the original query component
-	 * @return
-	 */
-	public static <T> QueryComponent<T> from_json(final @NonNull QueryComponent<JsonNode> json_version) {
-		//TODO (ALEPH-22)
-		return null;
-	}
-	
-	/** Converts a bean version of an update across to a JSON one
-	 * @param bean_version - the original update component
-	 * @return
-	 */
-	public static <T> UpdateComponent<T> from_json(final @NonNull UpdateComponent<JsonNode> json_version) {
-		//TODO (ALEPH-22)
-		return null;
 	}
 	
 	///////////////////////////////////////////////////////////////////
@@ -246,6 +221,10 @@ public class CrudUtils {
 
 	///////////////////////////////////////////////////////////////////
 
+	public static BeanUpdateComponent<JsonNode> update() {
+		return new BeanUpdateComponent<JsonNode>(null);
+	}
+	
 	public static <T> BeanUpdateComponent<T> update(@NonNull Class<T> clazz) {
 		return new BeanUpdateComponent<T>(BeanTemplateUtils.build(clazz).done());
 	}
@@ -373,7 +352,7 @@ public class CrudUtils {
 	 * @author acp
 	 * @param <T> the bean type being queried
 	 */
-	public static class SingleQueryComponent<T> extends QueryComponent<T> {
+	public static class SingleQueryComponent<T> extends QueryComponent<T> implements Cloneable {
 		
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
@@ -437,12 +416,20 @@ public class CrudUtils {
 
 		// Public interface - build
 		
-		/** Converts this component to one that can be passed into a raw JsonNode version
-		 * @return the Json equivalent query component
+		/** Converts a bean version of a query across to a JSON one, ie if you want to build a query using type checking
+		 *  but then want to apply to a "raw" (JSON) CRUD repo
+		 * @param bean_version - the original query component
+		 * @return
 		 */
+		@SuppressWarnings("unchecked")
 		@NonNull
-		public SingleJsonQueryComponent<T> toJsonComponent() {
-			return new SingleJsonQueryComponent<T>(this);
+		public SingleQueryComponent<JsonNode> toJson() {
+			try { // (ie just returns a shallow clone, which is exactly what I want)
+				return (SingleQueryComponent<JsonNode>)this.clone();
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 		
 		/** Adds a collection field to the query - any of which can match
@@ -596,7 +583,7 @@ public class CrudUtils {
 		
 		protected Object _element = null;
 		protected Operator _op; 		
-		LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> _extra = null;
+		protected LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> _extra = null;
 		
 		// Not supported when used in multi query
 		protected Long _limit;
@@ -607,7 +594,7 @@ public class CrudUtils {
 			_element = t == null ? null : t.get();
 			_op = op;
 		}
-		
+
 		@NonNull
 		protected SingleQueryComponent<T> with(final @NonNull Operator op, final @NonNull String field, Tuple2<Object, Object> in) {
 			if (null == _extra) {
@@ -760,19 +747,7 @@ public class CrudUtils {
 			}
 		}
 		
-		protected MethodNamingHelper<T> _naming_helper = null;
-		
-		protected SingleJsonQueryComponent(final @NonNull SingleQueryComponent<T> copy) {
-			super(BeanTemplate.of(copy._element), copy._op);
-			
-			_element = copy._element;
-			_op = copy._op;
-			_extra = copy._extra;
-			
-			// Not supported when used in multi query
-			_limit = copy._limit;
-			_orderBy = copy._orderBy;			
-		}
+		protected MethodNamingHelper<T> _naming_helper = null;		
 	}
 	
 	///////////////////////////////////////////////////////////////////
@@ -993,10 +968,18 @@ public class CrudUtils {
 			return (BeanUpdateComponent<T>)nested(_naming_helper.field(getter), nested_object);
 		}
 		
+		// For CRUD implementers
+		
+		@SuppressWarnings("unchecked")
+		@NonNull
+		public Class<T> getElementClass() {
+			return (@NonNull Class<T>) _element.getClass();
+		}			
+		
 		// Implementation
 		
 		@SuppressWarnings("unchecked")
-		protected BeanUpdateComponent(final @NonNull BeanTemplate<T> bean_template) {
+		protected BeanUpdateComponent(final @Nullable BeanTemplate<T> bean_template) {
 			super((BeanTemplate<Object>)bean_template);
 		}
 		@SuppressWarnings("unchecked")
@@ -1110,7 +1093,7 @@ public class CrudUtils {
 	 *
 	 * @param <T> the type of the bean in the repository
 	 */
-	public static class CommonUpdateComponent<T> extends UpdateComponent<T> {
+	public static class CommonUpdateComponent<T> extends UpdateComponent<T> implements Cloneable {
 
 		// Builders
 	
@@ -1196,16 +1179,6 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent#getElementClass()
-		 */
-		@SuppressWarnings("unchecked")
-		@NonNull
-		@Override
-		public Class<T> getElementClass() {
-			return (@NonNull Class<T>) _element.getClass();
-		}
-		
 		@NonNull
 		protected CommonUpdateComponent<T> with(final @NonNull UpdateOperator op, final @NonNull String field, Object in) {
 			if (null == _extra) {
@@ -1238,14 +1211,14 @@ public class CrudUtils {
 		protected final Object _element;
 		protected LinkedHashMultimap<String, Tuple2<UpdateOperator, Object>> _extra = null;
 		
-		protected CommonUpdateComponent(final @NonNull BeanTemplate<Object> t) {
-			_element = t.get();
+		protected CommonUpdateComponent(final @Nullable BeanTemplate<Object> t) {
+			_element = null == t ? null : t.get();
 		}				
 		//Recursive helper:
 		
 	}	
 	@NonNull
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final Object bean, boolean denest) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final @Nullable Object bean, boolean denest) {
 		if (null == bean) { // (for handling JSON, where you don't have a bean)
 			return Stream.of();
 		}
