@@ -64,7 +64,7 @@ public class LocalHarvestTestModule {
 	 */
 	@Inject
 	public LocalHarvestTestModule(IServiceContext service_context) {
-		_management_db_service = service_context.getCoreManagementDbService();
+		_management_db_service = service_context.getService(IManagementDbService.class, Optional.empty());		
 		_globals = service_context.getGlobalProperties();
 	}
 	
@@ -170,7 +170,7 @@ public class LocalHarvestTestModule {
 					harvest_result = harvester.onHarvestComplete(bucket, context);
 				}
 				else if (command.equals("onNewSource")) {
-					harvest_result = harvester.onNewSource(bucket, context);
+					harvest_result = harvester.onNewSource(bucket, context, true);
 				}
 				else if (command.equals("onPeriodicPoll")) {
 					harvest_result = harvester.onPeriodicPoll(bucket, context);

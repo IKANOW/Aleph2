@@ -23,6 +23,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
@@ -52,10 +53,10 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @param data_bucket_service
 	 */
 	@Inject
-	public CoreManagementDbService(final IManagementDbService underlying_management_db,
+	public CoreManagementDbService(final IServiceContext service_context,
 			final DataBucketCrudService data_bucket_service)
 	{
-		_underlying_management_db = underlying_management_db;
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
 		_data_bucket_service = data_bucket_service;
 
 		_auth = Optional.empty();
@@ -96,7 +97,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
-	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
+	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {		
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -106,8 +107,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
 			SharedLibraryBean library, Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO (ALEPH-19) add this
+		throw new RuntimeException("Method not yet supported");
 	}
 
 	/* (non-Javadoc)
@@ -130,16 +131,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerBucketState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO (ALEPH-19) add this
+		throw new RuntimeException("Method not yet supported");
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAnalyticThreadStore()
 	 */
 	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO (ALEPH-19) add this
+		throw new RuntimeException("Method not yet supported");
 	}
 
 	/* (non-Javadoc)
@@ -147,8 +148,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerAnalyticThreadState(Class<T> clazz,
 			AnalyticThreadBean analytic_thread, Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO (ALEPH-19) add this
+		throw new RuntimeException("Method not yet supported");
 	}
 
 	/* (non-Javadoc)
@@ -156,14 +157,13 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> T getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("No underlying drivers for CoreManagementDbService - did you want to get the underlying IManagementDbService? Use IServiceContext.getService(IManagementDbService.class, ...) if so.");
 	}
 
 	/** This service needs to load some additional classes via Guice. Here's the module that defines the bindings
 	 * @return
 	 */
-	public List<Module> getDependencyModules() {
+	public static List<Module> getExtraDependencyModules() {
 		return Arrays.asList((Module)new CoreManagementDbModule());
 	}
 	

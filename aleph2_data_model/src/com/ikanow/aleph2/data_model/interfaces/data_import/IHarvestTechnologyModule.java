@@ -45,10 +45,11 @@ public interface IHarvestTechnologyModule {
 	 * 
 	 * @param new_bucket - a new bucket associated with this harvester
 	 * @param context - the context available to this harvester
+	 * @param enabled - whether the bucket is enabled
 	 * @return A future for the response
 	 */
 	@NonNull 
-	CompletableFuture<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context, final boolean enabled);
 	
 	/**
 	 * Handles changes to an existing bucket

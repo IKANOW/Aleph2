@@ -28,12 +28,13 @@ import akka.pattern.Patterns;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
+import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
@@ -50,6 +51,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final IManagementDbService _underlying_management_db;
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
+	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_store_db;
 	
 	protected final ManagementDbActorContext _actor_context;
 	
@@ -57,12 +59,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param underlying_management_db
 	 */
 	@Inject
-	public DataBucketCrudService(
-			final @Named("management_db_service") IManagementDbService underlying_management_db)
+	public DataBucketCrudService(final IServiceContext service_context)
 	{
-		_underlying_management_db = underlying_management_db;
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
-
+		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
+		
 		_actor_context = ManagementDbActorContext.get();
 		
 		//DEBUG
@@ -77,6 +79,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = underlying_data_bucket_db;
+		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
 		_actor_context = ManagementDbActorContext.get();		
 	}
 	
@@ -89,7 +92,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) 
 	{
-		return new DataBucketCrudService(_underlying_management_db, _underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
+		return new DataBucketCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
+				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
 	}
 
 	/* (non-Javadoc)
