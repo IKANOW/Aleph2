@@ -49,7 +49,7 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 	 */
 	@NonNull 
 	@Override
-	ICrudService<O> getFilteredRepo(final @NonNull String authorization_fieldname, final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
+	IManagementCrudService<O> getFilteredRepo(final @NonNull String authorization_fieldname, final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
 	
 	//////////////////////////////////////////////////////
 	

@@ -68,16 +68,28 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
 	}
+
+	/** User constructor, for wrapping
+	 * @param underlying_management_db
+	 * @param underlying_data_bucket_db
+	 */
+	public DataBucketCrudService(IManagementDbService underlying_management_db, ICrudService<DataBucketBean> underlying_data_bucket_db)
+	{
+		_underlying_management_db = underlying_management_db;
+		_underlying_data_bucket_db = underlying_data_bucket_db;
+		_actor_context = ManagementDbActorContext.get();		
+	}
+	
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getFilteredRepo(java.lang.String, java.util.Optional, java.util.Optional)
 	 */
-	public ICrudService<DataBucketBean> getFilteredRepo(
+	public IManagementCrudService<DataBucketBean> getFilteredRepo(
 			String authorization_fieldname,
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) 
 	{
-		return _underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth);
+		return new DataBucketCrudService(_underlying_management_db, _underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
 	}
 
 	/* (non-Javadoc)
