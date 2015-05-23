@@ -32,8 +32,6 @@ import com.mongodb.DBCollection;
 
 public class TestManagementDbUtils {
 
-	//TODO remove spring once this is tested
-	
 	public static class TestBean {
 		String _id;
 		String test;

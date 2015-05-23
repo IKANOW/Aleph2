@@ -100,7 +100,8 @@ public class BucketActionSupervisor extends UntypedActor {
 	{
 		RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, timeout);
 		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
-		return FutureUtils.wrap(Patterns.ask(supervisor, m, 2*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));
+		return FutureUtils.wrap(Patterns.ask(supervisor, m, 5*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));
+			//(choose has longer timeout because of retries)
 	}
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)

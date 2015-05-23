@@ -28,12 +28,14 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.PartialFunction;
+import scala.Tuple2;
 import scala.concurrent.duration.FiniteDuration;
 import scala.runtime.BoxedUnit;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
@@ -69,17 +71,18 @@ public class BucketActionChooseActor extends AbstractActor {
 		protected void reset() {
 			reply_list.clear();
 			data_import_manager_set.clear();
-			targeted_actor = null;
+			targeted_source = null;
 			current_timeout_id = null;
 		}
-		protected final List<ActorRef> reply_list = new LinkedList<ActorRef>();
+		protected final List<Tuple2<String, ActorRef>> reply_list = new LinkedList<Tuple2<String, ActorRef>>();
 		protected final HashSet<String> data_import_manager_set = new HashSet<String>();
 		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
 		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<BucketActionMessage>();
 		// (These are genuinely mutable, can change if the actor resets and tries a different target)
-		protected ActorRef targeted_actor = null;
+		protected Tuple2<String, ActorRef> targeted_source; 
 		protected String current_timeout_id = null;
 		protected int tries = 0;
+		protected HashSet<String> blacklist = new HashSet<String>();
 	}
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
@@ -113,7 +116,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			.match(BucketActionWillAcceptMessage.class, 
 				m -> {
 					_state.data_import_manager_set.remove(m.source());
-					_state.reply_list.add(this.sender());
+					_state.reply_list.add(Tuples._2T(m.source(), this.sender()));
 					this.checkIfComplete();
 				})
 			.match(BucketActionIgnoredMessage.class, 
@@ -121,7 +124,7 @@ public class BucketActionChooseActor extends AbstractActor {
 					_state.data_import_manager_set.remove(m.source());
 					this.checkIfComplete();
 				})
-			.match(BucketActionTimeoutMessage.class, m -> m.uuid().equals(_state.current_timeout_id),
+			.match(BucketActionTimeoutMessage.class, m -> m.source().equals(_state.current_timeout_id),
 				m -> {
 					this.pickAndSend();
 				})				
@@ -134,11 +137,11 @@ public class BucketActionChooseActor extends AbstractActor {
 					this.sendReplyAndClose(BeanTemplateUtils
 							.clone(m.reply()).with(BasicMessageBean::source, m.source()).done());
 				})
-			.match(BucketActionIgnoredMessage.class, __ -> this.sender().equals(_state.targeted_actor),
+			.match(BucketActionIgnoredMessage.class, __ -> this.sender().equals(_state.targeted_source._2()),
 				m -> {
 					this.abortAndRetry(true);
 				})
-			.match(BucketActionTimeoutMessage.class, m -> m.uuid().equals(_state.current_timeout_id),
+			.match(BucketActionTimeoutMessage.class, m -> m.source().equals(_state.current_timeout_id),
 				m -> {
 					this.abortAndRetry(true);
 				})				
@@ -164,6 +167,7 @@ public class BucketActionChooseActor extends AbstractActor {
 				);
 		
 		if (allow_retries && (++_state.tries < MAX_TRIES)) {
+			_state.blacklist.add(_state.targeted_source._1()); //TODO blacklist
 			_state.reset();
 			
 			this.broadcastAction(_state.original_message.get());
@@ -181,14 +185,15 @@ public class BucketActionChooseActor extends AbstractActor {
 		if (!_state.reply_list.isEmpty()) {
 			// Pick at random from the actors that replied
 			final Random r = new Random();
-			_state.targeted_actor = _state.reply_list.get(r.nextInt(_state.reply_list.size()));
+			_state.targeted_source = _state.reply_list.get(r.nextInt(_state.reply_list.size()));
 			
 			_logger.info("actor_id=" + this.self().toString()
-					+ "; picking_actor=" + _state.targeted_actor 
+					+ "; picking_actor=" + _state.targeted_source._2() 
+					+ "; picking_source=" + _state.targeted_source._1() 
 					);
 			
 			// Forward the message on
-			_state.targeted_actor.tell(_state.original_message, this.self());
+			_state.targeted_source._2().tell(_state.original_message.get(), this.self());
 			
 			// Schedule a timeout
 			_state.current_timeout_id = UuidUtils.get().getRandomUuid();
@@ -223,10 +228,15 @@ public class BucketActionChooseActor extends AbstractActor {
 				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
 			}
 			
+			// Remove any blacklisted nodes:
+			_state.data_import_manager_set.removeAll(_state.blacklist);
+			
 			//(log)
 			_logger.info("message_id=" + message
 					+ "; actor_id=" + this.self().toString()
-					+ "; candidates_found=" + _state.data_import_manager_set.size());
+					+ "; candidates_found=" + _state.data_import_manager_set.size()
+					+ "; blacklisted=" + _state.blacklist.size()
+					);
 			
 			// 2) Then message all of the actors that we believe are present and wait for the response
 			

@@ -17,7 +17,6 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -39,7 +38,6 @@ import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.DeleteBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
@@ -64,7 +62,6 @@ public class TestBucketActionChooseActor {
 		private final String uuid;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
-			//TODO: handle differently based on whether it's an offer message or a real message
 			_logger.info("Refuse from: " + uuid);
 			
 			this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
@@ -79,24 +76,64 @@ public class TestBucketActionChooseActor {
 		private final String uuid;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
-			//TODO: handle differently based on whether it's an offer message or a real message
-			_logger.info("Accept from: " + uuid);
-			
-			this.sender().tell(
-					new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
-							new BasicMessageBean(
-									new Date(),
-									true,
-									uuid + "replaceme", // (this gets replaced by the bucket)
-									arg0.getClass().getSimpleName(),
-									null,
-									"handled",
-									null									
-									)),
-					this.self());
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Accept MESSAGE from: " + uuid);
+				this.sender().tell(
+						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+								new BasicMessageBean(
+										new Date(),
+										true,
+										uuid + "replaceme", // (this gets replaced by the bucket)
+										arg0.getClass().getSimpleName(),
+										null,
+										"handled",
+										null									
+										)),
+						this.self());
+			}
 		}		
 	}
 	
+	// This one always accepts, but then refuses when it comes down to it...
+	public static class TestActor_Accepter_Refuser extends UntypedActor {
+		public TestActor_Accepter_Refuser(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Refuse MESSAGE from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
+			}
+		}		
+	}	
+	
+	// This one always accepts, but then refuses when it comes down to it...
+	public static class TestActor_Accepter_Timeouter extends UntypedActor {
+		public TestActor_Accepter_Timeouter(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Timeout on MESSAGE from: " + uuid);
+			}
+		}		
+	}
 	
 	@Before
 	public void testSetup() throws Exception {
@@ -216,9 +253,6 @@ public class TestBucketActionChooseActor {
 	
 	/////////////////////////////////////////
 	
-	//TODO from down here, everything changes...
-	/*
-	
 	@Test
 	public void distributionTest_allActorsHandle() throws Exception {
 		
@@ -261,7 +295,7 @@ public class TestBucketActionChooseActor {
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
-		assertEquals(5, reply.replies().size());
+		assertEquals(1, reply.replies().size());
 
 		for (BasicMessageBean reply_bean: reply.replies()) {
 		
@@ -270,7 +304,6 @@ public class TestBucketActionChooseActor {
 			assertEquals("handled", reply_bean.message());
 			assertEquals(true, reply_bean.success());
 		}
-		assertTrue("All replies received", uuids.isEmpty());
 	}
 	
 	@Test
@@ -326,7 +359,7 @@ public class TestBucketActionChooseActor {
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
-		assertEquals(3, reply.replies().size());
+		assertEquals(1, reply.replies().size());
 
 		for (BasicMessageBean reply_bean: reply.replies()) {
 		
@@ -335,7 +368,6 @@ public class TestBucketActionChooseActor {
 			assertEquals("handled", reply_bean.message());
 			assertEquals(true, reply_bean.success());
 		}
-		assertTrue("All replies received", accept_uuids.isEmpty());
 	}
 	
 	@Test
@@ -381,9 +413,9 @@ public class TestBucketActionChooseActor {
 
 		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
 		
-		assertEquals((Integer)3, (Integer)reply.timed_out().size());
+		assertEquals((Integer)0, (Integer)reply.timed_out().size()); // (only get the timeout from the 0/1 requested nodes)
 		
-		assertEquals(3, reply.replies().size());
+		assertEquals(1, reply.replies().size());
 
 		for (BasicMessageBean reply_bean: reply.replies()) {
 		
@@ -392,9 +424,96 @@ public class TestBucketActionChooseActor {
 			assertEquals("handled", reply_bean.message());
 			assertEquals(true, reply_bean.success());
 		}
-		assertTrue("All replies received", accept_uuids.isEmpty());
 		
 	}
-	*/
+	
+	@Test
+	public void distributionTest_allActorsHandle_butThenWelch() throws Exception {
+		
+		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
+		
+		final HashSet<String> uuids = new HashSet<String>();
+		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Refuser.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Now do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+				BeanTemplateUtils.build(DataBucketBean.class).done().get());
+		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor: ", time_elapsed < 1000L);
 
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		assertEquals(0, reply.replies().size());
+	}
+	
+	@Test
+	public void distributionTest_allActorsHandle_butThenTimeout() throws Exception {
+		
+		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
+		
+		final HashSet<String> uuids = new HashSet<String>();
+		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Timeouter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Now do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+				BeanTemplateUtils.build(DataBucketBean.class).done().get());
+		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Should have timed out in actor: ", time_elapsed >= 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 5000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		assertEquals(0, reply.replies().size());
+	}
 }

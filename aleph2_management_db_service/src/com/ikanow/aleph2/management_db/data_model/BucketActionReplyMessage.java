@@ -33,11 +33,11 @@ public class BucketActionReplyMessage {
 	 * @author acp
 	 */
 	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {
-		public BucketActionTimeoutMessage(final @NonNull String uuid) {
-			this.uuid = uuid;
+		public BucketActionTimeoutMessage(final @NonNull String source) {
+			this.source = source;
 		}
-		@NonNull public String uuid() { return uuid; }
-		private final String uuid;
+		@NonNull public String source() { return source; }
+		private final String source;
 	}
 	
 	/** The message a BucketAction*Actor sends out when it is complete
