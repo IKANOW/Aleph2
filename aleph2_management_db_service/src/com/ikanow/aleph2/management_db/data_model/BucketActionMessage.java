@@ -15,6 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.data_model;
 
+import java.util.Collections;
+import java.util.Set;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorRef;
@@ -42,7 +45,10 @@ public class BucketActionMessage {
 		protected final BucketActionMessage message;
 	}	
 
-	private BucketActionMessage() {}
+	private BucketActionMessage() { handling_clients = Collections.emptySet(); }
+	private BucketActionMessage(final @NonNull Set<String> handling_clients) { this.handling_clients = handling_clients; }
+	@NonNull public Set<String> handling_clients() { return handling_clients; }
+	private final Set<String> handling_clients;
 
 	/** Offer a single node bucket to see who wants it
 	 * @author acp
@@ -60,6 +66,18 @@ public class BucketActionMessage {
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
 		public NewBucketActionMessage(final @NonNull DataBucketBean bucket) {
+			this.bucket = bucket;
+		}
+		@NonNull public DataBucketBean bucket() { return bucket; };
+		private final DataBucketBean bucket;
+	}
+	
+	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running
+	 * @author acp
+	 */
+	public static class DeleteBucketActionMessage extends BucketActionMessage {
+		public DeleteBucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) {
+			super(handling_clients);
 			this.bucket = bucket;
 		}
 		@NonNull public DataBucketBean bucket() { return bucket; };

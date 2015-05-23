@@ -73,12 +73,16 @@ public class DataBucketChangeActor extends AbstractActor {
 
 	// Stateless actor
 	
+	//TODO: need to replace getProcessUuid with ... something ... hostname??!
+	
 	 /* (non-Javadoc)
 	 * @see akka.actor.AbstractActor#receive()
 	 */
 	@Override
 	 public PartialFunction<Object, BoxedUnit> receive() {
 	    return ReceiveBuilder
+	    		.match(BucketActionOfferMessage.class, m -> m.handling_clients().contains(HostInformationUtils.getProcessUuid()),
+	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionOfferMessage.class, 
 		    		m -> {
 		    			Either<BasicMessageBean, Tuple2<DataBucketBean, SharedLibraryBean>> validated_bucket =

@@ -37,6 +37,19 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public class FutureUtils {
 
+	/** Generates a future that will error as soon as it's touched
+	 * @param e - the underlying exception
+	 * @return a future that errors when touched
+	 */
+	@NonNull
+	public static <T> CompletableFuture<T> returnError(final @NonNull Exception e) {
+		return new CompletableFuture<T>() {
+			@Override public T get() throws ExecutionException {
+				throw new ExecutionException(e);
+			}
+		};		
+	}
+	
 	/** Wraps a scala Future in a completable future 
 	 * @param f the scala Future
 	 * @return the CompletableFuture

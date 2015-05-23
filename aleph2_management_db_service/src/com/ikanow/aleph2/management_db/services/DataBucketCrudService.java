@@ -15,16 +15,17 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
-import akka.actor.ActorRef;
-import akka.pattern.Patterns;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
@@ -36,11 +37,13 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 /**
  * @author acp
@@ -66,31 +69,29 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
 		
 		_actor_context = ManagementDbActorContext.get();
-		
-		//DEBUG
-		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
 	}
 
 	/** User constructor, for wrapping
 	 * @param underlying_management_db
 	 * @param underlying_data_bucket_db
 	 */
-	public DataBucketCrudService(IManagementDbService underlying_management_db, ICrudService<DataBucketBean> underlying_data_bucket_db)
+	public DataBucketCrudService(final @NonNull IManagementDbService underlying_management_db, 
+			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db)
 	{
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = underlying_data_bucket_db;
 		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
 		_actor_context = ManagementDbActorContext.get();		
 	}
-	
-	
+		
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getFilteredRepo(java.lang.String, java.util.Optional, java.util.Optional)
 	 */
+	@NonNull
 	public IManagementCrudService<DataBucketBean> getFilteredRepo(
-			String authorization_fieldname,
-			Optional<AuthorizationBean> client_auth,
-			Optional<ProjectBean> project_auth) 
+			final @NonNull String authorization_fieldname,
+			final @NonNull Optional<AuthorizationBean> client_auth,
+			final @NonNull Optional<ProjectBean> project_auth) 
 	{
 		return new DataBucketCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
@@ -99,129 +100,135 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object, boolean)
 	 */
-	public ManagementFuture<Supplier<Object>> storeObject(DataBucketBean new_object,
-			boolean replace_if_present)
+	@NonNull
+	public ManagementFuture<Supplier<Object>> storeObject(final @NonNull DataBucketBean new_object, final boolean replace_if_present)
 	{
-		if (replace_if_present) {
-			// this is an update
+		//TODO Bucket validation:
+		// - Does the user have access rights on the parent directories
+		// - Do the directories exist? 
+		
+		if (replace_if_present && (null != new_object._id())) {
+			//TODO check if the object is present, if not then it's an update return that instead
 		}
-		else {
-			// this is a store
-			return this.storeObject(new_object);
-		}
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object)
-	 */
-	public ManagementFuture<Supplier<Object>> storeObject(DataBucketBean new_object) {
 		try {
-			// TODO Auto-generated method stub
-			
-			//TODO Bucket validation
-			
 			// OK if the bucket is validated we can store it (and create a status object)
 					
-			CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object);
-			
-			//TODO more checks if something has gone wrong (eg already exists)
+			CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, false);
+
+			// Check if the low level store has failed:
+			Object id = null;
 			try {
-				@SuppressWarnings("unused")
-				Object id = ret_val.get().get();
+				id = ret_val.get().get().toString();
 			}
-			catch (Exception e) {
-				// Almost certainly means that the object exists 
+			catch (Exception e) { // just pass the raw result back up
+				return FutureUtils.createManagementFuture(ret_val);
 			}			
+			// Create the directories
 			
-			// OK if we're here then it's time to notify any interested harvesters
+			// We've created a new bucket but is it enabled or not?
 			
-			final ActorRef actor = _actor_context.getActorSystem().actorOf(null, "TODO");
-			
-			final long STORE_OBJECT_TIMEOUT = 5000L;
-			
-			//TODO xxx is a serializable from the data model containing the 
+			CompletableFuture<Optional<DataBucketStatusBean>> bucket_status = _underlying_data_bucket_store_db.getObjectById(id);
 			@SuppressWarnings("unused")
-			scala.concurrent.Future<?> reply = Patterns.ask(actor, "xxx", STORE_OBJECT_TIMEOUT);
+			Optional<DataBucketStatusBean> status = null;
+			try {
+				status = bucket_status.get();
+			}
+			catch (Exception e) { // just pass the raw result back up
+				// Hmm not sure what's going on - just treat this like the status didn't exist:
+				status = Optional.empty();
+			}			
+
+			// OK if we're here then it's time to notify any interested harvesters
+
 			
-			//TODO wrap this future in a management future
+			//TODO
 		}
-		catch (Exception e) { // This is unexpected, pass it along in the future
+		catch (Exception e) {
 			//TODO
 		}
 		return null;
 	}
 
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object)
+	 */
+	@NonNull
+	public ManagementFuture<Supplier<Object>> storeObject(final @NonNull DataBucketBean new_object) {
+		return this.storeObject(new_object, false);
+	}
+
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObjects(java.util.List, boolean)
 	 */
-	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
-			List<DataBucketBean> new_objects, boolean continue_on_error) {
-		// TODO Auto-generated method stub
-		return null;
+	@NonNull
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<DataBucketBean> new_objects, final boolean continue_on_error) {
+		throw new RuntimeException("This method is not supported, call storeObject on each object separately");
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObjects(java.util.List)
 	 */
-	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
-			List<DataBucketBean> new_objects) {
-		// TODO Auto-generated method stub
-		return null;
+	@NonNull
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<DataBucketBean> new_objects) {
+		return this.storeObjects(new_objects, false);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#optimizeQuery(java.util.List)
 	 */
-	public ManagementFuture<Boolean> optimizeQuery(List<String> ordered_field_list) {
+	@NonNull
+	public ManagementFuture<Boolean> optimizeQuery(final @NonNull List<String> ordered_field_list) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.optimizeQuery(ordered_field_list));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deregisterOptimizedQuery(java.util.List)
 	 */
-	public boolean deregisterOptimizedQuery(List<String> ordered_field_list) {
+	public boolean deregisterOptimizedQuery(final @NonNull List<String> ordered_field_list) {
 		return _underlying_data_bucket_db.deregisterOptimizedQuery(ordered_field_list);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(
-			QueryComponent<DataBucketBean> unique_spec) {
+	@NonNull
+	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(final @NonNull QueryComponent<DataBucketBean> unique_spec) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
 	 */
+	@NonNull
 	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(
-			QueryComponent<DataBucketBean> unique_spec,
-			List<String> field_list, boolean include) {
+			final @NonNull QueryComponent<DataBucketBean> unique_spec,
+			final @NonNull List<String> field_list, final boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectById(java.lang.Object)
 	 */
-	public ManagementFuture<Optional<DataBucketBean>> getObjectById(Object id) {
+	@NonNull
+	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final @NonNull Object id) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectById(java.lang.Object, java.util.List, boolean)
 	 */
-	public ManagementFuture<Optional<DataBucketBean>> getObjectById(Object id,
-			List<String> field_list, boolean include) {
+	@NonNull
+	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final @NonNull Object id,
+			final @NonNull List<String> field_list, final boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
-			QueryComponent<DataBucketBean> spec)
+	@NonNull
+	public ManagementFuture<ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
+			final @NonNull QueryComponent<DataBucketBean> spec)
 	{
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec));
 	}
@@ -229,9 +236,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
 	 */
-	public ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
-			QueryComponent<DataBucketBean> spec, List<String> field_list,
-			boolean include)
+	@NonNull
+	public ManagementFuture<ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
+			final @NonNull QueryComponent<DataBucketBean> spec, final @NonNull List<String> field_list,
+			final boolean include)
 	{
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec, field_list, include));
 	}
@@ -239,13 +247,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<Long> countObjectsBySpec(QueryComponent<DataBucketBean> spec) {
+	@NonNull
+	public ManagementFuture<Long> countObjectsBySpec(final @NonNull QueryComponent<DataBucketBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjects()
 	 */
+	@NonNull
 	public ManagementFuture<Long> countObjects() {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjects());
 	}
@@ -253,39 +263,128 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectById(java.lang.Object)
 	 */
-	public ManagementFuture<Boolean> deleteObjectById(Object id) {
-		// TODO Auto-generated method stub
-		return null;
+	@NonNull
+	public ManagementFuture<Boolean> deleteObjectById(final @NonNull Object id) {		
+		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectById(id);		
+		try {
+			if (result.get().isPresent()) {
+				return this.deleteBucket(result.get().get());
+			}
+			else {
+				return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false));
+			}
+		}
+		catch (Exception e) {
+			// This is a serious enough exception that we'll just leave here
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));			
+		}
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<Boolean> deleteObjectBySpec(
-			QueryComponent<DataBucketBean> unique_spec) {
-		// TODO Auto-generated method stub
-		return null;
+	@NonNull
+	public ManagementFuture<Boolean> deleteObjectBySpec(final @NonNull QueryComponent<DataBucketBean> unique_spec) {
+		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectBySpec(unique_spec);
+		try {
+			if (result.get().isPresent()) {
+				return this.deleteBucket(result.get().get());
+			}
+			else {
+				return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false));
+			}
+		}
+		catch (Exception e) {
+			// This is a serious enough exception that we'll just leave here
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));			
+		}
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<Long> deleteObjectsBySpec(QueryComponent<DataBucketBean> spec) {
-		// TODO Auto-generated method stub
-		return null;
+	public ManagementFuture<Long> deleteObjectsBySpec(final @NonNull QueryComponent<DataBucketBean> spec) {
+		
+		// Need to do these one by one:
+
+		CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
+		
+		try {
+			final List<Tuple2<Boolean, CompletableFuture<Collection<BasicMessageBean>>>> collected_deletes =
+				StreamSupport.stream(to_delete.get().spliterator(), false)
+					.<Tuple2<Boolean, CompletableFuture<Collection<BasicMessageBean>>>>map(bucket -> {
+						final ManagementFuture<Boolean> single_delete = deleteBucket(bucket);
+						try { // check it doesn't do anything horrible
+							return Tuples._2T(single_delete.get(), single_delete.getManagementResults());
+						}
+						catch (Exception e) {
+							// Something went wrong, this is bad - just carry on though, there's not much to be
+							// done and this shouldn't ever happen anyway
+							return null;
+						}
+					})
+					.filter(reply -> null != reply)
+					.collect(Collectors.toList());
+			
+			final long deleted = collected_deletes.stream().collect(Collectors.summingLong(reply -> reply._1() ? 1 : 0));
+			
+			final List<CompletableFuture<Collection<BasicMessageBean>>> replies = 
+					collected_deletes.stream()
+							.<CompletableFuture<Collection<BasicMessageBean>>>map(reply -> reply._2())
+							.collect(Collectors.toList());
+			
+			final CompletableFuture<Void> all_done_future = CompletableFuture.allOf(replies.toArray(new CompletableFuture[replies.size()]));										
+			
+			return (ManagementFuture<Long>) FutureUtils.createManagementFuture(
+					CompletableFuture.completedFuture(deleted), 
+					all_done_future.thenApply(__ -> 
+							replies.stream().flatMap(reply -> reply.join().stream()).collect(Collectors.toList())));
+		}
+		catch (Exception e) {
+			// This is a serious enough exception that we'll just leave here
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));
+		}
 	}
 
+	/** Internal function to delete the bucket, while notifying active users of the bucket
+	 * @param to_delete
+	 * @return a management future containing the result 
+	 */
+	@NonNull
+	private ManagementFuture<Boolean> deleteBucket(final @NonNull DataBucketBean to_delete) {
+		try {
+			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
+			
+			//TODO don't forget to delete teh status also
+			
+			//TODO notify via buckets
+			
+			//TODO (ALEPH-19): If any elements have timed out then we should add them to a bus where we'll try again intermittently? 
+			
+			return FutureUtils.createManagementFuture(delete_reply);
+		}
+		catch (Exception e) {
+			// This is a serious enough exception that we'll just leave here
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));			
+		}
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteDatastore()
 	 */
+	@NonNull
 	public ManagementFuture<Boolean> deleteDatastore() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("This method is not supported");
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawCrudService()
 	 */
+	@NonNull
 	public IManagementCrudService<JsonNode> getRawCrudService() {
 		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
 	}
@@ -293,6 +392,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getSearchService()
 	 */
+	@NonNull
 	public Optional<IBasicSearchService<DataBucketBean>> getSearchService() {
 		return _underlying_data_bucket_db.getSearchService();
 	}
@@ -300,8 +400,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
-	public <T> T getUnderlyingPlatformDriver(Class<T> driver_class,
-			Optional<String> driver_options)
+	@NonNull
+	public <T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class,
+			final @NonNull Optional<String> driver_options)
 	{
 		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
 	}
@@ -310,8 +411,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectById(java.lang.Object, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public @NonNull ManagementFuture<Boolean> updateObjectById(
-			@NonNull Object id, @NonNull UpdateComponent<DataBucketBean> update) {
+	public @NonNull 
+	ManagementFuture<Boolean> updateObjectById(
+			final @NonNull Object id, final @NonNull UpdateComponent<DataBucketBean> update) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -321,9 +423,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	@Override
 	public @NonNull ManagementFuture<Boolean> updateObjectBySpec(
-			@NonNull QueryComponent<DataBucketBean> unique_spec,
-			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<DataBucketBean> update) {
+			final @NonNull QueryComponent<DataBucketBean> unique_spec,
+			final @NonNull Optional<Boolean> upsert,
+			final @NonNull UpdateComponent<DataBucketBean> update) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -333,9 +435,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	@Override
 	public @NonNull ManagementFuture<Long> updateObjectsBySpec(
-			@NonNull QueryComponent<DataBucketBean> spec,
-			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<DataBucketBean> update) {
+			final @NonNull QueryComponent<DataBucketBean> spec,
+			final @NonNull Optional<Boolean> upsert,
+			final @NonNull UpdateComponent<DataBucketBean> update) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -345,11 +447,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	@Override
 	public @NonNull ManagementFuture<Optional<DataBucketBean>> updateAndReturnObjectBySpec(
-			@NonNull QueryComponent<DataBucketBean> unique_spec,
-			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<DataBucketBean> update,
-			Optional<Boolean> before_updated, @NonNull List<String> field_list,
-			boolean include) {
+			final @NonNull QueryComponent<DataBucketBean> unique_spec,
+			final @NonNull Optional<Boolean> upsert,
+			final @NonNull UpdateComponent<DataBucketBean> update,
+			final @NonNull Optional<Boolean> before_updated, @NonNull List<String> field_list,
+			final boolean include) {
 		// TODO Auto-generated method stub
 		return null;
 	}

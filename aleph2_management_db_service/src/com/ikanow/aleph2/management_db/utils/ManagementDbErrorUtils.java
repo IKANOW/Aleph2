@@ -18,6 +18,6 @@ package com.ikanow.aleph2.management_db.utils;
 /** Core Management DB errors
  * @author acp
  */
-public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
+public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 
 }

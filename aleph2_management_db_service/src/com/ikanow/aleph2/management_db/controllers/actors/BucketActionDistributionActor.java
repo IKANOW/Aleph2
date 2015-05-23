@@ -61,6 +61,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 		protected ActorRef original_sender = null;
 		protected final List<BasicMessageBean> reply_list;
 		protected final HashSet<String> data_import_manager_set;
+		protected boolean restrict_replies = false;
 	}
 	final protected MutableState _state = new MutableState();
 	final protected FiniteDuration _timeout;
@@ -93,14 +94,17 @@ public class BucketActionDistributionActor extends AbstractActor {
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReplies = ReceiveBuilder
 			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
 				m -> {
-					_state.reply_list.add(m.reply());
-					_state.data_import_manager_set.remove(m.uuid());
-					this.checkIfComplete();
+					if (_state.data_import_manager_set.remove(m.uuid()) || !_state.restrict_replies)
+					{
+						_state.reply_list.add(m.reply());
+						this.checkIfComplete();
+					}
 				})
 			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
 				m -> {
-					_state.data_import_manager_set.remove(m.uuid());
-					this.checkIfComplete();
+					if (_state.data_import_manager_set.remove(m.uuid())) {
+						this.checkIfComplete();
+					}
 				})
 			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
 				m -> {
@@ -129,14 +133,21 @@ public class BucketActionDistributionActor extends AbstractActor {
 			
 			// 1a) Check how many people are registered as listening from zookeeper/curator
 			
-			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
+			if (message.handling_clients().isEmpty()) { // in this case we will broadcast it to anybody listening
 			
-			try {
-				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+				CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
+				
+				try {
+					_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+				}
+				catch (NoNodeException e) { 
+					// This is OK
+					_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+				}
 			}
-			catch (NoNodeException e) { 
-				// This is OK
-				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+			else { // just use the list I've been given
+				_state.restrict_replies = true;
+				_state.data_import_manager_set.addAll(message.handling_clients());
 			}
 			
 			//(log)
