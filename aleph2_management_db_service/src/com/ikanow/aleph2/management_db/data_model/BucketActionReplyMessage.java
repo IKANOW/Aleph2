@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.management_db.data_model;
 
 import java.util.List;
+import java.util.Set;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -37,14 +38,15 @@ public class BucketActionReplyMessage {
 	 * @author acp
 	 */
 	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
-		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, final int timed_out) {
+		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, Set<String> timed_out)
+		{
 			this.replies = replies;
 			this.timed_out = timed_out;			
 		}		
 		public List<BasicMessageBean> replies() { return replies; }
-		public Integer timed_out() { return timed_out; }
+		public Set<String> timed_out() { return timed_out; }
 		private final List<BasicMessageBean> replies;
-		private final Integer timed_out;
+		private final Set<String> timed_out;
 	}
 	
 	/** When a data import manager will accept a bucket action

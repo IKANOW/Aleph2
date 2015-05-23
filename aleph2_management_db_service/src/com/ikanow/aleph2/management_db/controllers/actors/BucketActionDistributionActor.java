@@ -29,6 +29,7 @@ import scala.concurrent.duration.FiniteDuration;
 import scala.runtime.BoxedUnit;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
@@ -54,18 +55,15 @@ public class BucketActionDistributionActor extends AbstractActor {
 	
 	protected class MutableState {
 		
-		public MutableState() {
-			reply_list = new LinkedList<BasicMessageBean>(); 
-			data_import_manager_set = new HashSet<String>();
-		}		
-		protected ActorRef original_sender = null;
-		protected final List<BasicMessageBean> reply_list;
-		protected final HashSet<String> data_import_manager_set;
-		protected boolean restrict_replies = false;
+		public MutableState() {}		
+		protected final List<BasicMessageBean> reply_list = new LinkedList<BasicMessageBean>();
+		protected final HashSet<String> data_import_manager_set = new HashSet<String>();
+		protected final HashSet<String> down_targeted_clients = new HashSet<String>();
+		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
+		protected final SetOnce<Boolean> restrict_replies = new SetOnce<Boolean>();
 	}
 	final protected MutableState _state = new MutableState();
-	final protected FiniteDuration _timeout;
-	
+	final protected FiniteDuration _timeout;	
 	protected final ManagementDbActorContext _system_context;
 	
 	///////////////////////////////////////////
@@ -94,7 +92,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReplies = ReceiveBuilder
 			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
 				m -> {
-					if (_state.data_import_manager_set.remove(m.uuid()) || !_state.restrict_replies)
+					if (_state.data_import_manager_set.remove(m.uuid()) || !_state.restrict_replies.get())
 					{
 						_state.reply_list.add(m.reply());
 						this.checkIfComplete();
@@ -127,28 +125,35 @@ public class BucketActionDistributionActor extends AbstractActor {
 	
 	protected void broadcastAction(final @NonNull BucketActionMessage message) {
 		try {
-			_state.original_sender = this.sender();
+			_state.original_sender.set(this.sender());
 			
 			// 1) Get a list of potential actors 
 			
 			// 1a) Check how many people are registered as listening from zookeeper/curator
+
+			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
-			if (message.handling_clients().isEmpty()) { // in this case we will broadcast it to anybody listening
-			
-				CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
-				
-				try {
-					_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+			try {
+				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+				if (!message.handling_clients().isEmpty()) { // Intersection of: targeted clients and available clients
+					_state.data_import_manager_set.retainAll(message.handling_clients());
+					_state.restrict_replies.set(true);
+					if (message.handling_clients().size() != _state.data_import_manager_set.size()) {
+						//OK what's happened here is that a targeted client is not currently up, we'll just save this
+						//and insert them back in at the end (but without timing out)
+						_state.down_targeted_clients.addAll(message.handling_clients());
+						_state.down_targeted_clients.removeAll(_state.data_import_manager_set);
+					}
 				}
-				catch (NoNodeException e) { 
-					// This is OK
-					_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+				else { // (just set the corresponding set_once)
+					_state.restrict_replies.set(false);					
 				}
 			}
-			else { // just use the list I've been given
-				_state.restrict_replies = true;
-				_state.data_import_manager_set.addAll(message.handling_clients());
+			catch (NoNodeException e) { 
+				// This is OK
+				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
 			}
+			
 			
 			//(log)
 			_logger.info("message_id=" + message
@@ -185,9 +190,12 @@ public class BucketActionDistributionActor extends AbstractActor {
 	protected void sendReplyAndClose() {
 		//(log)
 		_logger.info("actor_id=" + this.self().toString()
-				+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size());
+				+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size() + "; down=" + _state.down_targeted_clients.size());
+
+		// (can mutate this since we're about to delete the entire object)
+		_state.down_targeted_clients.addAll(_state.data_import_manager_set);
 		
-		_state.original_sender.tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.data_import_manager_set.size()), 
+		_state.original_sender.get().tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.down_targeted_clients), 
 									this.self());		
 		this.context().stop(this.self());
 	}
