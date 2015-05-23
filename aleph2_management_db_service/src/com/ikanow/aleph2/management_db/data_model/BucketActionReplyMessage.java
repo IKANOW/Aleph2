@@ -32,7 +32,13 @@ public class BucketActionReplyMessage {
 	/** System message indicating that not all messages have been replied to in time
 	 * @author acp
 	 */
-	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {}
+	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {
+		public BucketActionTimeoutMessage(final @NonNull String uuid) {
+			this.uuid = uuid;
+		}
+		@NonNull public String uuid() { return uuid; }
+		private final String uuid;
+	}
 	
 	/** The message a BucketAction*Actor sends out when it is complete
 	 * @author acp
@@ -54,11 +60,11 @@ public class BucketActionReplyMessage {
 	 */
 	public static class BucketActionWillAcceptMessage extends BucketActionReplyMessage {
 		
-		public BucketActionWillAcceptMessage(final @NonNull String uuid) {
-			this.uuid = uuid;
+		public BucketActionWillAcceptMessage(final @NonNull String source) {
+			this.source = source;
 		}
-		public String uuid() { return uuid; }
-		private final String uuid;
+		public String source() { return source; }
+		private final String source;
 	}
 	
 	/** When a data import manager cannot or does not wish to handle a bucket action message
@@ -66,11 +72,11 @@ public class BucketActionReplyMessage {
 	 */
 	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage {
 		
-		public BucketActionIgnoredMessage(final @NonNull String uuid) {
-			this.uuid = uuid;
+		public BucketActionIgnoredMessage(final @NonNull String source) {
+			this.source = source;
 		}
-		public String uuid() { return uuid; }
-		private final String uuid;
+		public String source() { return source; }
+		private final String source;
 	}
 	
 	/** Encapsulates the reply from any requested bucket action
@@ -78,14 +84,14 @@ public class BucketActionReplyMessage {
 	 */
 	public static class BucketActionHandlerMessage extends BucketActionReplyMessage {
 		
-		public BucketActionHandlerMessage(final @NonNull String uuid, final @NonNull BasicMessageBean reply) {
-			this.uuid = uuid;
+		public BucketActionHandlerMessage(final @NonNull String source, final @NonNull BasicMessageBean reply) {
+			this.source = source;
 			this.reply = reply;
 		}
-		public String uuid() { return uuid; }
+		public String source() { return source; }
 		public BasicMessageBean reply() { return reply; }
 		
-		private final String uuid;
+		private final String source;
 		private final BasicMessageBean reply;
 	}
 }

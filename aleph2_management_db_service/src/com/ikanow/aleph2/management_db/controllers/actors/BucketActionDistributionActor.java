@@ -30,8 +30,14 @@ import scala.runtime.BoxedUnit;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionIgnoredMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.sun.istack.internal.logging.Logger;
@@ -62,8 +68,8 @@ public class BucketActionDistributionActor extends AbstractActor {
 		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
 		protected final SetOnce<Boolean> restrict_replies = new SetOnce<Boolean>();
 	}
-	final protected MutableState _state = new MutableState();
-	final protected FiniteDuration _timeout;	
+	protected final MutableState _state = new MutableState();
+	protected final FiniteDuration _timeout;	
 	protected final ManagementDbActorContext _system_context;
 	
 	///////////////////////////////////////////
@@ -90,21 +96,23 @@ public class BucketActionDistributionActor extends AbstractActor {
 			.build();
 			
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReplies = ReceiveBuilder
-			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
+			.match(BucketActionHandlerMessage.class, 
 				m -> {
-					if (_state.data_import_manager_set.remove(m.uuid()) || !_state.restrict_replies.get())
+					if (_state.data_import_manager_set.remove(m.source()) || !_state.restrict_replies.get())
 					{
-						_state.reply_list.add(m.reply());
+						// (note - overwriting the bean message source with the hostname)
+						_state.reply_list.add(BeanTemplateUtils
+												.clone(m.reply()).with(BasicMessageBean::source, m.source()).done());
 						this.checkIfComplete();
 					}
 				})
-			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
+			.match(BucketActionIgnoredMessage.class, 
 				m -> {
-					if (_state.data_import_manager_set.remove(m.uuid())) {
+					if (_state.data_import_manager_set.remove(m.source())) {
 						this.checkIfComplete();
 					}
 				})
-			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
+			.match(BucketActionTimeoutMessage.class, 
 				m -> {
 					this.sendReplyAndClose();
 				})				
@@ -160,16 +168,16 @@ public class BucketActionDistributionActor extends AbstractActor {
 					+ "; actor_id=" + this.self().toString()
 					+ "; candidates_found=" + _state.data_import_manager_set.size());
 			
-			// 2) Then message all of the actors who replied that they were interested and wait for the response
+			// 2) Then message all of the actors that we believe are present and wait for the response
 
 			if (!_state.data_import_manager_set.isEmpty()) {
 			
-				_system_context.getBucketActionMessageBus().publish(new BucketActionMessage.BucketActionEventBusWrapper(this.self(), message));
+				_system_context.getBucketActionMessageBus().publish(new BucketActionEventBusWrapper(this.self(), message));
 				
 				// 2b) Schedule a timeout
 				
 				_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
-							this.self(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
+							this.self(), new BucketActionTimeoutMessage(UuidUtils.get().getRandomUuid()), 
 								_system_context.getActorSystem().dispatcher(), null);
 	
 				// 3) Transition state
@@ -195,7 +203,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 		// (can mutate this since we're about to delete the entire object)
 		_state.down_targeted_clients.addAll(_state.data_import_manager_set);
 		
-		_state.original_sender.get().tell(new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(_state.reply_list, _state.down_targeted_clients), 
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(_state.reply_list, _state.down_targeted_clients), 
 									this.self());		
 		this.context().stop(this.self());
 	}

@@ -15,22 +15,37 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.PartialFunction;
 import scala.concurrent.duration.FiniteDuration;
 import scala.runtime.BoxedUnit;
 
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionWillAcceptMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionIgnoredMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.sun.istack.internal.logging.Logger;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -43,23 +58,33 @@ import akka.japi.pf.ReceiveBuilder;
  */
 public class BucketActionChooseActor extends AbstractActor {
 
+	public static final Logger _logger = Logger.getLogger(BucketActionChooseActor.class);
+		
 	///////////////////////////////////////////
 	
 	// State
 	
 	protected class MutableState {
-		public MutableState() {
-			reply_list = new LinkedList<ActorRef>(); 
-			data_import_manager_set = new HashSet<String>();
-		}		
-		protected ActorRef original_sender = null;
-		protected final List<ActorRef> reply_list;
-		protected final HashSet<String> data_import_manager_set;
+		public MutableState() {}		
+		protected void reset() {
+			reply_list.clear();
+			data_import_manager_set.clear();
+			targeted_actor = null;
+			current_timeout_id = null;
+		}
+		protected final List<ActorRef> reply_list = new LinkedList<ActorRef>();
+		protected final HashSet<String> data_import_manager_set = new HashSet<String>();
+		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
+		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<BucketActionMessage>();
+		// (These are genuinely mutable, can change if the actor resets and tries a different target)
+		protected ActorRef targeted_actor = null;
+		protected String current_timeout_id = null;
+		protected int tries = 0;
 	}
-	final protected MutableState _state = new MutableState();
-	final protected FiniteDuration _timeout;
-	
+	protected final MutableState _state = new MutableState();
+	protected final FiniteDuration _timeout;	
 	protected final ManagementDbActorContext _system_context;
+	protected static final int MAX_TRIES = 3; // (this is a pretty low probability event) 
 	
 	///////////////////////////////////////////
 	
@@ -85,35 +110,37 @@ public class BucketActionChooseActor extends AbstractActor {
 			.build();
 
 	private PartialFunction<Object, BoxedUnit> _stateGettingCandidates = ReceiveBuilder
-			.match(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+			.match(BucketActionWillAcceptMessage.class, 
 				m -> {
-					_state.data_import_manager_set.remove(m.uuid());
+					_state.data_import_manager_set.remove(m.source());
 					_state.reply_list.add(this.sender());
 					this.checkIfComplete();
 				})
-			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
+			.match(BucketActionIgnoredMessage.class, 
 				m -> {
-					_state.data_import_manager_set.remove(m.uuid());
+					_state.data_import_manager_set.remove(m.source());
 					this.checkIfComplete();
 				})
-			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
+			.match(BucketActionTimeoutMessage.class, m -> m.uuid().equals(_state.current_timeout_id),
 				m -> {
 					this.pickAndSend();
 				})				
 			.build();
 	
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReply = ReceiveBuilder
-			.match(BucketActionReplyMessage.BucketActionHandlerMessage.class, 
+			.match(BucketActionHandlerMessage.class, 
 				m -> {
-					//TODO format and send on
+					// (note - overwrite the source field of the bean with the host)
+					this.sendReplyAndClose(BeanTemplateUtils
+							.clone(m.reply()).with(BasicMessageBean::source, m.source()).done());
 				})
-			.match(BucketActionReplyMessage.BucketActionIgnoredMessage.class, 
+			.match(BucketActionIgnoredMessage.class, __ -> this.sender().equals(_state.targeted_actor),
 				m -> {
-					//TODO need to check this is the one I'm processing, abort and try again if so
+					this.abortAndRetry(true);
 				})
-			.match(BucketActionReplyMessage.BucketActionTimeoutMessage.class, 
+			.match(BucketActionTimeoutMessage.class, m -> m.uuid().equals(_state.current_timeout_id),
 				m -> {
-					// Abort and try again if so
+					this.abortAndRetry(true);
 				})				
 			.build();
 		
@@ -130,14 +157,56 @@ public class BucketActionChooseActor extends AbstractActor {
 
 	// Actions
 	
+	protected void abortAndRetry(boolean allow_retries) {
+		
+		_logger.info("actor_id=" + this.self().toString()
+				+ "; abort_tries=" + _state.tries + "; allow_retries=" + allow_retries 
+				);
+		
+		if (allow_retries && (++_state.tries < MAX_TRIES)) {
+			_state.reset();
+			
+			this.broadcastAction(_state.original_message.get());
+			this.checkIfComplete();
+		}
+		else { // Just terminate with a "nothing to say" request
+			_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(
+					Arrays.asList(), _state.data_import_manager_set), 
+					this.self());		
+			this.context().stop(this.self());			
+		}
+	}
+	 
 	protected void pickAndSend() {
-		//TODO
-		this.context().become(_stateAwaitingReply);
+		if (!_state.reply_list.isEmpty()) {
+			// Pick at random from the actors that replied
+			final Random r = new Random();
+			_state.targeted_actor = _state.reply_list.get(r.nextInt(_state.reply_list.size()));
+			
+			_logger.info("actor_id=" + this.self().toString()
+					+ "; picking_actor=" + _state.targeted_actor 
+					);
+			
+			// Forward the message on
+			_state.targeted_actor.tell(_state.original_message, this.self());
+			
+			// Schedule a timeout
+			_state.current_timeout_id = UuidUtils.get().getRandomUuid();
+			_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
+						this.self(), new BucketActionTimeoutMessage(_state.current_timeout_id), 
+						_system_context.getActorSystem().dispatcher(), null);
+			
+			this.context().become(_stateAwaitingReply);
+		}
+		else { // Must have timed out getting any replies, just terminate
+			this.abortAndRetry(false);
+		}
 	}
 	
 	protected void broadcastAction(final @NonNull BucketActionMessage message) {
 		try {
-			_state.original_sender = this.sender();
+			_state.original_sender.set(this.sender());
+			_state.original_message.set(message);
 			
 			// 1) Get a list of potential actors 
 			
@@ -145,17 +214,35 @@ public class BucketActionChooseActor extends AbstractActor {
 			
 			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
-			_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+			try {
+				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+				
+			}
+			catch (NoNodeException e) { 
+				// This is OK
+				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+			}
 			
-			// 2) Then message all of the actors who replied that they were interested and wait for the response
+			//(log)
+			_logger.info("message_id=" + message
+					+ "; actor_id=" + this.self().toString()
+					+ "; candidates_found=" + _state.data_import_manager_set.size());
 			
-			_system_context.getBucketActionMessageBus().publish(new BucketActionMessage.BucketActionEventBusWrapper(this.self(), message));
+			// 2) Then message all of the actors that we believe are present and wait for the response
 			
-			_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
-						this.self(), new BucketActionReplyMessage.BucketActionTimeoutMessage(), 
-						_system_context.getActorSystem().dispatcher(), null);
-			
-			this.context().become(_stateGettingCandidates);
+			if (!_state.data_import_manager_set.isEmpty()) {
+				
+				_system_context.getBucketActionMessageBus().publish(new BucketActionEventBusWrapper
+						(this.self(), new BucketActionOfferMessage(message.bucket())));
+				
+				_state.current_timeout_id = UuidUtils.get().getRandomUuid();
+				_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
+							this.self(), new BucketActionTimeoutMessage(_state.current_timeout_id), 
+							_system_context.getActorSystem().dispatcher(), null);
+				
+				this.context().become(_stateGettingCandidates);
+			}
+			//(else we're going to insta terminate anyway)			
 		}
 		catch (Exception e) {
 			throw new RuntimeException();
@@ -166,8 +253,9 @@ public class BucketActionChooseActor extends AbstractActor {
 			this.pickAndSend();
 		}
 	}
-	protected void sendReplyAndClose() {
-		//TODO single message
+	protected void sendReplyAndClose(final @NonNull BasicMessageBean reply) {
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(Arrays.asList(reply), Collections.emptySet()), 
+				this.self());		
 		this.context().stop(this.self());
 	}
 

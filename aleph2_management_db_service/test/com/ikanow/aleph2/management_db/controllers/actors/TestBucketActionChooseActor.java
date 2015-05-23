@@ -51,9 +51,9 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
-public class TestBucketActionDistributionActor {
+public class TestBucketActionChooseActor {
 
-	public static final Logger _logger = Logger.getLogger(TestBucketActionDistributionActor.class);
+	public static final Logger _logger = Logger.getLogger(TestBucketActionChooseActor.class);
 	
 	// Test actors:
 	// This one always refuses
@@ -64,6 +64,7 @@ public class TestBucketActionDistributionActor {
 		private final String uuid;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
+			//TODO: handle differently based on whether it's an offer message or a real message
 			_logger.info("Refuse from: " + uuid);
 			
 			this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
@@ -78,6 +79,7 @@ public class TestBucketActionDistributionActor {
 		private final String uuid;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
+			//TODO: handle differently based on whether it's an offer message or a real message
 			_logger.info("Accept from: " + uuid);
 			
 			this.sender().tell(
@@ -116,7 +118,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -152,7 +154,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -194,7 +196,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -211,6 +213,11 @@ public class TestBucketActionDistributionActor {
 		
 		assertEquals(Collections.emptyList(), reply.replies());
 	}
+	
+	/////////////////////////////////////////
+	
+	//TODO from down here, everything changes...
+	/*
 	
 	@Test
 	public void distributionTest_allActorsHandle() throws Exception {
@@ -239,7 +246,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -304,7 +311,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -361,7 +368,7 @@ public class TestBucketActionDistributionActor {
 		final long before_time = new Date().getTime();
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
+				BucketActionSupervisor.askChooseActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
@@ -388,156 +395,6 @@ public class TestBucketActionDistributionActor {
 		assertTrue("All replies received", accept_uuids.isEmpty());
 		
 	}
+	*/
 
-	@Test
-	public void distributionTest_noBroadcast() throws Exception {
-		
-		final HashSet<String> accept_uuids = new HashSet<String>();
-		
-		final HashSet<String> target_uuids = new HashSet<String>();
-		
-		for (int i = 0; i < 3; ++i) {
-			String uuid = UuidUtils.get().getRandomUuid();
-			if (target_uuids.size() < 2) {
-				target_uuids.add(uuid);
-			}
-			
-			accept_uuids.add(uuid);
-			ManagementDbActorContext.get().getDistributedServices()
-				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
-			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-		}
-		
-		for (int i = 0; i < 3; ++i) {
-			String uuid = UuidUtils.get().getRandomUuid();
-			if (target_uuids.size() < 3) {
-				target_uuids.add(uuid);
-			}
-			
-			ManagementDbActorContext.get().getDistributedServices()
-				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);			
-			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Refuser.class, uuid), uuid);
-			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-		}
-		
-		DeleteBucketActionMessage test_message = new DeleteBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(),
-					target_uuids);
-		
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
-		
-		final long before_time = new Date().getTime();
-		
-		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
-						(BucketActionMessage)test_message, 
-						Optional.of(timeout));
-																
-		BucketActionCollectedRepliesMessage reply = f.get();
-		
-		final long time_elapsed = new Date().getTime() - before_time;
-		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
-
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
-		
-		assertEquals((Integer)0, (Integer)reply.timed_out().size());
-		
-		assertEquals(2, reply.replies().size());
-
-		for (BasicMessageBean reply_bean: reply.replies()) {
-		
-			accept_uuids.remove(reply_bean.source());
-			assertTrue("reply.source in UUID set: " + reply_bean.source(), target_uuids.remove(reply_bean.source()));
-			assertEquals("DeleteBucketActionMessage", reply_bean.command());
-			assertEquals("handled", reply_bean.message());
-			assertEquals(true, reply_bean.success());
-		}
-		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == accept_uuids.size());
-		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == target_uuids.size());
-		
-	}		
-
-	@Test
-	public void distributionTest_noBroadcast_someNodesNotPresent() throws Exception {
-		
-		final HashSet<String> accept_uuids = new HashSet<String>();
-		
-		final HashSet<String> target_uuids = new HashSet<String>();
-		
-		for (int i = 0; i < 3; ++i) {
-			String uuid = UuidUtils.get().getRandomUuid();
-			if (target_uuids.size() < 2) {
-				target_uuids.add(uuid);
-			}
-			
-			accept_uuids.add(uuid);
-			ManagementDbActorContext.get().getDistributedServices()
-				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
-			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-		}
-		
-		for (int i = 0; i < 3; ++i) {
-			String uuid = UuidUtils.get().getRandomUuid();
-			if (target_uuids.size() < 3) {
-				target_uuids.add(uuid);
-			}
-			else { // OK so this one target_uuid we're adding doesn't even get a zookeeper entry, ie this simulates the node being down
-					// but because there's no zookeeper entry, it should appear like a time out but without actually timing out
-				ManagementDbActorContext.get().getDistributedServices()
-					.getCuratorFramework().create().creatingParentsIfNeeded()
-					.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);			
-				
-				ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Refuser.class, uuid), uuid);
-				ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-			}
-		}
-		
-		DeleteBucketActionMessage test_message = new DeleteBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(),
-					target_uuids);
-		
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
-		
-		final long before_time = new Date().getTime();
-		
-		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
-						(BucketActionMessage)test_message, 
-						Optional.of(timeout));
-																
-		BucketActionCollectedRepliesMessage reply = f.get();
-		
-		final long time_elapsed = new Date().getTime() - before_time;
-		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
-
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
-		
-		assertEquals((Integer)1, (Integer)reply.timed_out().size());
-		
-		assertEquals(2, reply.replies().size());
-
-		for (BasicMessageBean reply_bean: reply.replies()) {
-		
-			accept_uuids.remove(reply_bean.source());
-			assertTrue("reply.source in UUID set: " + reply_bean.source(), target_uuids.remove(reply_bean.source()));
-			assertEquals("DeleteBucketActionMessage", reply_bean.command());
-			assertEquals("handled", reply_bean.message());
-			assertEquals(true, reply_bean.success());
-		}
-		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == accept_uuids.size());
-		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == target_uuids.size());
-		
-	}		
 }

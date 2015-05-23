@@ -28,6 +28,17 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
  * @author acp
  */
 public class BucketActionMessage {
+	private BucketActionMessage(final @NonNull DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
+	private BucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) { 
+		this.bucket = bucket; 		
+		this.handling_clients = handling_clients;
+	}
+	@NonNull public Set<String> handling_clients() { return handling_clients; }
+	private final Set<String> handling_clients;
+	@NonNull public DataBucketBean bucket() { return bucket; };
+	private final DataBucketBean bucket;
+	
+	
 	/** An internal class used to wrap event bus publications
 	 * @author acp
 	 */
@@ -45,20 +56,13 @@ public class BucketActionMessage {
 		protected final BucketActionMessage message;
 	}	
 
-	private BucketActionMessage() { handling_clients = Collections.emptySet(); }
-	private BucketActionMessage(final @NonNull Set<String> handling_clients) { this.handling_clients = handling_clients; }
-	@NonNull public Set<String> handling_clients() { return handling_clients; }
-	private final Set<String> handling_clients;
-
 	/** Offer a single node bucket to see who wants it
 	 * @author acp
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
 		public BucketActionOfferMessage(final @NonNull DataBucketBean bucket) {
-			this.bucket = bucket;
+			super(bucket);
 		}
-		@NonNull public DataBucketBean bucket() { return bucket; };
-		private final DataBucketBean bucket;
 	}	
 	
 	/** Send a new bucket action message to one (single node) or many (distributed node) buckets
@@ -66,10 +70,8 @@ public class BucketActionMessage {
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
 		public NewBucketActionMessage(final @NonNull DataBucketBean bucket) {
-			this.bucket = bucket;
+			super(bucket);
 		}
-		@NonNull public DataBucketBean bucket() { return bucket; };
-		private final DataBucketBean bucket;
 	}
 	
 	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running
@@ -77,10 +79,7 @@ public class BucketActionMessage {
 	 */
 	public static class DeleteBucketActionMessage extends BucketActionMessage {
 		public DeleteBucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) {
-			super(handling_clients);
-			this.bucket = bucket;
+			super(bucket, handling_clients);
 		}
-		@NonNull public DataBucketBean bucket() { return bucket; };
-		private final DataBucketBean bucket;
 	}
 }
