@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.management_db.utils;
+package com.ikanow.aleph2.data_model.utils;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -22,10 +22,11 @@ import java.util.concurrent.CompletableFuture;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
-import com.ikanow.aleph2.data_model.utils.FutureUtils;
 
 public class ManagementDbUtils {
 
+	//(NOTE THE TEST CODE FOR THIS RESIDES IN aleph2_management_db_service_mongodb, since it was easier to test using a real DB)
+	
 	/** Converts a normal CRUD service to a trivial management CRUD service (side channel always empty)
 	 * @param delegate
 	 * @return

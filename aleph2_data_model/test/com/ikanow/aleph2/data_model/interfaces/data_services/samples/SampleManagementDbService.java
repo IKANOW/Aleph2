@@ -95,4 +95,11 @@ public class SampleManagementDbService implements IManagementDbService {
 		return null;
 	}
 
+	@Override
+	public <T> ICrudService<T> getRetryStore(
+			@NonNull Class<T> retry_message_clazz) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import static org.junit.Assert.*;
 
@@ -49,6 +49,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecur
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleTemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils.ServiceContext;
 import com.typesafe.config.ConfigFactory;

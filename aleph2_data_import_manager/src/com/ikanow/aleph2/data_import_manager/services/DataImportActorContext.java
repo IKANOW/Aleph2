@@ -20,7 +20,7 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 

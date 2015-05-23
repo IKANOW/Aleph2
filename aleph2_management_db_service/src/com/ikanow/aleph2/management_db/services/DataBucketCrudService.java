@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,11 +32,11 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -49,7 +50,8 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+
 
 /**
  * @author acp
@@ -60,7 +62,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final IManagementDbService _underlying_management_db;
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
-	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_store_db;
+	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_status_db;
+	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	
 	protected final ManagementDbActorContext _actor_context;
 	
@@ -72,7 +75,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
-		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
+		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
+		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
 		
 		_actor_context = actor_context;
 	}
@@ -86,7 +90,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = underlying_data_bucket_db;
-		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
+		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
+		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
 		_actor_context = ManagementDbActorContext.get();		
 	}
 		
@@ -133,7 +138,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			// We've created a new bucket but is it enabled or not?
 			
-			CompletableFuture<Optional<DataBucketStatusBean>> bucket_status = _underlying_data_bucket_store_db.getObjectById(id);
+			CompletableFuture<Optional<DataBucketStatusBean>> bucket_status = _underlying_data_bucket_status_db.getObjectById(id);
 			@SuppressWarnings("unused")
 			Optional<DataBucketStatusBean> status = null;
 			try {
@@ -347,6 +352,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					CompletableFuture.completedFuture(deleted), 
 					all_done_future.thenApply(__ -> 
 							replies.stream().flatMap(reply -> reply.join().stream()).collect(Collectors.toList())));
+			//(note: join shouldn't be able to throw here since we've already called .get() without incurring an exception if we're here)
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -369,7 +375,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				// Get the status and delete it:
 				
 				final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
-					_underlying_data_bucket_store_db.updateAndReturnObjectBySpec(
+					_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
 							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
 							Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
 
@@ -397,12 +403,24 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 								(BucketActionMessage)delete_message, 
 								Optional.empty());
 				
+				CompletableFuture<Collection<BasicMessageBean>> management_results =
+						f.<Collection<BasicMessageBean>>thenApply(replies -> {
+							// (enough has gone wrong already - just fire and forget this)
+							replies.timed_out().stream().forEach(source -> {
+								_bucket_action_retry_store.storeObject(
+										new BucketActionRetryMessage(source,
+												// (can't clone the message because it's not a bean, but the c'tor is very simple)
+												new BucketActionMessage.DeleteBucketActionMessage(
+														delete_message.bucket(),
+														new HashSet<String>(Arrays.asList(source))
+														)										
+												));
+							});
+							return replies.replies(); 
+						});
+
 				// Convert BucketActionCollectedRepliesMessage into a management side-channel:
-				return FutureUtils.createManagementFuture(delete_reply,
-						f.<Collection<BasicMessageBean>>thenApply(replies -> replies.replies())
-						);
-						
-				//TODO (ALEPH-19): If any elements have timed out then we should add them to a bus where we'll try again intermittently? 
+				return FutureUtils.createManagementFuture(delete_reply, management_results);					
 			}	
 			else {
 				return FutureUtils.createManagementFuture(delete_reply);
@@ -442,11 +460,17 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
+	@SuppressWarnings("unchecked")
 	@NonNull
 	public <T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class,
 			final @NonNull Optional<String> driver_options)
 	{
-		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
+		if (driver_class == ICrudService.class) {
+			return (@NonNull T) _underlying_data_bucket_db;
+		}
+		else {
+			throw new RuntimeException("DataBucketCrudService.getUnderlyingPlatformDriver not supported");
+		}
 	}
 
 	/* (non-Javadoc)

@@ -58,6 +58,12 @@
   		<scope>test</scope>
   	</dependency>
   	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
+  		<version>[0.0,)</version>
+  		<scope>test</scope>
+  	</dependency>
+  	<dependency>
   		<groupId>junit</groupId>
   		<artifactId>junit</artifactId>
   		<version>4.12</version>

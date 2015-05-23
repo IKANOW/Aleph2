@@ -15,10 +15,12 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -67,6 +69,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 		protected final HashSet<String> down_targeted_clients = new HashSet<String>();
 		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
 		protected final SetOnce<Boolean> restrict_replies = new SetOnce<Boolean>();
+		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<BucketActionMessage>();
 	}
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
@@ -134,6 +137,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 	protected void broadcastAction(final @NonNull BucketActionMessage message) {
 		try {
 			_state.original_sender.set(this.sender());
+			_state.original_message.set(message);
 			
 			// 1) Get a list of potential actors 
 			
@@ -143,25 +147,24 @@ public class BucketActionDistributionActor extends AbstractActor {
 			
 			try {
 				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
-				if (!message.handling_clients().isEmpty()) { // Intersection of: targeted clients and available clients
-					_state.data_import_manager_set.retainAll(message.handling_clients());
-					_state.restrict_replies.set(true);
-					if (message.handling_clients().size() != _state.data_import_manager_set.size()) {
-						//OK what's happened here is that a targeted client is not currently up, we'll just save this
-						//and insert them back in at the end (but without timing out)
-						_state.down_targeted_clients.addAll(message.handling_clients());
-						_state.down_targeted_clients.removeAll(_state.data_import_manager_set);
-					}
-				}
-				else { // (just set the corresponding set_once)
-					_state.restrict_replies.set(false);					
-				}
 			}
 			catch (NoNodeException e) { 
 				// This is OK
 				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+			}			
+			if (!message.handling_clients().isEmpty()) { // Intersection of: targeted clients and available clients
+				_state.data_import_manager_set.retainAll(message.handling_clients());
+				_state.restrict_replies.set(true);
+				if (message.handling_clients().size() != _state.data_import_manager_set.size()) {
+					//OK what's happened here is that a targeted client is not currently up, we'll just save this
+					//and insert them back in at the end (but without timing out)
+					_state.down_targeted_clients.addAll(message.handling_clients());
+					_state.down_targeted_clients.removeAll(_state.data_import_manager_set);
+				}
 			}
-			
+			else { // (just set the corresponding set_once)
+				_state.restrict_replies.set(false);					
+			}
 			
 			//(log)
 			_logger.info("message_id=" + message
@@ -202,6 +205,21 @@ public class BucketActionDistributionActor extends AbstractActor {
 
 		// (can mutate this since we're about to delete the entire object)
 		_state.down_targeted_clients.addAll(_state.data_import_manager_set);
+		
+		List<BasicMessageBean> convert_timeouts_to_replies = _state.down_targeted_clients.stream()
+																.map(source-> {
+																	return new BasicMessageBean(
+																			new Date(), // date
+																			false, // success
+																			source,
+																			_state.original_message.get().getClass().getSimpleName(),
+																			null, // message code
+																			"Timeout",
+																			null // details
+																			);
+																})
+																.collect(Collectors.toList());
+		_state.reply_list.addAll(convert_timeouts_to_replies);
 		
 		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(_state.reply_list, _state.down_targeted_clients), 
 									this.self());		

@@ -37,7 +37,7 @@ public class DataBucketStatusBean {
 	/** User constructor
 	 */
 	public DataBucketStatusBean(
-			final @NonNull String id,
+			final @NonNull String _id,
 			final @NonNull Boolean suspended,
 			final @Nullable Date quarantined_until,
 			final @NonNull Long num_objects,
@@ -49,7 +49,7 @@ public class DataBucketStatusBean {
 			final @Nullable Multimap<String, BasicMessageBean> enrichment_log_messages,
 			final @Nullable Multimap<String, BasicMessageBean> storage_log_messages) {
 		super();
-		_id = id;
+		this._id = _id;
 		this.suspended = suspended;
 		this.quarantined_until = quarantined_until;
 		this.num_objects = num_objects;

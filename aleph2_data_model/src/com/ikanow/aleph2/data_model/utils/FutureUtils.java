@@ -26,56 +26,29 @@ import java.util.concurrent.TimeoutException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.concurrent.Await;
-import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
-
+ 
 /** Utilities relating to the specific use of futures within Aleph2
  * @author acp
  *
  */
 public class FutureUtils {
 
-	/** Generates a future that will error as soon as it's touched
-	 * @param e - the underlying exception
-	 * @return a future that errors when touched
-	 */
-	@NonNull
-	public static <T> CompletableFuture<T> returnError(final @NonNull Exception e) {
-		return new CompletableFuture<T>() {
-			@Override public T get() throws ExecutionException {
-				throw new ExecutionException(e);
-			}
-		};		
-	}
-	
 	/** Wraps a scala Future in a completable future 
 	 * @param f the scala Future
 	 * @return the CompletableFuture
 	 */
+	@SuppressWarnings("unchecked")
 	@NonNull
-	public static <T> CompletableFuture<T> wrap(final @NonNull Future<Object> f) {
-		return new CompletableFuture<T>() {
-			@Override
-			public boolean cancel(boolean mayInterruptIfRunning) {
-				return false;
-			}
-	
-			@Override
-			public boolean isCancelled() {
-				return false;
-			}
-	
-			@Override
-			public boolean isDone() {
-				return f.isCompleted();
-			}
-	
-			@SuppressWarnings("unchecked")
-			@Override
-			public T get() throws InterruptedException, ExecutionException {
-				if (isDone()) {
+	public static <T> CompletableFuture<T> wrap(final scala.concurrent.Future<Object> f) {
+		// Note the beginnings of a better way are here: http://onoffswitch.net/converting-akka-scala-futures-java-futures/
+		// but needs completing
+		
+		return CompletableFuture.supplyAsync(() -> {
+			try {
+				if (f.isCompleted()) {
 					return (T)f.value().get().get();
 				}
 				else {
@@ -86,17 +59,10 @@ public class FutureUtils {
 					}
 				}
 			}
-	
-			@SuppressWarnings("unchecked")
-			@Override
-			public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-				try {
-					return (T)Await.result(f, Duration.create(timeout, TimeUnit.MILLISECONDS));
-				} catch (Exception e) {
-					throw new ExecutionException(e);
-				}
+			catch (Exception e) {
+				throw new RuntimeException(e);
 			}
-		};
+		});
 	}
 	
 	/** Creates a trivial management future with no side channel - ie equivalent to the input future itself
@@ -184,4 +150,17 @@ public class FutureUtils {
 			return _management_side_channel.orElse(CompletableFuture.completedFuture(Collections.emptyList()));
 		}		
 	}
+
+	/** Generates a future that will error as soon as it's touched
+	 * @param e - the underlying exception
+	 * @return a future that errors when touched
+	 */
+	@NonNull
+	public static <T> CompletableFuture<T> returnError(final @NonNull Exception e) {
+		return new CompletableFuture<T>() {
+			@Override public T get() throws ExecutionException {
+				throw new ExecutionException(e);
+			}
+		};		
+	}	
 }

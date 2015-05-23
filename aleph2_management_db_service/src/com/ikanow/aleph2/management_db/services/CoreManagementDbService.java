@@ -23,11 +23,11 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -173,5 +173,14 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
 		// (done see above)		
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getRetryStore(java.lang.Class)
+	 */
+	@Override
+	public <T> ICrudService<T> getRetryStore(
+			@NonNull Class<T> retry_message_clazz) {
+		return _underlying_management_db.getRetryStore(retry_message_clazz);
 	}
 }

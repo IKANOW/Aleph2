@@ -186,5 +186,13 @@
   		<artifactId>uuid</artifactId>
   		<version>3.2</version>
   	</dependency>
+  	<!-- 
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_crud_service_mongodb</artifactId>
+  		<version>[0.0,)</version>
+  		<scope>test</scope>
+  	</dependency>
+  	 -->
   </dependencies>
 </project>

@@ -116,6 +116,8 @@ public interface IManagementDbService {
 	
 	////////////////////////////////////
 
+	// 3] Security
+	
 	/** Returns a copy of the management DB that is filtered based on the client (user) and project rights
 	 * @param authorization_fieldname the fieldname in the bean that determines where the per-bean authorization is held
 	 * @param client_auth Optional specification of the user's access rights
@@ -128,6 +130,12 @@ public interface IManagementDbService {
 	////////////////////////////////////
 
 	// X] Misc
+
+	/** When an internal message gets lost, it will usually end up in the retry store - regular re-attempts will then be made
+	 * @param retry_message_clazz - the class of the (internal) bean containing the lost message and some metadata
+	 * @return a CRUD service intended to support
+	 */
+	<T> ICrudService<T> getRetryStore(final @NonNull Class<T> retry_message_clazz);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!

@@ -3,7 +3,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_access.samples;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
-import com.ikanow.aleph2.data_model.interfaces.data_access.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 
 public class SampleServiceContextService {
 	private IServiceContext service_context;

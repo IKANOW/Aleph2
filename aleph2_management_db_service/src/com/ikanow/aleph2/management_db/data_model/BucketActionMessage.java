@@ -43,6 +43,8 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class BucketActionEventBusWrapper {
+		@SuppressWarnings("unused")
+		private BucketActionEventBusWrapper() { }
 		public BucketActionEventBusWrapper(final @NonNull ActorRef sender, final @NonNull BucketActionMessage message) {
 			this.sender = sender;
 			this.message = message;
@@ -52,14 +54,15 @@ public class BucketActionMessage {
 		@NonNull
 		public BucketActionMessage message() { return message; };
 		
-		protected final ActorRef sender;
-		protected final BucketActionMessage message;
+		protected ActorRef sender;
+		protected BucketActionMessage message;
 	}	
 
 	/** Offer a single node bucket to see who wants it
 	 * @author acp
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
+		private BucketActionOfferMessage() { super(null, null); }
 		public BucketActionOfferMessage(final @NonNull DataBucketBean bucket) {
 			super(bucket);
 		}
@@ -69,6 +72,7 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
+		private NewBucketActionMessage() { super(null, null); }
 		public NewBucketActionMessage(final @NonNull DataBucketBean bucket) {
 			super(bucket);
 		}
@@ -78,6 +82,7 @@ public class BucketActionMessage {
 	 * @author acp
 	 */
 	public static class DeleteBucketActionMessage extends BucketActionMessage {
+		private DeleteBucketActionMessage() { super(null, null); }
 		public DeleteBucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) {
 			super(bucket, handling_clients);
 		}

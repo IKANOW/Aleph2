@@ -165,9 +165,18 @@ public class TestBucketActionDistributionActor {
 
 		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
 		
-		assertEquals((Integer)5, (Integer)reply.timed_out().size());
+		assertEquals(5, reply.timed_out().size());
 		
-		assertEquals(Collections.emptyList(), reply.replies());
+		assertEquals(5, reply.replies().size());
+		
+		for (BasicMessageBean reply_bean: reply.replies()) {
+			
+			assertTrue("reply.source in timeout set", reply.timed_out().remove(reply_bean.source()));
+			assertEquals("NewBucketActionMessage", reply_bean.command());
+			assertEquals("Timeout", reply_bean.message());
+			assertEquals(false, reply_bean.success());
+		}
+		assertTrue("All timeouts accounted for", reply.timed_out().isEmpty());
 	}
 
 	@Test
@@ -374,19 +383,25 @@ public class TestBucketActionDistributionActor {
 
 		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
 		
-		assertEquals((Integer)3, (Integer)reply.timed_out().size());
+		assertEquals(3, reply.timed_out().size());
 		
-		assertEquals(3, reply.replies().size());
+		assertEquals(6, reply.replies().size());
 
 		for (BasicMessageBean reply_bean: reply.replies()) {
 		
-			assertTrue("reply.source in UUID set", accept_uuids.remove(reply_bean.source()));
-			assertEquals("NewBucketActionMessage", reply_bean.command());
-			assertEquals("handled", reply_bean.message());
-			assertEquals(true, reply_bean.success());
+			if (reply_bean.success()) {
+				assertTrue("reply.source in UUID set", accept_uuids.remove(reply_bean.source()));
+				assertEquals("NewBucketActionMessage", reply_bean.command());
+				assertEquals("handled", reply_bean.message());
+			}
+			else {
+				assertTrue("reply.source in timeout set", reply.timed_out().remove(reply_bean.source()));
+				assertEquals("NewBucketActionMessage", reply_bean.command());
+				assertEquals("Timeout", reply_bean.message());				
+			}
 		}
 		assertTrue("All replies received", accept_uuids.isEmpty());
-		
+		assertTrue("All timeouts accounted for", reply.timed_out().isEmpty());		
 	}
 
 	@Test
@@ -526,18 +541,25 @@ public class TestBucketActionDistributionActor {
 		
 		assertEquals((Integer)1, (Integer)reply.timed_out().size());
 		
-		assertEquals(2, reply.replies().size());
+		assertEquals(3, reply.replies().size());
 
 		for (BasicMessageBean reply_bean: reply.replies()) {
-		
-			accept_uuids.remove(reply_bean.source());
-			assertTrue("reply.source in UUID set: " + reply_bean.source(), target_uuids.remove(reply_bean.source()));
-			assertEquals("DeleteBucketActionMessage", reply_bean.command());
-			assertEquals("handled", reply_bean.message());
-			assertEquals(true, reply_bean.success());
+
+			if (reply_bean.success()) {
+				accept_uuids.remove(reply_bean.source());
+				assertTrue("reply.source in UUID set: " + reply_bean.source(), target_uuids.remove(reply_bean.source()));
+				assertEquals("DeleteBucketActionMessage", reply_bean.command());
+				assertEquals("handled", reply_bean.message());
+			}
+			else {
+				assertTrue("reply.source in timeout set", reply.timed_out().remove(reply_bean.source()));
+				assertEquals("DeleteBucketActionMessage", reply_bean.command());
+				assertEquals("Timeout", reply_bean.message());				
+			}
 		}
 		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == accept_uuids.size());
 		assertTrue("All expected replies received: " + Arrays.toString(target_uuids.toArray()), 1 == target_uuids.size());
+		assertTrue("All timeouts accounted for", reply.timed_out().isEmpty());		
 		
 	}		
 }

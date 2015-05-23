@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.interfaces.data_access;
+package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Optional;
 
@@ -27,7 +27,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
 /**

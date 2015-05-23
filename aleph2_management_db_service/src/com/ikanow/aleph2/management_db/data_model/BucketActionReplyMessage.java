@@ -33,17 +33,21 @@ public class BucketActionReplyMessage {
 	 * @author acp
 	 */
 	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {
+		@SuppressWarnings("unused")
+		private BucketActionTimeoutMessage() {}
 		public BucketActionTimeoutMessage(final @NonNull String source) {
 			this.source = source;
 		}
 		@NonNull public String source() { return source; }
-		private final String source;
+		private String source;
 	}
 	
 	/** The message a BucketAction*Actor sends out when it is complete
 	 * @author acp
 	 */
 	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
+		@SuppressWarnings("unused")
+		private BucketActionCollectedRepliesMessage() {}
 		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, Set<String> timed_out)
 		{
 			this.replies = replies;
@@ -51,38 +55,44 @@ public class BucketActionReplyMessage {
 		}		
 		public List<BasicMessageBean> replies() { return replies; }
 		public Set<String> timed_out() { return timed_out; }
-		private final List<BasicMessageBean> replies;
-		private final Set<String> timed_out;
+		private List<BasicMessageBean> replies;
+		private Set<String> timed_out;
 	}
 	
 	/** When a data import manager will accept a bucket action
 	 * @author acp
 	 */
 	public static class BucketActionWillAcceptMessage extends BucketActionReplyMessage {
+		@SuppressWarnings("unused")
+		private BucketActionWillAcceptMessage() {}
 		
 		public BucketActionWillAcceptMessage(final @NonNull String source) {
 			this.source = source;
 		}
 		public String source() { return source; }
-		private final String source;
+		private String source;
 	}
 	
 	/** When a data import manager cannot or does not wish to handle a bucket action message
 	 * @author acp
 	 */
 	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage {
+		@SuppressWarnings("unused")
+		private BucketActionIgnoredMessage() {}
 		
 		public BucketActionIgnoredMessage(final @NonNull String source) {
 			this.source = source;
 		}
 		public String source() { return source; }
-		private final String source;
+		private String source;
 	}
 	
 	/** Encapsulates the reply from any requested bucket action
 	 * @author acp
 	 */
 	public static class BucketActionHandlerMessage extends BucketActionReplyMessage {
+		@SuppressWarnings("unused")
+		private BucketActionHandlerMessage() {}
 		
 		public BucketActionHandlerMessage(final @NonNull String source, final @NonNull BasicMessageBean reply) {
 			this.source = source;
@@ -91,7 +101,7 @@ public class BucketActionReplyMessage {
 		public String source() { return source; }
 		public BasicMessageBean reply() { return reply; }
 		
-		private final String source;
-		private final BasicMessageBean reply;
+		private String source;
+		private BasicMessageBean reply;
 	}
 }

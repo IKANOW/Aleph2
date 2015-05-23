@@ -35,6 +35,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigRenderOptions;
 
@@ -78,6 +79,22 @@ public class BeanTemplateUtils {
 		return object_mapper.valueToTree(bean);		
 	}
 	
+	/** Converts a JsonNode to a bean template of the specified type
+	 * (note: not very high performance, should only be used for management-type operations)
+	 * @param bean - the bean to convert to JSON
+	 * @return - the bean template
+	 */
+	@NonNull 
+	static public <T> BeanTemplate<T> from(final @NonNull JsonNode bean_json, final @NonNull Class<T> clazz) {
+		try {
+			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+			return BeanTemplate.of(object_mapper.treeToValue(bean_json, clazz));
+		}
+		catch (Exception e) { // on fail returns an unchecked error
+			throw new RuntimeException(e); // (this can only happen due to "static" code type issues, so unchecked exception is fine
+		}
+	}
+	
 	/** Contains a partial bean
 	 * @author acp
 	 *
@@ -108,19 +125,6 @@ public class BeanTemplateUtils {
 		protected BeanTemplate(T element) { _element = element; }
 		protected T _element;
 	}
-	
-	/** Returns a bean of the designated type from the JSON (note: not very high performance, should only be used for management-type operations)
-	 * @param json
-	 * @param bean_clazz
-	 * @return
-	 * @throws JsonParseException
-	 * @throws JsonMappingException
-	 * @throws IOException
-	 */
-	@NonNull 
-	static public <T> T from(final @NonNull JsonNode json, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
-		return build(json, bean_clazz).done().get();
-	}	
 	
 	/** Returns a template builder of the designated type from the JSON (note: not very high performance, should only be used for management-type operations)
 	 * @param json
@@ -426,6 +430,7 @@ public class BeanTemplateUtils {
 	@NonNull
 	public static ObjectMapper configureMapper(final @NonNull Optional<ObjectMapper> configure_me) {
 		final ObjectMapper mapper = configure_me.orElse(new ObjectMapper());
+		mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		return mapper;

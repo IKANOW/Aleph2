@@ -38,6 +38,8 @@ import akka.pattern.Patterns;
  */
 public class BucketActionSupervisor extends UntypedActor {
 
+	//TODO (ALEPH-19): Need a scheduled thread that runs through the retries and checks each one
+	
 	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(10, TimeUnit.SECONDS);
 	
 	/** Factory method for getting a distribution actor
@@ -111,7 +113,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		if (untyped_message instanceof RequestMessage) {
 			RequestMessage message = (RequestMessage) untyped_message;
 			ActorRef new_child = this.context().actorOf(Props.create(message.actor_type, message.timeout));
-			
+
 			new_child.forward(message.message, this.context());
 		}
 		else {
