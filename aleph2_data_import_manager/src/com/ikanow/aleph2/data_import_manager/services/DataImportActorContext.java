@@ -29,16 +29,17 @@ import akka.actor.ActorSystem;
 /** Possibly temporary class to provide minimal actor context, pending moving to Guice
  * @author acp
  */
-public class DataImportManagerActorContext {
+public class DataImportActorContext {
 	
 	/** Creates a new actor context
 	 */
 	@Inject
-	public DataImportManagerActorContext(IServiceContext service_context)
+	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service)
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
 		_singleton = this;
+		_information_service = information_service;
 	}
 
 	/** Returns the global properties bean
@@ -49,7 +50,10 @@ public class DataImportManagerActorContext {
 		return _service_context.getGlobalProperties();
 	}
 	
-	
+	@NonNull
+	public GeneralInformationService getInformationService() {
+		return _information_service;
+	}
 	
 	/** Returns the global service context
 	 * @return the global service context
@@ -78,12 +82,13 @@ public class DataImportManagerActorContext {
 	/** Gets the actor context
 	 * @return the actor context
 	 */
-	public static DataImportManagerActorContext get() {
+	public static DataImportActorContext get() {
 		// (This will only not be set if guice injection has failed, in which case there are deeper problems...)
 		return _singleton;		
 	}
 	
-	protected static DataImportManagerActorContext _singleton = null;
+	protected static DataImportActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
 	protected final IServiceContext _service_context;
+	protected final GeneralInformationService _information_service;
 }

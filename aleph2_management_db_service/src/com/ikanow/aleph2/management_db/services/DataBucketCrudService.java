@@ -16,6 +16,8 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -39,11 +41,15 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 
 /**
  * @author acp
@@ -62,13 +68,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param underlying_management_db
 	 */
 	@Inject
-	public DataBucketCrudService(final IServiceContext service_context)
+	public DataBucketCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_store_db = _underlying_management_db.getDataBucketStatusStore();
 		
-		_actor_context = ManagementDbActorContext.get();
+		_actor_context = actor_context;
 	}
 
 	/** User constructor, for wrapping
@@ -309,7 +315,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Need to do these one by one:
 
-		CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
+		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
 		
 		try {
 			final List<Tuple2<Boolean, CompletableFuture<Collection<BasicMessageBean>>>> collected_deletes =
@@ -358,13 +364,49 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		try {
 			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
 			
-			//TODO don't forget to delete teh status also
+			if (delete_reply.get()) {
 			
-			//TODO notify via buckets
-			
-			//TODO (ALEPH-19): If any elements have timed out then we should add them to a bus where we'll try again intermittently? 
-			
-			return FutureUtils.createManagementFuture(delete_reply);
+				// Get the status and delete it:
+				
+				final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
+					_underlying_data_bucket_store_db.updateAndReturnObjectBySpec(
+							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
+							Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
+
+				final Supplier<Optional<DataBucketStatusBean>> lambda = () -> {
+					try {
+						return future_status_bean.get(); 
+					}
+					catch (Exception e) { // just treat this as not finding anything
+						return Optional.empty();
+					}					
+				};
+				final Optional<DataBucketStatusBean> status_bean = lambda.get();
+				
+				BucketActionMessage.DeleteBucketActionMessage delete_message = new
+						BucketActionMessage.DeleteBucketActionMessage(to_delete, 
+								new HashSet<String>(
+										Optional.ofNullable(
+												status_bean.isPresent() ? status_bean.get().node_affinity() : null)
+										.orElse(Collections.emptyList())
+										));
+				
+				final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+						BucketActionSupervisor.askDistributionActor(
+								_actor_context.getBucketActionSupervisor(), 
+								(BucketActionMessage)delete_message, 
+								Optional.empty());
+				
+				// Convert BucketActionCollectedRepliesMessage into a management side-channel:
+				return FutureUtils.createManagementFuture(delete_reply,
+						f.<Collection<BasicMessageBean>>thenApply(replies -> replies.replies())
+						);
+						
+				//TODO (ALEPH-19): If any elements have timed out then we should add them to a bus where we'll try again intermittently? 
+			}	
+			else {
+				return FutureUtils.createManagementFuture(delete_reply);
+			}
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here

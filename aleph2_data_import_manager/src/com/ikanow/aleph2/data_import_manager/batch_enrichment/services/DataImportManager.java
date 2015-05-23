@@ -24,7 +24,7 @@ import akka.actor.Props;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.FolderWatcherActor;
-import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 
 public class DataImportManager  {
@@ -33,7 +33,7 @@ public class DataImportManager  {
     protected ActorRef folderWatchActor = null;
     
 
-	protected final DataImportManagerActorContext _context;
+	protected final DataImportActorContext _context;
 	protected IStorageService _storage_service;
 	
 	protected ActorRef getFolderWatchActor(){
@@ -47,7 +47,7 @@ public class DataImportManager  {
 		
 	}
     @Inject
-    public DataImportManager(DataImportManagerActorContext context, IStorageService storageService) {
+    public DataImportManager(DataImportActorContext context, IStorageService storageService) {
     	this._context = context;
     	this._storage_service = storageService;
     }

@@ -42,13 +42,13 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	/** Factory method for getting a distribution actor
 	 */
-	public ActorRef getNewDistributionActor(final @NonNull FiniteDuration timeout) {
+	protected ActorRef getNewDistributionActor(final @NonNull FiniteDuration timeout) {
 		return this.getContext().actorOf(Props.create(BucketActionDistributionActor.class, timeout));
 	}
 
 	/** Factory method for getting a "choose" actor (picks a destination randomly from a pool of replies)
 	 */
-	public ActorRef getNewChooseActor(final @NonNull FiniteDuration timeout) {
+	protected ActorRef getNewChooseActor(final @NonNull FiniteDuration timeout) {
 		return this.getContext().actorOf(Props.create(BucketActionChooseActor.class, timeout));
 	}
 

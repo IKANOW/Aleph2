@@ -15,6 +15,8 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.harvest.utils;
 
+import java.net.InetAddress;
+
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 
 /** Provides static information about the host and process
@@ -23,6 +25,7 @@ import com.ikanow.aleph2.data_model.utils.UuidUtils;
  */
 public class HostInformationUtils {
 
+	private static String _hostname = null;
 	private final static String _uuid;
 	static {
 		_uuid = UuidUtils.get().getRandomUuid();
@@ -34,4 +37,19 @@ public class HostInformationUtils {
 	public static String getProcessUuid() {
 		return _uuid;
 	}
+	
+	/** Returns the hostname
+	 * @return
+	 */
+	public static String getHostname() {
+		// (just get the hostname once)
+		if (null == _hostname) {
+			try {
+				_hostname = InetAddress.getLocalHost().getHostName();
+			} catch (Exception e) {
+				_hostname = "UNKNOWN";
+			}
+		}		
+		return _hostname;
+	}//TESTED		
 }

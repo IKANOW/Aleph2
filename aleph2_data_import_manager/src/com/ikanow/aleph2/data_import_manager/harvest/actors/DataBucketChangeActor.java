@@ -20,8 +20,7 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
-import com.ikanow.aleph2.data_import_manager.harvest.utils.HostInformationUtils;
-import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -55,7 +54,7 @@ public class DataBucketChangeActor extends AbstractActor {
 
 	// Services
 	
-	protected final DataImportManagerActorContext _context;
+	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
 	protected final ActorSystem _actor_system;
@@ -63,7 +62,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
 	public DataBucketChangeActor() {
-		_context = DataImportManagerActorContext.get(); 
+		_context = DataImportActorContext.get(); 
 		_core_distributed_services = _context.getDistributedServices();
 		_actor_system = _core_distributed_services.getAkkaSystem();
 		_management_db = _context.getServiceContext().getCoreManagementDbService();
@@ -73,15 +72,13 @@ public class DataBucketChangeActor extends AbstractActor {
 
 	// Stateless actor
 	
-	//TODO: need to replace getProcessUuid with ... something ... hostname??!
-	
 	 /* (non-Javadoc)
 	 * @see akka.actor.AbstractActor#receive()
 	 */
 	@Override
 	 public PartialFunction<Object, BoxedUnit> receive() {
 	    return ReceiveBuilder
-	    		.match(BucketActionOfferMessage.class, m -> m.handling_clients().contains(HostInformationUtils.getProcessUuid()),
+	    		.match(BucketActionOfferMessage.class, m -> m.handling_clients().contains(_context.getInformationService().getHostname()),
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionOfferMessage.class, 
 		    		m -> {
@@ -94,7 +91,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		    					// Case 1: we received an error, just treat that like an ignore, this is an edge case anyway
 		    					// since the bucket should have been validated before it's gotten to this point
 		    					__ -> {
-				    				this.sender().tell(new BucketActionIgnoredMessage(HostInformationUtils.getProcessUuid()),  this.sender());	
+				    				this.sender().tell(new BucketActionIgnoredMessage(_context.getInformationService().getHostname()),  this.sender());	
 				    				return Unit.unit();
 		    					},
 		    					// Case 2: cache/get-the-cached harvest technology, load it into the classpath, check if we should handle or ignore

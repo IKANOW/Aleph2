@@ -28,7 +28,7 @@ import scala.concurrent.duration.Duration;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
-import com.ikanow.aleph2.data_import_manager.services.DataImportManagerActorContext;
+import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -41,7 +41,7 @@ public class FolderWatcherActor extends UntypedActor {
     private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
 
 	protected CuratorFramework curator_framework;
-	protected final DataImportManagerActorContext _context;
+	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
 	protected final IStorageService storage_service;
@@ -51,7 +51,7 @@ public class FolderWatcherActor extends UntypedActor {
 	protected Path dataPath = null;
 
     public FolderWatcherActor(IStorageService storage_service){
-    	this._context = DataImportManagerActorContext.get(); 
+    	this._context = DataImportActorContext.get(); 
     	this._global_properties_Bean = _context.getGlobalProperties();
     	logger.debug("_global_properties_Bean"+_global_properties_Bean);
     	this._core_distributed_services = _context.getDistributedServices();    	
