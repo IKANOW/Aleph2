@@ -35,6 +35,9 @@ public class BucketActionReplyMessage {
 	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {
 		@SuppressWarnings("unused")
 		private BucketActionTimeoutMessage() {}
+		/** User c'tor for creating a timeout message
+		 * @param source - the source (host) that timed out
+		 */
 		public BucketActionTimeoutMessage(final @NonNull String source) {
 			this.source = source;
 		}
@@ -48,6 +51,10 @@ public class BucketActionReplyMessage {
 	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
 		@SuppressWarnings("unused")
 		private BucketActionCollectedRepliesMessage() {}
+		/** User c'tor for creating a message encapsulating the reply from 0+ sources (hosts) that handled a message
+		 * @param replies - replies from any hosts that handled the message or timed out trying
+		 * @param timed_out - the set of hosts that timed out
+		 */
 		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, Set<String> timed_out)
 		{
 			this.replies = replies;
@@ -66,6 +73,9 @@ public class BucketActionReplyMessage {
 		@SuppressWarnings("unused")
 		private BucketActionWillAcceptMessage() {}
 		
+		/** User c'tor for a message indicating that the given data import manager can handle a bucket message
+		 * @param source - the source accepting the offer
+		 */
 		public BucketActionWillAcceptMessage(final @NonNull String source) {
 			this.source = source;
 		}
@@ -80,6 +90,9 @@ public class BucketActionReplyMessage {
 		@SuppressWarnings("unused")
 		private BucketActionIgnoredMessage() {}
 		
+		/** User c'tor for a message indicating that the given data import manager _will not_ handle a bucket message
+		 * @param source - the source accepting the offer
+		 */
 		public BucketActionIgnoredMessage(final @NonNull String source) {
 			this.source = source;
 		}
@@ -94,6 +107,10 @@ public class BucketActionReplyMessage {
 		@SuppressWarnings("unused")
 		private BucketActionHandlerMessage() {}
 		
+		/** Creates a message encapsulating the reply from any bucket action
+		 * @param source - the handling source (host)
+		 * @param reply - the reply from tha source
+		 */
 		public BucketActionHandlerMessage(final @NonNull String source, final @NonNull BasicMessageBean reply) {
 			this.source = source;
 			this.reply = reply;

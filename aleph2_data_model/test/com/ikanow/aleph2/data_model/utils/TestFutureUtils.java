@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -90,6 +92,35 @@ public class TestFutureUtils {
 		
 		final CompletableFuture<Collection<BasicMessageBean>> test2c = test2.getManagementResults().thenApply(e -> e);
 		assertEquals(pretest2b.get(), test2c.get());		
+		
+		// Test 3 - nested
+
+		final ExecutorService executor = Executors.newFixedThreadPool(5);
+		final CompletableFuture<TestBean> pretest3a = CompletableFuture.supplyAsync(() -> {
+			try { TimeUnit.SECONDS.sleep(1); } catch (Exception e) {}
+			return pretest1.join();
+		}, executor);
+		
+		final CompletableFuture<Collection<BasicMessageBean>> pretest3b = CompletableFuture.supplyAsync(() -> {
+			try { TimeUnit.SECONDS.sleep(2); } catch (Exception e) {}
+			return Collections.emptyList();
+		}, executor);
+		
+		final CompletableFuture<ManagementFuture<TestBean>> test3 = CompletableFuture.supplyAsync(() -> {
+			try { TimeUnit.SECONDS.sleep(1); } catch (Exception e) {}
+			return FutureUtils.createManagementFuture(pretest3a, pretest3b);
+		}, executor);		
+		
+		final ManagementFuture<TestBean> test3_actual = FutureUtils.denestManagementFuture(test3);
+		
+		assertEquals(pretest1.get(), test3_actual.get());		
+		assertEquals(Collections.emptyList(), test3_actual.getManagementResults().get());		
+
+		final CompletableFuture<TestBean> test3_actual_1 = test3_actual.thenApply(e -> e);
+		final CompletableFuture<Collection<BasicMessageBean>> test3_actual_2 = test3_actual.getManagementResults().thenApply(e -> e);
+		
+		assertEquals(pretest1.get(), test3_actual_1.get());		
+		assertEquals(Collections.emptyList(), test3_actual_2.get());		
 	}
 
 	@Test

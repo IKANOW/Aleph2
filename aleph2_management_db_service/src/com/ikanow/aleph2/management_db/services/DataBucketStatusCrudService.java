@@ -16,16 +16,24 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -36,15 +44,24 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.data_model.utils.Patterns;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
+
+//TODO (ALEPH-19): No method currently to access the harvest/enrichment/storage logs
 
 /** CRUD service for Data Bucket Status with management proxy
  * @author acp
@@ -268,16 +285,205 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		return this.updateObjectBySpec(CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, id), Optional.of(false), update);
 	}
 
+	@NonNull
+	private static Collection<BasicMessageBean> validateUpdateCommand(UpdateComponent<DataBucketStatusBean> update) {
+		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
+		
+		// There's a limited set of operations that are permitted:
+		// - change the number of objects
+		// - suspend or resume
+		// - quarantine		
+		// - add/remove log or status messages
+		
+		final ImmutableSet<String> statusFields = ImmutableSet.<String>builder()
+														.add(helper.field(DataBucketStatusBean::last_harvest_status_messages))
+														.add(helper.field(DataBucketStatusBean::last_enrichment_status_messages))
+														.add(helper.field(DataBucketStatusBean::last_storage_status_messages))
+														.build();
+														
+		final List<BasicMessageBean> errors = update.getAll().entries().stream()
+			.map(kvtmp -> Patterns.match(kvtmp)
+							.<BasicMessageBean>andReturn()
+							.when(kv -> helper.field(DataBucketStatusBean::num_objects).equals(kv.getKey()) 
+									&& (kv.getValue()._1().equals(CrudUtils.UpdateOperator.set)
+											|| kv.getValue()._1().equals(CrudUtils.UpdateOperator.increment))
+									&& (kv.getValue()._2() instanceof Number)
+									,
+									__ -> { return null; })
+							.when(kv -> helper.field(DataBucketStatusBean::suspended).equals(kv.getKey()) 
+									&& kv.getValue()._1().equals(CrudUtils.UpdateOperator.set)
+									&& (kv.getValue()._2() instanceof Boolean)
+									,
+									__ -> { return null; })
+							.when(kv -> helper.field(DataBucketStatusBean::quarantined_until).equals(kv.getKey()) 
+									&& ((kv.getValue()._1().equals(CrudUtils.UpdateOperator.set)
+											&& (kv.getValue()._2() instanceof Date))
+										|| kv.getValue()._1().equals(CrudUtils.UpdateOperator.unset))
+									,
+									__ -> { return null; })
+							.when(kv -> statusFields.contains(kv.getKey().split("[.]"))
+									,
+									__ -> { return null; })
+							.otherwise(kv -> { 
+								return new BasicMessageBean(
+										new Date(), // date
+										false, // success
+										"CoreManagementDbService",
+										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
+										null, // message code
+										ErrorUtils.get(ManagementDbErrorUtils.ILLEGAL_UPDATE_COMMAND, kv.getKey(), kv.getValue()._1()),
+										null); // details						
+							})
+			)
+			.filter(errmsg -> errmsg != null)
+			.collect(Collectors.toList());
+		
+		return errors;
+	}
+	
+	/** Tries to distribute a request to listening data import managers to notify their harvesters that the bucket state has been updated
+	 * @param update_reply - the future reply to the find-and-update
+	 * @param suspended_predicate - takes the status bean (must exist at this point) and checks whether the bucket should be suspended
+	 * @param underlying_data_bucket_db - the data bucket bean db store
+	 * @param actor_context - actor context for distributing out requests
+	 * @param retry_store - the retry store for handling data import manager connectivity problems
+	 * @return a collection of success/error messages from either this function or the 
+	 */
+	private static <T> CompletableFuture<Collection<BasicMessageBean>> getOperationFuture(
+			final @NonNull CompletableFuture<Optional<DataBucketStatusBean>> update_reply, 
+			final @NonNull Predicate<DataBucketStatusBean> suspended_predicate,
+			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db,
+			final @NonNull ManagementDbActorContext actor_context,
+			final @NonNull ICrudService<BucketActionRetryMessage> retry_store
+			)
+	{		
+		return update_reply.thenCompose(
+				sb -> {
+					return sb.isPresent()
+							? underlying_data_bucket_db.getObjectById(sb.get()._id())
+							: CompletableFuture.completedFuture(Optional.empty());
+				})
+				.thenCompose(bucket -> {
+					if (!bucket.isPresent()) {
+						return CompletableFuture.completedFuture(Arrays.asList(new BasicMessageBean(
+										new Date(), // date
+										false, // success
+										"CoreManagementDbService",
+										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
+										null, // message code
+										ErrorUtils.get(ManagementDbErrorUtils.MISSING_STATUS_BEAN_OR_BUCKET, 
+												update_reply.join().map(s -> s._id()).orElse("(unknown)")),
+										null) // details						
+								));
+					}
+					else { // If we're here we've retrieved both the bucket and bucket status, so we're good to go
+						final DataBucketStatusBean status_bean = update_reply.join().get(); 
+							// (as above, if we're here then must exist)
+						
+						// Once we have the bucket, issue the update command
+						final BucketActionMessage.UpdateBucketStateActionMessage update_message = new
+									BucketActionMessage.UpdateBucketStateActionMessage(bucket.get(), 
+											suspended_predicate.test(status_bean), // (ie user picks whether to suspend or unsuspend here)
+											new HashSet<String>(
+													Optional.ofNullable(status_bean.node_affinity())
+													.orElse(Collections.emptyList())
+													));
+						
+						// Collect message and handle retries
+						
+						final CompletableFuture<Collection<BasicMessageBean>> management_results =
+							MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, 
+									update_message, source -> {
+										return new BucketActionMessage.UpdateBucketStateActionMessage(
+												update_message.bucket(), status_bean.suspended(),
+												new HashSet<String>(Arrays.asList(source)));	
+									});
+							
+						return management_results;										
+					}
+				});
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
 	public @NonNull ManagementFuture<Boolean> updateObjectBySpec(
-			@NonNull QueryComponent<DataBucketStatusBean> unique_spec,
-			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<DataBucketStatusBean> update) {
-		// TODO Auto-generated method stub
-		return null;
+			final @NonNull QueryComponent<DataBucketStatusBean> unique_spec,
+			final Optional<Boolean> upsert,
+			final @NonNull UpdateComponent<DataBucketStatusBean> update)		
+	{
+		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
+		
+		if (upsert.orElse(false)) {
+			throw new RuntimeException("This method is not supported with upsert set and true");			
+		}
+		
+		final Collection<BasicMessageBean> errors = validateUpdateCommand(update);
+		if (!errors.isEmpty()) {
+			return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false),
+														CompletableFuture.completedFuture(errors));
+		}
+
+		// Now perform the update and based on the results we may need to send out instructions
+		// to any listening buckets
+
+		final CompletableFuture<Optional<DataBucketStatusBean>> update_reply = _underlying_data_bucket_status_db.
+			updateAndReturnObjectBySpec(unique_spec, Optional.of(false), update, Optional.of(false),
+										 Arrays.asList(
+												 helper.field(DataBucketStatusBean::_id),
+												 helper.field(DataBucketStatusBean::suspended), 
+												 helper.field(DataBucketStatusBean::quarantined_until),
+												 helper.field(DataBucketStatusBean::node_affinity)), 
+											true);
+		
+		try {
+			// What happens now depends on the contents of the message			
+			
+			// Maybe the user wanted to suspend/resume the bucket:
+			
+			final CompletableFuture<Collection<BasicMessageBean>> suspend_future = 
+				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
+					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::suspended))) {
+						
+						return getOperationFuture(update_reply, sb -> sb.suspended(),
+								_underlying_data_bucket_db, _actor_context, _bucket_action_retry_store
+								);
+					}
+					else { // (this isn't an error, just nothing to do here)
+						return CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList());
+					}
+			});
+					
+			// Maybe the user wanted to set quarantine on/off:
+			
+			final CompletableFuture<Collection<BasicMessageBean>> quarantine_future = 
+				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
+					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::quarantined_until))) {
+						
+						return getOperationFuture(update_reply, 
+								sb -> { // (this predicate is slightly more complex)
+									return (null != sb.quarantined_until()) || (new Date().getTime() < sb.quarantined_until().getTime());
+								},
+								_underlying_data_bucket_db, _actor_context, _bucket_action_retry_store
+								);
+					}
+					else { // (this isn't an error, just nothing to do here)
+						return CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList());
+					}
+			});
+			
+			return FutureUtils.createManagementFuture(
+									update_reply.thenApply(o -> o.isPresent()), // whether we updated
+									suspend_future.thenCombine(quarantine_future, 
+											(f1, f2) -> Stream.concat(f1.stream(), f2.stream()).collect(Collectors.toList())));
+										//(+combine error messages from suspend/quarantine operations)
+		}			
+		catch (Exception e) {
+			// This is a serious enough exception that we'll just leave here
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));			
+		}		
 	}
 
 	/* (non-Javadoc)
@@ -285,9 +491,9 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	 */
 	@Override
 	public @NonNull ManagementFuture<Long> updateObjectsBySpec(
-			@NonNull QueryComponent<DataBucketStatusBean> spec,
-			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<DataBucketStatusBean> update)
+			final @NonNull QueryComponent<DataBucketStatusBean> spec,
+			final Optional<Boolean> upsert,
+			final @NonNull UpdateComponent<DataBucketStatusBean> update)
 	{	
 		if (upsert.orElse(false)) {
 			throw new RuntimeException("This method is not supported with upsert set and true");			
@@ -298,7 +504,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 						Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::_id)), true);
 		
 		try {
-			return MgmtCrudUtils.applyCrudPredicate(affected_ids.get(), status -> this.updateObjectById(status._id(), update));
+			return MgmtCrudUtils.applyCrudPredicate(affected_ids, status -> this.updateObjectById(status._id(), update));
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -317,8 +523,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			@NonNull UpdateComponent<DataBucketStatusBean> update,
 			Optional<Boolean> before_updated, @NonNull List<String> field_list,
 			boolean include) {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("This method is not supported (use non-atomic update/get instead)");
 	}
 
 	/* (non-Javadoc)

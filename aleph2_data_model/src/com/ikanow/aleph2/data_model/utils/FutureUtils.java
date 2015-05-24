@@ -128,6 +128,15 @@ public class FutureUtils {
 		}		
 	}
 
+	/** De-nests a completablefuture<managementfuture> back into a management future
+	 * @return the de-nested management future
+	 */
+	public static <T> ManagementFuture<T> denestManagementFuture(final @NonNull CompletableFuture<ManagementFuture<T>> nested_mgmt_future) {
+		return createManagementFuture(
+				nested_mgmt_future.<T>thenApply(mf -> mf.join()), 
+				nested_mgmt_future.thenApply(mf -> mf.getManagementResults().join()));
+	}
+	
 	/** Generates a future that will error as soon as it's touched
 	 * @param e - the underlying exception
 	 * @return a future that errors when touched

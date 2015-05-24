@@ -23,8 +23,6 @@ import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** Represents generic harvest status
@@ -32,22 +30,24 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public class DataBucketStatusBean {
 
+	public static final String HARVEST_LOG_PATH = "/logs/harvest/";
+	public static final String ENRICHMENT_LOG_PATH = "/logs/enrichment/";
+	public static final String STORAGE_LOG_PATH = "/logs/storage/";
+	
 	protected DataBucketStatusBean() {}
 	
 	/** User constructor
 	 */
 	public DataBucketStatusBean(
 			final @NonNull String _id,
+			final @NonNull String bucket_path,
 			final @NonNull Boolean suspended,
 			final @Nullable Date quarantined_until,
 			final @NonNull Long num_objects,
 			final @Nullable List<String> node_affinity,
 			final @Nullable Map<String, BasicMessageBean> last_harvest_status_messages,
 			final @Nullable Map<String, BasicMessageBean> last_enrichment_status_messages,
-			final @Nullable Map<String, BasicMessageBean> last_storage_status_messages,
-			final @Nullable Multimap<String, BasicMessageBean> harvest_log_messages,
-			final @Nullable Multimap<String, BasicMessageBean> enrichment_log_messages,
-			final @Nullable Multimap<String, BasicMessageBean> storage_log_messages) {
+			final @Nullable Map<String, BasicMessageBean> last_storage_status_messages) {
 		super();
 		this._id = _id;
 		this.suspended = suspended;
@@ -57,9 +57,6 @@ public class DataBucketStatusBean {
 		this.last_harvest_status_messages = last_harvest_status_messages;
 		this.last_enrichment_status_messages = last_enrichment_status_messages;
 		this.last_storage_status_messages = last_storage_status_messages;
-		this.harvest_log_messages = harvest_log_messages;
-		this.enrichment_log_messages = enrichment_log_messages;
-		this.storage_log_messages = storage_log_messages;
 	}
 	
 	/** The _id of the data status bean in the management DB
@@ -67,6 +64,13 @@ public class DataBucketStatusBean {
 	 */
 	public String _id() {
 		return _id;
+	}
+	
+	/** The path of the corresponding bucket (relative to /app/aleph2/data)
+	 * @return the path of the corresponding bucket
+	 */
+	public String bucket_path() {
+		return bucket_path;
 	}
 	
 	/** True if the bucket has been suspended
@@ -116,26 +120,8 @@ public class DataBucketStatusBean {
 	public Map<String, BasicMessageBean> last_storage_status_messages() {
 		return Collections.unmodifiableMap(last_storage_status_messages);
 	}
-	/** A set of recent log messages from the harvesters, keyed by host. The core will remove old messages in an unspecified FIFO 
-	 * @return multimap of recent harvest messages vs host
-	 */
-	public Multimap<String, BasicMessageBean> harvest_log_messages() {
-		return Multimaps.unmodifiableMultimap(harvest_log_messages);
-	}
-	/** A set of recent log messages from the enrichment modules, keyed by host. The core will remove old messages in an unspecified FIFO 
-	 * @return multimap of recent enrichment messages vs host
-	 */
-	public Multimap<String, BasicMessageBean> enrichment_log_messages() {
-		return Multimaps.unmodifiableMultimap(enrichment_log_messages);
-	}
-	/** A set of recent log messages from the storage services, keyed by host. The core will remove old messages in an unspecified FIFO 
-	 * @return multimap of recent enrichment messages vs host
-	 */
-	public Multimap<String, BasicMessageBean> storage_log_messages() {
-		return Multimaps.unmodifiableMultimap(storage_log_messages);
-	}
-	
 	private String _id;
+	private String bucket_path;
 	private Boolean suspended;
 	private Date quarantined_until;
 	
@@ -146,9 +132,5 @@ public class DataBucketStatusBean {
 	private Map<String, BasicMessageBean> last_harvest_status_messages;
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;
 	private Map<String, BasicMessageBean> last_storage_status_messages;
-	
-	private Multimap<String, BasicMessageBean> harvest_log_messages;
-	private Multimap<String, BasicMessageBean> enrichment_log_messages;
-	private Multimap<String, BasicMessageBean> storage_log_messages;
 }
 

@@ -33,7 +33,7 @@ public class BucketActionRetryMessage {
 	 */
 	protected BucketActionRetryMessage() {}
 	
-	/** User constructor
+	/** User constructor to create a retry message for a host/message combo
 	 * @param source - the source that failed
 	 * @param message - the message that failed
 	 */

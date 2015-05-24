@@ -45,6 +45,10 @@ public class BucketActionMessage {
 	public static class BucketActionEventBusWrapper {
 		@SuppressWarnings("unused")
 		private BucketActionEventBusWrapper() { }
+		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
+		 * @param sender - the sender of the message
+		 * @param message - the message to be wrapped
+		 */
 		public BucketActionEventBusWrapper(final @NonNull ActorRef sender, final @NonNull BucketActionMessage message) {
 			this.sender = sender;
 			this.message = message;
@@ -63,6 +67,9 @@ public class BucketActionMessage {
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
 		private BucketActionOfferMessage() { super(null, null); }
+		/** User c'tor for creating a message to see which nodes can handle the given bucket
+		 * @param bucket - the bucket with an outstanding operation to apply
+		 */
 		public BucketActionOfferMessage(final @NonNull DataBucketBean bucket) {
 			super(bucket);
 		}
@@ -73,6 +80,10 @@ public class BucketActionMessage {
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
 		private NewBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to create a bucket
+		 * @param bucket - the bucket to create
+		 * @param is_suspended - whether the initial state is suspended
+		 */
 		public NewBucketActionMessage(final @NonNull DataBucketBean bucket, final boolean is_suspended) {
 			super(bucket);
 			this.is_suspended = is_suspended;
@@ -81,11 +92,56 @@ public class BucketActionMessage {
 		protected Boolean is_suspended;
 	}
 	
+	/** Updates an existing bucket
+	 * @author acp
+	 */
+	public static class UpdateBucketActionMessage extends BucketActionMessage {
+		private UpdateBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to update a bucket
+		 * @param new_bucket - the updated bucket
+		 * @param old_bucket - the old bucket
+		 * @param handling_clients the nodes handling this bucket
+		 */
+		public UpdateBucketActionMessage(final @NonNull DataBucketBean new_bucket, 
+											final @NonNull DataBucketBean old_bucket, 
+												final @NonNull Set<String> handling_clients)
+		{
+			super(new_bucket, handling_clients);
+			this.old_bucket = old_bucket;
+		}
+		public DataBucketBean old_bucket() { return old_bucket; }
+		protected DataBucketBean old_bucket;
+	}
+
+	/** Updates the state of an existing bucket
+	 * @author acp
+	 */
+	public static class UpdateBucketStateActionMessage extends BucketActionMessage {
+		private UpdateBucketStateActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to update a bucket's state
+		 * @param bucket - the bucket whose state is being changed
+		 * @param is_suspended - the suspension state
+		 * @param handling_clients - the nodes handling this bucket
+		 */
+		public UpdateBucketStateActionMessage(final @NonNull DataBucketBean bucket, 
+				final boolean is_suspended, final @NonNull Set<String> handling_clients)
+		{
+			super(bucket, handling_clients);
+			this.is_suspended = is_suspended;
+		}
+		public Boolean is_suspended() { return is_suspended; }
+		protected Boolean is_suspended;
+	}
+	
 	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running
 	 * @author acp
 	 */
 	public static class DeleteBucketActionMessage extends BucketActionMessage {
 		private DeleteBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to delete a bucket
+		 * @param bucket - the bucket to delete
+		 * @param handling_clients - the nodes handling this bucket
+		 */
 		public DeleteBucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) {
 			super(bucket, handling_clients);
 		}

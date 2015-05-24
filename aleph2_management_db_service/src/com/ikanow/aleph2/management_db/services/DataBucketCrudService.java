@@ -48,6 +48,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -145,7 +146,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Check for missing fields
 		
-		ManagementDbErrorUtils.ERROR_MAP.keySet().stream()
+		ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.keySet().stream()
 			.filter(s -> !bucket_json.has(s))
 			.forEach(s -> 
 				errors.add(new BasicMessageBean(
@@ -154,7 +155,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						"CoreManagementDbService",
 						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
 						null, // message code
-						ErrorUtils.get(ManagementDbErrorUtils.ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
+						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
 						null // details						
 					)));
 		
@@ -179,20 +180,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			// New bucket vs update
 			
-			Supplier<Optional<DataBucketBean>> get_old_bucket = () -> {
+			final Optional<DataBucketBean> old_bucket = Lambdas.exec(() -> {
 				try {
 					if (replace_if_present && (null != new_object._id())) {
 						return _underlying_data_bucket_db.getObjectById(new_object._id()).get();
 					}
 					else {
-						return Optional.empty();
+						return Optional.<DataBucketBean>empty();
 					}
 				}
 				catch (Exception e) {
 					throw new RuntimeException(e);
 				}
-			};
-			final Optional<DataBucketBean> old_bucket = get_old_bucket.get();
+			});
 
 			// Validation
 			
@@ -210,15 +210,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, false);
 
 			// Check if the low level store has failed:
-			final Supplier<Object> get_id = () -> {
+			final Object id = Lambdas.exec(() -> {
 				try {
 					return ret_val.get().get().toString();
 				}
 				catch (Exception e) { // just pass the raw result back up
 					return FutureUtils.createManagementFuture(ret_val);
-				}
-			};
-			final Object id = get_id.get();
+				}				
+			});
 
 			// Create the directories
 			
@@ -227,16 +226,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// We've created a new bucket but is it enabled or not?
 			
 			final CompletableFuture<Optional<DataBucketStatusBean>> bucket_status = _underlying_data_bucket_status_db.getObjectById(id);
-			final Supplier<Optional<DataBucketStatusBean>> get_status = () -> {
+			final Optional<DataBucketStatusBean> status = Lambdas.exec(() -> {
 				try {
 					return bucket_status.get();
 				}
 				catch (Exception e) { // just pass the raw result back up
 					// Hmm not sure what's going on - just treat this like the status didn't exist:
-					return Optional.empty();
-				}
-			};
-			final Optional<DataBucketStatusBean> status = get_status.get();
+					return Optional.<DataBucketStatusBean>empty();
+				}				
+			});
 			final boolean is_suspended = Optional.ofNullable(status.map(stat -> stat.suspended()).orElse(false)).orElse(false);
 
 			// OK if we're here then it's time to notify any interested harvesters
@@ -435,7 +433,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
 		
 		try {
-			return MgmtCrudUtils.applyCrudPredicate(to_delete.get(), this::deleteBucket);
+			return MgmtCrudUtils.applyCrudPredicate(to_delete, this::deleteBucket);
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -462,17 +460,16 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
 							Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
 
-				final Supplier<Optional<DataBucketStatusBean>> lambda = () -> {
+				final Optional<DataBucketStatusBean> status_bean = Lambdas.exec(() -> {
 					try {
 						return future_status_bean.get(); 
 					}
 					catch (Exception e) { // just treat this as not finding anything
-						return Optional.empty();
-					}					
-				};
-				final Optional<DataBucketStatusBean> status_bean = lambda.get();
+						return Optional.<DataBucketStatusBean>empty();
+					}										
+				});
 				
-				BucketActionMessage.DeleteBucketActionMessage delete_message = new
+				final BucketActionMessage.DeleteBucketActionMessage delete_message = new
 						BucketActionMessage.DeleteBucketActionMessage(to_delete, 
 								new HashSet<String>(
 										Optional.ofNullable(
@@ -480,28 +477,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 										.orElse(Collections.emptyList())
 										));
 				
-				final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-						BucketActionSupervisor.askDistributionActor(
-								_actor_context.getBucketActionSupervisor(), 
-								(BucketActionMessage)delete_message, 
-								Optional.empty());
-				
 				final CompletableFuture<Collection<BasicMessageBean>> management_results =
-						f.<Collection<BasicMessageBean>>thenApply(replies -> {
-							// (enough has gone wrong already - just fire and forget this)
-							replies.timed_out().stream().forEach(source -> {
-								_bucket_action_retry_store.storeObject(
-										new BucketActionRetryMessage(source,
-												// (can't clone the message because it's not a bean, but the c'tor is very simple)
-												new BucketActionMessage.DeleteBucketActionMessage(
-														delete_message.bucket(),
-														new HashSet<String>(Arrays.asList(source))
-														)										
-												));
+					MgmtCrudUtils.applyRetriableManagementOperation(_actor_context, _bucket_action_retry_store, 
+							delete_message, source -> {
+								return new BucketActionMessage.DeleteBucketActionMessage(
+										delete_message.bucket(),
+										new HashSet<String>(Arrays.asList(source)));	
 							});
-							return replies.replies(); 
-						});
-
+				
 				// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 				return FutureUtils.createManagementFuture(delete_reply, management_results);					
 			}	

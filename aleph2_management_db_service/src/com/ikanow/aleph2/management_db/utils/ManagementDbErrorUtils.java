@@ -22,6 +22,10 @@ import com.google.common.collect.ImmutableMap;
  */
 public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	// CREATION
+	
 	// Simple field rules
 	
 	public static final String BUCKET_NO_ACCESS_RIGHTS = "Bucket {0} has no access_rights field";
@@ -31,7 +35,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String BUCKET_NO_DISPLAY_NAME = "Bucket {0} has no display_name field";
 	public static final String BUCKET_NO_FULL_NAME = "Bucket {0} has no full_name field";	
 
-	public static final ImmutableMap<String, String> ERROR_MAP = ImmutableMap.<String, String>builder()
+	public static final ImmutableMap<String, String> NEW_BUCKET_ERROR_MAP = ImmutableMap.<String, String>builder()
 			.put("access_rights", BUCKET_NO_ACCESS_RIGHTS)
 			.put("owner_id", BUCKET_NO_ACCESS_RIGHTS)
 			.put("created", BUCKET_NO_ACCESS_RIGHTS)
@@ -79,11 +83,18 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	// - if a multi bucket, then must have access rights over multi buckets
 	// - all enrichment or harvest modules or technologies - owner id must have access rights
-	// - if an alias, then XXX 
-	// - there cannot be any buckets higher up the file path that XXX
-	// - there cannot be any buckets lower down the file path that XXX
+	// - if an alias, then TODO (ALEPH-19) 
+	// - there cannot be any buckets higher up the file path that TODO (ALEPH-19)
+	// - there cannot be any buckets lower down the file path that TODO (ALEPH-19)
 
 	public static final String MULTI_BUCKET_AUTHORIZATION_ERROR = "Multi-bucket {0}: user {1} does not have access to these buckets: {2}";
 	public static final String LIBRARY_AUTHORIZATION_ERROR = "Bucket {0}: user {1} does not have access to these libraries: {3}";
-	//TODO: the other rules
+	//TODO (ALEPH-19): the other rules
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	// UPDATES
+
+	public static final String ILLEGAL_UPDATE_COMMAND = "Only a subset of update commands are supported: {0} and {1} are not in this subset.";
+	public static final String MISSING_STATUS_BEAN_OR_BUCKET = "One of the bucket or bucket status could not be found for {0}";
 }
