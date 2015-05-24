@@ -27,12 +27,17 @@ import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Test;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
@@ -41,13 +46,17 @@ import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
-import com.mongodb.DBCollection;
+import com.sun.istack.internal.logging.Logger;
 
 public class TestDataBucketCrudService {
 
+	public static final Logger _logger = Logger.getLogger(TestDataBucketCrudService.class);	
+	
 	/////////////////////////////////////////////////////////////
 	
 	// Some test infrastructure
@@ -84,14 +93,67 @@ public class TestDataBucketCrudService {
 		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store;
 	}	
 	
-	//TODO add actor
+	// Actors:
+	
+	// Test actors:
+	// This one always refuses
+	public static class TestActor_Refuser extends UntypedActor {
+		public TestActor_Refuser(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Refuse from: " + uuid);
+			
+			this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
+		}		
+	}
 
+	// This one always accepts, and returns a message
+	public static class TestActor_Accepter extends UntypedActor {
+		public TestActor_Accepter(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Accept from: " + uuid);
+			
+			this.sender().tell(
+					new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+							new BasicMessageBean(
+									new Date(),
+									true,
+									uuid + "replaceme", // (this gets replaced by the bucket)
+									arg0.getClass().getSimpleName(),
+									null,
+									"handled",
+									null									
+									)),
+					this.self());
+		}		
+	}
+	
+	
+	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+		String uuid = UuidUtils.get().getRandomUuid();
+		ManagementDbActorContext.get().getDistributedServices()
+			.getCuratorFramework().create().creatingParentsIfNeeded()
+			.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+		
+		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
+		ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		return uuid;
+	}
+	
 	// Bucket insertion
 	
 	public void cleanDatabases() {
 		
 		_underlying_bucket_crud.deleteDatastore();
 		_underlying_bucket_status_crud.deleteDatastore();
+		_bucket_action_retry_store.deleteDatastore();
 	}
 	
 	/**
@@ -133,7 +195,11 @@ public class TestDataBucketCrudService {
 		}
 	}
 	
-	/////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	
+	// Single delete	
 	
 	// General idea in each case:
 	
@@ -142,64 +208,401 @@ public class TestDataBucketCrudService {
 	// Check that - 1) a response was retrieved, 2) the underlying DB entry was updated (except possibly where an error occurred)
 	
 	@Test
-	public void testSingleDeleteById() throws InterruptedException, ExecutionException, ClassNotFoundException {
+	public void testSingleDeleteById_timeout() throws InterruptedException, ExecutionException, ClassNotFoundException {
 	
 		cleanDatabases();
 		
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
 		
 		insertBucket(1, true, Arrays.asList("host1"), false, null);
 		
 		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
-		ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
-		/**/
+		assertEquals(1L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream().
+			forEach(b -> {
+				assertFalse("Failed", b.success());
+			});
+		
 		//DEBUG
-		ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
 		
 		assertTrue("Delete succeeds", ret_val.get());
 		
-		//TODO other stuff relating to actors...
-
 		// After deletion:
 		
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
-		//TODO: move this to the timeout version
+		assertEquals(1L, (long)_bucket_action_retry_store.countObjects().get());
+		final BucketActionRetryMessage retry = _bucket_action_retry_store.getObjectBySpec(CrudUtils.anyOf(BucketActionRetryMessage.class)).get().get();
+		final BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.message(), Class.forName(retry.message_clazz())).get();
+		assertEquals("id1", to_retry.bucket()._id());
+	}
+
+	@Test
+	public void testSingleDeleteById_partialTimeout() throws Exception {
+	
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList("host1", host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
+		
+		assertEquals(2L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals("host1")) {
+					assertFalse("Failed", b.success());
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
+		//DEBUG
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		assertTrue("Delete succeeds", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
 		assertEquals(1L, (long)_bucket_action_retry_store.countObjects().get());
+		final BucketActionRetryMessage retry = _bucket_action_retry_store.getObjectBySpec(CrudUtils.anyOf(BucketActionRetryMessage.class)).get().get();
+		final BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.message(), Class.forName(retry.message_clazz())).get();
+		assertEquals("id1", to_retry.bucket()._id());
+	}
+	
+	@Test
+	public void testSingleDeleteById() throws Exception {
+	
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
 		
-		/**/
-		System.out.println("??? " + _bucket_action_retry_store.getUnderlyingPlatformDriver(DBCollection.class, Optional.empty()).getName());
+		cleanDatabases();
 		
-		//TODO: should put this in the 
-		/**/
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
+		
+		assertEquals(2L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals(host1)) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
 		//DEBUG
-		BucketActionRetryMessage retry = _bucket_action_retry_store.getObjectBySpec(CrudUtils.anyOf(BucketActionRetryMessage.class)).get().get();
-		System.out.println("retry=" + BeanTemplateUtils.toJson(retry));
-		System.out.println("retry message=" + retry.message());
-		BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.message(), Class.forName(retry.message_clazz())).get();
-		System.out.println("Actual class=" + to_retry.getClass());
-		System.out.println("Bucket id=" + to_retry.bucket()._id());
-		System.out.println("Back other way=" + BeanTemplateUtils.toJson(to_retry));
-	}
-	
-	//TODO don't forget to test "not present" cases (ie wrong id)
-	//TODO test deletion attempts when nobody is listening (what _should_ it return?!)
-	
-	@Test
-	public void testSingleDeleteBySpec() {
-		//TODO
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		assertTrue("Delete succeeds", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
 	}
 	
 	@Test
-	public void testMultiDelete() {
-		//TODO
+	public void testSingleDeleteById_partialIgnore() throws Exception {
+	
+		String host1 = insertActor(TestActor_Refuser.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
+		
+		assertEquals(1L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
+		//DEBUG
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		assertTrue("Delete succeeds", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
 	}
+
+	@Test
+	public void testSingleDeleteBySpec() throws Exception {
+	
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectBySpec(CrudUtils.anyOf(DataBucketBean.class).when(DataBucketBean::full_name, "/bucket/path/here/1"));
+		
+		assertEquals(2L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals(host1)) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
+		//DEBUG
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		assertTrue("Delete succeeds", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+	}
+	
+	@Test
+	public void testSingleDeleteById_wrongId() throws Exception {
+	
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id2");		
+		
+		assertFalse("Didn't delete, no matching buckets", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+	}
+	
+	@Test
+	public void testSingleDeleteBySpec_wrongQuery() throws Exception {
+	
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectBySpec(CrudUtils.anyOf(DataBucketBean.class).when(DataBucketBean::full_name, "/bucket/path/here/2"));
+		
+		assertFalse("Didn't delete, no matching buckets", ret_val.get());
+		
+		// After deletion:
+		
+		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+	}
+	
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	
+	// Multi delete
+	
+	@Test
+	public void testMultiDelete_noTimeouts() throws Exception {
+		
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		insertBucket(2, true, Arrays.asList(host1, host2), false, null);
+		insertBucket(3, true, Arrays.asList(host1), false, null);
+		insertBucket(4, true, Arrays.asList(host1, host2), false, null);
+		
+		assertEquals(4L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(4L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		ManagementFuture<Long> ret_val = _bucket_crud.deleteObjectsBySpec(CrudUtils.anyOf(DataBucketBean.class)
+									.rangeAbove(DataBucketBean::full_name, "/bucket/path/here/2", true));
+		
+		assertEquals(2L, (long)ret_val.get());
+		
+		assertEquals(3L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals(host1)) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
+		//DEBUG
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		// After deletion:
+		
+		assertEquals(2L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(2L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+	}
+	
+	@Test
+	public void testMultiDelete_2Timeouts() throws Exception {
+		
+		String host1 = insertActor(TestActor_Accepter.class);
+		String host2 = insertActor(TestActor_Accepter.class);
+		
+		cleanDatabases();
+		
+		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		
+		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
+		insertBucket(2, true, Arrays.asList(host1, host2), false, null);
+		insertBucket(3, true, Arrays.asList(host1, "host3"), false, null);
+		insertBucket(4, true, Arrays.asList(host1, host2, "host3", "host4"), false, null);
+		
+		assertEquals(4L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(4L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		ManagementFuture<Long> ret_val = _bucket_crud.deleteObjectsBySpec(CrudUtils.anyOf(DataBucketBean.class)
+									.rangeAbove(DataBucketBean::full_name, "/bucket/path/here/2", true));
+		
+		assertEquals(2L, (long)ret_val.get());
+		
+		assertEquals(6L, ret_val.getManagementResults().get().size());		
+		ret_val.getManagementResults().get().stream()
+			.forEach(b -> {
+				if ( b.source().equals(host2) ) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals(host1)) {
+					assertTrue("Succeeded", b.success());				
+				}
+				else if ( b.source().equals("host3") ) {
+					assertFalse("Failed", b.success());				
+				}
+				else if (b.source().equals("host4")) {
+					assertFalse("Failed", b.success());				
+				}
+				else {
+					fail("Unrecognized host: " + b.source());
+				}
+			});
+		
+		//DEBUG
+		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
+		
+		// After deletion:
+		
+		assertEquals(2L, (long)_underlying_bucket_crud.countObjects().get());
+		assertEquals(2L, (long)_underlying_bucket_status_crud.countObjects().get());				
+		
+		assertEquals(3L, (long)_bucket_action_retry_store.countObjects().get());
+	}
+	
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	/////////////////////////////////////////////////////////////	
+	
+	// Store bucket
 	
 	/////////////////////////////////////////////////////////////	
 		

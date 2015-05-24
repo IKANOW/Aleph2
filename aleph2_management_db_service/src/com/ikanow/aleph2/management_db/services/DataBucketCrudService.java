@@ -53,6 +53,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 
 
+//TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
+
 /**
  * @author acp
  *
