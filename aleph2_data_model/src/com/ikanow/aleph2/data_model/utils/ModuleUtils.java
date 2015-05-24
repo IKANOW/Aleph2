@@ -394,7 +394,7 @@ public class ModuleUtils {
 		 * 
 		 */
 		@Override
-		public IStorageService getStorageIndexService() {
+		public IStorageService getStorageService() {
 			return getService(IStorageService.class, Optional.empty());
 		}
 

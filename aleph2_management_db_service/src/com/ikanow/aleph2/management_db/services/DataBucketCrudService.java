@@ -24,9 +24,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -35,6 +34,7 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -51,21 +51,22 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
-import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
 
-/**
+/** CRUD service for Data Bucket with management proxy
  * @author acp
- *
  */
 public class DataBucketCrudService implements IManagementCrudService<DataBucketBean> {
 
+	protected final IStorageService _storage_service;
+	
 	protected final IManagementDbService _underlying_management_db;
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
@@ -85,7 +86,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
 		
+		_storage_service = service_context.getStorageService();
+		
 		_actor_context = actor_context;
+		
+		// Handle some simple optimization of the data bucket CRUD repo:
+		Executors.newSingleThreadExecutor().submit(() -> {
+			_underlying_data_bucket_db.optimizeQuery(Arrays.asList(
+					BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
+		});		
 	}
 
 	/** User constructor, for wrapping
@@ -93,13 +102,17 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param underlying_data_bucket_db
 	 */
 	public DataBucketCrudService(final @NonNull IManagementDbService underlying_management_db, 
-			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db)
+			final @NonNull IStorageService storage_service,
+			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db,
+			final @NonNull ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
+			)
 	{
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = underlying_data_bucket_db;
-		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
+		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
 		_actor_context = ManagementDbActorContext.get();		
+		_storage_service = storage_service;
 	}
 		
 	/* (non-Javadoc)
@@ -112,7 +125,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final @NonNull Optional<ProjectBean> project_auth) 
 	{
 		return new DataBucketCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
-				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
+				_storage_service,
+				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth),
+				_underlying_data_bucket_status_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth)
+				);
 	}
 
 	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
@@ -127,6 +143,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 		final JsonNode bucket_json = BeanTemplateUtils.toJson(bucket);
 		
+		// Check for missing fields
+		
 		ManagementDbErrorUtils.ERROR_MAP.keySet().stream()
 			.filter(s -> !bucket_json.has(s))
 			.forEach(s -> 
@@ -139,6 +157,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						ErrorUtils.get(ManagementDbErrorUtils.ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
 						null // details						
 					)));
+		
+		// More complex missing field checks
 		
 		//TODO more complex rules
 		
@@ -415,36 +435,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
 		
 		try {
-			final List<Tuple2<Boolean, CompletableFuture<Collection<BasicMessageBean>>>> collected_deletes =
-				StreamSupport.stream(to_delete.get().spliterator(), false)
-					.<Tuple2<Boolean, CompletableFuture<Collection<BasicMessageBean>>>>map(bucket -> {
-						final ManagementFuture<Boolean> single_delete = deleteBucket(bucket);
-						try { // check it doesn't do anything horrible
-							return Tuples._2T(single_delete.get(), single_delete.getManagementResults());
-						}
-						catch (Exception e) {
-							// Something went wrong, this is bad - just carry on though, there's not much to be
-							// done and this shouldn't ever happen anyway
-							return null;
-						}
-					})
-					.filter(reply -> null != reply)
-					.collect(Collectors.toList());
-			
-			final long deleted = collected_deletes.stream().collect(Collectors.summingLong(reply -> reply._1() ? 1 : 0));
-			
-			final List<CompletableFuture<Collection<BasicMessageBean>>> replies = 
-					collected_deletes.stream()
-							.<CompletableFuture<Collection<BasicMessageBean>>>map(reply -> reply._2())
-							.collect(Collectors.toList());
-			
-			final CompletableFuture<Void> all_done_future = CompletableFuture.allOf(replies.toArray(new CompletableFuture[replies.size()]));										
-			
-			return (ManagementFuture<Long>) FutureUtils.createManagementFuture(
-					CompletableFuture.completedFuture(deleted), 
-					all_done_future.thenApply(__ -> 
-							replies.stream().flatMap(reply -> reply.join().stream()).collect(Collectors.toList())));
-			//(note: join shouldn't be able to throw here since we've already called .get() without incurring an exception if we're here)
+			return MgmtCrudUtils.applyCrudPredicate(to_delete.get(), this::deleteBucket);
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here

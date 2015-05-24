@@ -115,7 +115,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public IStorageService getStorageIndexService();
+	public IStorageService getStorageService();
 	
 	/**
 	* Returns an instance of the currently configured temporal service.

@@ -98,7 +98,7 @@ public class MockServiceContext implements IServiceContext {
 	}
 
 	@Override
-	public IStorageService getStorageIndexService() {
+	public IStorageService getStorageService() {
 		return getService(IStorageService.class, Optional.empty());
 	}
 

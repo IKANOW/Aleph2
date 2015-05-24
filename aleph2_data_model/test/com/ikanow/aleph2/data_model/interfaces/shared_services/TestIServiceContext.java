@@ -107,7 +107,7 @@ public class TestIServiceContext {
 		assertNotNull(context.getGraphService());
 		assertNotNull(context.getCoreManagementDbService());
 		assertNotNull(context.getSearchIndexService());
-		assertNotNull(context.getStorageIndexService());
+		assertNotNull(context.getStorageService());
 		assertNotNull(context.getTemporalService());
 		assertNotNull(context.getSecurityService());
 		assertNotNull(context.getGlobalProperties());
