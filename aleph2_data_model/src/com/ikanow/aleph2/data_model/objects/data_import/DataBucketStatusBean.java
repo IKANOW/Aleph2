@@ -50,6 +50,7 @@ public class DataBucketStatusBean {
 			final @Nullable Map<String, BasicMessageBean> last_storage_status_messages) {
 		super();
 		this._id = _id;
+		this.bucket_path = bucket_path;
 		this.suspended = suspended;
 		this.quarantined_until = quarantined_until;
 		this.num_objects = num_objects;
