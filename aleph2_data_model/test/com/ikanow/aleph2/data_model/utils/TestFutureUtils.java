@@ -37,14 +37,14 @@ public class TestFutureUtils {
 	}
 	
 	@Test
-	public void testFutureUtils() throws InterruptedException, ExecutionException, TimeoutException {
+	public void testWrappedManagementFuture() throws InterruptedException, ExecutionException, TimeoutException {
 		
 		// Test1 - very basic stuff
 		
 		final CompletableFuture<TestBean> pretest1 = 
 				CompletableFuture.completedFuture(BeanTemplateUtils.build(TestBean.class).with("field1", "alskdjfhg").done().get());
 		
-		ManagementFuture<TestBean> test1 = FutureUtils.createManagementFuture(pretest1);
+		final ManagementFuture<TestBean> test1 = FutureUtils.createManagementFuture(pretest1);
 		
 		assertEquals(Collections.emptyList(), test1.getManagementResults().get());
 		
@@ -56,6 +56,12 @@ public class TestFutureUtils {
 		assertEquals(pretest1.isCancelled(), test1.isCancelled());		
 		
 		assertEquals(pretest1.get().field1, test1.get(1000, TimeUnit.SECONDS).field1);		
+		
+		final CompletableFuture<TestBean> test1b = test1.thenApply(e -> e);
+		assertEquals(pretest1.get().field1, test1b.get().field1);
+
+		final CompletableFuture<Collection<BasicMessageBean>> test1c = test1.getManagementResults().thenApply(e -> e);
+		assertEquals(Collections.emptyList(), test1c.get());
 		
 		// Test2 - same but with a side channel 
 		
@@ -81,6 +87,35 @@ public class TestFutureUtils {
 		assertEquals(false, test2.getManagementResults().cancel(true));
 		assertEquals(pretest2b.isCancelled(), test2.getManagementResults().isCancelled());				
 		assertEquals(pretest2b.get(), test2.getManagementResults().get(1000, TimeUnit.SECONDS));
+		
+		final CompletableFuture<Collection<BasicMessageBean>> test2c = test2.getManagementResults().thenApply(e -> e);
+		assertEquals(pretest2b.get(), test2c.get());		
+	}
+
+	@Test
+	public void testWrappedErrorFuture() throws InterruptedException, ExecutionException {
+		final RuntimeException e = new RuntimeException("test1");
+		final CompletableFuture<Object> test1 = FutureUtils.returnError(e);
+		try {
+			test1.get();
+			fail("Should have thrown exception"); 
+		}
+		catch (Throwable t) {
+			assertEquals(e, t.getCause());
+		}
+		
+		final CompletableFuture<Object> test2 = test1.thenApply(oo -> oo);
+		try {
+			test2.get();
+			fail("Should have thrown exception"); 
+		}
+		catch (Throwable t) {
+			assertEquals(e, t.getCause());
+		}
 	}
 	
+	@Test
+	public void testWrappedScalaFuture() {
+		//(tested under management_db_service, we don't have akka here so it's a bit hard to test)		
+	}
 }
