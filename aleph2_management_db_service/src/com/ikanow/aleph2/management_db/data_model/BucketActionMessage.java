@@ -73,9 +73,12 @@ public class BucketActionMessage {
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
 		private NewBucketActionMessage() { super(null, null); }
-		public NewBucketActionMessage(final @NonNull DataBucketBean bucket) {
+		public NewBucketActionMessage(final @NonNull DataBucketBean bucket, final boolean is_suspended) {
 			super(bucket);
+			this.is_suspended = is_suspended;
 		}
+		protected Boolean is_suspended() { return is_suspended; }
+		protected Boolean is_suspended;
 	}
 	
 	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running

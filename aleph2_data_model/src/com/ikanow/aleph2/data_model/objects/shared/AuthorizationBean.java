@@ -19,5 +19,11 @@ package com.ikanow.aleph2.data_model.objects.shared;
  * @author acp
  */
 public class AuthorizationBean {
-
+	protected AuthorizationBean() {}
+	
+	public AuthorizationBean(final String auth_token) {
+		this.auth_token = auth_token;		
+	}
+	public String auth_token() { return auth_token; }
+	protected String auth_token;
 }

@@ -173,7 +173,7 @@ public class TestDataBucketCrudService {
 				.with(DataBucketBean::multi_node_enabled, multi_node_enabled)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean())
+				.with(DataBucketBean::access_rights, new AuthorizationBean("auth_token"))
 				.done().get();
 		
 		_underlying_bucket_crud.storeObject(bucket).get(); // (ensure exception on failure)

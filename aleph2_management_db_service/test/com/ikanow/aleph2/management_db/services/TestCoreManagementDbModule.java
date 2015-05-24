@@ -75,7 +75,7 @@ public class TestCoreManagementDbModule {
 				.with(DataBucketBean::multi_node_enabled, false)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean())
+				.with(DataBucketBean::access_rights, new AuthorizationBean("auth_token"))
 				.done().get();
 		
 		final BucketActionMessage.DeleteBucketActionMessage test_message = new 
