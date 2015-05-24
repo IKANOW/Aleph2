@@ -149,4 +149,74 @@ public class TestFutureUtils {
 	public void testWrappedScalaFuture() {
 		//(tested under management_db_service, we don't have akka here so it's a bit hard to test)		
 	}
+	
+	/** This function doesn't test any Aleph2 code, just want to verify how exceptions propagate
+	 * @throws ExecutionException 
+	 * @throws InterruptedException 
+	 */
+	@Test 
+	public void composingAndApplyFuturesAndExceptions() throws InterruptedException, ExecutionException {
+
+		CompletableFuture<String> test1a = CompletableFuture.completedFuture("test");
+		
+		// Composing
+		
+		CompletableFuture<String> test1b = test1a
+				.thenCompose(s -> CompletableFuture.completedFuture(s + "1"))
+				.thenCompose(ss -> CompletableFuture.completedFuture(ss + "1"));
+		
+		assertEquals("test11", test1b.get());
+		
+		CompletableFuture<String> test2b = test1a
+				.thenCompose(s -> CompletableFuture.completedFuture(s + "1"))
+				.thenCompose(ss -> {
+					if (ss.equals("test1")) {
+						throw new RuntimeException("test2b");
+					}
+					return CompletableFuture.completedFuture(ss + "1");
+				})
+				.thenCompose(sss -> {
+					System.out.println("NEVER SEE THIS1");
+					return CompletableFuture.completedFuture(sss + "1");
+				});
+		
+		try {
+			test2b.get();
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("test2b", e.getCause().getMessage());
+		}
+
+		// Same again when applying
+		
+		CompletableFuture<String> test3b = test1a
+				.thenApply(s -> s + 1)
+				.thenApply(ss -> ss + 1)
+				;
+		
+		assertEquals("test11", test3b.get());
+
+		CompletableFuture<String> test4b = test1a
+				.thenApply(s -> s + 1)
+				.thenApply(ss -> {
+					if (ss.equals("test1")) {
+						throw new RuntimeException("test4b");
+					}
+					return ss + "1";
+				})
+				.thenApply(sss -> {
+					System.out.println("NEVER SEE THIS2");
+					return sss + 1;
+				})
+				;
+		
+		try {
+			test4b.get();
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("test4b", e.getCause().getMessage());
+		}		
+	}
 }

@@ -24,7 +24,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
-	// CREATION
+	// BUCKET CREATION/UPDATES
 	
 	// Simple field rules
 	
@@ -54,6 +54,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology
 	// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology
 
+	public static final String FIELD_MUST_NOT_HAVE_ZERO_LENGTH = "Bucket {0} has a zero-length field: {1}";
 	public static final String ENRICHMENT_BUT_NO_HARVEST_TECH = "Bucket {0} has enrichment but no harvest_technology_name_or_id field";
 	public static final String HARVEST_BUT_NO_HARVEST_CONFIG = "Bucket {0} has harvest but no harvest configuration elements";
 	public static final String ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE = "Bucket {0} has enrichment but no master_enrichment_type field";
@@ -93,7 +94,13 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
-	// UPDATES
+	// BUCKET STATUS CREATION
+	
+	public static final String ILLEGAL_STATUS_CREATION = "Bucket Statuses must have _id/bucket_path/suspended fields set ({0})";
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	// BUCKET STATUS UPDATES
 
 	public static final String ILLEGAL_UPDATE_COMMAND = "Only a subset of update commands are supported: {0} and {1} are not in this subset.";
 	public static final String MISSING_STATUS_BEAN_OR_BUCKET = "One of the bucket or bucket status could not be found for {0}";

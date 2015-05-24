@@ -16,6 +16,8 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -26,8 +28,14 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import scala.Tuple2;
 
@@ -46,9 +54,12 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleBeanQueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -60,6 +71,7 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
+//TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
 
 /** CRUD service for Data Bucket with management proxy
  * @author acp
@@ -132,53 +144,16 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				);
 	}
 
-	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
-	 * @param bucket
-	 * @return
-	 */
-	@NonNull
-	protected Collection<BasicMessageBean> validateBucket(DataBucketBean bucket, boolean is_new) {
-		
-		// (will live with this being mutable)
-		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
-
-		final JsonNode bucket_json = BeanTemplateUtils.toJson(bucket);
-		
-		// Check for missing fields
-		
-		ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.keySet().stream()
-			.filter(s -> !bucket_json.has(s))
-			.forEach(s -> 
-				errors.add(new BasicMessageBean(
-						new Date(), // date
-						false, // success
-						"CoreManagementDbService",
-						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
-						null, // message code
-						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
-						null // details						
-					)));
-		
-		// More complex missing field checks
-		
-		//TODO more complex rules
-		
-		//TODO multi buckets
-		
-		//TODO various authorization
-		
-		return errors;
-	}
-	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object, boolean)
 	 */
 	@NonNull
 	public ManagementFuture<Supplier<Object>> storeObject(final @NonNull DataBucketBean new_object, final boolean replace_if_present)
 	{
-		try {
-			
-			// New bucket vs update
+		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
+		
+		try {			
+			// New bucket vs update - get the old bucket (we'll do this non-concurrently at least for now)
 			
 			final Optional<DataBucketBean> old_bucket = Lambdas.exec(() -> {
 				try {
@@ -196,7 +171,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 			// Validation
 			
-			final Collection<BasicMessageBean> errors = validateBucket(new_object, old_bucket.isPresent());
+			final Collection<BasicMessageBean> errors = validateBucket(new_object, old_bucket);
 		
 			if (!errors.isEmpty()) {
 				return FutureUtils.createManagementFuture(
@@ -205,63 +180,40 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						);
 			}
 			
-			// OK if the bucket is validated we can store it (and create a status object)
-					
-			CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, false);
-
-			// Check if the low level store has failed:
-			final Object id = Lambdas.exec(() -> {
-				try {
-					return ret_val.get().get().toString();
-				}
-				catch (Exception e) { // just pass the raw result back up
-					return FutureUtils.createManagementFuture(ret_val);
-				}				
-			});
-
 			// Create the directories
 			
-			//TODO (ALEPH-19): create the directories
+			try {
+				createFilePaths(new_object, _storage_service);
+			}
+			catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
+				return FutureUtils.createManagementFuture(
+						FutureUtils.returnError(e));			
+			}
 			
-			// We've created a new bucket but is it enabled or not?
+			// OK if the bucket is validated we can store it (and create a status object)
+					
+			final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, false);
+
+			// Get the status and then decide whether to broadcast out the new/update message
 			
-			final CompletableFuture<Optional<DataBucketStatusBean>> bucket_status = _underlying_data_bucket_status_db.getObjectById(id);
-			final Optional<DataBucketStatusBean> status = Lambdas.exec(() -> {
-				try {
-					return bucket_status.get();
+			final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = ret_val.thenCompose(f_id -> {
+				return _underlying_data_bucket_status_db.getObjectById(f_id.get(), 
+						Arrays.asList(helper.field(DataBucketStatusBean::_id), helper.field(DataBucketStatusBean::suspended), helper.field(DataBucketStatusBean::quarantined_until)), 
+						true);
+			})
+			.thenCompose(bucket_status_opt -> {
+				if (!bucket_status_opt.isPresent()) { // No bucket status, so not going to distribute the new bucket action
+					// instead we'll wait until the bucket status is actually created
+					return CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList());
 				}
-				catch (Exception e) { // just pass the raw result back up
-					// Hmm not sure what's going on - just treat this like the status didn't exist:
-					return Optional.<DataBucketStatusBean>empty();
-				}				
-			});
-			final boolean is_suspended = Optional.ofNullable(status.map(stat -> stat.suspended()).orElse(false)).orElse(false);
-
-			// OK if we're here then it's time to notify any interested harvesters
-
-			final BucketActionMessage.NewBucketActionMessage new_message = 
-					new BucketActionMessage.NewBucketActionMessage(new_object, is_suspended);
-			
-			final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-					Optional.ofNullable(new_object.multi_node_enabled()).orElse(false)
-					? 					
-					BucketActionSupervisor.askDistributionActor(
-							_actor_context.getBucketActionSupervisor(), 
-							(BucketActionMessage)new_message, 
-							Optional.empty())
-					:
-					BucketActionSupervisor.askChooseActor(
-							_actor_context.getBucketActionSupervisor(), 
-							(BucketActionMessage)new_message, 
-							Optional.empty());
-			
-			final CompletableFuture<Collection<BasicMessageBean>> management_results =
-					f.<Collection<BasicMessageBean>>thenApply(replies -> {
-						return replies.replies(); 
-					});
-
-			// Convert BucketActionCollectedRepliesMessage into a management side-channel:
-			return FutureUtils.createManagementFuture(ret_val, management_results);					
+				else {
+					final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(bucket_status_opt.get());
+					return old_bucket.isPresent()
+							? requestUpdatedBucket(new_object, old_bucket.get(), bucket_status_opt.get(), _actor_context, _bucket_action_retry_store)
+							: requestNewBucket(new_object, is_suspended, _actor_context);							
+				}
+			});			
+			return FutureUtils.createManagementFuture(ret_val, mgmt_results);
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -450,47 +402,45 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	private ManagementFuture<Boolean> deleteBucket(final @NonNull DataBucketBean to_delete) {
 		try {
 			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
-			
-			if (delete_reply.get()) {
-			
-				// Get the status and delete it:
-				
-				final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
-					_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
-							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
-							Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
 
-				final Optional<DataBucketStatusBean> status_bean = Lambdas.exec(() -> {
-					try {
-						return future_status_bean.get(); 
+			return FutureUtils.denestManagementFuture(delete_reply.thenCompose(del_reply -> {			
+				if (!del_reply) { // Didn't find an object to delete, just return that information to the user
+					return CompletableFuture.completedFuture(Optional.empty());
+				}
+				else { //Get the status and delete it 
+					final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
+							_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
+									CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
+									Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
+					
+					return future_status_bean;
+				}
+				})
+				.thenApply(status_bean -> {
+					if (!status_bean.isPresent()) {
+						return FutureUtils.createManagementFuture(delete_reply);
 					}
-					catch (Exception e) { // just treat this as not finding anything
-						return Optional.<DataBucketStatusBean>empty();
-					}										
-				});
-				
-				final BucketActionMessage.DeleteBucketActionMessage delete_message = new
-						BucketActionMessage.DeleteBucketActionMessage(to_delete, 
-								new HashSet<String>(
-										Optional.ofNullable(
-												status_bean.isPresent() ? status_bean.get().node_affinity() : null)
-										.orElse(Collections.emptyList())
-										));
-				
-				final CompletableFuture<Collection<BasicMessageBean>> management_results =
-					MgmtCrudUtils.applyRetriableManagementOperation(_actor_context, _bucket_action_retry_store, 
-							delete_message, source -> {
-								return new BucketActionMessage.DeleteBucketActionMessage(
-										delete_message.bucket(),
-										new HashSet<String>(Arrays.asList(source)));	
-							});
-				
-				// Convert BucketActionCollectedRepliesMessage into a management side-channel:
-				return FutureUtils.createManagementFuture(delete_reply, management_results);					
-			}	
-			else {
-				return FutureUtils.createManagementFuture(delete_reply);
-			}
+					else {
+						final BucketActionMessage.DeleteBucketActionMessage delete_message = new
+								BucketActionMessage.DeleteBucketActionMessage(to_delete, 
+										new HashSet<String>(
+												Optional.ofNullable(
+														status_bean.isPresent() ? status_bean.get().node_affinity() : null)
+												.orElse(Collections.emptyList())
+												));
+						
+						final CompletableFuture<Collection<BasicMessageBean>> management_results =
+							MgmtCrudUtils.applyRetriableManagementOperation(_actor_context, _bucket_action_retry_store, 
+									delete_message, source -> {
+										return new BucketActionMessage.DeleteBucketActionMessage(
+												delete_message.bucket(),
+												new HashSet<String>(Arrays.asList(source)));	
+									});
+						
+						// Convert BucketActionCollectedRepliesMessage into a management side-channel:
+						return FutureUtils.createManagementFuture(delete_reply, management_results);											
+					}
+				}));
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -546,7 +496,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public @NonNull 
 	ManagementFuture<Boolean> updateObjectById(
 			final @NonNull Object id, final @NonNull UpdateComponent<DataBucketBean> update) {
-		throw new RuntimeException("DataBucketCrudService.update* not supported");
+		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
 	/* (non-Javadoc)
@@ -557,7 +507,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final @NonNull QueryComponent<DataBucketBean> unique_spec,
 			final @NonNull Optional<Boolean> upsert,
 			final @NonNull UpdateComponent<DataBucketBean> update) {
-		throw new RuntimeException("DataBucketCrudService.update* not supported");
+		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
 	/* (non-Javadoc)
@@ -568,7 +518,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final @NonNull QueryComponent<DataBucketBean> spec,
 			final @NonNull Optional<Boolean> upsert,
 			final @NonNull UpdateComponent<DataBucketBean> update) {
-		throw new RuntimeException("DataBucketCrudService.update* not supported");
+		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
 	/* (non-Javadoc)
@@ -581,6 +531,274 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final @NonNull UpdateComponent<DataBucketBean> update,
 			final @NonNull Optional<Boolean> before_updated, @NonNull List<String> field_list,
 			final boolean include) {
-		throw new RuntimeException("DataBucketCrudService.update* not supported");
+		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
+	}
+	
+	/////////////////////////////////////////////////////////////////////////////////////
+	
+	// UTILITIES
+	
+	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
+	 * @param bucket
+	 * @return
+	 */
+	@NonNull
+	protected Collection<BasicMessageBean> validateBucket(final @NonNull DataBucketBean bucket, final @NonNull Optional<DataBucketBean> old_version) {
+		
+		// (will live with this being mutable)
+		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
+
+		final JsonNode bucket_json = BeanTemplateUtils.toJson(bucket);
+		
+		/////////////////
+
+		// PHASE 1
+		
+		// Check for missing fields
+		
+		ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.keySet().stream()
+			.filter(s -> !bucket_json.has(s))
+			.forEach(s -> 
+				errors.add(new BasicMessageBean(
+						new Date(), // date
+						false, // success
+						"CoreManagementDbService",
+						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
+						null, // message code
+						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
+						null // details						
+					)));
+		
+		// More complex missing field checks
+		
+		//TODO more complex rules
+
+		errors.addAll(checkForZeroLengthField(bucket._id(), bucket_json, "full_name", "display_name", "owner_id"));
+		
+		//TODO multi buckets - logic 
+		
+		// OK before I do any more stateful checking, going to stop if we have logic errors first 
+		
+		if (!errors.isEmpty()) {
+			return errors;
+		}
+		
+		/////////////////
+		
+		// PHASE 2
+				
+		//TODO multi buckets - authorization
+		
+		//TODO various other authorization
+
+		CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
+		
+		errors.addAll(bucket_path_errors_future.join());
+		
+		// OK before I do any more stateful checking, going to stop if we have logic errors first 
+		
+		if (!errors.isEmpty()) {
+			return errors;
+		}
+		
+		/////////////////
+		
+		// PHASE 3
+		
+		// Finally Check whether I am allowed to update the various fields if old_version.isPresent()
+		
+		if (old_version.isPresent()) {
+			//TODO
+		}		
+		return errors;
+	}
+	
+	private static Collection<BasicMessageBean> checkForZeroLengthField(final @Nullable String id, final @NonNull JsonNode json, final @NonNull String... fields) {
+		final LinkedList<BasicMessageBean> new_errors = new LinkedList<BasicMessageBean>();
+		for (String field: fields) {
+			if (json.has(field) && json.get(field).asText().isEmpty()) {
+				new_errors.add(new BasicMessageBean(
+						new Date(), // date
+						false, // success
+						"CoreManagementDbService",
+						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
+						null, // message code
+						ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, 
+								Optional.ofNullable(id).orElse("(new)"), "full_name"),
+						null)); // details						
+			}			
+		}
+		return new_errors;
+	}
+	
+	/** A utility routine to check whether the 
+	 * @param bucket - the bucket to validate
+	 * @return a future containing validation errors based on the path
+	 */
+	private CompletableFuture<Collection<BasicMessageBean>> validateOtherBucketsInPathChain(final @NonNull DataBucketBean bucket) {
+		final MethodNamingHelper<DataBucketBean> helper = BeanTemplateUtils.from(DataBucketBean.class);
+		final String bucket_full_name = normalize(bucket.full_name());
+
+		return this._underlying_data_bucket_db.getObjectsBySpec(getPathQuery(bucket_full_name), 
+				Arrays.asList(helper.field(DataBucketBean::full_name), helper.field(DataBucketBean::access_rights)), true)
+				.thenApply(cursor -> {
+					return StreamSupport.stream(cursor.spliterator(), false)
+						.filter(b -> (null == b.full_name()) || (null == b.access_rights()))
+						.<BasicMessageBean>map(b -> {
+							final String norm_name = normalize(b.full_name());							
+							if (norm_name.startsWith(bucket_full_name)) {
+								//TODO (ALEPH-19) call out other function, create BasicMessageBean error if not
+								return null;
+							}
+							else if (norm_name.startsWith(bucket_full_name)) {								
+								//TODO (ALEPH-19) call out other function, create BasicMessageBean error if not
+								return null;
+							}
+							else { // we're good
+								return null;
+							}
+						})								
+						.filter(err -> err != null)
+						.collect(Collectors.toList());
+				});
+	}
+	
+	/** Ensures that the bucket.full_name starts and ends with /s
+	 * @param bucket_full_name
+	 * @return
+	 */
+	protected static String normalize(final @NonNull String bucket_full_name) {
+		final String full_name_tmp = bucket_full_name.endsWith("/") ? bucket_full_name : (bucket_full_name + "/");
+		final String full_name = full_name_tmp.startsWith("/") ? full_name_tmp : ("/" + full_name_tmp);
+		return full_name;
+	}
+	
+	/** Creates the somewhat complex query that finds all buckets before or after this one on the path
+	 * @param normalized_bucket_full_name
+	 * @return the query to use in "validateOtherBucketsInPathChain"
+	 */
+	protected static QueryComponent<DataBucketBean> getPathQuery(final @NonNull String normalized_bucket_full_name) {		
+		final Matcher m = Pattern.compile("(/(?:[^/]+/)*)([^/]+/)").matcher(normalized_bucket_full_name);
+		// This must match by construction of full_name above
+		
+		final char first_char_of_final_path_inc = (char)(m.group(2).charAt(0) + 1);
+		
+		// Anything _before_ me in the chain
+		
+		final String[] parts = normalized_bucket_full_name.substring(1).split("[/]");
+		
+		// Going old school, it's getting late (lol@me):
+		SingleBeanQueryComponent<DataBucketBean> component1 = CrudUtils.anyOf(DataBucketBean.class);
+		for (int i = 0; i < parts.length; ++i) {
+			String path = parts[0];
+			for (int j = 0; j < i; ++j) {
+				path += "/" + parts[j];
+			}
+			component1 = component1.when(DataBucketBean::full_name, path);
+			component1 = component1.when(DataBucketBean::full_name, "/" + path);
+			component1 = component1.when(DataBucketBean::full_name, path + "/");
+			component1 = component1.when(DataBucketBean::full_name, "/" + path + "/");
+		}
+		
+		// Anything _after_ me in the chain
+		final SingleQueryComponent<DataBucketBean> component2 = CrudUtils.allOf(DataBucketBean.class)
+						.rangeAbove(DataBucketBean::full_name, normalized_bucket_full_name, true)
+						.rangeBelow(DataBucketBean::full_name, m.group(1) + first_char_of_final_path_inc, true);
+		
+		return CrudUtils.anyOf(component1, component2);
+	}
+	
+	/** Notify interested harvesters in the creation of a new bucket
+	 * @param new_object - the bucket just created
+	 * @param is_suspended - whether it's initially suspended
+	 * @param actor_context - the actor context for broadcasting out requests
+	 * @return the management side channel from the harvesters
+	 */
+	public static CompletableFuture<Collection<BasicMessageBean>> requestNewBucket(
+			final @NonNull DataBucketBean new_object, final boolean is_suspended,
+			final @NonNull ManagementDbActorContext actor_context 
+			)
+	{
+		// OK if we're here then it's time to notify any interested harvesters
+
+		final BucketActionMessage.NewBucketActionMessage new_message = 
+				new BucketActionMessage.NewBucketActionMessage(new_object, is_suspended);
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				Optional.ofNullable(new_object.multi_node_enabled()).orElse(false)
+				? 					
+				BucketActionSupervisor.askDistributionActor(
+						actor_context.getBucketActionSupervisor(), 
+						(BucketActionMessage)new_message, 
+						Optional.empty())
+				:
+				BucketActionSupervisor.askChooseActor(
+						actor_context.getBucketActionSupervisor(), 
+						(BucketActionMessage)new_message, 
+						Optional.empty());
+		
+		final CompletableFuture<Collection<BasicMessageBean>> management_results =
+				f.<Collection<BasicMessageBean>>thenApply(replies -> {
+					return replies.replies(); 
+				});
+
+		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
+		return management_results;							
+	}	
+	
+	/** Notify interested harvesters that a bucket has been updated
+	 * @param new_object
+	 * @param old_version
+	 * @param status
+	 * @param actor_context
+	 * @param retry_store
+	 * @return
+	 */
+	public static CompletableFuture<Collection<BasicMessageBean>> requestUpdatedBucket(
+			final @NonNull DataBucketBean new_object, 
+			final @NonNull DataBucketBean old_version,
+			final @NonNull DataBucketStatusBean status,
+			final @NonNull ManagementDbActorContext actor_context,
+			final @NonNull ICrudService<BucketActionRetryMessage> retry_store
+			)
+	{
+		final BucketActionMessage.UpdateBucketActionMessage update_message = 
+				new BucketActionMessage.UpdateBucketActionMessage(new_object, old_version, new HashSet<String>(status.node_affinity()));
+		
+		return MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
+				source -> new BucketActionMessage.UpdateBucketActionMessage
+							(new_object, old_version, new HashSet<String>(Arrays.asList(source))));
+	}	
+	
+	protected void createFilePaths(final @NonNull DataBucketBean bucket, final @NonNull IStorageService storage_service) throws Exception {
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+	
+		String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
+		
+		Arrays.asList(
+				bucket_root + "/managed_bucket",
+				bucket_root + "/managed_bucket/logs",
+				bucket_root + "/managed_bucket/logs/harvest",
+				bucket_root + "/managed_bucket/logs/enrichment",
+				bucket_root + "/managed_bucket/logs/storage",
+				bucket_root + "/managed_bucket/assets",
+				bucket_root + "/managed_bucket/import",
+				bucket_root + "/managed_bucket/temp",
+				bucket_root + "/managed_bucket/stored",
+				bucket_root + "/managed_bucket/stored/raw",
+				bucket_root + "/managed_bucket/stored/json",
+				bucket_root + "/managed_bucket/stored/processed",
+				bucket_root + "/managed_bucket/ready"
+				)
+				.stream()
+				.map(s -> new Path(s))
+				.forEach(p -> {
+					try {
+						dfs.mkdir(p, FsPermission.getDefault(), true);
+					}
+					catch (Exception e) {
+						throw new RuntimeException(e);
+					}
+				});
 	}
 }
