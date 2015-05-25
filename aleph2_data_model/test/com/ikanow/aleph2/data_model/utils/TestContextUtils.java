@@ -30,6 +30,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import scala.Tuple2;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
@@ -112,12 +114,12 @@ public class TestContextUtils {
 		
 		@Override
 		public List<String> getHarvestContextLibraries(
-				Optional<Set<Class<?>>> services) {
+				Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
 			return null;
 		}
 
 		@Override
-		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, @NonNull Optional<Set<Class<?>>> services) {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
 			return null;
 		}
 
@@ -132,7 +134,10 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public CompletableFuture<JsonNode> getGlobalHarvestTechnologyConfiguration() {
+		@NonNull 
+		public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final @NonNull Class<S> clazz, final @NonNull Optional<DataBucketBean> bucket)
+		{
+			//TODO
 			return null;
 		}
 

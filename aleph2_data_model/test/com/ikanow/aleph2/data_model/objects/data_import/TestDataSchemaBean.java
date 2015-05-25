@@ -37,14 +37,23 @@ public class TestDataSchemaBean {
 				new DataSchemaBean.StorageSchemaBean(
 						true,
 						"service_name",
-						"grouping_time_period",
-						"exist_age_max",
+						"raw_grouping_time_period",
+						"raw_exist_age_max",
+						"json_grouping_time_period",
+						"json_exist_age_max",
+						"processed_grouping_time_period",
+						"processed_exist_age_max",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 		
 		assertEquals("Storage bean enabled", storage_bean.enabled(), true);
 		assertEquals("Storage bean service_name", storage_bean.service_name(), "service_name");
-		assertEquals("Storage bean grouping_time_period", storage_bean.grouping_time_period(), "grouping_time_period");
+		assertEquals("Storage bean raw_grouping_time_period", storage_bean.raw_grouping_time_period(), "raw_grouping_time_period");
+		assertEquals("Storage bean json_grouping_time_period", storage_bean.json_grouping_time_period(), "json_grouping_time_period");
+		assertEquals("Storage bean processed_grouping_time_period", storage_bean.processed_grouping_time_period(), "processed_grouping_time_period");
+		assertEquals("Storage bean raw_exist_age_max", storage_bean.raw_exist_age_max(), "raw_exist_age_max");
+		assertEquals("Storage bean json_exist_age_max", storage_bean.json_exist_age_max(), "json_exist_age_max");
+		assertEquals("Storage bean processed_exist_age_max", storage_bean.processed_exist_age_max(), "processed_exist_age_max");
 		assertEquals("Storage bean technology_override_schema", storage_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Document Bean

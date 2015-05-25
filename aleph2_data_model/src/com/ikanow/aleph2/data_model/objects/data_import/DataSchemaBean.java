@@ -121,13 +121,21 @@ public class DataSchemaBean {
 		 */
 		public StorageSchemaBean(final @NonNull Boolean enabled, 
 				final @Nullable String service_name,
-				final @Nullable String grouping_time_period,
-				final @Nullable String exist_age_max,
+				final @Nullable String raw_grouping_time_period,
+				final @Nullable String raw_exist_age_max,
+				final @Nullable String json_grouping_time_period,
+				final @Nullable String json_exist_age_max,
+				final @Nullable String processed_grouping_time_period,
+				final @Nullable String processed_exist_age_max,
 				final @Nullable Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
-			this.grouping_time_period = grouping_time_period;
-			this.exist_age_max = exist_age_max;
+			this.raw_grouping_time_period = raw_grouping_time_period;
+			this.raw_exist_age_max = raw_exist_age_max;
+			this.json_grouping_time_period = json_grouping_time_period;
+			this.json_exist_age_max = json_exist_age_max;
+			this.processed_grouping_time_period = processed_grouping_time_period;
+			this.processed_exist_age_max = processed_exist_age_max;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the archive service is used for this bucket
@@ -147,15 +155,45 @@ public class DataSchemaBean {
 		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
 		 * @return the grouping_time_period
 		 */
-		public String grouping_time_period() {
-			return grouping_time_period;
+		public String raw_grouping_time_period() {
+			return raw_grouping_time_period;
 		}
 		/** A string describing the age at which documents in this bucket are deleted
 		 * (eg "10 days", "864000", "5 years")
 		 * @return the exist_age_max
 		 */
-		public String exist_age_max() {
-			return exist_age_max;
+		public String raw_exist_age_max() {
+			return raw_exist_age_max;
+		}
+		/** A string describing the time period granularity for searches
+		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
+		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
+		 * @return the grouping_time_period
+		 */
+		public String json_grouping_time_period() {
+			return json_grouping_time_period;
+		}
+		/** A string describing the age at which documents in this bucket are deleted
+		 * (eg "10 days", "864000", "5 years")
+		 * @return the exist_age_max
+		 */
+		public String json_exist_age_max() {
+			return json_exist_age_max;
+		}
+		/** A string describing the time period granularity for searches
+		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
+		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
+		 * @return the grouping_time_period
+		 */
+		public String processed_grouping_time_period() {
+			return processed_grouping_time_period;
+		}
+		/** A string describing the age at which documents in this bucket are deleted
+		 * (eg "10 days", "864000", "5 years")
+		 * @return the exist_age_max
+		 */
+		public String processed_exist_age_max() {
+			return processed_exist_age_max;
 		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
@@ -166,8 +204,12 @@ public class DataSchemaBean {
 		}
 		private Boolean enabled;
 		private String service_name;
-		private String grouping_time_period;
-		private String exist_age_max;
+		private String raw_grouping_time_period;
+		private String raw_exist_age_max;
+		private String json_grouping_time_period;
+		private String json_exist_age_max;
+		private String processed_grouping_time_period;
+		private String processed_exist_age_max;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Document Service

@@ -23,6 +23,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import scala.Tuple2;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -74,24 +76,27 @@ public interface IHarvestContext {
 	// HARVESTER TECHNOLOGY ONLY 
 	
 	/** (HarvesterTechnology only) A list of JARs that can be copied to an external process (eg Hadoop job) to provide the result client access to this context (and other services)
-	 * @services an optional set of service classes that are needed (only the libraries needed for the context is provided otherwise)
+	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
 	@NonNull 
-	List<String> getHarvestContextLibraries(final @NonNull Optional<Set<Class<?>>> services);
+	List<String> getHarvestContextLibraries(final @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
 	@NonNull 
-	String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket, @NonNull Optional<Set<Class<?>>> services);
+	String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket, final @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
 
-	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) configuration
-	 * @return A Future containing a JsonNode representing the "harvest technology specific configuration"
+	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) object data store
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+	 * @return a generic object repository visible to all users of this harvest technology
 	 */
 	@NonNull 
-	CompletableFuture<JsonNode> getGlobalHarvestTechnologyConfiguration();
+	<S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final @NonNull Class<S> clazz, final @NonNull Optional<DataBucketBean> bucket);
 	
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
