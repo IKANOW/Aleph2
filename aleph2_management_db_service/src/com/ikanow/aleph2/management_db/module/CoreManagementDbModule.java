@@ -21,6 +21,8 @@ import com.google.inject.Scopes;
 import com.google.inject.name.Named;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
+import com.ikanow.aleph2.management_db.services.DataBucketStatusCrudService;
+import com.ikanow.aleph2.management_db.services.SharedLibraryCrudService;
 
 /** Module to inject "internal" services to this module
  * @author acp
@@ -30,7 +32,7 @@ public class CoreManagementDbModule extends AbstractModule {
 
 	/** User constructor when called from StandaloneModuleManagement/the app - will just load the core service
 	 */
-	public CoreManagementDbModule() {
+	public CoreManagementDbModule() {		
 	}
 	
 	/** Guice injector
@@ -49,8 +51,9 @@ public class CoreManagementDbModule extends AbstractModule {
 	 * @see com.google.inject.AbstractModule#configure()
 	 */
 	public void configure() {
-		
 		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);		
+		this.bind(DataBucketStatusCrudService.class).in(Scopes.SINGLETON);		
+		this.bind(SharedLibraryCrudService.class).in(Scopes.SINGLETON);		
 		//TODO (ALEPH-19): bind remote bucket action message bus to itself so context injection works
 	}
 	

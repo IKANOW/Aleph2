@@ -38,6 +38,9 @@ public class LiveInjector {
 	 *                               other custom classloading device).
 	 */
 	public static String findPathJar(Class<?> context) throws IllegalStateException {
+		return findPathJar(context, null);
+	}
+	public static String findPathJar(Class<?> context, String backup_if_from_file) throws IllegalStateException {
 	    if (context == null) context = LiveInjector.class;
 	    String rawName = context.getName();
 	    String classFileName;
@@ -47,7 +50,14 @@ public class LiveInjector {
 	    }
 
 	    String uri = context.getResource(classFileName).toString();
-	    if (uri.startsWith("file:")) throw new IllegalStateException("This class has been loaded from a directory and not from a jar file.");
+	    if (uri.startsWith("file:")) {
+	    	if (null != backup_if_from_file) {
+	    		return backup_if_from_file;
+	    	}
+	    	else {
+	    		throw new IllegalStateException("This class has been loaded from a directory and not from a jar file.");
+	    	}
+	    }
 	    if (!uri.startsWith("jar:file:")) {
 	        int idx = uri.indexOf(':');
 	        String protocol = idx == -1 ? "(unknown)" : uri.substring(0, idx);

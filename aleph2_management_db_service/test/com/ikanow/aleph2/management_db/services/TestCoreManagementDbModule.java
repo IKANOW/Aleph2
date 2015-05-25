@@ -48,6 +48,7 @@ public class TestCoreManagementDbModule {
 	private MockMongoDbCrudServiceFactory _crud_factory;
 	private DataBucketCrudService _bucket_crud;
 	private DataBucketStatusCrudService _bucket_status_crud;
+	private SharedLibraryCrudService _shared_library_crud;
 	
 	@Test
 	public void testRetyDataStore() throws Exception {
@@ -59,7 +60,7 @@ public class TestCoreManagementDbModule {
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory);
 		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);		
-		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud);
+		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
 		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
 		
 		ICrudService<BucketActionRetryMessage> retry_service = _core_db_service.getRetryStore(BucketActionRetryMessage.class);

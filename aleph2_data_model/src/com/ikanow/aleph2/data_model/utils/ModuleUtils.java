@@ -31,6 +31,7 @@ import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -125,12 +126,22 @@ public class ModuleUtils {
 				try {
 					injectors.putAll(bindServiceEntry(entry, parent_injector));
 				} catch (Exception e) {
+					if (e instanceof CreationException) { // (often fails to provide useful information, so we'll insert it ourselves..)
+						CreationException ce = (CreationException) e;
+						e = null;
+						for (com.google.inject.spi.Message m: ce.getErrorMessages()) {
+							if (null == e) e = new RuntimeException(m.toString(), e);
+							else {
+								logger.error(ErrorUtils.get("Sub-Error during service binding {0}", m.toString()));										
+							}
+						}
+					}
 					logger.error(ErrorUtils.getLongForm("Error during service binding {0}",e));
 					exceptions.add(e);
 				}
 			});
 		if ( exceptions.size() > 0 ){
-			throw new Exception(exceptions.size() + " exceptions occured during loading services from config file.");
+			throw new Exception(exceptions.size() + " exceptions occured during loading services from config file, first shown", exceptions.get(0));
 		}
 		return injectors;
 	}
@@ -159,7 +170,7 @@ public class ModuleUtils {
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> bindServiceEntry(@NonNull ConfigDataServiceEntry entry, @NonNull Injector parent_injector) throws Exception {
 		Map<Key, Injector> injectorMap = new HashMap<Key, Injector>();
-		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));		
+		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));
 		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault);
 		
 		Class serviceClazz = Class.forName(entry.serviceName);		
@@ -278,8 +289,9 @@ public class ModuleUtils {
 		}
 		Key key = getKey(serviceClazz, serviceName);
 		Injector injector = serviceInjectors.get(key);
-		if ( injector != null )
+		if ( injector != null ) {
 			return (I) injector.getInstance(key);
+		}
 		else 
 			return null;
 	}
@@ -458,10 +470,10 @@ public class ModuleUtils {
 				if ( annotationName.isPresent() ) {
 					bind(interfaceClazz.get()).annotatedWith(Names.named(annotationName.get())).to(serviceClass).in(Scopes.SINGLETON); 
 				} else
-					bind(interfaceClazz.get()).to(serviceClass).in(Scopes.SINGLETON);
+					bind(interfaceClazz.get()).to(serviceClass).in(Scopes.SINGLETON);				
 			} else {
 				bind(serviceClass).in(Scopes.SINGLETON); //you can't annotate a plain bind
-			}		
+			}
 		}
 
 	}

@@ -39,7 +39,9 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 
 
+
 import scala.Tuple2;
+
 
 
 
@@ -62,6 +64,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
@@ -82,15 +85,15 @@ public class HarvestContext implements IHarvestContext {
 	
 	protected static class MutableState {
 		//TODO (ALEPH-19) logging information - will be genuinely mutable
-		SetOnce<DataBucketBean> bucket;
+		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
 	
 	// (stick this injection in and then call injectMembers in IN_MODULE case)
 	@Inject protected IServiceContext _service_context;	
-	@Inject protected IManagementDbService _core_management_db;
-	@Inject protected ICoreDistributedServices _distributed_services; 	
-	@Inject protected GlobalPropertiesBean _globals;
+	protected IManagementDbService _core_management_db;
+	protected ICoreDistributedServices _distributed_services; 	
+	protected GlobalPropertiesBean _globals;
 	
 	/**Guice injector
 	 * @param service_context
@@ -133,12 +136,19 @@ public class HarvestContext implements IHarvestContext {
 			
 			final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
 			injector.injectMembers(this);			
+			_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
+			_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty());
+			_globals = _service_context.getGlobalProperties();
 			
 			// Get bucket 
 			
 			String bucket_id = parsed_config.getString(__MY_ID);
 			
-			_mutable_state.bucket.set(_core_management_db.getDataBucketStore().getObjectById(bucket_id).get().get());
+			Optional<DataBucketBean> retrieve_bucket = _core_management_db.getDataBucketStore().getObjectById(bucket_id).get();
+			if (!retrieve_bucket.isPresent()) {
+				throw new RuntimeException("Unable to locate bucket: " + bucket_id);
+			}
+			_mutable_state.bucket.set(retrieve_bucket.get());
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -200,15 +210,17 @@ public class HarvestContext implements IHarvestContext {
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
 			// This very JAR			
-			final String this_jar = LiveInjector.findPathJar(this.getClass());
+			final String this_jar = Lambdas.exec(() -> {
+				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
+			});
 			
 			// Libraries associated with services:
 			final Set<String> user_service_class_files = services.map(set -> {
 				return set.stream()
 						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
 						.filter(service -> service != null)
-						.map(service -> LiveInjector.findPathJar(service.getClass()))
-						.filter(jar_path -> jar_path != null)
+						.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 						.collect(Collectors.toSet());
 			})
 			.orElse(Collections.emptySet());
@@ -218,8 +230,8 @@ public class HarvestContext implements IHarvestContext {
 					Arrays.asList(_service_context.getCoreManagementDbService(), 
 									_service_context.getService(IManagementDbService.class, Optional.empty())
 							).stream()
-							.map(service -> LiveInjector.findPathJar(service.getClass()))
-							.filter(jar_path -> jar_path != null)
+							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 							.collect(Collectors.toSet());
 			
 			// Combine them together
@@ -282,9 +294,9 @@ public class HarvestContext implements IHarvestContext {
 			
 			Config last_call = config_subset_services
 								.withValue(__MY_ID, ConfigValueFactory
-										.fromAnyRef(bucket.orElse(_mutable_state.bucket.get())._id(), "bucket id"));
+										.fromAnyRef(bucket.orElseGet(() -> _mutable_state.bucket.get())._id(), "bucket id"));
 			
-			return last_call.root().render(ConfigRenderOptions.concise());
+			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 		}
 		else {
 			throw new RuntimeException("Can only be called from technology, not module");			
@@ -310,7 +322,7 @@ public class HarvestContext implements IHarvestContext {
 			final @NonNull Optional<DataBucketBean> bucket) {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			
-			final DataBucketBean my_bucket = bucket.orElse(_mutable_state.bucket.get());
+			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			
 			SingleQueryComponent<SharedLibraryBean> tech_query = 
 					CrudUtils.anyOf(SharedLibraryBean.class)
@@ -373,7 +385,7 @@ public class HarvestContext implements IHarvestContext {
 			final @NonNull Optional<DataBucketBean> bucket) {
 		return this._core_management_db
 				.getDataBucketStatusStore()
-				.getObjectById(bucket.orElse(_mutable_state.bucket.get())._id())
+				.getObjectById(bucket.orElseGet(() -> _mutable_state.bucket.get())._id())
 				.thenApply(opt_status -> opt_status.get());		
 		// (ie will exception if not present)
 	}
@@ -406,7 +418,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public @NonNull String getTempOutputLocation(
 			@NonNull Optional<DataBucketBean> bucket) {
-		return _globals.distributed_root_dir() + "/" + bucket.orElse(_mutable_state.bucket.get()).full_name() + "/managed_bucket/import/temp/";
+		return _globals.distributed_root_dir() + "/" + bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name() + "/managed_bucket/import/temp/";
 	}
 
 	/* (non-Javadoc)
@@ -415,7 +427,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public @NonNull String getFinalOutputLocation(
 			@NonNull Optional<DataBucketBean> bucket) {
-		return _globals.distributed_root_dir() + "/" + bucket.orElse(_mutable_state.bucket.get()).full_name() + "/managed_bucket/import/ready/";
+		return _globals.distributed_root_dir() + "/" + bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name() + "/managed_bucket/import/ready/";
 	}
 
 	/* (non-Javadoc)

@@ -1,5 +1,7 @@
 package com.ikanow.aleph2.management_db.services;
 
+import java.util.Optional;
+
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
@@ -20,12 +22,11 @@ public class ManagementDbActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public ManagementDbActorContext(ICoreDistributedServices distributed_services, 
-								IServiceContext service_context,
-										BucketActionMessageBus bucket_action_message_bus)
+	public ManagementDbActorContext(final IServiceContext service_context,
+										final BucketActionMessageBus bucket_action_message_bus)
 	{
 		_service_context = service_context;
-		_distributed_services = distributed_services;
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
 		_bucket_action_bus = bucket_action_message_bus;
 		_singleton = this;
 	}

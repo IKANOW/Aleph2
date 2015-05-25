@@ -78,8 +78,7 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
  */
 public class DataBucketCrudService implements IManagementCrudService<DataBucketBean> {
 
-	protected final IStorageService _storage_service;
-	
+	protected final IStorageService _storage_service;	
 	protected final IManagementDbService _underlying_management_db;
 	
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
@@ -89,12 +88,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final ManagementDbActorContext _actor_context;
 	
 	/** Guice invoked constructor
-	 * @param underlying_management_db
 	 */
 	@Inject
 	public DataBucketCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
+		
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
@@ -111,8 +110,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	}
 
 	/** User constructor, for wrapping
-	 * @param underlying_management_db
-	 * @param underlying_data_bucket_db
 	 */
 	public DataBucketCrudService(final @NonNull IManagementDbService underlying_management_db, 
 			final @NonNull IStorageService storage_service,

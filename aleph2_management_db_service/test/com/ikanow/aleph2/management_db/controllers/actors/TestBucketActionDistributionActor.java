@@ -32,10 +32,12 @@ import org.junit.Test;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
@@ -98,10 +100,12 @@ public class TestBucketActionDistributionActor {
 	
 	@Before
 	public void testSetup() throws Exception {
+		MockServiceContext mock_service_context = new MockServiceContext();
+		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), new MockCoreDistributedServices());
+		
 		@SuppressWarnings("unused")
 		ManagementDbActorContext singleton = new ManagementDbActorContext(
-				new MockCoreDistributedServices(),
-				null, //(need a mock ServiceContext)
+				mock_service_context, 
 				new LocalBucketActionMessageBus()
 				);
 	}

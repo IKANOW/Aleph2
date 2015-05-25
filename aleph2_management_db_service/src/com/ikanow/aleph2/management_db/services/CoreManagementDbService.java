@@ -45,6 +45,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final IManagementDbService _underlying_management_db;	
 	protected final DataBucketCrudService _data_bucket_service;
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
+	protected final SharedLibraryCrudService _shared_library_service;
 	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
@@ -55,13 +56,15 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Inject
 	public CoreManagementDbService(final IServiceContext service_context,
-			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service
+			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
+			final SharedLibraryCrudService shared_library_service
 			)
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
-
+		_shared_library_service = shared_library_service;
+		
 		_auth = Optional.empty();
 		_project = Optional.empty();
 		
@@ -79,10 +82,12 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public CoreManagementDbService(final IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
+			final SharedLibraryCrudService shared_library_service,		
 			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project) {
 		_underlying_management_db = underlying_management_db;
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
+		_shared_library_service = shared_library_service;
 		
 		_auth = auth;
 		_project = project;		
@@ -96,7 +101,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth)
 	{
 		return new CoreManagementDbService(_underlying_management_db, 
-				_data_bucket_service, _data_bucket_status_service, 
+				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
 				client_auth, project_auth);
 	}
 	
@@ -104,8 +109,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
 	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {		
-		// TODO Auto-generated method stub
-		return null;
+		return _shared_library_service;
 	}
 
 	/* (non-Javadoc)

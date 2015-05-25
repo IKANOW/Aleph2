@@ -68,6 +68,7 @@ public class TestDataBucketCrudService {
 	public MockMongoDbCrudServiceFactory _crud_factory;
 	public DataBucketCrudService _bucket_crud;
 	public DataBucketStatusCrudService _bucket_status_crud;
+	public SharedLibraryCrudService _shared_library_crud;
 	public ManagementDbActorContext _db_actor_context;
 	public ICoreDistributedServices _core_distributed_services;
 	public ICrudService<DataBucketBean> _underlying_bucket_crud;
@@ -83,11 +84,13 @@ public class TestDataBucketCrudService {
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory);
 		_core_distributed_services = new MockCoreDistributedServices();
 		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
-		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);		
-		_db_actor_context = new ManagementDbActorContext(_core_distributed_services, _mock_service_context, new LocalBucketActionMessageBus());
+		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
+		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _core_distributed_services);
+		_db_actor_context = new ManagementDbActorContext(_mock_service_context, new LocalBucketActionMessageBus());
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _db_actor_context);
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _db_actor_context);
-		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud);
+		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);
+		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
 		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
 		
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;

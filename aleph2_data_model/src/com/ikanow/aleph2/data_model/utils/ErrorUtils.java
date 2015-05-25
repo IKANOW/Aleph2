@@ -88,7 +88,28 @@ public class ErrorUtils {
 		try {
 			message = t.getMessage();
 		}
-		catch (Exception e) {} // just carry on
+		catch (Exception e) {
+			// Try to handle known offenders for this:
+			if (t instanceof com.google.inject.ConfigurationException) {
+				com.google.inject.ConfigurationException ce1 = (com.google.inject.ConfigurationException) t;
+				if (!ce1.getErrorMessages().isEmpty()) {
+					message = ce1.getErrorMessages().iterator().next().toString();
+				}
+			}
+			else if (t instanceof com.google.inject.CreationException) {
+				com.google.inject.CreationException ce1 = (com.google.inject.CreationException) t;
+				if (!ce1.getErrorMessages().isEmpty()) {
+					message = ce1.getErrorMessages().iterator().next().toString();
+				}				
+			}
+			else if (t instanceof com.google.inject.ProvisionException) {
+				com.google.inject.ProvisionException ce1 = (com.google.inject.ProvisionException) t;
+				if (!ce1.getErrorMessages().isEmpty()) {
+					message = ce1.getErrorMessages().iterator().next().toString();
+				}				
+			}
+			//else just carry on
+		} 
 		sb.append("[").append(message).append(": ").append(t.getClass().getSimpleName()).append("]:");
 		
 		for (StackTraceElement el: t.getStackTrace()) {
