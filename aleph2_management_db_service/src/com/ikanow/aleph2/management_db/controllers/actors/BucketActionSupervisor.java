@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -84,6 +85,13 @@ public class BucketActionSupervisor extends UntypedActor {
 						final @NonNull BucketActionMessage message, 
 						final @NonNull Optional<FiniteDuration> timeout)
 	{
+		if (null == message.bucket().harvest_technology_name_or_id()) {
+			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
+			return CompletableFuture.completedFuture(
+					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(
+							Collections.emptyList(), Collections.emptySet()
+							));
+		}
 		RequestMessage m = new RequestMessage(BucketActionDistributionActor.class, message, timeout);
 		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
 		return FutureUtils.wrap(Patterns.ask(supervisor, m, 2*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));
@@ -100,6 +108,13 @@ public class BucketActionSupervisor extends UntypedActor {
 					final @NonNull BucketActionMessage message, 
 					final @NonNull Optional<FiniteDuration> timeout)
 	{
+		if (null == message.bucket().harvest_technology_name_or_id()) {
+			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
+			return CompletableFuture.completedFuture(
+					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(
+							Collections.emptyList(), Collections.emptySet()
+							));
+		}
 		RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, timeout);
 		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
 		return FutureUtils.wrap(Patterns.ask(supervisor, m, 5*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));

@@ -324,12 +324,12 @@ public class HarvestContext implements IHarvestContext {
 			
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			
-			SingleQueryComponent<SharedLibraryBean> tech_query = 
+			final SingleQueryComponent<SharedLibraryBean> tech_query = 
 					CrudUtils.anyOf(SharedLibraryBean.class)
 						.when(SharedLibraryBean::_id, my_bucket.harvest_technology_name_or_id())
 						.when(SharedLibraryBean::path_name, my_bucket.harvest_technology_name_or_id());
 			
-			List<SingleQueryComponent<SharedLibraryBean>> other_libs = 
+			final List<SingleQueryComponent<SharedLibraryBean>> other_libs = 
 				Optionals.ofNullable(my_bucket.harvest_configs()).stream()
 					.flatMap(hcfg -> Optionals.ofNullable(hcfg.library_ids_or_names()).stream())
 					.map(name -> {
@@ -343,11 +343,8 @@ public class HarvestContext implements IHarvestContext {
 							(left, right) -> { left.addAll(right); return left; }
 							));
 
-			other_libs.toArray(new SingleQueryComponent[other_libs.size()]);
-
-			
 			@SuppressWarnings("unchecked")
-			MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(tech_query,
+			final MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(tech_query,
 					other_libs.toArray(new SingleQueryComponent[other_libs.size()]));
 			
 			// Get the names or ids, get the shared libraries, get the cached ids (must be present)

@@ -153,7 +153,8 @@ public class TestBucketActionChooseActor {
 	public void distributionTest_noActors() throws InterruptedException, ExecutionException {
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-												BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+												BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+												, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -189,7 +190,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -231,7 +233,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -278,7 +281,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -342,7 +346,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -398,7 +403,8 @@ public class TestBucketActionChooseActor {
 		}
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -452,7 +458,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
@@ -497,7 +504,8 @@ public class TestBucketActionChooseActor {
 		// Now do the test
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
-				BeanTemplateUtils.build(DataBucketBean.class).done().get(), false);
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
 		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();

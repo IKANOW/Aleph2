@@ -62,6 +62,7 @@ import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 //TODO (ALEPH-19): No method currently to access the harvest/enrichment/storage logs
+//TODO (ALEPH-19): need to set node affinity after creating bucket
 
 /** CRUD service for Data Bucket Status with management proxy
  * @author acp

@@ -614,4 +614,6 @@ public class TestDataBucketCrudService {
 	//TODO test random things that work (eg count)
 	
 	//TODO test random things that don't work, just to get coverage
+
+	//TODO don't forget to check node affinity has been set
 }

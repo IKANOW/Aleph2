@@ -118,7 +118,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public @NonNull ManagementFuture<Supplier<Object>> storeObject(
 			@NonNull SharedLibraryBean new_object, boolean replace_if_present) {
-		//TODO: don't allow if replace_if_present
+		if (replace_if_present) {
+			throw new RuntimeException("Can't call storeObject with replace_if_present: true, use update instead");
+		}
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObject(new_object, replace_if_present));
 	}
 
@@ -132,7 +134,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public @NonNull ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
 			@NonNull List<SharedLibraryBean> new_objects,
 			boolean continue_on_error) {
-		//TODO: don't allow if continue_on_error
+		if (continue_on_error) {
+			throw new RuntimeException("Can't call storeObjects with continue_on_error: true, use update instead");
+		}
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObjects(new_objects, continue_on_error));
 	}
 

@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
@@ -58,6 +59,9 @@ public class LocalHarvestTestModule {
 
 	protected final IManagementDbService _management_db_service;
 	protected final GlobalPropertiesBean _globals;
+	protected final IServiceContext _context;
+	
+	protected @Inject Injector _injector;
 	
 	/** Guice constructor, injects underlying management service (must actually be mongodb)
 	 * @param management_db_service
@@ -66,6 +70,7 @@ public class LocalHarvestTestModule {
 	public LocalHarvestTestModule(IServiceContext service_context) {
 		_management_db_service = service_context.getService(IManagementDbService.class, Optional.empty());		
 		_globals = service_context.getGlobalProperties();
+		_context = service_context;
 	}
 	
 	public void start(String source_key, String harvest_tech_jar_path, String... commands) throws Exception {
@@ -150,8 +155,7 @@ public class LocalHarvestTestModule {
 						Optional.of(new File(harvest_tech_jar_path).getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", command);						
 						
-		//TODO (ALEPH-19): currently harvest context is null
-		final IHarvestContext context = null;
+		final IHarvestContext context = _injector.getInstance(HarvestContext.class);
 		
 		if (ret_val.isLeft()) {
 			System.out.println("Failed to instantiate harvester: " + ret_val.left().value().message());

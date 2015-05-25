@@ -72,6 +72,7 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
 //TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
+//TODO (ALEPH-19): need to set node affinity after creating bucket
 
 /** CRUD service for Data Bucket with management proxy
  * @author acp
