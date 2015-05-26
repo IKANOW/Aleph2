@@ -61,6 +61,7 @@ import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
 
@@ -107,6 +108,9 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
+		    			final ActorRef closing_sender = this.sender();
+		    			final ActorRef closing_self = this.self();
+		    					    			
 	    				final String hostname = _context.getInformationService().getHostname();
 		    			try {
 		    				final boolean harvest_tech_only = m instanceof BucketActionOfferMessage;
@@ -122,7 +126,7 @@ public class DataBucketChangeActor extends AbstractActor {
 									return talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
 		    					})
 		    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
-									this.sender().tell(reply,  this.sender());		    						
+									closing_sender.tell(reply,  closing_self);		    						
 		    					})
 		    					;
 		    			}
@@ -131,7 +135,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		    						HarvestErrorUtils.buildErrorMessage(hostname, m,
 		    								ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, m.bucket().full_name())
 		    								);
-		    				this.sender().tell(new BucketActionHandlerMessage(hostname, error_bean),  this.sender());			    				
+		    				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
 		    			}
 		    		})
 	    		.build();
@@ -168,7 +172,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
 						return Either.left(
 								HarvestErrorUtils.buildErrorMessage(source, m,
-										HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.full_name()));
+										HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.harvest_technology_name_or_id()));
 					}
 					
 					final List<String> other_libs = harvest_tech_only 
@@ -268,7 +272,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		try {
 			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
 			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket, cache_tech_jar_only);
-			
+
 			return management_db.getSharedLibraryStore().getObjectsBySpec(
 					spec, 
 					Arrays.asList(
@@ -282,6 +286,9 @@ public class DataBucketChangeActor extends AbstractActor {
 						// note we use a tuple of (id, name) as the key and then flatten out later 
 						final Map<Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Either<BasicMessageBean, String>>>> map_of_futures = 
 							StreamSupport.stream(cursor.spliterator(), true)
+								.filter(lib -> {
+									return true;
+								})
 								.collect(Collectors.<SharedLibraryBean, Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Either<BasicMessageBean, String>>>>
 									toMap(
 										// want to keep both the name and id versions - will flatten out below
@@ -311,12 +318,12 @@ public class DataBucketChangeActor extends AbstractActor {
 												err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
 												,
 												// Normal:
-												s -> 
-													Arrays.asList(
-														Tuples._2T(kv.getKey()._1(), Tuples._2T(kv.getValue()._1(), s)), 
-														Tuples._2T(kv.getKey()._2(), Tuples._2T(kv.getValue()._1(), s)))
-															.stream()
-													);
+												s -> { 
+													return Arrays.asList(
+														Tuples._2T(kv.getKey()._1(), Tuples._2T(kv.getValue()._1(), s)), // result object with path_name
+														Tuples._2T(kv.getKey()._2(), Tuples._2T(kv.getValue()._1(), s))) // result object with id
+															.stream();
+												});
 									})
 									.collect(Collectors.<Tuple2<String, Tuple2<SharedLibraryBean, String>>, String, Tuple2<SharedLibraryBean, String>>
 										toMap(

@@ -35,7 +35,7 @@ public class TestClassloaderUtils {
 			//expected!
 		}
 		
-		final String pathname = System.getProperty("user.dir") + "/simple-harvest-example.jar";
+		final String pathname = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);
 		
@@ -70,7 +70,7 @@ public class TestClassloaderUtils {
 			//expected!
 		}
 		
-		final String pathname = System.getProperty("user.dir") + "/simple-harvest-example.jar";
+		final String pathname = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);		
 		
