@@ -20,6 +20,9 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import.services.HarvestContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -30,6 +33,9 @@ import akka.actor.ActorSystem;
  * @author acp
  */
 public class DataImportActorContext {
+	
+	@Inject 
+	protected Injector _injector; // (used to generate harvest contexts)
 	
 	/** Creates a new actor context
 	 */
@@ -50,6 +56,17 @@ public class DataImportActorContext {
 		return _service_context.getGlobalProperties();
 	}
 	
+	/** Returns a new (non singleton) instance of a harvest context
+	 * @return the new harvest context
+	 */
+	@NonNull
+	public IHarvestContext getNewHarvestContext() {
+		return _injector.getInstance(HarvestContext.class);
+	}
+	
+	/** Returns the information service providing eg hostname and process information
+	 * @return
+	 */
 	@NonNull
 	public GeneralInformationService getInformationService() {
 		return _information_service;

@@ -33,6 +33,7 @@ import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -40,18 +41,21 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 
-import fj.Unit;
 import fj.data.Either;
 import scala.PartialFunction;
 import scala.Tuple2;
@@ -108,23 +112,19 @@ public class DataBucketChangeActor extends AbstractActor {
 		    				final boolean harvest_tech_only = m instanceof BucketActionOfferMessage;
 		    				
 		    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, hostname, m)
-		    					.thenCompose(err_map -> {		    						
-		    						err_map.either(
-		    								//error
-		    								error -> {
-		    									this.sender().tell(new BucketActionHandlerMessage(hostname, error),  this.sender());
-		    									return Unit.unit();
-		    								}
-		    								,
-		    								//normal
-		    								map -> talkToHarvester_topLevel(m.bucket(), map, harvest_tech_only, m, hostname)
-		    										.thenCompose(result -> {
-		    											this.sender().tell(new BucketActionHandlerMessage(hostname, result),  this.sender());
-		    											return null; //TODO how do i get rid of this
-		    										}));
+		    					.thenCompose(err_or_map -> {
 		    						
-		    						return null;//TODO how do i get rid of this
-		    					});
+									final IHarvestContext h_context = _context.getNewHarvestContext();
+									
+									final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
+											getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
+									
+									return talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
+		    					})
+		    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
+									this.sender().tell(reply,  this.sender());		    						
+		    					})
+		    					;
 		    			}
 		    			catch (Exception e) { // (trying to use Either to avoid this, but just in case...)
 		    				final BasicMessageBean error_bean = 
@@ -139,7 +139,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		
 	////////////////////////////////////////////////////////////////////////////
 	
-	// Utility code
+	// Functional code
 	
 	/** Talks to the harvest tech module - this top level function just sets the classloader up and creates the module,
 	 *  then calls talkToHarvester_actuallyTalk to do the talking
@@ -150,54 +150,100 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
-	protected static CompletableFuture<BasicMessageBean> talkToHarvester_topLevel(
-			final @NonNull DataBucketBean bucket, final @NonNull Map<String, Tuple2<SharedLibraryBean, String>> libs, boolean harvest_tech_only,
-			final @NonNull BucketActionMessage m, final @NonNull String source
+	protected static Either<BasicMessageBean, IHarvestTechnologyModule> getHarvestTechnology(
+			final @NonNull DataBucketBean bucket, 
+			boolean harvest_tech_only,
+			final @NonNull BucketActionMessage m, 
+			final @NonNull String source,
+			final @NonNull Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
-		final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(bucket.harvest_technology_name_or_id());
-		if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
-			return CompletableFuture.completedFuture(
-					HarvestErrorUtils.buildErrorMessage(source, m,
-							ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND), bucket.full_name(), bucket.full_name()));
-		}
-		
-		final List<String> other_libs = harvest_tech_only 
-				? Collections.emptyList() 
-				: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
-
-		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
-				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
-						libbean_path._1().misc_entry_point(), 
-						Optional.of(libbean_path._2()),
-						other_libs,
-						source, m);						
-						
-		return ret_val.either(
+		return err_or_libs.<Either<BasicMessageBean, IHarvestTechnologyModule>>either(
 				//Error:
-				error -> CompletableFuture.completedFuture(error),
+				error -> Either.left(error)
+				,
 				// Normal
-				tech_module -> talkToHarvester_actuallyTalk(bucket, tech_module, m));
+				libs -> {
+					final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(bucket.harvest_technology_name_or_id());
+					if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
+						return Either.left(
+								HarvestErrorUtils.buildErrorMessage(source, m,
+										ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND), bucket.full_name(), bucket.full_name()));
+					}
+					
+					final List<String> other_libs = harvest_tech_only 
+							? Collections.emptyList() 
+							: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
+					
+					final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+							ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+									libbean_path._1().misc_entry_point(), 
+									Optional.of(libbean_path._2()),
+									other_libs,
+									source, m);
+					
+					return ret_val;
+				});
 	}
+	
+	//
 	
 	/** Make various requests of the harvester based on the message type
 	 * @param bucket
 	 * @param tech_module
 	 * @param m
-	 * @return
+	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Either finally)
 	 */
-	protected static CompletableFuture<BasicMessageBean> talkToHarvester_actuallyTalk(
-			final @NonNull DataBucketBean bucket, final @NonNull IHarvestTechnologyModule tech_module,
-			final @NonNull BucketActionMessage m
+	protected static CompletableFuture<BucketActionReplyMessage> talkToHarvester(
+			final @NonNull DataBucketBean bucket, 
+			final @NonNull BucketActionMessage m,
+			final @NonNull String source,
+			final @NonNull IHarvestContext context,
+			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		//TODO: need to go grab the harvest context
-		return null;
+		return err_or_tech_module.either(
+			//Error:
+			error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
+			,
+			// Normal
+			tech_module -> 
+				Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
+						final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket);
+						return CompletableFuture.completedFuture(accept_or_ignore
+								? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
+								: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
+					})
+					.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+						return tech_module.onDelete(bucket, context)
+								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+					})
+					.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+						return tech_module.onNewSource(bucket, context, msg.is_suspended())  
+								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+					})
+					.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+						return tech_module.onUpdatedSource(msg.old_bucket(), bucket, context)
+								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+					})
+					.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
+						return (msg.is_suspended()
+								? tech_module.onSuspend(bucket, context)
+								: tech_module.onResume(bucket, context))
+									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+					})
+					.otherwise(msg -> { // return "command not recognized" error
+						return CompletableFuture.completedFuture(
+								new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
+									ErrorUtils.get(HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED), 
+										bucket.full_name(), m.getClass().getSimpleName())));
+					})
+			);
 	}
 	
-	/** Returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
-	 * (and guarantee that the file has been cached when the future comples)
+	/** Given a bucket ...returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
+	 * (and guarantee that the file has been cached when the future completes)
 	 * @param bucket
 	 * @param cache_tech_jar_only
 	 * @param management_db
@@ -208,15 +254,29 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return  a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
 	 */
 	@SuppressWarnings("unchecked")
-	protected static <M> CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> cacheJars(final DataBucketBean bucket, final boolean cache_tech_jar_only,
-			final @NonNull IManagementDbService management_db, final @NonNull GlobalPropertiesBean globals,
-			 final @NonNull IStorageService fs, final @NonNull String handler_for_errors, final @NonNull M msg_for_errors
+	protected static <M> CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> 
+		cacheJars(
+				final DataBucketBean bucket, 
+				final boolean cache_tech_jar_only,
+				final @NonNull IManagementDbService management_db, 
+				final @NonNull GlobalPropertiesBean globals,
+				final @NonNull IStorageService fs, 
+				final @NonNull String handler_for_errors, 
+				final @NonNull M msg_for_errors
 			)
 	{
 		try {
+			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
 			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket, cache_tech_jar_only);
 			
-			return management_db.getSharedLibraryStore().getObjectsBySpec(spec, Arrays.asList("_id", "path_name", "misc_entry_point"), true)
+			return management_db.getSharedLibraryStore().getObjectsBySpec(
+					spec, 
+					Arrays.asList(
+						helper.field(SharedLibraryBean::_id), 
+						helper.field(SharedLibraryBean::path_name), 
+						helper.field(SharedLibraryBean::misc_entry_point)
+					), 
+					true)
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 
@@ -231,8 +291,9 @@ public class DataBucketChangeActor extends AbstractActor {
 												JarCacheUtils.getCachedJar(globals.local_cached_jar_dir(), lib, fs, handler_for_errors, msg_for_errors))));
 						
 						// denest from map of futures to future of maps, also handle any errors here:
+						// (some sort of "lift" function would be useful here - this are a somewhat inelegant few steps)
 						
-						CompletableFuture<Either<BasicMessageBean, String>>[] futures = 
+						final CompletableFuture<Either<BasicMessageBean, String>>[] futures = 
 								(CompletableFuture<Either<BasicMessageBean, String>>[]) map_of_futures
 								.values()
 								.stream().map(t2 -> t2._2()).collect(Collectors.toList())
@@ -243,19 +304,19 @@ public class DataBucketChangeActor extends AbstractActor {
 							try {
 								final Map<String, Tuple2<SharedLibraryBean, String>> almost_there = map_of_futures.entrySet().stream()
 									.flatMap(kv -> {
-												final Either<BasicMessageBean, String> ret = kv.getValue()._2().join(); // (must have already returned if here
-												return ret.<Stream<Tuple2<String, Tuple2<SharedLibraryBean, String>>>>
-													either(
-														//Error:
-														err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
-														,
-														// Normal:
-														s -> 
-														Arrays.asList(
-															Tuples._2T(kv.getKey()._1(), Tuples._2T(kv.getValue()._1(), s)), 
-															Tuples._2T(kv.getKey()._2(), Tuples._2T(kv.getValue()._1(), s)))
-																.stream()
-														);
+										final Either<BasicMessageBean, String> ret = kv.getValue()._2().join(); // (must have already returned if here
+										return ret.<Stream<Tuple2<String, Tuple2<SharedLibraryBean, String>>>>
+											either(
+												//Error:
+												err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
+												,
+												// Normal:
+												s -> 
+													Arrays.asList(
+														Tuples._2T(kv.getKey()._1(), Tuples._2T(kv.getValue()._1(), s)), 
+														Tuples._2T(kv.getKey()._2(), Tuples._2T(kv.getValue()._1(), s)))
+															.stream()
+													);
 									})
 									.collect(Collectors.<Tuple2<String, Tuple2<SharedLibraryBean, String>>, String, Tuple2<SharedLibraryBean, String>>
 										toMap(
@@ -275,9 +336,9 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 		catch (Exception e) {
 			return CompletableFuture.completedFuture(
-					Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
-							ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
-							)));
+				Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
+					ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
+					)));
 		}
 	}
 
@@ -288,7 +349,10 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	protected static QueryComponent<SharedLibraryBean> getQuery(final DataBucketBean bucket, final boolean cache_tech_jar_only) {
+	protected static QueryComponent<SharedLibraryBean> getQuery(
+			final DataBucketBean bucket, 
+			final boolean cache_tech_jar_only)
+	{
 		final SingleQueryComponent<SharedLibraryBean> tech_query = 
 				CrudUtils.anyOf(SharedLibraryBean.class)
 					.when(SharedLibraryBean::_id, bucket.harvest_technology_name_or_id())

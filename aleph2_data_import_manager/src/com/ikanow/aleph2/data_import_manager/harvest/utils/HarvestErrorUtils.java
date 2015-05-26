@@ -29,6 +29,7 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	public static final String SHARED_LIBRARY_NAME_NOT_FOUND = "Shared library {1} not found: {0}";
 	public static final String ERROR_LOADING_CLASS = "Error loading class {1}: {0}";
 	public static final String ERROR_CACHING_SHARED_LIBS = "Misc error caching shared libs for bucket {1}: {0}";
+	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";
 	 
 	///////////////////////////////////////////////////////////////////////////
 	

@@ -88,7 +88,7 @@ public class BucketActionMessage {
 			super(bucket);
 			this.is_suspended = is_suspended;
 		}
-		protected Boolean is_suspended() { return is_suspended; }
+		public Boolean is_suspended() { return is_suspended; }
 		protected Boolean is_suspended;
 	}
 	
