@@ -2,6 +2,9 @@ package com.ikanow.aleph2.data_import_manager.harvest.utils;
 
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -22,7 +25,7 @@ public class TestClassloaderUtils {
 	public static class TestMessageBean {}
 	
 	@Test
-	public void testClassLoading_primaryLib() {
+	public void testClassLoading_primaryLib() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -32,10 +35,14 @@ public class TestClassloaderUtils {
 			//expected!
 		}
 		
+		final String pathname = System.getProperty("user.dir") + "/simple-harvest-example.jar";
+		final Path path = new Path(pathname);
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);
+		
 		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
-						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
-						Optional.of("file:/Users/acp/github/Aleph2/aleph2_data_import_manager/simple-harvest-example.jar"),
+						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology",
+						Optional.of(path2.toString()),
 						Collections.emptyList(), "test1", new TestMessageBean());						
 						
 		if (ret_val.isLeft()) {
@@ -53,7 +60,7 @@ public class TestClassloaderUtils {
 	}
 	
 	@Test
-	public void testClassLoading_secondaryLib() {
+	public void testClassLoading_secondaryLib() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -63,11 +70,15 @@ public class TestClassloaderUtils {
 			//expected!
 		}
 		
+		final String pathname = System.getProperty("user.dir") + "/simple-harvest-example.jar";
+		final Path path = new Path(pathname);
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);		
+		
 		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.empty(),
-						Arrays.asList("file:/Users/acp/github/Aleph2/aleph2_data_import_manager/simple-harvest-example.jar"), 
+						Arrays.asList(path2.toString()), 
 						"test1", new TestMessageBean());						
 						
 		if (ret_val.isLeft()) {
@@ -85,7 +96,7 @@ public class TestClassloaderUtils {
 	}
 	
 	@Test
-	public void testClassLoading_fails() {
+	public void testClassLoading_fails() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -95,11 +106,15 @@ public class TestClassloaderUtils {
 			//expected!
 		}
 		
+		final String pathname = System.getProperty("user.dir") + "/simple-harvest-examplee-FAILS.jar";
+		final Path path = new Path(pathname);
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);				
+		
 		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.empty(),
-						Arrays.asList("file:/Users/acp/github/Aleph2/aleph2_data_import_manager/simple-harvest-example-FAILS.jar"), 
+						Arrays.asList(path2.toString()), 
 						"test1", new TestMessageBean());						
 						
 		if (ret_val.isRight()) {
@@ -110,7 +125,7 @@ public class TestClassloaderUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		assertEquals(error.message(), "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]:[JclObjectFactory.java:102:org.xeustechnologies.jcl.JclObjectFactory:create][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:99:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails] ([com.ikanow.aleph2.test.example.ExampleHarvestTechnology: ClassNotFoundException]:[AbstractClassLoader.java:129:org.xeustechnologies.jcl.AbstractClassLoader:loadClass][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:99:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails])");
+		assertEquals(error.message(), "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]:[JclObjectFactory.java:102:org.xeustechnologies.jcl.JclObjectFactory:create][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:114:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails] ([com.ikanow.aleph2.test.example.ExampleHarvestTechnology: ClassNotFoundException]:[AbstractClassLoader.java:129:org.xeustechnologies.jcl.AbstractClassLoader:loadClass][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:114:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails])");
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);

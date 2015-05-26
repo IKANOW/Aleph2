@@ -19,7 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class GlobalPropertiesBean {
 
-	public static final String PROPERTIES_ROOT = "Globals"; 	
+	public static final String PROPERTIES_ROOT = "globals"; 	
 	public static final String __DEFAULT_LOCAL_ROOT_DIR = "/opt/aleph2-home/"; 	
 	public static final String __DEFAULT_LOCAL_YARN_CONFIG_DIR = "/opt/aleph2-home/yarn-config/"; 	
 	public static final String __DEFAULT_LOCAL_CACHED_JARS_DIR = "/opt/aleph2-home/cached-jars/"; 	

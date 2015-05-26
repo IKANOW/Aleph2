@@ -76,6 +76,14 @@ public class TestJarCacheUtils {
 	public static class TestMessageBean {};
 	
 	@Test
+	public void testSetup() {
+		if (File.separator.equals("\\")) { // windows mode!
+			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
+			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
+		}		
+	}
+	
+	@Test
 	public void testLocalFileNotPresent() throws InterruptedException, ExecutionException, UnsupportedFileSystemException {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
@@ -110,17 +118,22 @@ public class TestJarCacheUtils {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
 		
-		final String expected_cache_name = _globals.local_cached_jar_dir().replace(File.separator, "/") + "test1.cache.jar";
+		String java_name = _globals.local_cached_jar_dir() + File.separator + "testX.cache.jar";
+		final String expected_cache_name = java_name.replace(File.separator, "/"); 
 		final Path expected_cache_path = localfs.makeQualified(new Path(expected_cache_name));
 		
 		// Just make sure we've deleted the old file
 		try {
-			new File(expected_cache_name).delete();
+			System.out.println("Deleted: " + new File(java_name).delete());
 		}
-		catch (Exception e) {}
+		catch (Exception e) {
+			fail("Misc Error: " + e);
+		}
 		
 		assertTrue("Remote file exists", new File(_test_file_path).exists());
-		assertFalse("Local file doesn't exist", new File(expected_cache_name).exists());
+		assertFalse("Local file doesn't exist: " +
+				java_name,
+				new File(java_name).exists());
 		
 		// Now create the file
 		
@@ -136,11 +149,11 @@ public class TestJarCacheUtils {
 		
 		final SharedLibraryBean library_bean = BeanTemplateUtils.build(SharedLibraryBean.class)
 															.with(SharedLibraryBean::path_name, _test_file_path)
-															.with(SharedLibraryBean::_id, "test1")
+															.with(SharedLibraryBean::_id, "testX")
 															.done().get();
 		
 		final Either<BasicMessageBean, String> ret_val_1 =
-				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "test1", new TestMessageBean()).get();
+				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "testX", new TestMessageBean()).get();
 		
 		assertEquals(expected_cache_path.toString(), ret_val_1.right().value());
 		
@@ -211,7 +224,9 @@ public class TestJarCacheUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		assertEquals(error.message(), "Shared library C:\\Users\\acp\\AppData\\Local\\Temp\\/test.jarx not found: [File file:/C:/Users/acp/AppData/Local/Temp/test.jarx does not exist: FileNotFoundException]:[RawLocalFileSystem.java:524:org.apache.hadoop.fs.RawLocalFileSystem:deprecatedGetFileStatus][FileContext.java:1112:org.apache.hadoop.fs.FileContext:getFileStatus][JarCacheUtils.java:58:com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils:getCachedJar][TestJarCacheUtils.java:207:com.ikanow.aleph2.data_import_manager.harvest.utils.TestJarCacheUtils:testRemoteFileNotPresent]");
+		String expected_message = "Shared library C:\\Users\\acp\\AppData\\Local\\Temp\\/test.jarx not found: [File file:/C:/Users/acp/AppData/Local/Temp/test.jarx does not exist: FileNotFoundException]:[RawLocalFileSystem.java:524:org.apache.hadoop.fs.RawLocalFileSystem:deprecatedGetFileStatus][FileContext.java:1112:org.apache.hadoop.fs.FileContext:getFileStatus][JarCacheUtils.java:58:com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils:getCachedJar][TestJarCacheUtils.java:212:com.ikanow.aleph2.data_import_manager.harvest.utils.TestJarCacheUtils:testRemoteFileNotPresent]"
+										.replaceAll(":[0-9]+", ":LINE");
+		assertEquals(expected_message, error.message().replaceAll(":[0-9]+", ":LINE"));
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);

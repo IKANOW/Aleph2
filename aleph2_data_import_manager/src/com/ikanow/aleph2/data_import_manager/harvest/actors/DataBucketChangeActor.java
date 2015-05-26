@@ -168,7 +168,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
 						return Either.left(
 								HarvestErrorUtils.buildErrorMessage(source, m,
-										ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND), bucket.full_name(), bucket.full_name()));
+										HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.full_name()));
 					}
 					
 					final List<String> other_libs = harvest_tech_only 
@@ -236,7 +236,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					.otherwise(msg -> { // return "command not recognized" error
 						return CompletableFuture.completedFuture(
 								new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
-									ErrorUtils.get(HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED), 
+									HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 
 										bucket.full_name(), m.getClass().getSimpleName())));
 					})
 			);
