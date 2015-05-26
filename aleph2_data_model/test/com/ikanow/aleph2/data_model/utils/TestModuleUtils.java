@@ -231,9 +231,9 @@ public class TestModuleUtils {
 	@Test
 	public void testInjectGlobalConfig_specified() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		configMap.put("Globals.local_cached_jar_dir", "a");
-		configMap.put("Globals.local_root_dir", "b");
-		configMap.put("Globals.local_yarn_config_dir", "c");
+		configMap.put("globals.local_cached_jar_dir", "a");
+		configMap.put("globals.local_root_dir", "b");
+		configMap.put("globals.local_yarn_config_dir", "c");
 		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
 		assertNotNull(service_troi);
