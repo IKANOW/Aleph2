@@ -62,7 +62,6 @@ import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 //TODO (ALEPH-19): No method currently to access the harvest/enrichment/storage logs
-//TODO (ALEPH-19): need to set node affinity after creating bucket
 
 /** CRUD service for Data Bucket Status with management proxy
  * @author acp
@@ -181,17 +180,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		final CompletableFuture<Supplier<Object>> ret_val = 
 				_underlying_data_bucket_status_db.storeObject(new_object);
 		
-		return FutureUtils.createManagementFuture(ret_val,
-			ret_val.thenCompose(__ -> _underlying_data_bucket_db.getObjectById(new_object._id()))
-				.thenCompose(optbucket -> {
-					if (optbucket.isPresent()) { // The bucket already existed, this means create a "new bucket" message						
-						final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(new_object);
-						return DataBucketCrudService.requestNewBucket(optbucket.get(), is_suspended, _actor_context);											
-					}
-					else { // No bucket yet, the "new bucket" message will create its own "new bucket" message
-						return CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList());
-					}
-				}));
+		return FutureUtils.createManagementFuture(ret_val, CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList()));
 	}
 
 	/* (non-Javadoc)
@@ -413,7 +402,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 						Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::_id)), true);
 		
 		try {
-			return MgmtCrudUtils.applyCrudPredicate(affected_ids, status -> this.updateObjectById(status._id(), update));
+			return MgmtCrudUtils.applyCrudPredicate(affected_ids, status -> this.updateObjectById(status._id(), update))._1();
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here

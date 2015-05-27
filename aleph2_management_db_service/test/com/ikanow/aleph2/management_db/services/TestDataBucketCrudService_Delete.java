@@ -53,9 +53,9 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.sun.istack.internal.logging.Logger;
 
-public class TestDataBucketCrudService {
+public class TestDataBucketCrudService_Delete {
 
-	public static final Logger _logger = Logger.getLogger(TestDataBucketCrudService.class);	
+	public static final Logger _logger = Logger.getLogger(TestDataBucketCrudService_Delete.class);	
 	
 	/////////////////////////////////////////////////////////////
 	
@@ -604,16 +604,8 @@ public class TestDataBucketCrudService {
 	}
 	
 	/////////////////////////////////////////////////////////////	
-	/////////////////////////////////////////////////////////////	
-	/////////////////////////////////////////////////////////////	
-	
-	// Store bucket
-	
-	/////////////////////////////////////////////////////////////	
 		
 	//TODO test random things that work (eg count)
 	
 	//TODO test random things that don't work, just to get coverage
-
-	//TODO don't forget to check node affinity has been set
 }

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import scala.Tuple2;
 
@@ -49,6 +49,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -59,6 +61,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
@@ -72,7 +75,6 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
 //TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
-//TODO (ALEPH-19): need to set node affinity after creating bucket
 
 /** CRUD service for Data Bucket with management proxy
  * @author acp
@@ -177,6 +179,20 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						CompletableFuture.completedFuture(errors)
 						);
 			}
+
+			// Error if a bucket status doesn't exist - must create a bucket status before creating the bucket
+			// (note the above validation ensures the bucket has an _id)
+			// (obviously need to block here until we're sure..)
+			
+			if (!this._underlying_data_bucket_status_db.getObjectById(new_object._id(), Arrays.asList("_id"), true).
+					get().isPresent())
+			{
+				return FutureUtils.createManagementFuture(
+						FutureUtils.returnError(new RuntimeException(
+								ErrorUtils.get(ManagementDbErrorUtils.BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS, new_object.full_name()))),
+						CompletableFuture.completedFuture(Collections.emptyList())
+						);				
+			}
 			
 			// Create the directories
 			
@@ -208,7 +224,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(bucket_status_opt.get());
 					return old_bucket.isPresent()
 							? requestUpdatedBucket(new_object, old_bucket.get(), bucket_status_opt.get(), _actor_context, _bucket_action_retry_store)
-							: requestNewBucket(new_object, is_suspended, _actor_context);							
+							: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);							
 				}
 			});			
 			return FutureUtils.createManagementFuture(ret_val, mgmt_results);
@@ -383,7 +399,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
 		
 		try {
-			return MgmtCrudUtils.applyCrudPredicate(to_delete, this::deleteBucket);
+			return MgmtCrudUtils.applyCrudPredicate(to_delete, this::deleteBucket)._1();
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -536,6 +552,22 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	// UTILITIES
 	
+	/** Simple converter from string error into basic message bean
+	 * @param error
+	 * @return
+	 */
+	public static BasicMessageBean getCreateValidationError(final @NonNull String error) {
+		return new BasicMessageBean(
+				new Date(), // date
+				false, // success
+				"CoreManagementDbService",
+				BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
+				null, // message code
+				error,
+				null // details						
+			);
+	}
+	
 	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
 	 * @param bucket
 	 * @return
@@ -555,25 +587,132 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Check for missing fields
 		
 		ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.keySet().stream()
-			.filter(s -> !bucket_json.has(s))
+			.filter(s -> !bucket_json.has(s) || bucket_json.get(s).asText().isEmpty())
 			.forEach(s -> 
-				errors.add(new BasicMessageBean(
-						new Date(), // date
-						false, // success
-						"CoreManagementDbService",
-						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
-						null, // message code
-						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket._id()).orElse("(new)")),
-						null // details						
-					)));
+				errors.add(getCreateValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket.full_name()).orElse("(unknown)")))));
 		
 		// More complex missing field checks
 		
-		//TODO more complex rules
+		// - if has enrichment then must have harvest_technology_name_or_id (1) 
+		// - if has harvest_technology_name_or_id then must have harvest_configs (2)
+		// - if has enrichment then must have master_enrichment_type (3)
+		// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology (4)
+		// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology (5)
 
-		errors.addAll(checkForZeroLengthField(bucket._id(), bucket_json, "full_name", "display_name", "owner_id"));
+		//(1, 3, 4, 5)
+		if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
+				|| ((null != bucket.streaming_enrichment_configs()) && !bucket.streaming_enrichment_configs().isEmpty())
+				|| (null != bucket.batch_enrichment_topology())
+				|| (null != bucket.streaming_enrichment_topology()))
+		{
+			if (null == bucket.harvest_technology_name_or_id()) { //(1)
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_HARVEST_TECH, bucket.full_name())));
+			}
+			if (null == bucket.master_enrichment_type()) { // (3)
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
+			}
+			else {
+				// (4)
+				if ((DataBucketBean.MasterEnrichmentType.batch == bucket.master_enrichment_type())
+					 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+				{
+					if ((null == bucket.batch_enrichment_topology()) && 
+							((null == bucket.batch_enrichment_configs()) || bucket.batch_enrichment_configs().isEmpty()))
+					{
+						errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+					}
+				}
+				// (5)
+				if ((DataBucketBean.MasterEnrichmentType.streaming == bucket.master_enrichment_type())
+						 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+				{
+					if ((null == bucket.streaming_enrichment_topology()) && 
+							((null == bucket.streaming_enrichment_configs()) || bucket.streaming_enrichment_configs().isEmpty()))
+					{
+						errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+					}
+				}
+			}
+		}
+		// (2)
+		if ((null != bucket.harvest_technology_name_or_id()) &&
+				((null == bucket.harvest_configs()) || bucket.harvest_configs().isEmpty()))
+		{			
+			errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.HARVEST_BUT_NO_HARVEST_CONFIG, bucket.full_name())));
+		}
 		
-		//TODO multi buckets - logic 
+		// Embedded object field rules
+		
+		// - each data schema must: either be enabled or disabled (leave this for the moment, will just default to enabled)
+		// - each harvest config must be: either be enabled or disabled (6)
+		// - each enrichment config must be: either be enabled or disabled, have at least 1 lib id or name //(7)
+
+		Consumer<Tuple2<String, List<String>>> list_test = list -> {
+			if (null != list._2()) for (String s: list._2()) {
+				if ((s == null) || s.isEmpty()) {
+					errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
+				}
+			}
+			
+		};
+		
+		// (6)
+		if ((null != bucket.harvest_technology_name_or_id()) && (null != bucket.harvest_configs())) {
+			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
+				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
+				if (null == hmeta.enabled()) { // (6)
+					errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_HARVEST_CONFIG_ELEMENTS, bucket.full_name(), Integer.toString(i))));					
+				}
+				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
+			}
+		}
+
+		// (7)
+		Consumer<Tuple2<String, EnrichmentControlMetadataBean>> enrichment_test = emeta -> {
+			if (null == emeta._2().enabled()) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS, bucket.full_name(), emeta._1())));
+			}
+			if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+			}
+			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
+			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
+		};		
+		if (null != bucket.batch_enrichment_topology()) {
+			enrichment_test.accept(Tuples._2T("batch_enrichment_topology", bucket.batch_enrichment_topology()));
+		}
+		if (null != bucket.batch_enrichment_configs()) {
+			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
+				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
+				enrichment_test.accept(Tuples._2T("batch_enrichment_configs" + Integer.toString(i), emeta));
+			}
+		}
+		if (null != bucket.streaming_enrichment_topology()) {
+			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()));
+		}
+		if (null != bucket.streaming_enrichment_configs()) {
+			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
+				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
+				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs" + Integer.toString(i), emeta));
+			}
+		}
+		
+		// Multi-buckets logic 
+		
+		// - if a multi bucket than cannot have any of: enrichment or harvest (8)
+		// - multi-buckets cannot be nested (TODO: ALEPH-19, leave this one for later)
+		
+		
+		//(8)
+		if ((null != bucket.multi_bucket_children()) && !bucket.multi_bucket_children().isEmpty()) {
+			if (null != bucket.master_enrichment_type()) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));
+			}
+			if (null != bucket.harvest_technology_name_or_id()) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));				
+			}
+		}
 		
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
@@ -585,10 +724,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// PHASE 2
 				
-		//TODO multi buckets - authorization
+		//TODO (ALEPH-19): multi buckets - authorization; other - authorization
 		
-		//TODO various other authorization
-
 		CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
 		
 		errors.addAll(bucket_path_errors_future.join());
@@ -606,27 +743,18 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Finally Check whether I am allowed to update the various fields if old_version.isPresent()
 		
 		if (old_version.isPresent()) {
-			//TODO
+			final DataBucketBean old_bucket = old_version.get();
+			if (!bucket._id().equals(old_bucket._id())) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ID_CHANGED, bucket.full_name())));
+			}
+			if (!bucket.full_name().equals(old_bucket.full_name())) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name())));
+			}
+			if (!bucket.owner_id().equals(old_bucket.owner_id())) {
+				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name())));
+			}
 		}		
 		return errors;
-	}
-	
-	private static Collection<BasicMessageBean> checkForZeroLengthField(final @Nullable String id, final @NonNull JsonNode json, final @NonNull String... fields) {
-		final LinkedList<BasicMessageBean> new_errors = new LinkedList<BasicMessageBean>();
-		for (String field: fields) {
-			if (json.has(field) && json.get(field).asText().isEmpty()) {
-				new_errors.add(new BasicMessageBean(
-						new Date(), // date
-						false, // success
-						"CoreManagementDbService",
-						BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
-						null, // message code
-						ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, 
-								Optional.ofNullable(id).orElse("(new)"), "full_name"),
-						null)); // details						
-			}			
-		}
-		return new_errors;
 	}
 	
 	/** A utility routine to check whether the 
@@ -714,6 +842,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	public static CompletableFuture<Collection<BasicMessageBean>> requestNewBucket(
 			final @NonNull DataBucketBean new_object, final boolean is_suspended,
+			final @NonNull ICrudService<DataBucketStatusBean> status_store,
 			final @NonNull ManagementDbActorContext actor_context 
 			)
 	{
@@ -740,6 +869,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					return replies.replies(); 
 				});
 
+		// Apply the affinity to the bucket status (which must exists, by construction):
+		MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
+		
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		return management_results;							
 	}	

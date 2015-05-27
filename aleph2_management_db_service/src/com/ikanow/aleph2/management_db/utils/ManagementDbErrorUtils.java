@@ -26,16 +26,20 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	// BUCKET CREATION/UPDATES
 	
+	public static final String BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS = "Bucket {0} does not have a corresponding bucket status - this should be created first";
+	
 	// Simple field rules
 	
+	public static final String BUCKET_NO_ID_FIELD = "Bucket {0} has no (non-empty) _id field";
 	public static final String BUCKET_NO_ACCESS_RIGHTS = "Bucket {0} has no access_rights field";
-	public static final String BUCKET_NO_OWNER_ID = "Bucket {0} has no owner_id field";
-	public static final String BUCKET_NO_CREATED = "Bucket {0} has no created field";
-	public static final String BUCKET_NO_MODIFIED = "Bucket {0} has no modified field";
-	public static final String BUCKET_NO_DISPLAY_NAME = "Bucket {0} has no display_name field";
-	public static final String BUCKET_NO_FULL_NAME = "Bucket {0} has no full_name field";	
+	public static final String BUCKET_NO_OWNER_ID = "Bucket {0} has no (non-empty) owner_id field";
+	public static final String BUCKET_NO_CREATED = "Bucket {0} has no (non-empty) created field";
+	public static final String BUCKET_NO_MODIFIED = "Bucket {0} has no (non-empty) modified field";
+	public static final String BUCKET_NO_DISPLAY_NAME = "Bucket {0} has (non-empty) no display_name field";
+	public static final String BUCKET_NO_FULL_NAME = "Bucket {0} has no (non-empty) full_name field";	
 
 	public static final ImmutableMap<String, String> NEW_BUCKET_ERROR_MAP = ImmutableMap.<String, String>builder()
+			.put("_id", BUCKET_NO_ID_FIELD)
 			.put("access_rights", BUCKET_NO_ACCESS_RIGHTS)
 			.put("owner_id", BUCKET_NO_ACCESS_RIGHTS)
 			.put("created", BUCKET_NO_ACCESS_RIGHTS)
@@ -49,7 +53,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// Other rules:
 	
 	// - if has enrichment then must have harvest_technology_name_or_id 
-	// - if has harvest_technology_name_or_id and then harvest_configs
+	// - if has harvest_technology_name_or_id then must have harvest_configs
 	// - if has enrichment then must have master_enrichment_type
 	// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology
 	// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology
@@ -91,6 +95,14 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String MULTI_BUCKET_AUTHORIZATION_ERROR = "Multi-bucket {0}: user {1} does not have access to these buckets: {2}";
 	public static final String LIBRARY_AUTHORIZATION_ERROR = "Bucket {0}: user {1} does not have access to these libraries: {3}";
 	//TODO (ALEPH-19): the other rules
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	// BUCKET UPDATE
+	
+	public static final String BUCKET_UPDATE_ID_CHANGED = "Bucket {0}: can't update _id";
+	public static final String BUCKET_UPDATE_FULLNAME_CHANGED = "Bucket {0}: can't _currently_ update full_name";
+	public static final String BUCKET_UPDATE_OWNERID_CHANGED = "Bucket {0}: can't _currently_ update owner_id";
 	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	

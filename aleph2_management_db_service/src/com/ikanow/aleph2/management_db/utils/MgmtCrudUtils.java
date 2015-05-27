@@ -18,6 +18,7 @@ package com.ikanow.aleph2.management_db.utils;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,7 +30,9 @@ import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -79,19 +82,48 @@ public class MgmtCrudUtils {
 		return management_results;
 	}
 	
+	/** Applies the node affinity obtained from "applyCrudPredicate" to the designated bucket
+	 * @param bucket_id
+	 * @param nodes_future
+	 * @param status_store
+	 * @return
+	 */
+	static public CompletableFuture<Boolean> applyNodeAffinity(final @NonNull String bucket_id,
+			final @NonNull ICrudService<DataBucketStatusBean> status_store,
+			final @NonNull CompletableFuture<Set<String>> nodes_future)
+	{
+		return nodes_future.thenCompose(nodes -> {
+			return status_store.updateObjectById(bucket_id, CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::node_affinity, nodes));
+		});
+	}
+	
+	/** Quick utility function to extract a set of sources (hostnames) that returned with success==true
+	 * @param mgmt_results - management future including non-trivial side channel
+	 * @return
+	 */
+	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final @NonNull CompletableFuture<Collection<BasicMessageBean>> mgmt_results) {
+		return mgmt_results.thenApply(list -> {
+			return list.stream().filter(msg -> msg.success()).map(msg -> msg.source()).collect(Collectors.toSet());
+		});
+	}
+	
 	/** Applies a "CRUD predicate" (ie returning a ManagementFuture<Boolean>) to a cursor of results
 	 *  and collects the main results into a list of successes, and collects the management side channels
 	 * @param application_cursor
 	 * @param crud_predicate
-	 * @return
+	 * @return - firstly a management future with the side channel, secondly a candidate list of nodes that say yes
 	 */
-	static public <T> ManagementFuture<Long> applyCrudPredicate(
+	static public <T> Tuple2<ManagementFuture<Long>, CompletableFuture<Set<String>>> applyCrudPredicate(
 			CompletableFuture<Cursor<T>> application_cursor_future,
 			Function<T, ManagementFuture<Boolean>> crud_predicate)
 	{
-		return FutureUtils.denestManagementFuture(application_cursor_future.thenApply(cursor -> {
-			return applyCrudPredicate(cursor, crud_predicate);
+		final ManagementFuture<Long> part1 = 
+			FutureUtils.denestManagementFuture(application_cursor_future.thenApply(cursor -> {
+				return applyCrudPredicate(cursor, crud_predicate);
 		}));
+		
+		final CompletableFuture<Set<String>> part2 = getSuccessfulNodes(part1.getManagementResults());
+		return Tuples._2T(part1, part2);
 	}
 	
 	
