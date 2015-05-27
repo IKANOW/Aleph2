@@ -1,8 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>aleph2_access_manager</groupId>
+  <groupId>com.ikanow.aleph2</groupId>
   <artifactId>aleph2_access_manager</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>${aleph2.version}</version>
+  <properties>
+       <aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+  </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <resources>
@@ -28,7 +31,7 @@
   	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_data_model</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
+  		<version>${aleph2.version}</version>
   	</dependency>
   	<dependency>
   		<groupId>junit</groupId>

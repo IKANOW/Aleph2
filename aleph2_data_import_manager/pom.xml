@@ -2,7 +2,10 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ikanow.aleph2</groupId>
   <artifactId>aleph2_data_import_manager</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>${aleph2.version}</version>
+  <properties>
+	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+  </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <resources>
