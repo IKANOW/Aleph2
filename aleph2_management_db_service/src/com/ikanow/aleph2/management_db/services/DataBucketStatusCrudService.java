@@ -343,9 +343,10 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			final CompletableFuture<Collection<BasicMessageBean>> suspend_future = 
 				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
 					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::suspended))) {
-						
+
+						// (note this handles suspending the bucket if no handlers are available)
 						return getOperationFuture(update_reply, sb -> sb.suspended(),
-								_underlying_data_bucket_db, _actor_context, _bucket_action_retry_store
+								_underlying_data_bucket_db, _underlying_data_bucket_status_db, _actor_context, _bucket_action_retry_store
 								);
 					}
 					else { // (this isn't an error, just nothing to do here)
@@ -359,11 +360,12 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
 					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::quarantined_until))) {
 						
+						// (note this handles suspending the bucket if no handlers are available)
 						return getOperationFuture(update_reply, 
 								sb -> { // (this predicate is slightly more complex)
 									return (null != sb.quarantined_until()) || (new Date().getTime() < sb.quarantined_until().getTime());
 								},
-								_underlying_data_bucket_db, _actor_context, _bucket_action_retry_store
+								_underlying_data_bucket_db, _underlying_data_bucket_status_db, _actor_context, _bucket_action_retry_store
 								);
 					}
 					else { // (this isn't an error, just nothing to do here)
@@ -539,6 +541,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			final @NonNull CompletableFuture<Optional<DataBucketStatusBean>> update_reply, 
 			final @NonNull Predicate<DataBucketStatusBean> suspended_predicate,
 			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db,
+			final @NonNull ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db,
 			final @NonNull ManagementDbActorContext actor_context,
 			final @NonNull ICrudService<BucketActionRetryMessage> retry_store
 			)
@@ -585,7 +588,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 												new HashSet<String>(Arrays.asList(source)));	
 									});
 							
-						return management_results;										
+						return MgmtCrudUtils.handlePossibleEmptyNodeAffinity(
+								bucket.get(), suspended_predicate.test(status_bean), management_results, underlying_data_bucket_status_db);
 					}
 				});
 	}

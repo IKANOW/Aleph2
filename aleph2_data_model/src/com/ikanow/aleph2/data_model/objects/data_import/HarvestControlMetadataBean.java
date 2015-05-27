@@ -55,13 +55,13 @@ public class HarvestControlMetadataBean {
 	 * @return the library_ids_or_names
 	 */
 	public List<String> library_ids_or_names() {
-		return Collections.unmodifiableList(library_ids_or_names);
+		return null == library_ids_or_names ? null : Collections.unmodifiableList(library_ids_or_names);
 	}
 	/** The harvest-technology-specific configuration that controls the per-bucket import
 	 * @return the config
 	 */
 	public Map<String, Object> config() {
-		return Collections.unmodifiableMap(config);
+		return null == config ? null : Collections.unmodifiableMap(config);
 	}
 	private String name;
 	private Boolean enabled;

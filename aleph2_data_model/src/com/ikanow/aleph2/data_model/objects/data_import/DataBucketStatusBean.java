@@ -99,27 +99,27 @@ public class DataBucketStatusBean {
 	 * @return the current list of hostnames on which the associated harvest technology is running
 	 */
 	public List<String> node_affinity() {
-		return Collections.unmodifiableList(node_affinity);
+		return node_affinity == null ? null : Collections.unmodifiableList(node_affinity);
 	}
 	
 	/** Each time a host performs a harvest activity (either -internal- technology or -external- module) it can update this date/status 
 	 * @return a map of hosts vs the last time they harvested for this bucket 
 	 */
 	public Map<String, BasicMessageBean> last_harvest_status_messages() {
-		return Collections.unmodifiableMap(last_harvest_status_messages);
+		return last_harvest_status_messages == null ? null : Collections.unmodifiableMap(last_harvest_status_messages);
 	}
 	/** Each time a host performs an enrichment activity it updates this date/status (from within the core) 
 	 * @return a map of hosts vs the last time they enriched for this bucket 
 	 */
 	public Map<String, BasicMessageBean> last_enrichment_status_messages() {
-		return Collections.unmodifiableMap(last_enrichment_status_messages);
+		return last_enrichment_status_messages == null ? null : Collections.unmodifiableMap(last_enrichment_status_messages);
 	}
 	
 	/** Each time a host and data service performs an enrichment activity it updates this date/status (from within the core) 
 	 * @return a map of host+service vs the status/date
 	 */
 	public Map<String, BasicMessageBean> last_storage_status_messages() {
-		return Collections.unmodifiableMap(last_storage_status_messages);
+		return last_storage_status_messages == null ? null : Collections.unmodifiableMap(last_storage_status_messages);
 	}
 	private String _id;
 	private String bucket_path;

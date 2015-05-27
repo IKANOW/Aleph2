@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -74,6 +73,8 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
+//TODO ... in the meantime, just created a ".DELETED" file? (eg then can write a script to do the deletion/whatever)
+//TODO ... handle the update poll messaging
 //TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
 
 /** CRUD service for Data Bucket with management proxy
@@ -184,9 +185,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// (note the above validation ensures the bucket has an _id)
 			// (obviously need to block here until we're sure..)
 			
-			if (!this._underlying_data_bucket_status_db.getObjectById(new_object._id(), Arrays.asList("_id"), true).
-					get().isPresent())
-			{
+			final CompletableFuture<Optional<DataBucketStatusBean>> corresponding_status = 
+					_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
+							Arrays.asList(helper.field(DataBucketStatusBean::_id), 
+											helper.field(DataBucketStatusBean::suspended), 
+											helper.field(DataBucketStatusBean::quarantined_until)), true);					
+					
+			if (!corresponding_status.get().isPresent()) {
 				return FutureUtils.createManagementFuture(
 						FutureUtils.returnError(new RuntimeException(
 								ErrorUtils.get(ManagementDbErrorUtils.BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS, new_object.full_name()))),
@@ -210,24 +215,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 			// Get the status and then decide whether to broadcast out the new/update message
 			
-			final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = ret_val.thenCompose(f_id -> {
-				return _underlying_data_bucket_status_db.getObjectById(f_id.get(), 
-						Arrays.asList(helper.field(DataBucketStatusBean::_id), helper.field(DataBucketStatusBean::suspended), helper.field(DataBucketStatusBean::quarantined_until)), 
-						true);
-			})
-			.thenCompose(bucket_status_opt -> {
-				if (!bucket_status_opt.isPresent()) { // No bucket status, so not going to distribute the new bucket action
-					// instead we'll wait until the bucket status is actually created
-					return CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList());
-				}
-				else {
-					final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(bucket_status_opt.get());
-					return old_bucket.isPresent()
-							? requestUpdatedBucket(new_object, old_bucket.get(), bucket_status_opt.get(), _actor_context, _bucket_action_retry_store)
-							: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);							
-				}
-			});			
-			return FutureUtils.createManagementFuture(ret_val, mgmt_results);
+			final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
+			final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
+					? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _bucket_action_retry_store)
+					: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
+				
+			// If we got no responses then leave the object but suspend it
+					
+			return FutureUtils.createManagementFuture(ret_val,
+					MgmtCrudUtils.handlePossibleEmptyNodeAffinity(new_object, is_suspended, mgmt_results, _underlying_data_bucket_status_db));
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -552,22 +548,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	// UTILITIES
 	
-	/** Simple converter from string error into basic message bean
-	 * @param error
-	 * @return
-	 */
-	public static BasicMessageBean getCreateValidationError(final @NonNull String error) {
-		return new BasicMessageBean(
-				new Date(), // date
-				false, // success
-				"CoreManagementDbService",
-				BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
-				null, // message code
-				error,
-				null // details						
-			);
-	}
-	
 	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
 	 * @param bucket
 	 * @return
@@ -587,9 +567,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Check for missing fields
 		
 		ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.keySet().stream()
-			.filter(s -> !bucket_json.has(s) || bucket_json.get(s).asText().isEmpty())
+			.filter(s -> !bucket_json.has(s) || (bucket_json.get(s).isTextual() && bucket_json.get(s).asText().isEmpty()))
 			.forEach(s -> 
-				errors.add(getCreateValidationError(
+				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket.full_name()).orElse("(unknown)")))));
 		
 		// More complex missing field checks
@@ -607,10 +587,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				|| (null != bucket.streaming_enrichment_topology()))
 		{
 			if (null == bucket.harvest_technology_name_or_id()) { //(1)
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_HARVEST_TECH, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_HARVEST_TECH, bucket.full_name())));
 			}
 			if (null == bucket.master_enrichment_type()) { // (3)
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
 			}
 			else {
 				// (4)
@@ -620,7 +600,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					if ((null == bucket.batch_enrichment_topology()) && 
 							((null == bucket.batch_enrichment_configs()) || bucket.batch_enrichment_configs().isEmpty()))
 					{
-						errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
 					}
 				}
 				// (5)
@@ -630,7 +610,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					if ((null == bucket.streaming_enrichment_topology()) && 
 							((null == bucket.streaming_enrichment_configs()) || bucket.streaming_enrichment_configs().isEmpty()))
 					{
-						errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
 					}
 				}
 			}
@@ -639,7 +619,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if ((null != bucket.harvest_technology_name_or_id()) &&
 				((null == bucket.harvest_configs()) || bucket.harvest_configs().isEmpty()))
 		{			
-			errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.HARVEST_BUT_NO_HARVEST_CONFIG, bucket.full_name())));
+			errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.HARVEST_BUT_NO_HARVEST_CONFIG, bucket.full_name())));
 		}
 		
 		// Embedded object field rules
@@ -651,7 +631,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		Consumer<Tuple2<String, List<String>>> list_test = list -> {
 			if (null != list._2()) for (String s: list._2()) {
 				if ((s == null) || s.isEmpty()) {
-					errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
 				}
 			}
 			
@@ -662,7 +642,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
 				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
 				if (null == hmeta.enabled()) { // (6)
-					errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_HARVEST_CONFIG_ELEMENTS, bucket.full_name(), Integer.toString(i))));					
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_HARVEST_CONFIG_ELEMENTS, bucket.full_name(), Integer.toString(i))));					
 				}
 				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
 			}
@@ -671,10 +651,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// (7)
 		Consumer<Tuple2<String, EnrichmentControlMetadataBean>> enrichment_test = emeta -> {
 			if (null == emeta._2().enabled()) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS, bucket.full_name(), emeta._1())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS, bucket.full_name(), emeta._1())));
 			}
 			if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
 			}
 			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
 			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
@@ -692,7 +672,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()));
 		}
 		if (null != bucket.streaming_enrichment_configs()) {
-			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
+			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
 				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs" + Integer.toString(i), emeta));
 			}
@@ -701,16 +681,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Multi-buckets logic 
 		
 		// - if a multi bucket than cannot have any of: enrichment or harvest (8)
-		// - multi-buckets cannot be nested (TODO: ALEPH-19, leave this one for later)
-		
+		// - multi-buckets cannot be nested (TODO: ALEPH-19, leave this one for later)		
 		
 		//(8)
 		if ((null != bucket.multi_bucket_children()) && !bucket.multi_bucket_children().isEmpty()) {
-			if (null != bucket.master_enrichment_type()) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));
-			}
 			if (null != bucket.harvest_technology_name_or_id()) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));				
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));				
 			}
 		}
 		
@@ -745,13 +721,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (old_version.isPresent()) {
 			final DataBucketBean old_bucket = old_version.get();
 			if (!bucket._id().equals(old_bucket._id())) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ID_CHANGED, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ID_CHANGED, bucket.full_name())));
 			}
 			if (!bucket.full_name().equals(old_bucket.full_name())) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name())));
 			}
 			if (!bucket.owner_id().equals(old_bucket.owner_id())) {
-				errors.add(getCreateValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name())));
 			}
 		}		
 		return errors;
@@ -804,8 +780,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @return the query to use in "validateOtherBucketsInPathChain"
 	 */
 	protected static QueryComponent<DataBucketBean> getPathQuery(final @NonNull String normalized_bucket_full_name) {		
-		final Matcher m = Pattern.compile("(/(?:[^/]+/)*)([^/]+/)").matcher(normalized_bucket_full_name);
+		final Matcher m = Pattern.compile("(/(?:[^/]*/)*)([^/]*/)").matcher(normalized_bucket_full_name);
 		// This must match by construction of full_name above
+		m.matches();
 		
 		final char first_char_of_final_path_inc = (char)(m.group(2).charAt(0) + 1);
 		

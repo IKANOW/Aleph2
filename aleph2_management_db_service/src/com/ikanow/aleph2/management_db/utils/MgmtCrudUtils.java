@@ -15,7 +15,9 @@
  ******************************************************************************/
 package com.ikanow.aleph2.management_db.utils;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,9 +32,11 @@ import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -47,6 +51,22 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
  */
 public class MgmtCrudUtils {
 
+	/** Simple converter from string error into basic message bean
+	 * @param error
+	 * @return
+	 */
+	public static BasicMessageBean createValidationError(final @NonNull String error) {
+		return new BasicMessageBean(
+				new Date(), // date
+				false, // success
+				"CoreManagementDbService",
+				BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
+				null, // message code
+				error,
+				null // details						
+			);
+	}
+	
 	/** Applies a management operation that might need to be retried, collating the results and converting into
 	 *  something that can be placed in the management side channel of a ManagementFuture
 	 * @param actor_context - the actor context (used to send the message)
@@ -80,6 +100,44 @@ public class MgmtCrudUtils {
 				});
 		
 		return management_results;
+	}
+	
+	/** Handles the case where no nodes reply - still perform the operation but then suspend the bucket (user will have to unsuspend once nodes are available)
+	 * @param bucket
+	 * @param is_suspended
+	 * @param return_from_handlers
+	 * @param status_store
+	 * @return
+	 */
+	static public CompletableFuture<Collection<BasicMessageBean>> handlePossibleEmptyNodeAffinity(final @NonNull DataBucketBean bucket,
+			final boolean is_suspended,
+			final CompletableFuture<Collection<BasicMessageBean>> return_from_handlers,
+			final @NonNull ICrudService<DataBucketStatusBean> status_store
+			)
+	{
+		return return_from_handlers.thenApply(results -> {
+			if (results.isEmpty()) { // uh oh, nobody answered, so we're going to generate an error after all and suspend it
+				if (!is_suspended) { // suspend it
+					try {
+						status_store.updateObjectById(bucket._id(),
+								CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::suspended, true)
+								).get();
+					}
+					catch (Exception e) {
+						return Arrays.asList(createValidationError(
+								ErrorUtils.getLongForm("{1}: {0}", e, bucket.full_name()))
+								);
+					} 
+					// (wait until complete)
+				}
+				return Arrays.asList(createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, bucket.full_name()))
+						);
+			}
+			else {
+				return results;
+			}
+		});
 	}
 	
 	/** Applies the node affinity obtained from "applyCrudPredicate" to the designated bucket

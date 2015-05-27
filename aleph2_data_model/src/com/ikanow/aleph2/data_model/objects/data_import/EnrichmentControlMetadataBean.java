@@ -51,7 +51,7 @@ public class EnrichmentControlMetadataBean {
 	 * @return the dependencies
 	 */
 	public List<String> dependencies() {
-		return Collections.unmodifiableList(dependencies);
+		return dependencies == null ? null : Collections.unmodifiableList(dependencies);
 	}
 	/** Returns if this enrichment is currently enabled - implicitly disables all dependent enrichments
 	 * @return the enabled
@@ -64,13 +64,13 @@ public class EnrichmentControlMetadataBean {
 	 * @return the library_ids_or_names
 	 */
 	public List<String> library_ids_or_names() {
-		return Collections.unmodifiableList(library_ids_or_names);
+		return library_ids_or_names == null ? null : Collections.unmodifiableList(library_ids_or_names);
 	}
 	/** The enrichment-module-specific configuration that controls the per-bucket enrichment
 	 * @return the config
 	 */
 	public Map<String, Object> getConfig() {
-		return Collections.unmodifiableMap(config);
+		return config == null ? null : Collections.unmodifiableMap(config);
 	}
 	private String name;
 	private List<String> dependencies;

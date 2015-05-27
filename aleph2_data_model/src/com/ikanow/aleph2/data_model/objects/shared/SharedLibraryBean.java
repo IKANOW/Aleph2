@@ -97,7 +97,7 @@ public class SharedLibraryBean {
 	 * @return
 	 */
 	public Set<String> tags() {
-		return Collections.unmodifiableSet(tags);
+		return tags == null ? null : Collections.unmodifiableSet(tags);
 	}
 	/** The set of access tokens, read access only - any admin has write access and nobody else
 	 * @return the set of access tokens

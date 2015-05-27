@@ -74,7 +74,7 @@ public class DataLayerConfigurationBean {
 	 * @return the storage_service_config
 	 */
 	public Map<String, Object> archive_service_config() {
-		return Collections.unmodifiableMap(storage_service_config);
+		return storage_service_config == null ? null : Collections.unmodifiableMap(storage_service_config);
 	}
 	/** The implementation of the columnar service, in format "alias:fully.qualified.class.name"
 	 * @return the columnar_db_service
@@ -86,7 +86,7 @@ public class DataLayerConfigurationBean {
 	 * @return the columnar_db_service_config
 	 */
 	public Map<String, Object> columnar_service_config() {
-		return Collections.unmodifiableMap(columnar_db_service_config);
+		return columnar_db_service_config == null ? null : Collections.unmodifiableMap(columnar_db_service_config);
 	}
 	/** The implementation of the graph db service, in format "alias:fully.qualified.class.name"
 	 * @return the graph_db_service
@@ -98,7 +98,7 @@ public class DataLayerConfigurationBean {
 	 * @return the graph_db_service_config
 	 */
 	public Map<String, Object> graph_db_service_config() {
-		return Collections.unmodifiableMap(graph_db_service_config);
+		return graph_db_service_config == null ? null : Collections.unmodifiableMap(graph_db_service_config);
 	}
 	/** The implementation of the geospatial service, in format "alias:fully.qualified.class.name"
 	 * @return the geospatial_service
@@ -110,7 +110,7 @@ public class DataLayerConfigurationBean {
 	 * @return the geospatial_service_config
 	 */
 	public Map<String, Object> geospatial_service_config() {
-		return Collections.unmodifiableMap(geospatial_service_config);
+		return geospatial_service_config == null ? null : Collections.unmodifiableMap(geospatial_service_config);
 	}
 	/** The implementation of the management db service, in format "alias:fully.qualified.class.name"
 	 * @return the management_db_service
@@ -122,7 +122,7 @@ public class DataLayerConfigurationBean {
 	 * @return the management_db_service_config
 	 */
 	public Map<String, Object> management_db_service_config() {
-		return Collections.unmodifiableMap(management_db_service_config);
+		return management_db_service_config == null ? null : Collections.unmodifiableMap(management_db_service_config);
 	}
 	/** The implementation of the object db service, in format "alias:fully.qualified.class.name"
 	 * @return the object_db_service
@@ -134,7 +134,7 @@ public class DataLayerConfigurationBean {
 	 * @return the object_db_service_config
 	 */
 	public Map<String, Object> object_db_service_config() {
-		return Collections.unmodifiableMap(document_db_service_config);
+		return document_db_service_config == null ? null : Collections.unmodifiableMap(document_db_service_config);
 	}
 	/** The implementation of the search index service, in format "alias:fully.qualified.class.name"
 	 * @return the search_index_service
@@ -146,7 +146,7 @@ public class DataLayerConfigurationBean {
 	 * @return the search_index_service_config
 	 */
 	public Map<String, Object> search_index_service_config() {
-		return Collections.unmodifiableMap(search_index_service_config);
+		return search_index_service_config == null ? null : Collections.unmodifiableMap(search_index_service_config);
 	}
 	/** The implementation of the temporal service, in format "alias:fully.qualified.class.name"
 	 * @return the temporal_service
@@ -158,7 +158,7 @@ public class DataLayerConfigurationBean {
 	 * @return the temporal_service_config
 	 */
 	public Map<String, Object> temporal_service_config() {
-		return Collections.unmodifiableMap(temporal_service_config);
+		return temporal_service_config == null ? null : Collections.unmodifiableMap(temporal_service_config);
 	}
 	private String storage_service;
 	private Map<String, Object> storage_service_config;

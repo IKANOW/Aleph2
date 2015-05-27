@@ -26,7 +26,8 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	// BUCKET CREATION/UPDATES
 	
-	public static final String BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS = "Bucket {0} does not have a corresponding bucket status - this should be created first";
+	public static final String BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS = "Bucket {0} does not have a corresponding bucket status - this should be created first";	
+	public static final String NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED = "Bucket {0} was created, but no data import managers were available to handle it, so it was created in suspended mode";
 	
 	// Simple field rules
 	
