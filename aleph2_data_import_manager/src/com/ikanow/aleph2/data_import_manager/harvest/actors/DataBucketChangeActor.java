@@ -206,7 +206,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		return err_or_tech_module.either(
+		return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>either(
 			//Error:
 			error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
 			,
