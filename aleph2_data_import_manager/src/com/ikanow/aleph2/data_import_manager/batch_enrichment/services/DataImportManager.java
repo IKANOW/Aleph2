@@ -19,7 +19,6 @@ import org.apache.log4j.Logger;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import akka.actor.PoisonPill;
 import akka.actor.Props;
 
 import com.google.inject.Inject;

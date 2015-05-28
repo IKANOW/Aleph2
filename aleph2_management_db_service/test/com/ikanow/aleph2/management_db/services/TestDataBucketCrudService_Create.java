@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 import org.apache.commons.io.FileUtils;
@@ -49,6 +50,7 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
@@ -56,6 +58,7 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
+import com.mongodb.MongoException;
 import com.sun.istack.internal.logging.Logger;
 
 public class TestDataBucketCrudService_Create {
@@ -134,20 +137,44 @@ public class TestDataBucketCrudService_Create {
 		private final String uuid;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
-			_logger.info("Accept from: " + uuid);
-			
-			this.sender().tell(
-					new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
-							new BasicMessageBean(
-									new Date(),
-									true,
-									uuid + "replaceme", // (this gets replaced by the bucket)
-									arg0.getClass().getSimpleName(),
-									null,
-									"handled",
-									null									
-									)),
-					this.self());
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Accept MESSAGE from: " + uuid);
+				this.sender().tell(
+						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+								new BasicMessageBean(
+										new Date(),
+										true,
+										uuid + "replaceme", // (this gets replaced by the bucket)
+										arg0.getClass().getSimpleName(),
+										null,
+										"handled",
+										null									
+										)),
+						this.self());
+			}
+		}		
+	}
+	
+	// This one always accepts, but then refuses when it comes down to it...
+	public static class TestActor_Accepter_Refuser extends UntypedActor {
+		public TestActor_Accepter_Refuser(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Refuse MESSAGE from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
+			}
 		}		
 	}	
 	
@@ -159,6 +186,7 @@ public class TestDataBucketCrudService_Create {
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
 		ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+
 		return uuid;
 	}
 	
@@ -177,8 +205,6 @@ public class TestDataBucketCrudService_Create {
 	
 	// Store bucket
 	
-	//TODO don't forget to check node affinity has been set
-
 	@Test
 	public void testValidateInsert() throws Exception {
 		cleanDatabases();
@@ -206,7 +232,7 @@ public class TestDataBucketCrudService_Create {
 		// 1) Check needs status object to be present
 		
 		try {
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_bucket);
 			assertEquals(0, result.getManagementResults().get().size());			
 			result.get();
 			fail("Should have thrown an exception");
@@ -251,7 +277,7 @@ public class TestDataBucketCrudService_Create {
 				
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket).with(DataBucketBean::full_name, null).done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty());
 			
 			result.get();
@@ -267,7 +293,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket).with(DataBucketBean::full_name, "").done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -286,7 +312,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());			
 			result.get();
 			fail("Should have thrown an exception");
@@ -305,7 +331,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -326,7 +352,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -347,7 +373,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
 					.with(DataBucketBean::streaming_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -365,7 +391,7 @@ public class TestDataBucketCrudService_Create {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -388,7 +414,7 @@ public class TestDataBucketCrudService_Create {
 								.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("xxx", ""))
 								.done().get()))
 					.done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -410,7 +436,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::batch_enrichment_configs, 
 							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()))
 							.done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -433,7 +459,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::streaming_enrichment_configs, 
 							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()))
 							.done();
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -455,7 +481,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).done().get()))
 					.done();
 			
-			ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			result.get();
@@ -466,25 +492,85 @@ public class TestDataBucketCrudService_Create {
 			assertEquals(RuntimeException.class, e.getCause().getClass());
 		}				
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
-
-		
-		//TODO
-		// register bucket vs ignore handlers
-
-		String refusing_host1 = insertActor(TestActor_Refuser.class);
-		String refusing_host2 = insertActor(TestActor_Refuser.class);
-		assertFalse("created actors on different hosts", refusing_host1.equals(refusing_host2));
-		//TODO make them sub
 	}
 
-	public void testAnotherSemiFailedBucketCreation() throws Exception {
+	///////////////////////////////////////////////////////////////////////////////////////////
+
+	@Test 
+	public void handleDeleteFileStillPresent() throws InterruptedException, ExecutionException {
+		cleanDatabases();
+				
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, true) 
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
+				.done().get();
+
+		//(add the status object and try)
+		final DataBucketStatusBean status = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, valid_bucket._id())
+				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status).get();
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+		
+		// Add a delete file:
+		try {
+			new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()).mkdirs();
+		}		
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		
+		try {
+			new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + ".DELETED").createNewFile();
+		}		
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+
+		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + ".DELETED").exists());
+		
+		// OK now try inserting the bucket, should error:
+		
+		try {
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_bucket);
+			result.get();
+			fail("Should have thrown an exception");
+		}
+		catch (Exception e) {
+			System.out.println("expected, err=" + e.getCause().getMessage());
+			assertEquals(RuntimeException.class, e.getCause().getClass());
+		}				
+		assertEquals(0L, (long)_bucket_crud.countObjects().get());			
+		
+	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	@Test
+	public void testAnotherSemiFailedBucketCreation_multiNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register a refuse-then-accept
-		String accepting_host1 = insertActor(TestActor_Accepter.class);
-		String accepting_host2 = insertActor(TestActor_Accepter.class);
-		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
-		//TODO make them sub
+		final String refusing_host1 = insertActor(TestActor_Refuser.class);
+		final String refusing_host2 = insertActor(TestActor_Refuser.class);
+		assertFalse("created actors on different hosts", refusing_host1.equals(refusing_host2));
 		
 		// 0) Start with a valid bucket:
 		
@@ -496,6 +582,13 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, false) 
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
 				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
@@ -518,8 +611,6 @@ public class TestDataBucketCrudService_Create {
 		_bucket_status_crud.storeObject(status).get();
 		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
 
-		// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
-		//TODO make sure it actually works, check node affinity
 		assertEquals(0L, (long)_bucket_crud.countObjects().get());
 		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
 		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
@@ -533,16 +624,79 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 	
+	@Test
+	public void testAnotherSemiFailedBucketCreation_singleNode() throws Exception {
+		cleanDatabases();
+
+		// Setup: register a refuse-then-accept
+		final String refusing_host1 = insertActor(TestActor_Accepter_Refuser.class);
+		final String refusing_host2 = insertActor(TestActor_Accepter_Refuser.class);
+		assertFalse("created actors on different hosts", refusing_host1.equals(refusing_host2));
+		
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, true) 
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.done().get();
+
+		//(delete the file path)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		
+		//(add the status object and try)
+		final DataBucketStatusBean status = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, valid_bucket._id())
+				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status).get();
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+
+		assertEquals(0L, (long)_bucket_crud.countObjects().get());
+		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
+		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
+		assertEquals(false, err_msg.success());
+		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, valid_bucket.full_name()), err_msg.message());
+		assertEquals(valid_bucket._id(), insert_future.get().get());
+		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+		assertEquals(0, status_after.node_affinity().size());
+		assertEquals(true, status_after.suspended());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+	}
 	
-	public void testSuccessfulBucketCreation() throws Exception {
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	@Test
+	public void testSuccessfulBucketCreation_singleNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register an accepting actor to listen:
-		//TODO first try with no accepting hosts, check get error then insert
-		String accepting_host1 = insertActor(TestActor_Accepter.class);
-		String accepting_host2 = insertActor(TestActor_Accepter.class);
+		final String accepting_host1 = insertActor(TestActor_Accepter.class);
+		final String accepting_host2 = insertActor(TestActor_Accepter.class);
 		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
-		//TODO make them sub
 		
 		// 0) Start with a valid bucket:
 		
@@ -554,7 +708,13 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, false) 
 				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
 				.done().get();
 
 		//(delete the file path)
@@ -577,22 +737,137 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
 
 		// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
-		//TODO make sure it actually works, check node affinity
 		assertEquals(0L, (long)_bucket_crud.countObjects().get());
 		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
 		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
-		assertEquals(false, err_msg.success());
-		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, valid_bucket.full_name()), err_msg.message());
+		assertEquals(true, err_msg.success());
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
-		assertEquals(0, status_after.node_affinity().size());
-		assertEquals(true, status_after.suspended());
+		assertEquals(1, status_after.node_affinity().size());
+		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) || status_after.node_affinity().contains(accepting_host2));
+		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
-	
-	public void testUpdateValidationErrors() {
+
+	@Test
+	public void testSuccessfulBucketCreation_multiNode() throws Exception {
+		cleanDatabases();
+
+		// Setup: register an accepting actor to listen:
+		final String accepting_host1 = insertActor(TestActor_Accepter.class);
+		final String accepting_host2 = insertActor(TestActor_Accepter.class);
+		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
 		
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, true) 
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
+				.done().get();
+
+		//(delete the file path)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		
+		//(add the status object and try)
+		final DataBucketStatusBean status = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, valid_bucket._id())
+				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status).get();
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+
+		// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
+		assertEquals(0L, (long)_bucket_crud.countObjects().get());
+		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
+		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
+		assertEquals(true, err_msg.success());
+		assertEquals(valid_bucket._id(), insert_future.get().get());
+		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+		assertEquals(2, status_after.node_affinity().size());
+		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
+		assertEquals(false, status_after.suspended());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
-	//TODO: tests
+
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	@Test
+	public void testUpdateValidation() throws Exception {
+		
+		// Insert a bucket:
+		testSuccessfulBucketCreation_multiNode();		
+		
+		// Try to update it
+		
+		final DataBucketBean bucket = _bucket_crud.getObjectById("id1").get().get();
+		
+		final DataBucketBean mod_bucket1 = BeanTemplateUtils.clone(bucket)
+											.with(DataBucketBean::full_name, "Something else")
+											.with(DataBucketBean::owner_id, "Someone else")
+											.done();
+		
+		// First attempt: will fail because not trying to overwrite:
+		
+		final ManagementFuture<Supplier<Object>> update_future = _bucket_crud.storeObject(mod_bucket1);
+		
+		try {
+			update_future.get();
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertTrue("Dup key error", e.getCause() instanceof MongoException);
+		}
+		
+		// Second attempt: fail on validation
+		final ManagementFuture<Supplier<Object>> update_future2 = _bucket_crud.storeObject(mod_bucket1, true);
+		
+		try {
+			assertEquals(2, update_future2.getManagementResults().get().size()); // (2 errors)
+			update_future.get();
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertTrue("Validation error", e.getCause() instanceof RuntimeException);
+		}
+		
+		// Third attempt, succeed with different update
+
+		final DataBucketBean mod_bucket3 = BeanTemplateUtils.clone(bucket)
+				.with(DataBucketBean::display_name, "Something else")
+				.done();
+		
+		final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
+		assertEquals("id1", update_future3.get().get());
+
+		final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
+		assertEquals("Something else", bucket3.display_name());
+		
+		//(just quickly check node affinity didn't change)
+		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
+		assertEquals(2, status_after.node_affinity().size());
+	}
 }

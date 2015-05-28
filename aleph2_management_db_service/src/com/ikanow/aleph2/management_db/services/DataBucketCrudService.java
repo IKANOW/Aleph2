@@ -15,11 +15,13 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -72,9 +75,8 @@ import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 
-//TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data
-//TODO ... in the meantime, just created a ".DELETED" file? (eg then can write a script to do the deletion/whatever)
-//TODO ... handle the update poll messaging
+//TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data (for now, add a .DELETED file just so we know)
+//TODO (ALEPH-19): ... handle the update poll messaging, needs an indexed "next poll" query, do a findAndMod from every thread every minute
 //TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
 
 /** CRUD service for Data Bucket with management proxy
@@ -188,6 +190,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final CompletableFuture<Optional<DataBucketStatusBean>> corresponding_status = 
 					_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
 							Arrays.asList(helper.field(DataBucketStatusBean::_id), 
+											helper.field(DataBucketStatusBean::node_affinity), 
 											helper.field(DataBucketStatusBean::suspended), 
 											helper.field(DataBucketStatusBean::quarantined_until)), true);					
 					
@@ -211,7 +214,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			// OK if the bucket is validated we can store it (and create a status object)
 					
-			final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, false);
+			final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, replace_if_present);
 
 			// Get the status and then decide whether to broadcast out the new/update message
 			
@@ -411,6 +414,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	@NonNull
 	private ManagementFuture<Boolean> deleteBucket(final @NonNull DataBucketBean to_delete) {
 		try {
+			// Also delete the file paths (currently, just add ".deleted" to top level path) 
+			deleteFilePath(to_delete, _storage_service);
+			
 			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
 
 			return FutureUtils.denestManagementFuture(delete_reply.thenCompose(del_reply -> {			
@@ -418,6 +424,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					return CompletableFuture.completedFuture(Optional.empty());
 				}
 				else { //Get the status and delete it 
+					
 					final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
 							_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
 									CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
@@ -624,10 +631,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Embedded object field rules
 		
-		// - each data schema must: either be enabled or disabled (leave this for the moment, will just default to enabled)
-		// - each harvest config must be: either be enabled or disabled (6)
-		// - each enrichment config must be: either be enabled or disabled, have at least 1 lib id or name //(7)
-
 		Consumer<Tuple2<String, List<String>>> list_test = list -> {
 			if (null != list._2()) for (String s: list._2()) {
 				if ((s == null) || s.isEmpty()) {
@@ -637,22 +640,18 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 		};
 		
+		// Lists mustn't have zero-length elements
+		
 		// (6)
 		if ((null != bucket.harvest_technology_name_or_id()) && (null != bucket.harvest_configs())) {
 			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
 				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
-				if (null == hmeta.enabled()) { // (6)
-					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_HARVEST_CONFIG_ELEMENTS, bucket.full_name(), Integer.toString(i))));					
-				}
 				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
 			}
 		}
 
 		// (7)
 		Consumer<Tuple2<String, EnrichmentControlMetadataBean>> enrichment_test = emeta -> {
-			if (null == emeta._2().enabled()) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS, bucket.full_name(), emeta._1())));
-			}
 			if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
 				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
 			}
@@ -720,9 +719,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		if (old_version.isPresent()) {
 			final DataBucketBean old_bucket = old_version.get();
-			if (!bucket._id().equals(old_bucket._id())) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ID_CHANGED, bucket.full_name())));
-			}
 			if (!bucket.full_name().equals(old_bucket.full_name())) {
 				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name())));
 			}
@@ -733,7 +729,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		return errors;
 	}
 	
-	/** A utility routine to check whether the 
+	/** A utility routine to check whether the bucket is allowed to be in this location
 	 * @param bucket - the bucket to validate
 	 * @return a future containing validation errors based on the path
 	 */
@@ -846,11 +842,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					return replies.replies(); 
 				});
 
-		// Apply the affinity to the bucket status (which must exists, by construction):
-		MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
-		
+		// Apply the affinity to the bucket status (which must exist, by construction):
+		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
+
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
-		return management_results;							
+		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
+		return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 	}	
 	
 	/** Notify interested harvesters that a bucket has been updated
@@ -870,17 +867,35 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			)
 	{
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
-				new BucketActionMessage.UpdateBucketActionMessage(new_object, old_version, new HashSet<String>(status.node_affinity()));
+				new BucketActionMessage.UpdateBucketActionMessage(new_object, old_version, new HashSet<String>(
+						null == status.node_affinity() ? Collections.emptySet() : status.node_affinity()));
 		
 		return MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
 				source -> new BucketActionMessage.UpdateBucketActionMessage
 							(new_object, old_version, new HashSet<String>(Arrays.asList(source))));
 	}	
 	
-	protected void createFilePaths(final @NonNull DataBucketBean bucket, final @NonNull IStorageService storage_service) throws Exception {
+	public static final String DELETE_TOUCH_FILE = ".DELETED";
+	
+	protected static void deleteFilePath(final @NonNull DataBucketBean to_delete, final @NonNull IStorageService storage_service) throws Exception {
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+		
+		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
+		
+		dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE));		
+	}
+	
+	protected static void createFilePaths(final @NonNull DataBucketBean bucket, final @NonNull IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
 	
-		String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
+		
+		// Check if a "delete touch file is present, bail if so"
+		try {
+			dfs.getFileStatus(new Path(bucket_root + "/" + DELETE_TOUCH_FILE));
+			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.DELETE_TOUCH_FILE_PRESENT, bucket.full_name()));
+		}
+		catch (FileNotFoundException fe) {} // (fine just carry on)
 		
 		Arrays.asList(
 				bucket_root + "/managed_bucket",

@@ -51,7 +51,7 @@ public class TestCoreManagementDbModule {
 	private SharedLibraryCrudService _shared_library_crud;
 	
 	@Test
-	public void testRetyDataStore() throws Exception {
+	public void testRetryDataStore() throws Exception {
 		
 		// A bunch of DI related setup:
 		// Here's the setup that Guice normally gives you....

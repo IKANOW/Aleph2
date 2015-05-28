@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.services;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -32,6 +34,7 @@ import akka.actor.Props;
 import akka.actor.UntypedActor;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -51,6 +54,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
+import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 import com.sun.istack.internal.logging.Logger;
 
 public class TestDataBucketCrudService_Delete {
@@ -62,6 +66,8 @@ public class TestDataBucketCrudService_Delete {
 	// Some test infrastructure
 	
 	// This is everything DI normally does for you!
+	public GlobalPropertiesBean _globals;
+	public MockHdfsStorageService _storage_service;
 	public MockMongoDbManagementDbService _underlying_db_service;
 	public CoreManagementDbService _core_db_service;
 	public MockServiceContext _mock_service_context;
@@ -79,6 +85,9 @@ public class TestDataBucketCrudService_Delete {
 	public void setup() throws Exception {
 		
 		// Here's the setup that Guice normally gives you....
+		final String tmpdir = System.getProperty("java.io.tmpdir");
+		_globals = new GlobalPropertiesBean(tmpdir, tmpdir, tmpdir, tmpdir);
+		_storage_service = new MockHdfsStorageService(_globals);
 		_mock_service_context = new MockServiceContext();		
 		_crud_factory = new MockMongoDbCrudServiceFactory();
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory);
@@ -86,6 +95,7 @@ public class TestDataBucketCrudService_Delete {
 		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _core_distributed_services);
+		_mock_service_context.addService(IStorageService.class, Optional.empty(),_storage_service);
 		_db_actor_context = new ManagementDbActorContext(_mock_service_context, new LocalBucketActionMessageBus());
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _db_actor_context);
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _db_actor_context);
@@ -180,6 +190,16 @@ public class TestDataBucketCrudService_Delete {
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
 				.with(DataBucketBean::access_rights, new AuthorizationBean("auth_token"))
 				.done().get();
+		
+		//(create a file path also)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		try {
+			new File(System.getProperty("java.io.tmpdir") + bucket.full_name()).mkdirs();
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		_underlying_bucket_crud.storeObject(bucket).get(); // (ensure exception on failure)
 		
