@@ -7,7 +7,7 @@ env:
  - TEST_DIR=aleph2_data_model
 
 before_install:
- - cd aleph2_data_model && mvn install -DskipTests=true && cd ../test_dependencies/aleph2_crud_service_mongodb && mvn install -DskipTests=true && cd ../../
+ - cd aleph2_data_model && mvn install -DskipTests=true && cd ../test_dependencies/ && mvn install -DskipTests=true && cd ../
 
 script: cd $TEST_DIR && mvn install -DskipTests=true && mvn test
 
