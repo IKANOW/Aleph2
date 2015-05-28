@@ -1,0 +1,78 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">    <modelVersion>4.0.0</modelVersion>
+<parent>
+    <groupId>com.ikanow.aleph2</groupId>
+    <artifactId>aleph2_parent</artifactId>
+    <version>${aleph2.version}</version>
+</parent>
+
+<groupId>com.ikanow.aleph2</groupId>
+<artifactId>aleph2_uber</artifactId>
+<name>Aleph2 uber jar project</name>
+<version>${aleph2.version}</version>
+<properties>
+    <aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+    </properties>
+
+
+<dependencies>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_data_model</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_object_import_library</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_access_manager</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_core_distributed_services_library</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_data_analytics_manager</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_data_import_manager</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_harvest_context_library</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.ikanow.aleph2</groupId>
+        <artifactId>aleph2_management_db_service</artifactId>
+		<version>${aleph2.version}</version>
+    </dependency>
+
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>2.2</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+</project>
