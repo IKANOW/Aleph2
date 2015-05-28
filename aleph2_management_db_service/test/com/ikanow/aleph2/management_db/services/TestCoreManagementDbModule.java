@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
@@ -36,6 +37,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 
@@ -57,7 +59,7 @@ public class TestCoreManagementDbModule {
 		// Here's the setup that Guice normally gives you....
 		_mock_service_context = new MockServiceContext();		
 		_crud_factory = new MockMongoDbCrudServiceFactory();
-		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory);
+		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null);
 		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);		
 		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
@@ -77,7 +79,7 @@ public class TestCoreManagementDbModule {
 				.with(DataBucketBean::multi_node_enabled, false)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean("auth_token"))
+				.with(DataBucketBean::access_rights, new AuthorizationBean(ImmutableMap.<String, String>builder().put("auth_token", "r").build()))
 				.done().get();
 		
 		final BucketActionMessage.DeleteBucketActionMessage test_message = new 

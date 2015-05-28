@@ -53,6 +53,7 @@ import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServic
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
@@ -94,7 +95,7 @@ public class TestDataBucketCrudService_Create {
 		_storage_service = new MockHdfsStorageService(_globals);
 		_mock_service_context = new MockServiceContext();		
 		_crud_factory = new MockMongoDbCrudServiceFactory();
-		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory);
+		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null);
 		_core_distributed_services = new MockCoreDistributedServices();
 		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);

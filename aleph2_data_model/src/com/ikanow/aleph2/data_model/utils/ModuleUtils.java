@@ -132,11 +132,11 @@ public class ModuleUtils {
 						for (com.google.inject.spi.Message m: ce.getErrorMessages()) {
 							if (null == e) e = new RuntimeException(m.toString(), e);
 							else {
-								logger.error(ErrorUtils.get("Sub-Error during service binding {0}", m.toString()));										
+								logger.error(ErrorUtils.get("Sub-Error during service {1}:{2} binding {0}", m.toString(), entry.interfaceName, entry.serviceName));										
 							}
 						}
 					}
-					logger.error(ErrorUtils.getLongForm("Error during service binding {0}",e));
+					logger.error(ErrorUtils.getLongForm("Error during service {1}:{2} binding {0}",e, entry.interfaceName, entry.serviceName));
 					exceptions.add(e);
 				}
 			});
