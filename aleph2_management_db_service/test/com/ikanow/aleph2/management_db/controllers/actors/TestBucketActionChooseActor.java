@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -45,7 +46,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.Bucke
 import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-import com.sun.istack.internal.logging.Logger;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;

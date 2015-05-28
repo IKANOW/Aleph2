@@ -55,7 +55,7 @@ import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbS
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
-import com.sun.istack.internal.logging.Logger;
+import org.apache.log4j.Logger;
 
 public class TestDataBucketCrudService_Delete {
 
