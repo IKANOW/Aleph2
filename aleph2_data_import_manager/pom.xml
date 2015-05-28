@@ -61,7 +61,7 @@
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_storage_service_hdfs</artifactId>
   		<version>${aleph2.version}</version>
-	    <!--  <scope>test</scope> -->
+	    <scope>test</scope>
   	</dependency>  	
 	<dependency>
 	    <groupId>jdk.tools</groupId>
