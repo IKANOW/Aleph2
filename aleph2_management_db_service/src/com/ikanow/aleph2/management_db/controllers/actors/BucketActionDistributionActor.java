@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -42,7 +43,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.Bucke
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-import com.sun.istack.internal.logging.Logger;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
