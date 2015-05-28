@@ -37,7 +37,7 @@ import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbCon
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
-import com.sun.istack.internal.logging.Logger;
+import org.apache.log4j.Logger;
 
 public class TestDataBucketStatusCrudService {
 
