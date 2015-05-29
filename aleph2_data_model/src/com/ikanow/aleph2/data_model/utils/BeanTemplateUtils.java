@@ -173,15 +173,14 @@ public class BeanTemplateUtils {
 			throw new RuntimeException("CloningHelper.clone", e);
 		}
 	}
-	/**Builds an immutable object using the specified value just to get the class (see clone to actually use the input variable)
+	/**Builds an immutable object using the specified value as a starting point
 	 * @param a - the object determining the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	@SuppressWarnings("unchecked")
 	@NonNull
 	public static <T> TemplateHelper<T> build(final @NonNull T a) {
 		try {
-			return new TemplateHelper<T>((Class<T>) a.getClass());
+			return new TemplateHelper<T>(a);
 		} catch (Exception e) {
 			throw new RuntimeException("TemplateHelper.build", e);
 		}

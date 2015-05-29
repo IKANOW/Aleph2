@@ -29,9 +29,9 @@ import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
-import com.ikanow.aleph2.data_model.utils.TestObjectTemplateUtils.NestedTestBean.NestedNestedTestBean;
+import com.ikanow.aleph2.data_model.utils.TestBeanTemplateUtils.NestedTestBean.NestedNestedTestBean;
 
-public class TestObjectTemplateUtils {
+public class TestBeanTemplateUtils {
 
 	public static class TestBean {
 		public String testField() { return testField; } /** Test field */

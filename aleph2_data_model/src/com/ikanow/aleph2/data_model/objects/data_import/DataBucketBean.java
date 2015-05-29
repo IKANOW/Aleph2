@@ -82,7 +82,7 @@ public class DataBucketBean {
 	 * @return the bucket_aliases
 	 */
 	public Set<String> tags() {
-		return tags;
+		return tags == null ? null : Collections.unmodifiableSet(tags);
 	}
 	/** A map of SecurityService specific tokens that control read/write/admin access to the bucket
 	 * @return the access_groups

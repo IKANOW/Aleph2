@@ -239,9 +239,10 @@ public class TestHarvestContext {
 								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
 			
 			Map<String, String> mods = test_context.getHarvestLibraries(Optional.of(test_bucket)).get();
-			String expected = "{name3=/opt/aleph2-home/cached-jars//id3.cache.jar, name2=/opt/aleph2-home/cached-jars//id2.cache.jar, name1=/opt/aleph2-home/cached-jars//id1.cache.jar, test_harvest_tech_name=/opt/aleph2-home/cached-jars//test_harvest_tech_id.cache.jar}";
-			
-			assertEquals(expected, mods.toString());
+			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
+			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
+			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
+			assertTrue("test_harvest_tech_name", mods.containsKey("test_harvest_tech_name") && mods.get("test_harvest_tech_name").endsWith("test_harvest_tech_id.cache.jar"));
 		}
 		catch (Exception e) {
 			try {

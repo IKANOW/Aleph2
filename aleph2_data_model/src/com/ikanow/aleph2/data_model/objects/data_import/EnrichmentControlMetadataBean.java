@@ -69,7 +69,7 @@ public class EnrichmentControlMetadataBean {
 	/** The enrichment-module-specific configuration that controls the per-bucket enrichment
 	 * @return the config
 	 */
-	public Map<String, Object> getConfig() {
+	public Map<String, Object> config() {
 		return config == null ? null : Collections.unmodifiableMap(config);
 	}
 	private String name;
