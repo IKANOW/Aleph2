@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.data.Stat;
 
 import scala.concurrent.duration.Duration;
 import akka.actor.Cancellable;
@@ -34,13 +35,14 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 public class FolderWatcherActor extends UntypedActor {
 	
 
     private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
 
-	protected CuratorFramework curator_framework;
+	protected CuratorFramework _curator	;
 	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
@@ -55,7 +57,7 @@ public class FolderWatcherActor extends UntypedActor {
     	this._global_properties_Bean = _context.getGlobalProperties();
     	logger.debug("_global_properties_Bean"+_global_properties_Bean);
     	this._core_distributed_services = _context.getDistributedServices();    	
-    	this.curator_framework = _core_distributed_services.getCuratorFramework();
+    	this._curator = _core_distributed_services.getCuratorFramework();
     	this._management_db = _context.getServiceContext().getCoreManagementDbService();
     	this.storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020"));
@@ -112,7 +114,7 @@ public class FolderWatcherActor extends UntypedActor {
 			    String bucketId = bucketPathStr.substring(bucketPathStr.indexOf(dataPathStr)+dataPathStr.length());
 			    logger.debug("dataPath:"+dataPathStr+" ,Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
 			    // TODO create or send message to BatchBucketActors
-			    
+			    checkAndScheduleBucketAgent(bucketPathStr, bucketId);
 			} // for			
 		} catch (Exception e) {
 			logger.error("traverseFolders Caught Exception:",e);
@@ -120,6 +122,32 @@ public class FolderWatcherActor extends UntypedActor {
 
 	}
 	
+	protected void checkAndScheduleBucketAgent(String bucketPathStr, String bucketId) {
+		//curator_framework.
+		try{
+			String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER+bucketId;
+			Stat bucketExists = _curator.checkExists().forPath(bucketZkPath);
+			//List<String> bucketRegistration = _curator.getChildren().forPath(bucketZkPath);
+		
+			//if(bucketExists==null || bucketRegistration.isEmpty()){
+				if(bucketExists==null ){
+				//bucket is not registered yet, grab it and do the processing on this node
+				// send message to batchBus so some actor will take care if this node
+				//_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
+			}else{
+				// someone else already is working in it
+				//logger.debug();
+			}
+		}
+		catch(Exception e){
+			logger.error("Caught Exception",e);
+		}
+		//_state.data_import_manager_set.addAll();
+		//
+
+
+	}
+
 	protected Path detectBucketPath(){
 		logger.debug("detectBucketPath");
 		if(_bucket_path==null){
