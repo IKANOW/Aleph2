@@ -5,17 +5,13 @@ jdk:
 
 env:
  - TEST_DIR=aleph2_data_model
+ - TEST_DIR=aleph2_management_db_service
 
 before_install:
- - cd test_dependencies && git pull origin master && cd ../aleph2_data_model && mvn install -DskipTests=true && cd ../test_dependencies/ && mvn install -DskipTests=true && cd ../
+ - cd test_dependencies && git pull origin master && cd ../aleph2_data_model && mvn install -DskipTests=true && cd ../aleph2_core_distributed_services_library && mvn install -DskipTests=true && cd ../test_dependencies/ && mvn install -DskipTests=true && cd ../
 
 script: cd $TEST_DIR && mvn install -DskipTests=true && mvn test
 
 after_success:
  - mvn clean test jacoco:report coveralls:report
-
-# blacklist
-branches:
-  except:
-    - aleph4_data_import_manager
 
