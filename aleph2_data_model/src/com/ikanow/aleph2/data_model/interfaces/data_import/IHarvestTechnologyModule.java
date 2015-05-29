@@ -60,7 +60,7 @@ public interface IHarvestTechnologyModule {
 	 * @return A future for the response
 	 */
 	@NonNull 
-	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final boolean is_enabled, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing

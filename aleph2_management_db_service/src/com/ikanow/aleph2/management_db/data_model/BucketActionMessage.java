@@ -102,15 +102,18 @@ public class BucketActionMessage {
 		 * @param old_bucket - the old bucket
 		 * @param handling_clients the nodes handling this bucket
 		 */
-		public UpdateBucketActionMessage(final @NonNull DataBucketBean new_bucket, 
+		public UpdateBucketActionMessage(final @NonNull DataBucketBean new_bucket,  final boolean is_enabled,
 											final @NonNull DataBucketBean old_bucket, 
 												final @NonNull Set<String> handling_clients)
 		{
 			super(new_bucket, handling_clients);
 			this.old_bucket = old_bucket;
+			this.is_enabled = is_enabled;
 		}
 		public DataBucketBean old_bucket() { return old_bucket; }
+		public Boolean is_enabled() { return is_enabled; }
 		protected DataBucketBean old_bucket;
+		protected Boolean is_enabled;		
 	}
 
 	/** Updates the state of an existing bucket

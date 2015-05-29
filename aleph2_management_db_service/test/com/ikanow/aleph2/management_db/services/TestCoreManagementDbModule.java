@@ -85,6 +85,8 @@ public class TestCoreManagementDbModule {
 		final BucketActionMessage.DeleteBucketActionMessage test_message = new 
 				BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
 
+		retry_service.deleteDatastore().get(); // (just clear it out from the past test)
+		
 		assertEquals(0L, (long)retry_service.countObjects().get());
 		
 		retry_service.storeObject(

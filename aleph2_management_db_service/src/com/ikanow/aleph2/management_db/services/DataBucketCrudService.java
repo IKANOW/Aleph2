@@ -868,12 +868,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			)
 	{
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
-				new BucketActionMessage.UpdateBucketActionMessage(new_object, old_version, new HashSet<String>(
-						null == status.node_affinity() ? Collections.emptySet() : status.node_affinity()));
+				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version,  
+						new HashSet<String>(
+								null == status.node_affinity() ? Collections.emptySet() : status.node_affinity()));
 		
 		return MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
 				source -> new BucketActionMessage.UpdateBucketActionMessage
-							(new_object, old_version, new HashSet<String>(Arrays.asList(source))));
+							(new_object, !status.suspended(), old_version, new HashSet<String>(Arrays.asList(source))));
 	}	
 	
 	public static final String DELETE_TOUCH_FILE = ".DELETED";

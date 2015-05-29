@@ -192,7 +192,7 @@ public class LocalHarvestTestModule {
 					harvest_result = harvester.onTestSource(bucket, null, context);
 				}
 				else if (command.equals("onUpdatedSource")) {
-					harvest_result = harvester.onUpdatedSource(bucket, bucket, context);
+					harvest_result = harvester.onUpdatedSource(bucket, bucket, true, context);
 				}
 				else {
 					if (command.equals("help")) {

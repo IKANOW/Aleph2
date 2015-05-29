@@ -377,7 +377,7 @@ public class TestDataBucketChangeActor {
 		
 		// Test 5: update
 		
-		final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, bucket, Collections.emptySet());
+		final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
 		
 		final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToHarvester(
 				bucket, update, "test5", _actor_context.getNewHarvestContext(), 
