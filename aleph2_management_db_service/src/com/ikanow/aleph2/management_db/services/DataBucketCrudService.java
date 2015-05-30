@@ -34,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -657,8 +658,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 		// (7)
 		Consumer<Tuple2<String, EnrichmentControlMetadataBean>> enrichment_test = emeta -> {
-			if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
+				if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+				}
 			}
 			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
 			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
@@ -669,7 +672,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (null != bucket.batch_enrichment_configs()) {
 			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("batch_enrichment_configs" + Integer.toString(i), emeta));
+				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta));
 			}
 		}
 		if (null != bucket.streaming_enrichment_topology()) {
@@ -678,7 +681,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (null != bucket.streaming_enrichment_configs()) {
 			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs" + Integer.toString(i), emeta));
+				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta));
 			}
 		}
 		
@@ -888,7 +891,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
 		
-		dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE));		
+		try (final FSDataOutputStream out = 
+				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
+		{} //(ie close after creating)
 	}
 	
 	protected static void createFilePaths(final @NonNull DataBucketBean bucket, final @NonNull IStorageService storage_service) throws Exception {
