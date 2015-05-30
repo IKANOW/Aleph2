@@ -125,6 +125,11 @@ public class BucketActionChooseActor extends AbstractActor {
 					_state.data_import_manager_set.remove(m.source());
 					this.checkIfComplete();
 				})
+			.match(BucketActionHandlerMessage.class, // Can receive this if the call errors, just treat it like an ignored
+				m -> {
+					_state.data_import_manager_set.remove(m.source());
+					this.checkIfComplete();
+				})
 			.match(BucketActionTimeoutMessage.class, m -> m.source().equals(_state.current_timeout_id),
 				m -> {
 					this.pickAndSend();

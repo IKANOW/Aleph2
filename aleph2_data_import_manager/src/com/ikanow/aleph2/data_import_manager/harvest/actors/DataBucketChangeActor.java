@@ -72,8 +72,6 @@ import akka.japi.pf.ReceiveBuilder;
  * @author acp
  */
 public class DataBucketChangeActor extends AbstractActor {
-
-	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 	
 	///////////////////////////////////////////
@@ -113,6 +111,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2}", this.self(), m.getClass().getSimpleName(), this.sender()));
+		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
 		    					    			

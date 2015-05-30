@@ -68,14 +68,26 @@ public class IkanowV1SynchronizationModule {
 		_local_actor_context = local_actor_context;
 	}
 	
-	public void start() {
-		_logger.info("Attaching DataBucketChangeActor to " +  ActorUtils.BUCKET_ACTION_EVENT_BUS);
+	public void start() {		
+		final String hostname = _local_actor_context.getInformationService().getHostname();
 		
 		// Create a bucket change actor and register it vs the local message bus
 		final ActorRef handler = _local_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), 
-				_local_actor_context.getInformationService().getHostname()
-				);
+				hostname);
+		
+		_logger.info(ErrorUtils.get("Attaching DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ACTION_EVENT_BUS));
+		
 		_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+
+		_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ACTION_ZOOKEEPER, hostname));
+		
+		try {
+			_core_distributed_services.getCuratorFramework().create()
+				.creatingParentsIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+		}
+		catch (Exception e) {
+			_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
+		}		
 		
 		_logger.info("Starting IkanowV1SynchronizationModule");
 		
