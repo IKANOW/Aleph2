@@ -4,6 +4,7 @@
   <artifactId>aleph2_object_import_library</artifactId>
   <version>${aleph2.version}</version>
   <properties>
+	<aleph2.scope>compile</aleph2.scope>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
   </properties>
   <build>
@@ -17,6 +18,23 @@
            <target>1.8</target>
         </configuration>
       </plugin>
+		 <!-- In order to prevent other aleph2 projects to be included, execute using: mvn -e clean package -Dmaven.test.skip=true -Daleph2.scope=provided  -->
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-shade-plugin</artifactId>
+	        <version>2.3</version>
+	        <executions>
+	          <execution>
+	            <phase>package</phase>
+	            <goals>
+	              <goal>shade</goal>
+	            </goals>
+				<configuration>
+		          <shadedArtifactAttached>true</shadedArtifactAttached>
+	            </configuration>
+	          </execution>
+	        </executions>
+	      </plugin>      
     </plugins>
   </build>
 </project>
