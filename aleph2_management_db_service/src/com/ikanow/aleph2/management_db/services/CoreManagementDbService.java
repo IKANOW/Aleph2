@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
@@ -41,6 +43,8 @@ import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
  * @author acp
  */
 public class CoreManagementDbService implements IManagementDbService, IExtraDependencyLoader {
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IManagementDbService _underlying_management_db;	
 	protected final DataBucketCrudService _data_bucket_service;

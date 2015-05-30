@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
@@ -84,7 +86,9 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
  * @author acp
  */
 public class DataBucketCrudService implements IManagementCrudService<DataBucketBean> {
-
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
+	
 	protected final IStorageService _storage_service;	
 	protected final IManagementDbService _underlying_management_db;
 	

@@ -28,6 +28,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
@@ -67,6 +69,8 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
  * @author acp
  */
 public class DataBucketStatusCrudService implements IManagementCrudService<DataBucketStatusBean> {
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IStorageService _storage_service;
 	protected final IManagementDbService _underlying_management_db;

@@ -21,6 +21,8 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
@@ -43,6 +45,8 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class SharedLibraryCrudService implements IManagementCrudService<SharedLibraryBean> {
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IStorageService _storage_service;	
 	protected final IManagementDbService _underlying_management_db;

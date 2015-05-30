@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
@@ -71,6 +73,9 @@ import akka.japi.pf.ReceiveBuilder;
  */
 public class DataBucketChangeActor extends AbstractActor {
 
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
+	
 	///////////////////////////////////////////
 
 	// Services

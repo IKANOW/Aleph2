@@ -23,7 +23,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
@@ -54,8 +55,7 @@ import akka.japi.pf.ReceiveBuilder;
  *
  */
 public class BucketActionDistributionActor extends AbstractActor {
-
-	public static final Logger _logger = Logger.getLogger(BucketActionDistributionActor.class);
+	private static final Logger _logger = LogManager.getLogger();	
 	
 	///////////////////////////////////////////
 	
