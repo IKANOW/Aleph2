@@ -75,6 +75,12 @@ public class SharedLibraryBean {
 	public String path_name() {
 		return path_name;
 	}
+	/** A description purely for informational/discovery purposes
+	 * @return the description text
+	 */
+	public String description() {
+		return description;
+	}
 	/** The type of the library (harvest/enrichment/analytics/access/misc and technology/module/etc-for-misc)
 	 * @return the type
 	 */
@@ -132,6 +138,7 @@ public class SharedLibraryBean {
 	private Date modified;
 	private String display_name;
 	private String path_name;
+	private String description;
 	private LibraryType type;
 	private String subtype;
 	public enum LibraryType { 

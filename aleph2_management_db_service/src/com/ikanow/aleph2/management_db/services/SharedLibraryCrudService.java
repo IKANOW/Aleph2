@@ -18,9 +18,12 @@ package com.ikanow.aleph2.management_db.services;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -39,6 +42,7 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
@@ -122,9 +126,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public @NonNull ManagementFuture<Supplier<Object>> storeObject(
 			@NonNull SharedLibraryBean new_object, boolean replace_if_present) {
-		if (replace_if_present) {
-			throw new RuntimeException("Can't call storeObject with replace_if_present: true, use update instead");
-		}
+		//TODO (ALEPH-19): convert this into an update, ie get old version, compare and overwrite
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObject(new_object, replace_if_present));
 	}
 
@@ -245,16 +247,33 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 
 	@Override
 	public @NonNull ManagementFuture<Boolean> deleteObjectById(
-			@NonNull Object id) {
-		// TODO also delete the file
-		return null;
+			@NonNull Object id) {		
+		final QueryComponent<SharedLibraryBean> query = CrudUtils.allOf(SharedLibraryBean.class).when(SharedLibraryBean::_id, id);
+		return deleteObjectBySpec(query);
 	}
 
 	@Override
 	public @NonNull ManagementFuture<Boolean> deleteObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec) {
-		// TODO also delete the file
-		return null;
+			@NonNull QueryComponent<SharedLibraryBean> unique_spec) {		
+		return FutureUtils.createManagementFuture(
+			_underlying_library_db.getObjectBySpec(unique_spec).thenCompose(lib -> {
+				if (lib.isPresent()) {
+					try {
+						final FileContext fs = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+						fs.delete(fs.makeQualified(new Path(lib.get().path_name())), false);
+					}
+					catch (Exception e) { // i suppose we don't really care if it fails..
+						// (maybe add a message?)
+						/**/
+						//DEBUG
+						e.printStackTrace();
+					}
+					return _underlying_library_db.deleteObjectBySpec(unique_spec);
+				}
+				else {
+					return CompletableFuture.completedFuture(false);
+				}
+			}));
 	}
 
 	@Override

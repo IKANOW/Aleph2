@@ -243,9 +243,40 @@ public class DataBucketBean {
 	}
 	private DataSchemaBean data_schema;	
 	
+	/** A list of logical locations against each of the schemas - the string therein will only make
+	 *  sense to the current schema implementation
+	 * @return
+	 */
 	public Map<String, String> data_locations() {
 		return data_locations == null ? data_locations : Collections.unmodifiableMap(data_locations);
 	}	
 	private Map<String, String> data_locations;
+	
+	////////////////////////////////////////
+	
+	// Templating
+
+	/** Encapsulates a template object used to create this bucket
+	 *  Ie the information in the list of templates (ids + subs) is sufficient to recreate an identical bucket
+	 * @author acp
+	 */
+	public static class Template {
+		/** The id or name of the template JSON
+		 * @return
+		 */
+		public String id_or_name() { return id_or_name; }
+		/**  A JSON object representing the specific substitutions used to generate this bucket 
+		 * @return
+		 */
+		public Map<String, Object> substitutions() { return null == substitutions ? null : Collections.unmodifiableMap(substitutions); }
+		
+		private String id_or_name;
+		private Map<String, Object> substitutions;
+	}
+	/** A list of templates that was used to generate this bucket
+	 * @return
+	 */
+	public List<Template> templates() { return templates == null ? null : Collections.unmodifiableList(templates); }
+	private List<Template> templates;
 	
 }
