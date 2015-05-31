@@ -116,10 +116,10 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 												, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(4, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
-		
+		_logger.info("sending message");		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
@@ -127,6 +127,7 @@ public class TestBucketActionDistributionActor {
 						Optional.of(timeout));
 																
 		BucketActionCollectedRepliesMessage reply = f.get();
+		_logger.info("received message reply");		
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
@@ -153,7 +154,7 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 				, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -167,9 +168,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Should have timed out in actor", time_elapsed >= 1000L);
+		assertTrue("Should have timed out in actor", time_elapsed >= 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals(5, reply.timed_out().size());
 		
@@ -205,7 +206,7 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 				, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -219,9 +220,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
@@ -251,7 +252,7 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 				, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -265,9 +266,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Shouldn't have timed out in actor: ", time_elapsed < 1000L);
+		assertTrue("Shouldn't have timed out in actor: ", time_elapsed < 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
@@ -317,7 +318,7 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 				, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -331,9 +332,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
@@ -375,7 +376,7 @@ public class TestBucketActionDistributionActor {
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
 				, false);
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -389,9 +390,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Should have timed out in actor", time_elapsed >= 1000L);
+		assertTrue("Should have timed out in actor", time_elapsed >= 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals(3, reply.timed_out().size());
 		
@@ -455,7 +456,7 @@ public class TestBucketActionDistributionActor {
 				,
 					target_uuids);
 		
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -469,9 +470,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
@@ -533,7 +534,7 @@ public class TestBucketActionDistributionActor {
 				,
 					target_uuids);
 		
-		FiniteDuration timeout = Duration.create(1, TimeUnit.SECONDS);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
 		
@@ -547,9 +548,9 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 3000L);
 
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 2000L);
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
 		
 		assertEquals((Integer)1, (Integer)reply.timed_out().size());
 		

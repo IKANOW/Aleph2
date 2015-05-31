@@ -15,17 +15,20 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import com.ikanow.aleph2.data_model.objects.data_import.BucketDiffBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 
 /** Harvesters are responsible from taking objects in arbitrary formats over arbitrary transport protocols,
  *  and doing one of the following things:
- *   - TODO (ALEPH-3)
+ *   - writing JSON objects to a real-time queue provided by the context
+ *   - dumping JSON/XML/CSV/Seq files in the designated HDFS directory
  * @author acp
  *
  */
@@ -54,13 +57,15 @@ public interface IHarvestTechnologyModule {
 	/**
 	 * Handles changes to an existing bucket
 	 * 
-	 * @param olducket - the updated bucket
-	 * @param newBucket - the updated bucket
+	 * @param old_bucket - the updated bucket
+	 * @param new_bucket - the updated bucket
+	 * @param is_enabled - whether the bucket is currently enabled (note - you cannot infer anything about the previous enabled/suspended state)
+	 * @param diff - optionally what information has changed (including changes to shared library beans). If this is not present (it will not be in early versions of the platform), developers must assume everything has changed, eg restarting the external service. 
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	@NonNull 
-	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final boolean is_enabled, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final boolean is_enabled, final Optional<BucketDiffBean> diff, final @NonNull IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing
