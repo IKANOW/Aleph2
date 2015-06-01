@@ -131,7 +131,7 @@ public class TestBucketActionDistributionActor {
 		
 		final long time_elapsed = new Date().getTime() - before_time;
 		
-		assertTrue("Should have returned almost immediately, not timed out", time_elapsed < 1000L);
+		assertTrue("Should have returned almost immediately, not timed out", time_elapsed < 4000L);
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
