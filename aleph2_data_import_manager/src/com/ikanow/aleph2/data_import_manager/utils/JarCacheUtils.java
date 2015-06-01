@@ -64,24 +64,18 @@ public class JarCacheUtils {
 				
 				if (file_status.getModificationTime() > local_file_status.getModificationTime()) {
 
-					dfs.util().copy(original_jar_file, cached_jar_file, false, true);
+					lfs.util().copy(original_jar_file, cached_jar_file, false, true);
 				}
 			}
 			catch (FileNotFoundException f) {
 				
 				// 2) if the local version doesn't exist then just copy the distributed file across
 				
-				/**/
-				System.out.println("?? " + original_jar_file + " TO " + cached_jar_file);
-				
-				dfs.util().copy(original_jar_file, cached_jar_file);
+				lfs.util().copy(original_jar_file, cached_jar_file);
 			}
 			return CompletableFuture.completedFuture(Either.right(cached_jar_file.toString()));
 			
 		} catch (Exception e) {
-			/**/
-			e.printStackTrace();
-			
 			return CompletableFuture.completedFuture(Either.left
 					(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
