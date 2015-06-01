@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -564,9 +565,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
 	 * @param bucket
 	 * @return
+	 * @throws ExecutionException 
+	 * @throws InterruptedException 
 	 */
 	@NonNull
-	protected Collection<BasicMessageBean> validateBucket(final @NonNull DataBucketBean bucket, final @NonNull Optional<DataBucketBean> old_version) {
+	protected Collection<BasicMessageBean> validateBucket(final @NonNull DataBucketBean bucket, final @NonNull Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
 		
 		// (will live with this being mutable)
 		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
@@ -584,6 +587,20 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			.forEach(s -> 
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.NEW_BUCKET_ERROR_MAP.get(s), Optional.ofNullable(bucket.full_name()).orElse("(unknown)")))));
+		
+		// We have a full name if we're here, so no check for uniqueness
+		
+		if (!old_version.isPresent()) { // (create not update)
+			if (this._underlying_data_bucket_db.countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
+																.when(DataBucketBean::full_name, bucket.full_name())
+															).get() > 0)
+			{			
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
+				
+				return errors; // (this is catastrophic obviously)
+			}
+		}
 		
 		// More complex missing field checks
 		

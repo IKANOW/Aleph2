@@ -749,7 +749,33 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
-	}
+		
+		// Since it worked, let's quickly try adding again with same full name but different id and check it fails...
+		
+		final DataBucketBean dup = BeanTemplateUtils.clone(valid_bucket).with(DataBucketBean::_id, "different_id").done();
+		//(add the status object and try)
+		final DataBucketStatusBean status2 = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, dup._id())
+				.with(DataBucketStatusBean::bucket_path, dup.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status2).get();
+		assertEquals(2L, (long)_bucket_status_crud.countObjects().get());
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+		final ManagementFuture<Supplier<Object>> insert_future2 = _bucket_crud.storeObject(valid_bucket);
+		try {
+			insert_future2.get();
+			fail("Should have thrown an exception");
+		}
+		catch (Exception e) {
+			assertEquals(1, insert_future2.getManagementResults().get().size());
+			System.out.println("Dup error = " + insert_future2.getManagementResults().get().iterator().next().message());
+		}
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+}
 
 	@Test
 	public void testSuccessfulBucketCreation_multiNode() throws Exception {
@@ -862,6 +888,10 @@ public class TestDataBucketCrudService_Create {
 				.done();
 		
 		final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
+		
+		/**/
+		System.out.println("??? " + update_future3.getManagementResults().get().iterator().next().message());
+		
 		assertEquals("id1", update_future3.get().get());
 
 		final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
