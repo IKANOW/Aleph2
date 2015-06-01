@@ -57,9 +57,10 @@ import fj.data.Either;
 
 public class LocalHarvestTestModule {
 
-	protected final IManagementDbService _management_db_service;
-	protected final GlobalPropertiesBean _globals;
 	protected final IServiceContext _context;
+	protected final IManagementDbService _core_management_db;
+	protected final IManagementDbService _underlying_management_db;
+	protected final GlobalPropertiesBean _globals;
 	
 	protected @Inject Injector _injector;
 	
@@ -68,9 +69,10 @@ public class LocalHarvestTestModule {
 	 */
 	@Inject
 	public LocalHarvestTestModule(IServiceContext service_context) {
-		_management_db_service = service_context.getService(IManagementDbService.class, Optional.empty());		
-		_globals = service_context.getGlobalProperties();
 		_context = service_context;
+		_core_management_db = _context.getCoreManagementDbService();
+		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty());
+		_globals = service_context.getGlobalProperties();		
 	}
 	
 	public void start(String source_key, String harvest_tech_jar_path, String... commands) throws Exception {
@@ -133,7 +135,7 @@ public class LocalHarvestTestModule {
 	private void run_command(String source_key, String harvest_tech_jar_path, String command) throws Exception {
 		
 		@SuppressWarnings("unchecked")
-		final ICrudService<JsonNode> v1_config_db = _management_db_service.getUnderlyingPlatformDriver(ICrudService.class, Optional.of("ingest.source"));
+		final ICrudService<JsonNode> v1_config_db = _underlying_management_db.getUnderlyingPlatformDriver(ICrudService.class, Optional.of("ingest.source"));
 		
 		final SingleQueryComponent<JsonNode> query = CrudUtils.allOf().when("key", source_key);
 		final Optional<JsonNode> result = v1_config_db.getObjectBySpec(query).get();

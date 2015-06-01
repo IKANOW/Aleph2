@@ -135,7 +135,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		    					})
 		    					;
 		    			}
-		    			catch (Exception e) { // (trying to use Either to avoid this, but just in case...)
+		    			catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
 		    				final BasicMessageBean error_bean = 
 		    						HarvestErrorUtils.buildErrorMessage(hostname, m,
 		    								ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, m.bucket().full_name())
@@ -211,50 +211,57 @@ public class DataBucketChangeActor extends AbstractActor {
 			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>either(
-			//Error:
-			error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
-			,
-			// Normal
-			tech_module -> 
-				Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
-					.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-						tech_module.onInit(context);
-						final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, context);
-						return CompletableFuture.completedFuture(accept_or_ignore
-								? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
-								: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
-					})
-					.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-						tech_module.onInit(context);
-						return tech_module.onDelete(bucket, context)
-								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
-					})
-					.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-						tech_module.onInit(context);
-						return tech_module.onNewSource(bucket, context, msg.is_suspended())  
-								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
-					})
-					.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-						tech_module.onInit(context);
-						return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), Optional.empty(), context)
-								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
-					})
-					.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
-						tech_module.onInit(context);
-						return (msg.is_suspended()
-								? tech_module.onSuspend(bucket, context)
-								: tech_module.onResume(bucket, context))
+		try {
+			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>either(
+				//Error:
+				error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
+				,
+				// Normal
+				tech_module -> 
+					Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
+						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
+							tech_module.onInit(context);
+							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, context);
+							return CompletableFuture.completedFuture(accept_or_ignore
+									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
+									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
+						})
+						.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return tech_module.onDelete(bucket, context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
-					})
-					.otherwise(msg -> { // return "command not recognized" error
-						tech_module.onInit(context);
-						return CompletableFuture.completedFuture(
-								new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
-									HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 
-										bucket.full_name(), m.getClass().getSimpleName())));
-					})
-			);
+						})
+						.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return tech_module.onNewSource(bucket, context, msg.is_suspended())  
+									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+						})
+						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), Optional.empty(), context)
+									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+						})
+						.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return (msg.is_suspended()
+									? tech_module.onSuspend(bucket, context)
+									: tech_module.onResume(bucket, context))
+										.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+						})
+						.otherwise(msg -> { // return "command not recognized" error
+							tech_module.onInit(context);
+							return CompletableFuture.completedFuture(
+									new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
+										HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 
+											bucket.full_name(), m.getClass().getSimpleName())));
+						})
+				);
+		}
+		catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
+			return CompletableFuture.completedFuture(
+					new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
+						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.right().value().getClass()))));  
+		}		
 	}
 	
 	/** Given a bucket ...returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 

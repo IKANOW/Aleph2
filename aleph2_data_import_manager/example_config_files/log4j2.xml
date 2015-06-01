@@ -8,7 +8,7 @@
  
          <RollingFile name="fileWriter"
                      fileName="/opt/aleph2-home/logs/v1_sync_service.log"
-                     filePattern="/opt/aleph2-home/logs/v1_sync_service.%d{yyyy-MM-dd-hh-mm}.gz">
+                     filePattern="/opt/aleph2-home/logs/v1_sync_service.%d{yyyy-MM-dd}.gz">
 			<PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
             <TimeBasedTriggeringPolicy/>
         </RollingFile>

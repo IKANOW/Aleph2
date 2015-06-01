@@ -109,6 +109,9 @@ public class TestDataBucketChangeActor {
 		
 		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(_actor_context);
+		
+		// Have to do this in order for the underlying management db to live...		
+		_service_context.getCoreManagementDbService();
 	}
 	
 	@Test
@@ -386,7 +389,7 @@ public class TestDataBucketChangeActor {
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
 		assertEquals("test5", test5_reply.source());
-		assertEquals("called onUpdatedSource", test5_reply.reply().message());
+		assertEquals("called onUpdatedSource true", test5_reply.reply().message());
 		assertEquals(true, test5_reply.reply().success());
 		
 		// Test 6: update state - (a) resume, (b) suspend
@@ -435,83 +438,89 @@ public class TestDataBucketChangeActor {
 	
 	@Test
 	public void test_cacheJars() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
-		// Preamble:
-		// 0) Insert 2 library beans into the management db
-		
-		final DataBucketBean bucket = createBucket("test_tech_id");		
-		
-		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
-		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
-		final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
-		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
-		
-		List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
-
-		final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty());
-		final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
-		library_crud.storeObjects(lib_elements).get();
-		
-		assertEquals(3L, (long)library_crud.countObjects().get());
-		
-		// 0b) Create the more complex bucket
-		
-		final HarvestControlMetadataBean harvest_module = new HarvestControlMetadataBean(
-				"test_tech_name", true, Arrays.asList("test_module_id"), null
-				);
-		final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
-							.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id")
-							.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
-							.done();
-		
-		// 1) Normal operation
-		
-		CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-			DataBucketChangeActor.cacheJars(bucket, true, 
-					_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
-					"test1_source", "test1_command"
-				);
-		
-		if (reply_structure.get().isLeft()) {
-			fail("About to crash with: " + reply_structure.get().left().value().message());
-		}		
-		assertTrue("cacheJars should return valid reply", reply_structure.get().isRight());
+		try {
+			// Preamble:
+			// 0) Insert 2 library beans into the management db
+			
+			final DataBucketBean bucket = createBucket("test_tech_id");		
+			
+			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
+			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
+			final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
+			final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
+			
+			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
 	
-		final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().right().value();
-		
-		assertEquals(2L, reply_map.size()); // (harves tech only, one for name, one for id) 
-		
-		// 2) Normal operation - tech + module
-		
-		CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
-				DataBucketChangeActor.cacheJars(bucket2, false, 
+			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty());
+			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
+			library_crud.storeObjects(lib_elements).get();
+			
+			assertEquals(3L, (long)library_crud.countObjects().get());
+			
+			// 0b) Create the more complex bucket
+			
+			final HarvestControlMetadataBean harvest_module = new HarvestControlMetadataBean(
+					"test_tech_name", true, Arrays.asList("test_module_id"), null
+					);
+			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
+								.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id")
+								.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
+								.done();
+			
+			// 1) Normal operation
+			
+			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
+				DataBucketChangeActor.cacheJars(bucket, true, 
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
-						"test2_source", "test2_command"
+						"test1_source", "test1_command"
 					);
 			
-		if (reply_structure2.get().isLeft()) {
-			fail("About to crash with: " + reply_structure2.get().left().value().message());
-		}		
-		assertTrue("cacheJars should return valid reply", reply_structure2.get().isRight());
-	
-		final Map<String, Tuple2<SharedLibraryBean, String>> reply_map2 = reply_structure2.get().right().value();
+			if (reply_structure.get().isLeft()) {
+				fail("About to crash with: " + reply_structure.get().left().value().message());
+			}		
+			assertTrue("cacheJars should return valid reply", reply_structure.get().isRight());
 		
-		assertEquals(4L, reply_map2.size()); // (harves tech only, one for name, one for id)
+			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().right().value();
 			
-		// 3) Couple of error cases:
+			assertEquals(2L, reply_map.size()); // (harves tech only, one for name, one for id) 
+			
+			// 2) Normal operation - tech + module
+			
+			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
+					DataBucketChangeActor.cacheJars(bucket2, false, 
+							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+							"test2_source", "test2_command"
+						);
+				
+			if (reply_structure2.get().isLeft()) {
+				fail("About to crash with: " + reply_structure2.get().left().value().message());
+			}		
+			assertTrue("cacheJars should return valid reply", reply_structure2.get().isRight());
 		
-		DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id, "failtest").done();
-		
-		CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
-				DataBucketChangeActor.cacheJars(bucket3, false, 
-						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
-						"test2_source", "test2_command"
-					);
-		
-		assertTrue("cacheJars should return error", reply_structure3.get().isLeft());
+			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map2 = reply_structure2.get().right().value();
+			
+			assertEquals(4L, reply_map2.size()); // (harves tech only, one for name, one for id)
+				
+			// 3) Couple of error cases:
+			
+			DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id, "failtest").done();
+			
+			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
+					DataBucketChangeActor.cacheJars(bucket3, false, 
+							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+							"test2_source", "test2_command"
+						);
+			
+			assertTrue("cacheJars should return error", reply_structure3.get().isLeft());
+		}
+		catch (Exception e) {
+			System.out.println(ErrorUtils.getLongForm("guice? {0}", e));
+			throw e;
+		}
 	}
 	
 	@Test
-	public void test_actor() throws UnsupportedFileSystemException, IllegalArgumentException, InterruptedException, ExecutionException, TimeoutException {
+	public void test_actor() throws UnsupportedFileSystemException, IllegalArgumentException, InterruptedException, ExecutionException, TimeoutException {		
 		// Set up the DB
 		// Preamble:
 		// 0) Insert 2 library beans into the management db
