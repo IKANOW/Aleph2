@@ -163,7 +163,7 @@ public class LocalHarvestTestModule {
 		else {
 			final IHarvestTechnologyModule harvester = ret_val.right().value();
 			if (command.equals("canRunOnThisNode")) {
-				System.out.println(command + ": " + harvester.canRunOnThisNode(bucket));
+				System.out.println(command + ": " + harvester.canRunOnThisNode(bucket, context));
 			}
 			else {
 				CompletableFuture<BasicMessageBean> harvest_result = null; // (this is most of them)

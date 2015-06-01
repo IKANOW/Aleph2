@@ -69,7 +69,7 @@ public class ClassloaderUtils {
 			}
 			return Either.right(ret_val);
 		}
-		catch (Exception e) {
+		catch (Throwable e) {
 			return Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
 							HarvestErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 

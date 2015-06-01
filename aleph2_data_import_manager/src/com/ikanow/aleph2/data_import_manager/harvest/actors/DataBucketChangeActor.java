@@ -219,30 +219,36 @@ public class DataBucketChangeActor extends AbstractActor {
 			tech_module -> 
 				Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 					.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-						final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket);
+						tech_module.onInit(context);
+						final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, context);
 						return CompletableFuture.completedFuture(accept_or_ignore
 								? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
 								: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
 					})
 					.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+						tech_module.onInit(context);
 						return tech_module.onDelete(bucket, context)
 								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 					})
 					.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+						tech_module.onInit(context);
 						return tech_module.onNewSource(bucket, context, msg.is_suspended())  
 								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 					})
 					.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+						tech_module.onInit(context);
 						return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), Optional.empty(), context)
 								.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 					})
 					.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
+						tech_module.onInit(context);
 						return (msg.is_suspended()
 								? tech_module.onSuspend(bucket, context)
 								: tech_module.onResume(bucket, context))
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 					})
 					.otherwise(msg -> { // return "command not recognized" error
+						tech_module.onInit(context);
 						return CompletableFuture.completedFuture(
 								new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
 									HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 

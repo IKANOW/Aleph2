@@ -48,7 +48,7 @@ public class TestClassloaderUtils {
 		if (ret_val.isLeft()) {
 			System.out.println("About to crash with: " + ret_val.left().value().message());
 		}		
-		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get()));
+		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
 		
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -84,7 +84,7 @@ public class TestClassloaderUtils {
 		if (ret_val.isLeft()) {
 			System.out.println("About to crash with: " + ret_val.left().value().message());
 		}		
-		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get()));
+		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
 		
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
