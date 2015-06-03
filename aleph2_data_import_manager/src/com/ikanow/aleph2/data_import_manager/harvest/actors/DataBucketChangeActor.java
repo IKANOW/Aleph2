@@ -268,7 +268,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
 			return CompletableFuture.completedFuture(
 					new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
-						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.right().value().getClass()))));  
+						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.right().value().getClass()))));
 		}		
 	}
 	

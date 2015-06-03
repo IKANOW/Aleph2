@@ -28,6 +28,7 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	public static final String HARVEST_TECHNOLOGY_NAME_NOT_FOUND = "No valid harvest technology {0} found for bucket {1}";
 	public static final String SHARED_LIBRARY_NAME_NOT_FOUND = "Shared library {1} not found: {0}";
 	public static final String ERROR_LOADING_CLASS = "Error loading class {1}: {0}";
+	public static final String ERROR_CLASS_NOT_SUPERCLASS = "Error: class {0} is not an implementation of {1}: this may be because you have included eg aleph2_data_model in your class - you should not include any core/contrib JARs in there.";
 	public static final String ERROR_CACHING_SHARED_LIBS = "Misc error caching shared libs for bucket {1}: {0}";
 	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";
 	 

@@ -79,7 +79,7 @@ public class DataImportManagerTest {
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 		dataImportManager.start();	
-		Thread.sleep(300000);
+		Thread.sleep(3000);
 		dataImportManager.stop();		
 
 	}
