@@ -86,7 +86,7 @@ public class FolderWatcherActor extends UntypedActor {
 			.system()
 			.scheduler()
 			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
-					Duration.create(5000, TimeUnit.MILLISECONDS), getSelf(),
+					Duration.create(8000, TimeUnit.MILLISECONDS), getSelf(),
 					"tick", getContext().dispatcher(), null);				
 
 		}else
@@ -105,19 +105,15 @@ public class FolderWatcherActor extends UntypedActor {
 	}
 
 	protected void traverseFolders() {
-		logger.debug("bucket_Path:"+_bucket_path);
+		logger.debug("traverseFolders for path: "+_bucket_path);
 		try {
 			Path bucketParent = detectBucketPath();
 			if(bucketParent!=null){
 				FileStatus[] statuss = fileContext.util().listStatus(bucketParent);
-				logger.debug(statuss.length);
-				String dataPathStr = dataPath.toString();
-				
 				for (int i = 0; i < statuss.length; i++) {
 					String bucketPathStr = statuss[i].getPath().toString();				
-				    String bucketId = bucketPathStr.substring(bucketPathStr.indexOf(dataPathStr)+dataPathStr.length());
-				    logger.debug("dataPath:"+dataPathStr+" ,Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
-				    // TODO create or send message to BatchBucketActors
+				    String bucketId = statuss[i].getPath().getName();
+				    // create or send message to BatchBucketActors
 				    checkAndScheduleBucketAgent(bucketPathStr, bucketId);
 				} // for		
 			}
@@ -129,13 +125,11 @@ public class FolderWatcherActor extends UntypedActor {
 	
 	protected void checkAndScheduleBucketAgent(String bucketPathStr, String bucketId) {
 		//curator_framework.
+	    logger.debug("checkAndScheduleBucketAgent for Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
 		try{
-			String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER+bucketId;
+			String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + "/" + bucketId;
 			Stat bucketExists = _curator.checkExists().forPath(bucketZkPath);
-			//List<String> bucketRegistration = _curator.getChildren().forPath(bucketZkPath);
-		
-			//if(bucketExists==null || bucketRegistration.isEmpty()){
-				if(bucketExists==null ){
+			if(bucketExists==null ){
 				//bucket is not registered yet, grab it and do the processing on this node
 				// send message to batchBus so some actor will take care if this node
 				//_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
@@ -143,7 +137,7 @@ public class FolderWatcherActor extends UntypedActor {
 				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketId, bucketZkPath), getSelf());						
 			}else{
 				// someone else already is working in it
-				//logger.debug();
+				logger.debug("Path "+bucketZkPath+" is already locked in zookeeper!");
 			}
 		}
 		catch(Exception e){
@@ -162,8 +156,9 @@ public class FolderWatcherActor extends UntypedActor {
 			// looking for managed_bucket underneath /app/aleph2/data
 			Path p = DirUtils.findOneSubdirectory(fileContext, dataPath, "managed_bucket");
 			// assuming managed_bucket is two levels underneath all buckets dirs, e.g. <bucket_path>/<bucket_name>/managed
+			logger.info("detectBucketPath found one:"+p);
 			if(p!=null && p.getParent()!=null){
-				_bucket_path = p.getParent().getParent();
+				this._bucket_path = p.getParent().getParent();
 			}else{
 				logger.error("Could not initialize bucket Path starting at:"+dataPath);
 			}

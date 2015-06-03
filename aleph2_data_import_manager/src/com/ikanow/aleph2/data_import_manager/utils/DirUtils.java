@@ -34,20 +34,22 @@ public class DirUtils {
 	 public static Path findOneSubdirectory(FileContext fileContext, Path start, String subDirectoryName) {	 
 		Path p = null;
 		try {
-			logger.debug("findOneSubdirectory:"+start);
+			logger.debug("findOneSubdirectory :"+start.toString());
 			FileStatus[] statuss = fileContext.util().listStatus(start);
-			logger.debug(statuss.length);
 			for (int i = 0; i < statuss.length; i++) {
 				FileStatus dir = statuss[i];
+				logger.debug("FileStatus:" + statuss[i].getPath().toString());
 				if(dir.isDirectory()){
 					if(dir.getPath().getName().contains(subDirectoryName)){
 						logger.debug("findOneSubdirectory match:"+dir.getPath().getName());
 						return dir.getPath();
 					}else{
-					    return findOneSubdirectory(fileContext, dir.getPath(),  subDirectoryName);
+						p = findOneSubdirectory(fileContext, dir.getPath(),  subDirectoryName);
+						if(p!=null){
+							return p;							
+						}
 					}
 				}
-				logger.debug("FileStatus:" + statuss[i].toString());
 			}
 
 		} catch (Exception e) {
