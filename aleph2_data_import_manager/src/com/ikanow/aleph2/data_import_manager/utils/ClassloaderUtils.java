@@ -25,6 +25,7 @@ import org.xeustechnologies.jcl.JclObjectFactory;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 
 import fj.data.Either;
 
@@ -67,12 +68,18 @@ public class ClassloaderUtils {
 			if (null == ret_val) {
 				throw new RuntimeException("Unknown error");
 			}
-			return Either.right(ret_val);
+			else if (!interface_clazz.isAssignableFrom(ret_val.getClass())) {
+				return Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+						msg_for_errors, 
+						ErrorUtils.get(HarvestErrorUtils.ERROR_CLASS_NOT_SUPERCLASS, implementation_classname, interface_clazz) 
+						));				
+			}
+			else return Either.right(ret_val);
 		}
 		catch (Throwable e) {
 			return Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
-							HarvestErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 
+							ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 
 							));
 		}
 	}	

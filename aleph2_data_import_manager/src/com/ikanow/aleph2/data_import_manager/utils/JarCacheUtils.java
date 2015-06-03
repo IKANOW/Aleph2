@@ -75,7 +75,7 @@ public class JarCacheUtils {
 			}
 			return CompletableFuture.completedFuture(Either.right(cached_jar_file.toString()));
 			
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			return CompletableFuture.completedFuture(Either.left
 					(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
