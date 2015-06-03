@@ -125,11 +125,52 @@ public class TestClassloaderUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		assertTrue("Failed error message, should contain 'Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]': " + error.message(), 
-				error.message().contains("Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]"));
+		final String expected_err_fragment = "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]";
+		assertTrue("Failed error message, should contain: " + expected_err_fragment + " vs " + error.message(), 
+				error.message().contains(expected_err_fragment));
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);
 		
 	}
+	
+	@Test
+	public void testClassLoading_wrongInterface() throws UnsupportedFileSystemException {
+
+		try {
+			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+			assertTrue("Should have thrown a ClassNotFoundException", false);
+		}
+		catch (ClassNotFoundException e) {
+			//expected!
+		}
+		
+		final String pathname = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
+		final Path path = new Path(pathname);
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);				
+		
+		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+						"java.lang.String", 
+						Optional.empty(),
+						Arrays.asList(path2.toString()), 
+						"test1", new TestMessageBean());						
+						
+		if (ret_val.isRight()) {
+			System.out.println("About to crash,found class?");
+		}		
+		BasicMessageBean error = ret_val.left().value();
+		
+		assertEquals(error.command(), "TestMessageBean");
+		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
+		assertEquals(error.details(), null);
+		final String expected_err_fragment = "Error: class java.lang.String is not an implementation of interface";
+		assertTrue("Failed error message, should contain: " + expected_err_fragment + " vs " + error.message(), 
+				error.message().contains(expected_err_fragment));
+		assertEquals(error.message_code(), null);
+		assertEquals(error.source(), "test1");
+		assertEquals(error.success(), false);
+		
+	}
+	
 }

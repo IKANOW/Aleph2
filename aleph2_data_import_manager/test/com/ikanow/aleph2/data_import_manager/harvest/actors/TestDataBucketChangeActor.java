@@ -70,6 +70,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -436,6 +437,44 @@ public class TestDataBucketChangeActor {
 		assertEquals(false, test7_reply.reply().success());
 		assertEquals("test7", test7_reply.source());
 		assertEquals("Message type BucketActionMessage not recognized for bucket /test/path/", test7_reply.reply().message());
+	}
+	
+	@Test 
+	public void test_harvesterTalkWrap() throws InterruptedException, ExecutionException {
+		final DataBucketBean bucket = createBucket("test_tech_id");
+		
+		// Get the harvest tech module standalone ("in app" way is covered above)
+		
+		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
+						Collections.emptyList(), "test1", "test");						
+		
+		if (ret_val.isLeft()) {
+			fail("getHarvestTechnology call failed: " + ret_val.left().value().message());
+		}
+		assertTrue("harvest tech created: ", ret_val.right().value() != null);
+		
+		final IHarvestTechnologyModule harvest_tech = ret_val.right().value();
+		
+		final CompletableFuture<BucketActionReplyMessage> return_value = FutureUtils.returnError(new RuntimeException("test1"));
+
+		assertTrue("Ready to throw exception", return_value.isCompletedExceptionally());
+		
+		final CompletableFuture<BucketActionReplyMessage> test1 = 
+				DataBucketChangeActor.handleTechnologyErrors(bucket, 
+						new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", Either.right(harvest_tech), 
+						return_value);
+		
+		assertTrue("Reply message type", test1.get() instanceof BucketActionHandlerMessage);
+		assertEquals(false, ((BucketActionHandlerMessage)test1.get()).reply().success());
+		
+		final String expected_err_fragment = "manually called exception: [test1: RuntimeException]";
+		
+		assertTrue("Contains error fragment: " + expected_err_fragment, 
+				((BucketActionHandlerMessage)test1.get()).reply().message().contains(expected_err_fragment)
+				);
 	}
 	
 	@Test
