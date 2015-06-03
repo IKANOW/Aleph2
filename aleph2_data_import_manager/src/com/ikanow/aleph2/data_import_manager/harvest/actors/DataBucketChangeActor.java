@@ -128,7 +128,9 @@ public class DataBucketChangeActor extends AbstractActor {
 									final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
 											getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
 									
-									return talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
+									final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
+									return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
+									
 		    					})
 		    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
 									closing_sender.tell(reply,  closing_self);		    						
@@ -145,7 +147,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		    		})
 	    		.build();
 	 }
-		
+	
 	////////////////////////////////////////////////////////////////////////////
 	
 	// Functional code
@@ -219,14 +221,19 @@ public class DataBucketChangeActor extends AbstractActor {
 			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		try {
+		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();
+		
+		try {			
 			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>either(
 				//Error:
 				error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
 				,
 				// Normal
-				tech_module -> 
-					Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
+				tech_module -> {
+					_logger.info("Set active classloader to: " + tech_module.getClass().getClassLoader());					
+					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
+					
+					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
 							tech_module.onInit(context);
 							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, context);
@@ -262,14 +269,50 @@ public class DataBucketChangeActor extends AbstractActor {
 									new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
 										HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 
 											bucket.full_name(), m.getClass().getSimpleName())));
-						})
-				);
+						});
+				});
 		}
 		catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
 			return CompletableFuture.completedFuture(
 					new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
 						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.right().value().getClass()))));
 		}		
+		finally {
+			Thread.currentThread().setContextClassLoader(saved_current_classloader);
+		}
+	}
+
+	/** Wraps the communications with the tech module so that calls to completeExceptionally are handled
+	 * @param bucket
+	 * @param m
+	 * @param source
+	 * @param context
+	 * @param err_or_tech_module - the tech module (is ignored unless the user code got called ie implies err_or_tech_module.isRight)
+	 * @param return_value - either the user return value or a wrap of the exception
+	 * @return
+	 */
+	@NonNull
+	public static final CompletableFuture<BucketActionReplyMessage> handleTechnologyErrors(
+			final @NonNull DataBucketBean bucket, 
+			final @NonNull BucketActionMessage m,
+			final @NonNull String source,
+			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module, 
+			final @NonNull CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
+					)
+	{
+		if (return_value.isCompletedExceptionally()) { // Harvest Tech developer called completeExceptionally, ugh
+			try {				
+				return_value.get(); // (causes an exception)
+			}
+			catch (Throwable t) { // e.getCause() is the exception we want
+				// Note if we're here then err_or_tech_module must be "right"
+				return CompletableFuture.completedFuture(
+						new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
+							ErrorUtils.getLongForm(HarvestErrorUtils.HARVEST_TECH_ERROR, t.getCause(), m.bucket().full_name(), err_or_tech_module.right().value().getClass()))));
+			}
+		}
+		//(else fall through to...)
+		return return_value;
 	}
 	
 	/** Given a bucket ...returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
