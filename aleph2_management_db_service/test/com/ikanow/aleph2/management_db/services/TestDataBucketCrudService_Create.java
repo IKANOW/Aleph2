@@ -90,7 +90,7 @@ public class TestDataBucketCrudService_Create {
 	public void setup() throws Exception {
 		
 		// Here's the setup that Guice normally gives you....
-		final String tmpdir = System.getProperty("java.io.tmpdir");
+		final String tmpdir = System.getProperty("java.io.tmpdir") + File.separator;
 		_globals = new GlobalPropertiesBean(tmpdir, tmpdir, tmpdir, tmpdir);
 		_storage_service = new MockHdfsStorageService(_globals);
 		_mock_service_context = new MockServiceContext();		
@@ -225,10 +225,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		// 1) Check needs status object to be present
 		
@@ -265,7 +265,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, status_after.node_affinity().size());
 		assertEquals(true, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 				
 		//////////////////////////
@@ -534,16 +534,16 @@ public class TestDataBucketCrudService_Create {
 		
 		// Add a delete file:
 		try {
-			new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()).mkdirs();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()).mkdirs();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		try {
-			new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + ".DELETED").createNewFile();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + ".DELETED").createNewFile();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 
-		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + ".DELETED").exists());
+		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + ".DELETED").exists());
 		
 		// OK now try inserting the bucket, should error:
 		
@@ -595,10 +595,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -621,7 +621,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, status_after.node_affinity().size());
 		assertEquals(true, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 	
@@ -656,10 +656,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -720,10 +720,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -747,7 +747,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(1, status_after.node_affinity().size());
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) || status_after.node_affinity().contains(accepting_host2));
 		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		
 		// Since it worked, let's quickly try adding again with same full name but different id and check it fails...
@@ -807,10 +807,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -834,7 +834,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(2, status_after.node_affinity().size());
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
 		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 

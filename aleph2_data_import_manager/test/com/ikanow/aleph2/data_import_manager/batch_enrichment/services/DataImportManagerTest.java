@@ -2,6 +2,7 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Optional;
@@ -19,8 +20,6 @@ import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
-import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
-import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
@@ -40,7 +39,7 @@ public class DataImportManagerTest {
 			return;
 		}
 		
-		final String temp_dir = System.getProperty("java.io.tmpdir");
+		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_import_manager.properties")))

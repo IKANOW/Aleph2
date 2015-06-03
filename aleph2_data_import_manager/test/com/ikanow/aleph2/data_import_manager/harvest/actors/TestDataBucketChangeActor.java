@@ -93,7 +93,7 @@ public class TestDataBucketChangeActor {
 			return;
 		}
 		
-		final String temp_dir = System.getProperty("java.io.tmpdir");
+		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_bucket_change.properties")))
@@ -116,7 +116,7 @@ public class TestDataBucketChangeActor {
 	
 	@Test
 	public void testSetup() {
-		final String temp_dir = System.getProperty("java.io.tmpdir");
+		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		assertTrue("setup completed - service context", _service_context != null);
 		assertTrue("setup completed - services", _service_context.getCoreManagementDbService() != null);
@@ -317,7 +317,9 @@ public class TestDataBucketChangeActor {
 						Optional.of(new File(System.getProperty("user.dir") + "\\misc_test_assets\\simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", "test");						
 		
-		assertTrue("getHarvestTechnology call succeeded", ret_val.isRight());
+		if (ret_val.isLeft()) {
+			fail("getHarvestTechnology call failed: " + ret_val.left().value().message());
+		}
 		assertTrue("harvest tech created: ", ret_val.right().value() != null);
 		
 		final IHarvestTechnologyModule harvest_tech = ret_val.right().value();

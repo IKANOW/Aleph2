@@ -15,14 +15,10 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.utils;
 
-import java.io.IOException;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.log4j.Logger;
 /** 
  * Utility class working on FileContext.

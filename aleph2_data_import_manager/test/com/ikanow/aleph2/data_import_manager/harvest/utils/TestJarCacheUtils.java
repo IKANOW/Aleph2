@@ -55,7 +55,7 @@ public class TestJarCacheUtils {
 	@Before
 	public void setUpDependencies() throws AccessControlException, FileAlreadyExistsException, FileNotFoundException, ParentNotDirectoryException, UnsupportedFileSystemException, IllegalArgumentException, IOException {
 		
-		final String temp_dir = System.getProperty("java.io.tmpdir");
+		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		_globals = new GlobalPropertiesBean(
 				temp_dir, temp_dir, temp_dir, temp_dir);	
@@ -88,7 +88,12 @@ public class TestJarCacheUtils {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
 		
-		final String expected_cache_name = _globals.local_cached_jar_dir().replace(File.separator, "/") + "test1.cache.jar";
+		final String local_cached_dir = Optional.of(_globals.local_cached_jar_dir())
+											.map(dir -> dir.replace(File.separator, "/"))
+											.map(dir -> dir.endsWith("/") ? dir : (dir + "/"))
+											.get();
+		
+		final String expected_cache_name = local_cached_dir + "test1.cache.jar";
 		final Path expected_cache_path = localfs.makeQualified(new Path(expected_cache_name));
 		
 		// Just make sure we've deleted the old file
@@ -224,9 +229,7 @@ public class TestJarCacheUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		String expected_message = "Shared library C:\\Users\\acp\\AppData\\Local\\Temp\\/test.jarx not found: [File file:/C:/Users/acp/AppData/Local/Temp/test.jarx does not exist: FileNotFoundException]:[RawLocalFileSystem.java:524:org.apache.hadoop.fs.RawLocalFileSystem:deprecatedGetFileStatus][FileContext.java:1112:org.apache.hadoop.fs.FileContext:getFileStatus][JarCacheUtils.java:58:com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils:getCachedJar][TestJarCacheUtils.java:212:com.ikanow.aleph2.data_import_manager.harvest.utils.TestJarCacheUtils:testRemoteFileNotPresent]"
-										.replaceAll(":[0-9]+", ":LINE");
-		assertEquals(expected_message, error.message().replaceAll(":[0-9]+", ":LINE"));
+		assertTrue(error.message().contains("not found: "));
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);

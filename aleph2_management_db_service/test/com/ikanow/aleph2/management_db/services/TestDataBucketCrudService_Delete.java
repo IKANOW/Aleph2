@@ -87,7 +87,7 @@ public class TestDataBucketCrudService_Delete {
 	public void setup() throws Exception {
 		
 		// Here's the setup that Guice normally gives you....
-		final String tmpdir = System.getProperty("java.io.tmpdir");
+		final String tmpdir = System.getProperty("java.io.tmpdir") + File.separator;
 		_globals = new GlobalPropertiesBean(tmpdir, tmpdir, tmpdir, tmpdir);
 		_storage_service = new MockHdfsStorageService(_globals);
 		_mock_service_context = new MockServiceContext();		
@@ -195,11 +195,11 @@ public class TestDataBucketCrudService_Delete {
 		
 		//(create a file path also)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		try {
-			new File(System.getProperty("java.io.tmpdir") + bucket.full_name()).mkdirs();
+			new File(System.getProperty("java.io.tmpdir") + File.separator +  bucket.full_name()).mkdirs();
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		

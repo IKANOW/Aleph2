@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.services;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.util.Optional;
 
 import org.junit.Before;
@@ -37,6 +38,7 @@ import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbCon
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
+
 import org.apache.log4j.Logger;
 
 public class TestDataBucketStatusCrudService {
@@ -67,7 +69,7 @@ public class TestDataBucketStatusCrudService {
 	public void setup() throws Exception {
 		
 		// Here's the setup that Guice normally gives you....
-		final String tmpdir = System.getProperty("java.io.tmpdir");
+		final String tmpdir = System.getProperty("java.io.tmpdir") + File.separator;
 		_globals = new GlobalPropertiesBean(tmpdir, tmpdir, tmpdir, tmpdir);
 		_storage_service = new MockHdfsStorageService(_globals);
 		_mock_service_context = new MockServiceContext();		
