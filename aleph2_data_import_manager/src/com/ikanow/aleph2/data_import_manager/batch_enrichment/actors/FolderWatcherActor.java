@@ -105,17 +105,20 @@ public class FolderWatcherActor extends UntypedActor {
 	protected void traverseFolders() {
 		logger.debug("bucket_Path:"+_bucket_path);
 		try {
-			FileStatus[] statuss = fileContext.util().listStatus(detectBucketPath());
-			logger.debug(statuss.length);
-			String dataPathStr = dataPath.toString();
-			
-			for (int i = 0; i < statuss.length; i++) {
-				String bucketPathStr = statuss[i].getPath().toString();				
-			    String bucketId = bucketPathStr.substring(bucketPathStr.indexOf(dataPathStr)+dataPathStr.length());
-			    logger.debug("dataPath:"+dataPathStr+" ,Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
-			    // TODO create or send message to BatchBucketActors
-			    checkAndScheduleBucketAgent(bucketPathStr, bucketId);
-			} // for			
+			Path bucketParent = detectBucketPath();
+			if(bucketParent!=null){
+				FileStatus[] statuss = fileContext.util().listStatus(bucketParent);
+				logger.debug(statuss.length);
+				String dataPathStr = dataPath.toString();
+				
+				for (int i = 0; i < statuss.length; i++) {
+					String bucketPathStr = statuss[i].getPath().toString();				
+				    String bucketId = bucketPathStr.substring(bucketPathStr.indexOf(dataPathStr)+dataPathStr.length());
+				    logger.debug("dataPath:"+dataPathStr+" ,Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
+				    // TODO create or send message to BatchBucketActors
+				    checkAndScheduleBucketAgent(bucketPathStr, bucketId);
+				} // for		
+			}
 		} catch (Exception e) {
 			logger.error("traverseFolders Caught Exception:",e);
 		}
@@ -155,7 +158,11 @@ public class FolderWatcherActor extends UntypedActor {
 			// looking for managed_bucket underneath /app/aleph2/data
 			Path p = DirUtils.findOneSubdirectory(fileContext, dataPath, "managed_bucket");
 			// assuming managed_bucket is two levels underneath all buckets dirs, e.g. <bucket_path>/<bucket_name>/managed
-			_bucket_path = p.getParent().getParent();
+			if(p!=null && p.getParent()!=null){
+				_bucket_path = p.getParent().getParent();
+			}else{
+				logger.error("Could not initialize bucket Path starting at:"+dataPath);
+			}
 			logger.debug("Detected bucket Path:"+p);
 			} catch (Exception e) {
 				logger.error("detectBucketPath Caught Exception",e);

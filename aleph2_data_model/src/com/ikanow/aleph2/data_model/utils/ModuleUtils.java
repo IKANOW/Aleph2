@@ -302,7 +302,8 @@ public class ModuleUtils {
 		synchronized (ModuleUtils.class) {
 			globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
 		}
-		logger.info("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
+		if ( parent_injector != null)
+			logger.info("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
 		interfaceHasDefault = new HashSet<Class<?>>();
 		parent_injector = Guice.createInjector(new ServiceModule());		
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
