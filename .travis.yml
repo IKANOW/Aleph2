@@ -8,7 +8,7 @@ env:
  - TEST_DIR=aleph2_core_distributed_services_library
  - TEST_DIR=aleph2_harvest_context_library
  - TEST_DIR=aleph2_management_db_service
- - TEST_DIR=aleph2_data_import_library
+ - TEST_DIR=aleph2_data_import_manager
 
 before_install:
  - cd test_dependencies && git pull origin master && cd ../aleph2_data_model && mvn install -DskipTests=true && cd ../aleph2_core_distributed_services_library && mvn install -DskipTests=true && cd ../test_dependencies/ && mvn install -DskipTests=true && cd ../
