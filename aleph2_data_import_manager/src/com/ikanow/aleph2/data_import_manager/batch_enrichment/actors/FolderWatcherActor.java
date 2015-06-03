@@ -26,7 +26,9 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.data.Stat;
 
 import scala.concurrent.duration.Duration;
+import akka.actor.ActorRef;
 import akka.actor.Cancellable;
+import akka.actor.Props;
 import akka.actor.UntypedActor;
 
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -46,7 +48,7 @@ public class FolderWatcherActor extends UntypedActor {
 	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
-	protected final IStorageService storage_service;
+	protected final IStorageService _storage_service;
 	protected GlobalPropertiesBean _global_properties_Bean = null; 
 	protected Path _bucket_path = null;
 	protected FileContext fileContext = null;
@@ -59,7 +61,7 @@ public class FolderWatcherActor extends UntypedActor {
     	this._core_distributed_services = _context.getDistributedServices();    	
     	this._curator = _core_distributed_services.getCuratorFramework();
     	this._management_db = _context.getServiceContext().getCoreManagementDbService();
-    	this.storage_service = storage_service;
+    	this._storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020"));
 		this.dataPath = new Path(_global_properties_Bean.distributed_root_dir()+"/data");
 		this._bucket_path = detectBucketPath();
@@ -137,6 +139,8 @@ public class FolderWatcherActor extends UntypedActor {
 				//bucket is not registered yet, grab it and do the processing on this node
 				// send message to batchBus so some actor will take care if this node
 				//_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
+				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),bucketId);
+				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketId, bucketZkPath), getSelf());						
 			}else{
 				// someone else already is working in it
 				//logger.debug();
