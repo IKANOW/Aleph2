@@ -125,7 +125,8 @@ public class TestClassloaderUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		assertEquals(error.message(), "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]:[JclObjectFactory.java:102:org.xeustechnologies.jcl.JclObjectFactory:create][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:114:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails] ([com.ikanow.aleph2.test.example.ExampleHarvestTechnology: ClassNotFoundException]:[AbstractClassLoader.java:129:org.xeustechnologies.jcl.AbstractClassLoader:loadClass][JclObjectFactory.java:85:org.xeustechnologies.jcl.JclObjectFactory:create][ClassloaderUtils.java:66:com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils:getFromCustomClasspath][TestClassloaderUtils.java:114:com.ikanow.aleph2.data_import_manager.harvest.utils.TestClassloaderUtils:testClassLoading_fails])");
+		assertTrue("Failed error message, should contain 'Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]': " + error.message(), 
+				error.message().contains("Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]"));
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);
