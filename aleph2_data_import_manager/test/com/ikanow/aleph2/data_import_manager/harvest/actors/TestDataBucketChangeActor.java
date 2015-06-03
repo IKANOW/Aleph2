@@ -314,7 +314,7 @@ public class TestDataBucketChangeActor {
 		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
-						Optional.of(new File(System.getProperty("user.dir") + "\\misc_test_assets\\simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", "test");						
 		
 		if (ret_val.isLeft()) {
