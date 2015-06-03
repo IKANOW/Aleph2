@@ -19,8 +19,6 @@ import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
-import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
-import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
