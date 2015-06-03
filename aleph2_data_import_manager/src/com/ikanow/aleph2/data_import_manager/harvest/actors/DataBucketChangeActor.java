@@ -167,32 +167,40 @@ public class DataBucketChangeActor extends AbstractActor {
 			final @NonNull Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
-		return err_or_libs.<Either<BasicMessageBean, IHarvestTechnologyModule>>either(
-				//Error:
-				error -> Either.left(error)
-				,
-				// Normal
-				libs -> {
-					final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(bucket.harvest_technology_name_or_id());
-					if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
-						return Either.left(
-								HarvestErrorUtils.buildErrorMessage(source, m,
-										HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.harvest_technology_name_or_id()));
-					}
-					
-					final List<String> other_libs = harvest_tech_only 
-							? Collections.emptyList() 
-							: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
-					
-					final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
-							ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
-									libbean_path._1().misc_entry_point(), 
-									Optional.of(libbean_path._2()),
-									other_libs,
-									source, m);
-					
-					return ret_val;
-				});
+		try {
+			return err_or_libs.<Either<BasicMessageBean, IHarvestTechnologyModule>>either(
+					//Error:
+					error -> Either.left(error)
+					,
+					// Normal
+					libs -> {
+						final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(bucket.harvest_technology_name_or_id());
+						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
+							return Either.left(
+									HarvestErrorUtils.buildErrorMessage(source, m,
+											HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.harvest_technology_name_or_id()));
+						}
+						
+						final List<String> other_libs = harvest_tech_only 
+								? Collections.emptyList() 
+								: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
+						
+						final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+								ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+										libbean_path._1().misc_entry_point(), 
+										Optional.of(libbean_path._2()),
+										other_libs,
+										source, m);
+						
+						return ret_val;
+					});
+		}
+		catch (Throwable t) {
+			return Either.left(
+					HarvestErrorUtils.buildErrorMessage(source, m,
+						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, t, bucket.harvest_technology_name_or_id())));  
+			
+		}
 	}
 	
 	//
@@ -359,7 +367,7 @@ public class DataBucketChangeActor extends AbstractActor {
 						});
 					});
 		}
-		catch (Exception e) {
+		catch (Throwable e) {
 			return CompletableFuture.completedFuture(
 				Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
 					ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
