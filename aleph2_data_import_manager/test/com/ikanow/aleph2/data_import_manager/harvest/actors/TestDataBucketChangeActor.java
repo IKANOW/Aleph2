@@ -378,7 +378,7 @@ public class TestDataBucketChangeActor {
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
 		assertEquals("test4", test4_reply.source());
-		assertEquals("called onNewSource: true", test4_reply.reply().message());
+		assertEquals("called onNewSource: false", test4_reply.reply().message());
 		assertEquals(true, test4_reply.reply().success());
 		
 		// Test 5: update
