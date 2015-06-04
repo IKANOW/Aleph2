@@ -41,7 +41,9 @@ public class BucketActionSupervisor extends UntypedActor {
 
 	//TODO (ALEPH-19): Need a scheduled thread that runs through the retries and checks each one
 	
-	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(10, TimeUnit.SECONDS);
+	//TODO (ALEPH-19): Need different timeouts to handle "found harvester it's taking its time" vs "waiting internally for harvesters"
+	// this is larger than it needs to be to handle that case
+	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(60, TimeUnit.SECONDS);
 	
 	/** Factory method for getting a distribution actor
 	 */
