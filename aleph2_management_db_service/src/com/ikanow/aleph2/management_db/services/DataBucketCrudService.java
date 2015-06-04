@@ -426,19 +426,20 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
 
-			return FutureUtils.denestManagementFuture(delete_reply.thenCompose(del_reply -> {			
-				if (!del_reply) { // Didn't find an object to delete, just return that information to the user
-					return CompletableFuture.completedFuture(Optional.empty());
-				}
-				else { //Get the status and delete it 
-					
-					final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
-							_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
-									CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
-									Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
-					
-					return future_status_bean;
-				}
+			return FutureUtils.denestManagementFuture(delete_reply
+				.thenCompose(del_reply -> {			
+					if (!del_reply) { // Didn't find an object to delete, just return that information to the user
+						return CompletableFuture.completedFuture(Optional.empty());
+					}
+					else { //Get the status and delete it 
+						
+						final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
+								_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
+										CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
+										Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
+						
+						return future_status_bean;
+					}
 				})
 				.thenApply(status_bean -> {
 					if (!status_bean.isPresent()) {
