@@ -52,9 +52,7 @@ public class DataImportManagerTest {
 		
 		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
-		
-		//_db_actor_context = new ManagementDbActorContext(_service_context, new LocalBucketActionMessageBus());
-		
+
 		actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(actor_context);
 		// create folder structure if it does not exist for testing.

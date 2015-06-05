@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -25,18 +26,21 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class DataImportManagerMain {
 
 	private static Logger logger = LogManager.getLogger();	
-	private static Injector serverInjector = createInjector();
-
-	public static Injector createInjector() {
+	private static Injector serverInjector = null;
+	
+	public static Injector createInjector(final String config_path) {
 		
 
 		Injector injector = null;
 		try {
-			injector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.empty());
+			Config config = ConfigFactory.parseFile(new File(config_path));
+			injector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		} catch (Exception e) {
 			logger.error("Error creating injector from DataImportManagerModule:",e);	
 		}
@@ -55,7 +59,12 @@ public class DataImportManagerMain {
 	}
 
 	public static void main(String[] args) {
-		if(args!=null && args.length>0){
+		if (0 == args.length) {
+			System.out.println("First arg must be config file");
+			System.exit(-1); 
+		}
+		serverInjector = createInjector(args[0]);
+		if(args.length>0){
 			if("stop".equalsIgnoreCase(args[1])){
 				Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
 				DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
