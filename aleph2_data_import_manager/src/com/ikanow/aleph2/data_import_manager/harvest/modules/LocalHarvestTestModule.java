@@ -71,7 +71,7 @@ public class LocalHarvestTestModule {
 	public LocalHarvestTestModule(IServiceContext service_context) {
 		_context = service_context;
 		_core_management_db = _context.getCoreManagementDbService();
-		_underlying_management_db = _core_management_db.getUnderlyingPlatformDriver(IManagementDbService.class, Optional.empty()).get();
+		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
 		_globals = service_context.getGlobalProperties();		
 	}
 	

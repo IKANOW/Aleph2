@@ -166,14 +166,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
-	@SuppressWarnings("unchecked")
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
-		
-		if (IManagementDbService.class.isAssignableFrom(driver_class)) {
-			return (Optional<T>) Optional.of(_underlying_management_db);
-		}		
-		else throw new RuntimeException("No underlying drivers for CoreManagementDbService other than the underlying management db");
+		throw new RuntimeException("No underlying drivers for CoreManagementDbService - did you want to get the underlying IManagementDbService? Use IServiceContext.getService(IManagementDbService.class, ...) if so.");
 	}
 
 	/** This service needs to load some additional classes via Guice. Here's the module that defines the bindings
