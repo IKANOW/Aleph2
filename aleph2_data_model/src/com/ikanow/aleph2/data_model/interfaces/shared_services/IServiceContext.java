@@ -48,7 +48,7 @@ public interface IServiceContext {
 	* @param serviceClazz The class of the resource you want to access e.g. ISecurityService.class
 	* @return the data service requested or null if it does not exist
 	*/
-	public <I> I getService(Class<I> serviceClazz, Optional<String> serviceName);
+	public <I> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
 	
 	/////////////////////////////////////////////////////////////////////
 	
@@ -60,7 +60,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public IColumnarService getColumnarService();
+	public Optional<IColumnarService> getColumnarService();
 	
 	/**
 	* Returns an instance of the currently configured document service.
@@ -69,7 +69,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public IDocumentService getDocumentService();
+	public Optional<IDocumentService> getDocumentService();
 	
 	/**
 	* Returns an instance of the currently configured geospatial service.
@@ -78,7 +78,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public IGeospatialService getGeospatialService();
+	public Optional<IGeospatialService> getGeospatialService();
 	
 	/**
 	* Returns an instance of the currently configured graph service.
@@ -87,7 +87,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public IGraphService getGraphService();
+	public Optional<IGraphService> getGraphService();
 	
 	/**
 	* Returns an instance of the currently configured _core_ mangement db service (which sits above the actual technology configured for the management db service via service.ManagementDbService.*).
@@ -105,7 +105,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public ISearchIndexService getSearchIndexService();
+	public Optional<ISearchIndexService> getSearchIndexService();
 	
 	/**
 	* Returns an instance of the currently configured storage index service.
@@ -123,7 +123,7 @@ public interface IServiceContext {
 	* 
 	* @return
 	*/
-	public ITemporalService getTemporalService();
+	public Optional<ITemporalService> getTemporalService();
 	
 	/////////////////////////////////////////////////////////////////////
 	

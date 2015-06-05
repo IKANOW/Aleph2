@@ -23,7 +23,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 public class SampleColumnarService implements IColumnarService {
 
 	@Override
-	public <T> T getUnderlyingPlatformDriver(
+	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}

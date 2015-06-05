@@ -67,7 +67,7 @@ public class TestJarCacheUtils {
 		_test_file_path = temp_dir + "/test.jar";
 		final Path test_file_path = new Path(_test_file_path);
 		
-		final FileContext fs = _mock_hdfs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+		final FileContext fs = _mock_hdfs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		fs.create(test_file_path, EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE));
 		
 		_test_file_time = fs.getFileStatus(test_file_path).getModificationTime();

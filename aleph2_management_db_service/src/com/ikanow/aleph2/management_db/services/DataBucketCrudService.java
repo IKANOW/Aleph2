@@ -104,7 +104,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	@Inject
 	public DataBucketCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
@@ -481,11 +481,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
 	@SuppressWarnings("unchecked")
-	public <T> T getUnderlyingPlatformDriver(final Class<T> driver_class,
+	public <T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class,
 			final Optional<String> driver_options)
 	{
 		if (driver_class == ICrudService.class) {
-			return (T) _underlying_data_bucket_db;
+			return (Optional<T>) Optional.of(_underlying_data_bucket_db);
 		}
 		else {
 			throw new RuntimeException("DataBucketCrudService.getUnderlyingPlatformDriver not supported");
@@ -882,7 +882,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public static final String DELETE_TOUCH_FILE = ".DELETED";
 	
 	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
-		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		
 		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
 		
@@ -892,7 +892,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	}
 	
 	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
-		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
 		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
 		

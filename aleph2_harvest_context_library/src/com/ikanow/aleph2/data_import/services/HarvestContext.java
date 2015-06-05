@@ -102,7 +102,7 @@ public class HarvestContext implements IHarvestContext {
 		_state_name = State.IN_TECHNOLOGY;
 		_service_context = service_context;
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
-		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_globals = service_context.getGlobalProperties();
 	}
 
@@ -136,7 +136,7 @@ public class HarvestContext implements IHarvestContext {
 			final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
 			injector.injectMembers(this);			
 			_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
-			_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty());
+			_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 			_globals = _service_context.getGlobalProperties();
 			
 			// Get bucket 
@@ -160,7 +160,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public <I> Optional<I> getService(Class<I> service_clazz,
 			Optional<String> service_name) {
-		return Optional.ofNullable(_service_context.getService(service_clazz, service_name));
+		return _service_context.getService(service_clazz, service_name);
 	}
 
 	/* (non-Javadoc)

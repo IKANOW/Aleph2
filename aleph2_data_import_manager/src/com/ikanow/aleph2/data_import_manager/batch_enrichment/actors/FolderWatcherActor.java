@@ -63,7 +63,7 @@ public class FolderWatcherActor extends UntypedActor {
     	this._curator = _core_distributed_services.getCuratorFramework();
     	this._management_db = _context.getServiceContext().getCoreManagementDbService();
     	this._storage_service = storage_service;
-		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020"));
+		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020")).get();
 		this.dataPath = new Path(_global_properties_Bean.distributed_root_dir()+"/data");
 		this._bucket_paths = detectBucketPaths();
     }

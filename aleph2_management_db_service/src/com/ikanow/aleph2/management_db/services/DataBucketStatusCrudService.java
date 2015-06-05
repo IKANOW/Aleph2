@@ -86,7 +86,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Inject
 	public DataBucketStatusCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
@@ -134,10 +134,10 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T getUnderlyingPlatformDriver(
+	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		if (driver_class == ICrudService.class) {
-			return (T) _underlying_data_bucket_status_db;
+			return (Optional<T>) Optional.of(_underlying_data_bucket_status_db);
 		}
 		else {
 			throw new RuntimeException("DataBucketCrudService.getUnderlyingPlatformDriver not supported");

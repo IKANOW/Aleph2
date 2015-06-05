@@ -28,7 +28,7 @@ public class SampleStorageService implements IStorageService {
 	}
 
 	@Override
-	public <T> T getUnderlyingPlatformDriver(
+	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}

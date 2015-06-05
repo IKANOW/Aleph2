@@ -26,5 +26,5 @@ public interface IColumnarService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
+	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

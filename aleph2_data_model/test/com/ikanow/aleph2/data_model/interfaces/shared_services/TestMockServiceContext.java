@@ -79,7 +79,7 @@ public class TestMockServiceContext {
 		assertNull(context.getService(ISearchIndexService.class, Optional.of("fail")));
 		
 		
-		assertFalse("Shouldn't be equal", context.getCoreManagementDbService() == context.getService(IManagementDbService.class, Optional.empty()));
+		assertFalse("Shouldn't be equal", context.getCoreManagementDbService() == context.getService(IManagementDbService.class, Optional.empty()).get());
 	}
 	
 }

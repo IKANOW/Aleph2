@@ -491,7 +491,7 @@ public class TestDataBucketChangeActor {
 			
 			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
 	
-			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty());
+			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
 			library_crud.storeObjects(lib_elements).get();
 			
@@ -574,7 +574,7 @@ public class TestDataBucketChangeActor {
 		
 		final List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
 
-		final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty());
+		final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
 		try {
 			library_crud.storeObjects(lib_elements, true).get();

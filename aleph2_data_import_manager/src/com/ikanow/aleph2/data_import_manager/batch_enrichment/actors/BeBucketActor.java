@@ -64,7 +64,7 @@ public class BeBucketActor extends UntypedActor {
 		this._curator = _core_distributed_services.getCuratorFramework();
 		this._management_db = _context.getServiceContext().getCoreManagementDbService();
 		this.storage_service = storage_service;
-		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020"));
+		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020")).get();
 	}
 
 	@Override

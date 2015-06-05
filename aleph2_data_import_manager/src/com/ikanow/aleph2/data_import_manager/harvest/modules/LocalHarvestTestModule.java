@@ -71,7 +71,7 @@ public class LocalHarvestTestModule {
 	public LocalHarvestTestModule(IServiceContext service_context) {
 		_context = service_context;
 		_core_management_db = _context.getCoreManagementDbService();
-		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty());
+		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
 		_globals = service_context.getGlobalProperties();		
 	}
 	
@@ -135,7 +135,7 @@ public class LocalHarvestTestModule {
 	private void run_command(String source_key, String harvest_tech_jar_path, String command) throws Exception {
 		
 		@SuppressWarnings("unchecked")
-		final ICrudService<JsonNode> v1_config_db = _underlying_management_db.getUnderlyingPlatformDriver(ICrudService.class, Optional.of("ingest.source"));
+		final ICrudService<JsonNode> v1_config_db = _underlying_management_db.getUnderlyingPlatformDriver(ICrudService.class, Optional.of("ingest.source")).get();
 		
 		final SingleQueryComponent<JsonNode> query = CrudUtils.allOf().when("key", source_key);
 		final Optional<JsonNode> result = v1_config_db.getObjectBySpec(query).get();

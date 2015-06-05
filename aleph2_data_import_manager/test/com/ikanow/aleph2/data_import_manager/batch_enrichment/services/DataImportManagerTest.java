@@ -59,7 +59,7 @@ public class DataImportManagerTest {
 		app_injector.injectMembers(actor_context);
 		// create folder structure if it does not exist for testing.
 		
-		FileContext fileContext = _service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class,Optional.empty());
+		FileContext fileContext = _service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class,Optional.empty()).get();
 		logger.info("Root dir:"+actor_context.getGlobalProperties().distributed_root_dir());
 		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket1/managed_bucket/import/ready");
 		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket2/managed_bucket/import/ready");

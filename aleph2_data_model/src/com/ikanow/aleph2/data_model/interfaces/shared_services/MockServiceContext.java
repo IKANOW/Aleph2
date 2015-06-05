@@ -59,61 +59,61 @@ public class MockServiceContext implements IServiceContext {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public <I> I getService(Class<I> serviceClazz,
+	public <I> Optional<I> getService(Class<I> serviceClazz,
 			Optional<String> serviceName) {
-		return (I)Optional.ofNullable(_mocks.get(serviceClazz.getName()))
-						.orElse(new HashMap<String, Object>())
-						.get(serviceName.orElse(""));
+		return (Optional<I>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
+								.orElse(new HashMap<String, Object>())
+								.get(serviceName.orElse("")));
 	}
 
 	@Override
-	public IColumnarService getColumnarService() {
+	public Optional<IColumnarService> getColumnarService() {
 		return getService(IColumnarService.class, Optional.empty());
 	}
 
 	@Override
-	public IDocumentService getDocumentService() {
+	public Optional<IDocumentService> getDocumentService() {
 		return getService(IDocumentService.class, Optional.empty());
 	}
 
 	@Override
-	public IGeospatialService getGeospatialService() {
+	public Optional<IGeospatialService> getGeospatialService() {
 		return getService(IGeospatialService.class, Optional.empty());
 	}
 
 	@Override
-	public IGraphService getGraphService() {
+	public Optional<IGraphService> getGraphService() {
 		return getService(IGraphService.class, Optional.empty());
 	}
 
 	@Override
 	public IManagementDbService getCoreManagementDbService() {
-		return getService(IManagementDbService.class, Optional.of("CoreManagementDbService"));
+		return getService(IManagementDbService.class, Optional.of("CoreManagementDbService")).get();
 	}
 
 	@Override
-	public ISearchIndexService getSearchIndexService() {
+	public Optional<ISearchIndexService> getSearchIndexService() {
 		return getService(ISearchIndexService.class, Optional.empty());
 	}
 
 	@Override
 	public IStorageService getStorageService() {
-		return getService(IStorageService.class, Optional.empty());
+		return getService(IStorageService.class, Optional.empty()).get();
 	}
 
 	@Override
-	public ITemporalService getTemporalService() {
+	public Optional<ITemporalService> getTemporalService() {
 		return getService(ITemporalService.class, Optional.empty());
 	}
 
 	@Override
 	public ISecurityService getSecurityService() {
-		return getService(ISecurityService.class, Optional.empty());
+		return getService(ISecurityService.class, Optional.empty()).get();
 	}
 
 	@Override
 	public GlobalPropertiesBean getGlobalProperties() {
-		return getService(GlobalPropertiesBean.class, Optional.empty());
+		return getService(GlobalPropertiesBean.class, Optional.empty()).get();
 	}
 
 }

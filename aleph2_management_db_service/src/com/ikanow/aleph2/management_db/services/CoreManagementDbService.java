@@ -63,7 +63,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			final SharedLibraryCrudService shared_library_service
 			)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;
@@ -166,7 +166,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
-	public <T> T getUnderlyingPlatformDriver(Class<T> driver_class,
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
 		throw new RuntimeException("No underlying drivers for CoreManagementDbService - did you want to get the underlying IManagementDbService? Use IServiceContext.getService(IManagementDbService.class, ...) if so.");
 	}

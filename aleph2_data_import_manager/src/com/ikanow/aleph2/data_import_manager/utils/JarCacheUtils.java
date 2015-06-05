@@ -47,7 +47,7 @@ public class JarCacheUtils {
 			final String handler_for_errors, final M msg_for_errors)
 	{		
 		try {
-			final FileContext dfs = fs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+			final FileContext dfs = fs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 			final FileContext lfs = FileContext.getLocalFSFileContext(new Configuration());
 			
 			final Path cached_jar_file = lfs.makeQualified(new Path(local_cached_jar_dir + "/" + buildCachedJarName(library_bean))); 

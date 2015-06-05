@@ -42,7 +42,7 @@ public class DataImportActorContext {
 	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service)
 	{
 		_service_context = service_context;
-		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
 		_information_service = information_service;
 	}

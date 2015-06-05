@@ -23,7 +23,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
 public class SampleGeospatialService implements IGeospatialService {
 
 	@Override
-	public <T> T getUnderlyingPlatformDriver(
+	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}

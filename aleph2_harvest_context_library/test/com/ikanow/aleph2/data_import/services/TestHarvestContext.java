@@ -141,7 +141,7 @@ public class TestHarvestContext {
 	
 			@SuppressWarnings("unchecked")
 			final ICrudService<DataBucketBean> raw_mock_db =
-					test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty());
+					test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
 			raw_mock_db.storeObject(test_bucket).get();
 			
 			assertEquals(1L, (long)raw_mock_db.countObjects().get());
@@ -235,7 +235,7 @@ public class TestHarvestContext {
 					.with(SharedLibraryBean::path_name, "name3")
 					.done().get();
 			
-			test_context._service_context.getService(IManagementDbService.class, Optional.empty())
+			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
 								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
 			
 			Map<String, String> mods = test_context.getHarvestLibraries(Optional.of(test_bucket)).get();

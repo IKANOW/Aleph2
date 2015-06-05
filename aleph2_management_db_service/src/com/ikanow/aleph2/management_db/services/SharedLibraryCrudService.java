@@ -59,7 +59,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	 */
 	@Inject
 	public SharedLibraryCrudService(final IServiceContext service_context) {
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty());
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
 		_underlying_library_db = _underlying_management_db.getSharedLibraryStore();
 		
@@ -102,10 +102,10 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T getUnderlyingPlatformDriver(
+	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		if (driver_class == ICrudService.class) {
-			return (T) _underlying_library_db;
+			return (Optional<T>) Optional.of(_underlying_library_db);
 		}
 		else {
 			throw new RuntimeException("SharedLibraryCrudService.getUnderlyingPlatformDriver not supported");
@@ -258,7 +258,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			_underlying_library_db.getObjectBySpec(unique_spec).thenCompose(lib -> {
 				if (lib.isPresent()) {
 					try {
-						final FileContext fs = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
+						final FileContext fs = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 						fs.delete(fs.makeQualified(new Path(lib.get().path_name())), false);
 					}
 					catch (Exception e) { // i suppose we don't really care if it fails..

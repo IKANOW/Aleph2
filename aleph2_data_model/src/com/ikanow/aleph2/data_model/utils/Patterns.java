@@ -169,7 +169,6 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input
 		 * @return the return value from the matching clause or this otherwise
 		 */
-		@Nullable
 		public R otherwise(final Function<G, R> expression) {
 			if (_r_set) {
 				return _r;
@@ -182,7 +181,6 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input
 		 * @return the return value from the matching clause or this otherwise
 		 */
-		@Nullable
 		public R otherwise(final Supplier<R> expression) {
 			if (_r_set) {
 				return _r;

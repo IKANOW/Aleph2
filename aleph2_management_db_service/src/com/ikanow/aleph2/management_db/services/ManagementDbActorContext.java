@@ -25,7 +25,7 @@ public class ManagementDbActorContext {
 										final BucketActionMessageBus bucket_action_message_bus)
 	{
 		_service_context = service_context;
-		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty());
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_bucket_action_bus = bucket_action_message_bus;
 		_singleton = this;
 	}
