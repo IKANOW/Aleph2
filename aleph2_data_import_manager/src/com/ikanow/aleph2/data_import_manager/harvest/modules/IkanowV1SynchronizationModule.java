@@ -60,7 +60,7 @@ public class IkanowV1SynchronizationModule {
 	public IkanowV1SynchronizationModule(IServiceContext context, DataImportActorContext local_actor_context) {
 		_context = context;
 		_core_management_db = context.getCoreManagementDbService();
-		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
+		_underlying_management_db = context.getCoreManagementDbService().getUnderlyingPlatformDriver(IManagementDbService.class, Optional.empty()).get();
 		_core_distributed_services = _context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_db_actor_context = new ManagementDbActorContext(_context, new LocalBucketActionMessageBus());
 			//(^ injection issues with this because CoreManagementDbService is registered with a different injector
