@@ -1,10 +1,12 @@
 package com.ikanow.aleph2.data_import_manager.utils;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.hadoop.fs.FileContext;
@@ -60,6 +62,8 @@ public class DirUtilsTest {
 		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket1/managed_bucket/import/ready");
 		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket2/managed_bucket/import/ready");
 		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket3/managed_bucket/import/ready");
+		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket_parent/bucket4/managed_bucket/import/ready");
+		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket_parent/onemore/bucket5/managed_bucket/import/ready");
 }
 	
 	@Test
@@ -67,6 +71,16 @@ public class DirUtilsTest {
 		Path start = new Path(actor_context.getGlobalProperties().distributed_root_dir()+"/data/");
 		Path p = DirUtils.findOneSubdirectory(fileContext, start, "managed_bucket");
 		assertNotNull(p);
+
+	}
+
+	@Test
+	public void testFindAllSubdirectory(){
+		Path start = new Path(actor_context.getGlobalProperties().distributed_root_dir()+"/data/");
+		
+		List<Path> paths = new ArrayList<Path>();
+		DirUtils.findAllSubdirectories(paths, fileContext, start, "managed_bucket",false);
+		assertEquals(5,paths.size());
 
 	}
 

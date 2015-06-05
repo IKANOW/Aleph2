@@ -67,6 +67,7 @@ public class DataImportManagerTest {
 }
 	
 	@Test
+	@Ignore
 	public void testCreate() throws Exception {
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
@@ -74,6 +75,7 @@ public class DataImportManagerTest {
 	}
 
 	@Test
+	@Ignore
 	public void testStartStop() throws Exception {
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
@@ -85,13 +87,12 @@ public class DataImportManagerTest {
 	}
 
 	@Test
-	@Ignore
 	public void testFolderWatch() throws Exception {
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 		dataImportManager.tick();	
-		Thread.sleep(3000);
+		Thread.sleep(30000);
 	}
 	
 	

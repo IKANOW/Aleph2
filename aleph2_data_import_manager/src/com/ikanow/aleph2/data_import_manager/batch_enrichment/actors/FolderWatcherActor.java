@@ -15,12 +15,16 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nonnull;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.data.Stat;
@@ -50,7 +54,7 @@ public class FolderWatcherActor extends UntypedActor {
 	protected final ICoreDistributedServices _core_distributed_services;
 	protected final IStorageService _storage_service;
 	protected GlobalPropertiesBean _global_properties_Bean = null; 
-	protected Path _bucket_path = null;
+	protected List<Path> _bucket_paths = null;
 	protected FileContext fileContext = null;
 	protected Path dataPath = null;
 
@@ -64,7 +68,7 @@ public class FolderWatcherActor extends UntypedActor {
     	this._storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020"));
 		this.dataPath = new Path(_global_properties_Bean.distributed_root_dir()+"/data");
-		this._bucket_path = detectBucketPath();
+		this._bucket_paths = detectBucketPaths();
     }
     
 	
@@ -105,17 +109,18 @@ public class FolderWatcherActor extends UntypedActor {
 	}
 
 	protected void traverseFolders() {
-		logger.debug("traverseFolders for path: "+_bucket_path);
+		logger.debug("traverseFolders for path: "+_bucket_paths);
 		try {
-			Path bucketParent = detectBucketPath();
-			if(bucketParent!=null){
-				FileStatus[] statuss = fileContext.util().listStatus(bucketParent);
-				for (int i = 0; i < statuss.length; i++) {
-					String bucketPathStr = statuss[i].getPath().toString();				
-				    String bucketId = statuss[i].getPath().getName();
+			detectBucketPaths();
+			if(_bucket_paths!=null){
+				logger.debug("traverseFolders for path: "+_bucket_paths);
+				for (Path path : _bucket_paths) {
+					String bucketPathStr = path.toString();
+					String dataPathStr = dataPath.toString();
+				    String bucketFullName = createFullName(bucketPathStr, dataPathStr);
 				    // create or send message to BatchBucketActors
-				    checkAndScheduleBucketAgent(bucketPathStr, bucketId);
-				} // for		
+				    checkAndScheduleBucketAgent(bucketPathStr, bucketFullName);					
+				}
 			}
 		} catch (Exception e) {
 			logger.error("traverseFolders Caught Exception:",e);
@@ -123,22 +128,38 @@ public class FolderWatcherActor extends UntypedActor {
 
 	}
 	
-	protected void checkAndScheduleBucketAgent(String bucketPathStr, String bucketId) {
+	protected static String createFullName(@Nonnull String bucketPathStr, @Nonnull String dataPathStr) {
+		String fullName = bucketPathStr;
+		int dataPathPos = bucketPathStr.indexOf(dataPathStr);
+		if(dataPathPos>0 && bucketPathStr.length()> dataPathPos + dataPathStr.length()){
+			fullName = bucketPathStr.substring(dataPathPos + dataPathStr.length());
+		}
+		return fullName;
+	}
+
+	protected static String createAgentName(@Nonnull String fullName) {
+		String agentName = fullName.replace('/', '$').replace('\\', '$')+  UUID.randomUUID().toString();
+		return agentName;
+		
+	}
+
+	protected void checkAndScheduleBucketAgent(String bucketPathStr, String bucketFullName) {
 		//curator_framework.
-	    logger.debug("checkAndScheduleBucketAgent for Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketId);
+	    logger.debug("checkAndScheduleBucketAgent for Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketFullName);
 		try{
-			String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + "/" + bucketId;
+			/*			
 			Stat bucketExists = _curator.checkExists().forPath(bucketZkPath);
 			if(bucketExists==null ){
-				//bucket is not registered yet, grab it and do the processing on this node
+*/				//bucket is not registered yet, grab it and do the processing on this node
 				// send message to batchBus so some actor will take care if this node
 				//_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
-				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),bucketId);
-				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketId, bucketZkPath), getSelf());						
-			}else{
+				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),bucketFullName);
+				String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + bucketFullName;
+				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketFullName, bucketZkPath), getSelf());						
+			/*}else{
 				// someone else already is working in it
 				logger.debug("Path "+bucketZkPath+" is already locked in zookeeper!");
-			}
+			} */
 		}
 		catch(Exception e){
 			logger.error("Caught Exception",e);
@@ -149,24 +170,18 @@ public class FolderWatcherActor extends UntypedActor {
 
 	}
 
-	protected Path detectBucketPath(){
-		logger.debug("detectBucketPath");
-		if(_bucket_path==null){
+	protected List<Path> detectBucketPaths(){
+		logger.debug("detectBucketPaths");
+		if(_bucket_paths==null){
 			try {
-			// looking for managed_bucket underneath /app/aleph2/data
-			Path p = DirUtils.findOneSubdirectory(fileContext, dataPath, "managed_bucket");
-			// assuming managed_bucket is two levels underneath all buckets dirs, e.g. <bucket_path>/<bucket_name>/managed
-			logger.info("detectBucketPath found one:"+p);
-			if(p!=null && p.getParent()!=null){
-				this._bucket_path = p.getParent().getParent();
-			}else{
-				logger.error("Could not initialize bucket Path starting at:"+dataPath);
-			}
-			logger.debug("Detected bucket Path:"+p);
+				// looking for managed_bucket underneath /app/aleph2/data
+				_bucket_paths =  new ArrayList<Path>();
+				DirUtils.findAllSubdirectories(_bucket_paths, fileContext, dataPath, "managed_bucket",false);
+				logger.info("detectBucketPath found "+_bucket_paths.size()+" folders.");
 			} catch (Exception e) {
 				logger.error("detectBucketPath Caught Exception",e);
 			} 
 		}
-		return _bucket_path;
+		return _bucket_paths;
 	}
 }

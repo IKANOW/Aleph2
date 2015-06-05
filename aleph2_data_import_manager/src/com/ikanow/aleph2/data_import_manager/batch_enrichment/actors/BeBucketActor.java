@@ -29,7 +29,12 @@ import akka.actor.UntypedActor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
@@ -59,13 +64,16 @@ public class BeBucketActor extends UntypedActor {
 		this._curator = _core_distributed_services.getCuratorFramework();
 		this._management_db = _context.getServiceContext().getCoreManagementDbService();
 		this.storage_service = storage_service;
-		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,
-				Optional.of("hdfs://localhost:8020"));
+		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020"));
 	}
 
 	@Override
 	public void postStop() {
 		logger.debug("postStop");
+		stopActor();
+	}
+
+	protected void stopActor(){
 		if (bucketZkPath != null) {
 			try {
 				logger.debug("Deleting bucket path in ZK:" + bucketZkPath);
@@ -73,10 +81,8 @@ public class BeBucketActor extends UntypedActor {
 			} catch (Exception e) {
 				logger.error("Caught exception", e);
 			}
-		}
-
+		}		
 	}
-
 	@Override
 	public void onReceive(Object message) throws Exception {
 		logger.debug("Message received:" + message);
@@ -113,12 +119,38 @@ public class BeBucketActor extends UntypedActor {
 					logger.debug("Detected " + statuss.length + " ready files.");
 					// TODO
 					// load cached bucket by id and see if it is enabled
-				}
-			}
+					String fullName = "TODO";
+					
+					IManagementCrudService<DataBucketBean> bucketStatusStore = _management_db.getDataBucketStore();
+					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", fullName);
+					bucketStatusStore.getObjectBySpec(query_comp_full_name).thenAccept(odb -> {
+						 if (odb.isPresent()) {
+							
+							boolean containsEnrichment = odb.get().batch_enrichment_configs().stream().map(EnrichmentControlMetadataBean::enabled).reduce(false, (a ,b)-> a ||  b);
+							//send self a stop message
+							if(!containsEnrichment){
+								stopActor();
+							}else{
+								// TODO enrichment work on bucket
+							}
+						} else { 
+							stopActor();
+						}
+							
+						});
+					} // status length					
+					} 
+						
 		} catch (Exception e) {
 			logger.error("checkReady caught Exception:", e);
 		}
 
 	}
-
 }
+
+/*	protected Optional<DataBucketBean> loadBucket(String bucketId, String fullName, String bucketPathStr) {
+
+		Optional<DataBucketBean> odb  bucketStatusStore.getObjectBySpec(query_comp_full_name).thenComposeAsync(bucketBean -> {
+			return null;   }).thenAccept(action);
+                                        
+*/

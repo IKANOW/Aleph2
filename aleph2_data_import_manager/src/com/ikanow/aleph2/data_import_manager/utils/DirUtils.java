@@ -16,6 +16,8 @@
 package com.ikanow.aleph2.data_import_manager.utils;
 
 
+import java.util.List;
+
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -71,6 +73,35 @@ public class DirUtils {
 			}
 		}
 		
+	}
+
+	public static void findAllSubdirectories(List<Path> allPaths, FileContext fileContext, Path start, String subDirectoryName,boolean includeMatched) {		
+		try {
+			logger.debug("findAllSubdirectories :"+start.toString());
+			FileStatus[] statuss = fileContext.util().listStatus(start);
+			for (int i = 0; i < statuss.length; i++) {
+				FileStatus dir = statuss[i];
+				logger.debug("FileStatus:" + statuss[i].getPath().toString());
+				if(dir.isDirectory()){
+					if(dir.getPath().getName().contains(subDirectoryName)){
+						logger.debug("findOneSubdirectory match:"+dir.getPath().getName());
+						if(includeMatched){
+							allPaths.add(dir.getPath());
+						}else{
+							allPaths.add(dir.getPath().getParent());
+						}
+					}else{
+						findAllSubdirectories(allPaths, fileContext, dir.getPath(),  subDirectoryName,includeMatched);
+						/*if(paths!=null){
+							allPaths.addAll(paths);							
+						}*/
+					}
+				}
+			}
+
+		} catch (Exception e) {
+			logger.error("findAllSubdirectories Caught Exception", e);
+		}		
 	}
 
 }
