@@ -738,7 +738,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	private CompletableFuture<Collection<BasicMessageBean>> validateOtherBucketsInPathChain(final DataBucketBean bucket) {
 		final MethodNamingHelper<DataBucketBean> helper = BeanTemplateUtils.from(DataBucketBean.class);
-		final String bucket_full_name = normalize(bucket.full_name());
+		final String bucket_full_name = normalizeBucketPath(bucket.full_name(), true);
 
 		return this._underlying_data_bucket_db.getObjectsBySpec(getPathQuery(bucket_full_name), 
 				Arrays.asList(helper.field(DataBucketBean::full_name), helper.field(DataBucketBean::access_rights)), true)
@@ -746,7 +746,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					return StreamSupport.stream(cursor.spliterator(), false)
 						.filter(b -> (null == b.full_name()) || (null == b.access_rights()))
 						.<BasicMessageBean>map(b -> {
-							final String norm_name = normalize(b.full_name());							
+							final String norm_name = normalizeBucketPath(b.full_name(), true);							
 							if (norm_name.startsWith(bucket_full_name)) {
 								//TODO (ALEPH-19) call out other function, create BasicMessageBean error if not
 								return null;
@@ -766,13 +766,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	/** Ensures that the bucket.full_name starts and ends with /s
 	 * @param bucket_full_name
+	 * @param ending_with_separator - for path operations we want to treat the bucket as ending with /, for the DB it should be /path/.../to ie not ending with / 
 	 * @return
 	 */
-	protected static String normalize(final String bucket_full_name) {
-		final String full_name_tmp = bucket_full_name.endsWith("/") ? bucket_full_name : (bucket_full_name + "/");
-		final String full_name = full_name_tmp.startsWith("/") ? full_name_tmp : ("/" + full_name_tmp);
-		return full_name;
+	public static String normalizeBucketPath(final String bucket_full_name, boolean ending_with_separator) {
+		return Optional.of(bucket_full_name)
+					.map(b -> {
+						if (ending_with_separator) return b.endsWith("/") ? b : (b + "/");
+						else return b.endsWith("/") ? b.substring(0, b.length() - 1) : b;
+					})
+					.map(b -> b.startsWith("/") ? b : ("/" + b))
+					.get();
 	}
+	
 	
 	/** Creates the somewhat complex query that finds all buckets before or after this one on the path
 	 * @param normalized_bucket_full_name
