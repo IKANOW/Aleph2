@@ -19,8 +19,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Bean controlling an enrichment configuration
  * @author acp
@@ -31,9 +29,9 @@ public class EnrichmentControlMetadataBean {
 	
 	/** User constructor
 	 */
-	public EnrichmentControlMetadataBean(final @NonNull String name,
-			final @Nullable List<String> dependencies, @NonNull Boolean enabled,
-			final @Nullable List<String> library_ids_or_names, @Nullable Map<String, Object> config) {
+	public EnrichmentControlMetadataBean(final String name,
+			final List<String> dependencies, Boolean enabled,
+			final List<String> library_ids_or_names, Map<String, Object> config) {
 		super();
 		this.name = name;
 		this.dependencies = dependencies;

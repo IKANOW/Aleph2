@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.Collections;
 import java.util.List;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.AbstractModule;
 
@@ -36,7 +35,7 @@ public interface IExtraDependencyLoader {
 	 *   
 	 * @return a possibly empty list of modules
 	 */
-	static @NonNull List<AbstractModule> getExtraDependencyModules() { return Collections.emptyList(); }
+	static List<AbstractModule> getExtraDependencyModules() { return Collections.emptyList(); }
 	
 	/** This method is unusued, it simply exists to remind developers that they need to create a function called
 	 * {@link #getExtraDependencyModules()}, with the same method (practically "overriding" it) in their implementing class for this service.

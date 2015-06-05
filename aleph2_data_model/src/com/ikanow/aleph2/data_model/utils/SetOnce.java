@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** An object container that you can only set once
  *  For cases when you want to make something final but for whatever reason it can't get set
@@ -35,7 +34,7 @@ public class SetOnce<T> {
 	/** Create an initialized SetOnce (not sure why you'd ever want to do this?)
 	 * @param t - the value to set
 	 */
-	public SetOnce(final @NonNull T t) { _t = t; }
+	public SetOnce(final T t) { _t = t; }
 
 	/** Sets the parameter - if it's already set
 	 * @param t - the value to set

@@ -20,8 +20,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import scala.Tuple2;
 
@@ -38,14 +36,14 @@ public class AnalyticThreadStatusBean {
 	/** User constructor
 	 */
 	public AnalyticThreadStatusBean(
-			final @NonNull String id,
-			final @NonNull Boolean suspended,
-			final @Nullable Date quarantined_until,
-			final @NonNull Long num_objects,
-			final @Nullable List<String> node_affinity,
-			final @Nullable Map<String, BasicMessageBean> last_status_messages,
-			final @Nullable Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
-			final @Nullable Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages) {
+			final String id,
+			final Boolean suspended,
+			final Date quarantined_until,
+			final Long num_objects,
+			final List<String> node_affinity,
+			final Map<String, BasicMessageBean> last_status_messages,
+			final Map<Tuple2<String, String>, BasicMessageBean> last_storage_status_messages,
+			final Multimap<Tuple2<String, String>, BasicMessageBean> analytics_log_messages) {
 		super();
 		_id = id;
 		this.suspended = suspended;

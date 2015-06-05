@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -42,11 +41,10 @@ public class JarCacheUtils {
 	 * @param fs
 	 * @return either a basic message bean containing an error, or the fully qualified path of the cached JAR
 	 */
-	@NonNull
 	public static <M> CompletableFuture<Either<BasicMessageBean, String>> getCachedJar(
-			final @NonNull String local_cached_jar_dir,
-			final @NonNull SharedLibraryBean library_bean, final @NonNull IStorageService fs,
-			final @NonNull String handler_for_errors, final @NonNull M msg_for_errors)
+			final String local_cached_jar_dir,
+			final SharedLibraryBean library_bean, final IStorageService fs,
+			final String handler_for_errors, final M msg_for_errors)
 	{		
 		try {
 			final FileContext dfs = fs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
@@ -88,7 +86,6 @@ public class JarCacheUtils {
 	 * @param library_bean the library bean to cache
 	 * @return the cache name
 	 */
-	@NonNull
 	private static String buildCachedJarName(SharedLibraryBean library_bean) {
 		return library_bean._id() + ".cache.jar";
 	}

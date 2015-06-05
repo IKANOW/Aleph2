@@ -19,7 +19,6 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple3;
 
@@ -36,12 +35,12 @@ public interface IEnrichmentBatchModule {
 	 * @param bucket - the bucket for which this enrichment is taking place
 	 * @param final_stage - this is true if this is the final step before the object is stored
 	 */
-	void onStageInitialize(final @NonNull IEnrichmentModuleContext context, final  @NonNull DataBucketBean bucket, final boolean final_stage);
+	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final boolean final_stage);
 	
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a list of (id, object, lazy binary stream) for processing 
 	 */
-	void onObjectBatch(final @NonNull List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
+	void onObjectBatch(final List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
 
 	/** Called when a stage is complete - enables tidying up and similar
 	 */

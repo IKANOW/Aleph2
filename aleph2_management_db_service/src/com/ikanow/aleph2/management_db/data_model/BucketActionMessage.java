@@ -18,7 +18,6 @@ package com.ikanow.aleph2.management_db.data_model;
 import java.util.Collections;
 import java.util.Set;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorRef;
 
@@ -28,14 +27,14 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
  * @author acp
  */
 public class BucketActionMessage {
-	private BucketActionMessage(final @NonNull DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
-	private BucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) { 
+	private BucketActionMessage(final DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
+	private BucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) { 
 		this.bucket = bucket; 		
 		this.handling_clients = handling_clients;
 	}
-	@NonNull public Set<String> handling_clients() { return handling_clients; }
+	public Set<String> handling_clients() { return handling_clients; }
 	private final Set<String> handling_clients;
-	@NonNull public DataBucketBean bucket() { return bucket; };
+	public DataBucketBean bucket() { return bucket; };
 	private final DataBucketBean bucket;
 	
 	
@@ -49,13 +48,11 @@ public class BucketActionMessage {
 		 * @param sender - the sender of the message
 		 * @param message - the message to be wrapped
 		 */
-		public BucketActionEventBusWrapper(final @NonNull ActorRef sender, final @NonNull BucketActionMessage message) {
+		public BucketActionEventBusWrapper(final ActorRef sender, final BucketActionMessage message) {
 			this.sender = sender;
 			this.message = message;
 		}	
-		@NonNull
 		public ActorRef sender() { return sender; };
-		@NonNull
 		public BucketActionMessage message() { return message; };
 		
 		protected ActorRef sender;
@@ -70,7 +67,7 @@ public class BucketActionMessage {
 		/** User c'tor for creating a message to see which nodes can handle the given bucket
 		 * @param bucket - the bucket with an outstanding operation to apply
 		 */
-		public BucketActionOfferMessage(final @NonNull DataBucketBean bucket) {
+		public BucketActionOfferMessage(final DataBucketBean bucket) {
 			super(bucket);
 		}
 	}	
@@ -84,7 +81,7 @@ public class BucketActionMessage {
 		 * @param bucket - the bucket to create
 		 * @param is_suspended - whether the initial state is suspended
 		 */
-		public NewBucketActionMessage(final @NonNull DataBucketBean bucket, final boolean is_suspended) {
+		public NewBucketActionMessage(final DataBucketBean bucket, final boolean is_suspended) {
 			super(bucket);
 			this.is_suspended = is_suspended;
 		}
@@ -102,9 +99,9 @@ public class BucketActionMessage {
 		 * @param old_bucket - the old bucket
 		 * @param handling_clients the nodes handling this bucket
 		 */
-		public UpdateBucketActionMessage(final @NonNull DataBucketBean new_bucket,  final boolean is_enabled,
-											final @NonNull DataBucketBean old_bucket, 
-												final @NonNull Set<String> handling_clients)
+		public UpdateBucketActionMessage(final DataBucketBean new_bucket,  final boolean is_enabled,
+											final DataBucketBean old_bucket, 
+												final Set<String> handling_clients)
 		{
 			super(new_bucket, handling_clients);
 			this.old_bucket = old_bucket;
@@ -126,8 +123,8 @@ public class BucketActionMessage {
 		 * @param is_suspended - the suspension state
 		 * @param handling_clients - the nodes handling this bucket
 		 */
-		public UpdateBucketStateActionMessage(final @NonNull DataBucketBean bucket, 
-				final boolean is_suspended, final @NonNull Set<String> handling_clients)
+		public UpdateBucketStateActionMessage(final DataBucketBean bucket, 
+				final boolean is_suspended, final Set<String> handling_clients)
 		{
 			super(bucket, handling_clients);
 			this.is_suspended = is_suspended;
@@ -145,7 +142,7 @@ public class BucketActionMessage {
 		 * @param bucket - the bucket to delete
 		 * @param handling_clients - the nodes handling this bucket
 		 */
-		public DeleteBucketActionMessage(final @NonNull DataBucketBean bucket, final @NonNull Set<String> handling_clients) {
+		public DeleteBucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) {
 			super(bucket, handling_clients);
 		}
 	}

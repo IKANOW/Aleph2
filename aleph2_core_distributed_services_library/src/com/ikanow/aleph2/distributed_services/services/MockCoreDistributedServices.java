@@ -20,7 +20,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorSystem;
 
@@ -53,7 +52,6 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
-	@NonNull
 	public CuratorFramework getCuratorFramework() {
 		return _curator_framework;
 	}
@@ -62,7 +60,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
 	 */
 	@Override
-	public @NonNull ActorSystem getAkkaSystem() {
+	public ActorSystem getAkkaSystem() {
 		return _akka_system;
 	}
 }

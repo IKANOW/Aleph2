@@ -28,7 +28,6 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
@@ -82,7 +81,6 @@ public class ModuleUtils {
 	 *  INTENDED TO BE CALLED FROM guice_submodule.configure() (or later of course, though you should be using injected beans by then)
 	 * @return the user config (or whatever is on the classpath as a fallback)
 	 */
-	@NonNull
 	public static Config getStaticConfig() {
 		return Optional.ofNullable(saved_config).orElse(ConfigFactory.load());
 	}
@@ -96,7 +94,7 @@ public class ModuleUtils {
 	 * @param config
 	 * @throws Exception 
 	 */
-	public static void loadModulesFromConfig(@NonNull Config config) throws Exception {
+	public static void loadModulesFromConfig(Config config) throws Exception {
 		initialize(config);		
 	}
 	
@@ -117,7 +115,7 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
-			@NonNull Config config, Injector parent_injector) throws Exception {				
+			Config config, Injector parent_injector) throws Exception {				
 		Map<Key, Injector> injectors = new HashMap<Key, Injector>();
 		List<ConfigDataServiceEntry> serviceProperties = PropertiesUtils.getDataServiceProperties(config, SERVICES_PROPERTY);
 		List<Exception> exceptions = new ArrayList<Exception>();
@@ -168,7 +166,7 @@ public class ModuleUtils {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("rawtypes")
-	private static Map<Key, Injector> bindServiceEntry(@NonNull ConfigDataServiceEntry entry, @NonNull Injector parent_injector) throws Exception {
+	private static Map<Key, Injector> bindServiceEntry(ConfigDataServiceEntry entry, Injector parent_injector) throws Exception {
 		Map<Key, Injector> injectorMap = new HashMap<Key, Injector>();
 		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));
 		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault);
@@ -262,7 +260,7 @@ public class ModuleUtils {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static Key getKey(@NonNull Class serviceClazz, @NonNull Optional<String> serviceName) {		
+	private static Key getKey(Class serviceClazz, Optional<String> serviceName) {		
 		if ( serviceName.isPresent() )
 			return Key.get(serviceClazz, Names.named(serviceName.get()));
 		else
@@ -279,7 +277,7 @@ public class ModuleUtils {
 	 * @return
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static <I> I getService(@NonNull Class<I> serviceClazz, @NonNull Optional<String> serviceName) {
+	public static <I> I getService(Class<I> serviceClazz, Optional<String> serviceName) {
 		if ( serviceInjectors == null ) {
 			try {
 				loadModulesFromConfig(ConfigFactory.load());
@@ -296,7 +294,7 @@ public class ModuleUtils {
 			return null;
 	}
 	
-	private static void initialize(@NonNull Config config) throws Exception {
+	private static void initialize(Config config) throws Exception {
 		saved_config = config;
 		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
 		synchronized (ModuleUtils.class) {
@@ -320,7 +318,7 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Injector createInjector(@NonNull List<Module> modules, @NonNull Optional<Config> config) throws Exception {		
+	public static Injector createInjector(List<Module> modules, Optional<Config> config) throws Exception {		
 		if ( parent_injector == null && !config.isPresent() )
 			config = Optional.of(ConfigFactory.load());
 		if ( config.isPresent() )
@@ -451,7 +449,7 @@ public class ModuleUtils {
 		private Optional<String> annotationName;
 		
 		@SuppressWarnings("rawtypes")
-		public ServiceBinderModule(@NonNull Class serviceClazz, Optional<Class> interfaceClazz, Optional<String> annotationName) {
+		public ServiceBinderModule(Class serviceClazz, Optional<Class> interfaceClazz, Optional<String> annotationName) {
 			this.serviceClass = serviceClazz;
 			this.interfaceClazz = interfaceClazz;
 			this.annotationName = annotationName;

@@ -17,7 +17,6 @@ package com.ikanow.aleph2.management_db.data_model;
 
 import java.util.Date;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,8 +37,8 @@ public class BucketActionRetryMessage {
 	 * @param message - the message that failed
 	 */
 	public <T> BucketActionRetryMessage(
-			final @NonNull String source,
-			final @NonNull T message
+			final String source,
+			final T message
 			)
 	{
 		inserted = new Date();

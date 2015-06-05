@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 import java.util.Collection;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -27,23 +26,20 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 public class SampleSearchIndexService implements ISearchIndexService {
 
 	@Override
-	public <O> @NonNull ICrudService<O> getCrudService(@NonNull Class<O> clazz,
-			@NonNull DataBucketBean bucket) {
-		// TODO Auto-generated method stub
+	public <O> ICrudService<O> getCrudService(Class<O> clazz,
+			DataBucketBean bucket) {
 		return null;
 	}
 
 	@Override
-	public <O> @NonNull ICrudService<O> getCrudService(@NonNull Class<O> clazz,
-			@NonNull Collection<DataBucketBean> buckets) {
-		// TODO Auto-generated method stub
+	public <O> ICrudService<O> getCrudService(Class<O> clazz,
+			Collection<DataBucketBean> buckets) {
 		return null;
 	}
 
 	@Override
-	public <T> @NonNull T getUnderlyingPlatformDriver(
-			@NonNull Class<T> driver_class, Optional<String> driver_options) {
-		// TODO Auto-generated method stub
+	public <T> T getUnderlyingPlatformDriver(
+			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}
 

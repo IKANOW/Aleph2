@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
 
@@ -43,7 +42,7 @@ public interface ISecurityService {
 	 * @param operation The operation this identity wants to perform, usually one of CRUD
 	 * @return
 	 */
-	public boolean hasPermission(@NonNull Identity identity, @NonNull Class<?> resourceClass, String resourceIdentifier, @NonNull String operation);
+	public boolean hasPermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
 
 	/**
 	 * An alternative permission that allows any string name for a resourceName, this is not recommended as two
@@ -56,7 +55,7 @@ public interface ISecurityService {
 	 * @param operation The operation this identity wants to perform, usually one of CRUD
 	 * @return
 	 */
-	public boolean hasPermission(@NonNull Identity identity, @NonNull String resourceName, String resourceIdentifier, @NonNull String operation);
+	public boolean hasPermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
 	
 	/**
 	 * Returns back an identity given the token, for example if your security service is
@@ -69,7 +68,7 @@ public interface ISecurityService {
 	 * @return
 	 * @throws Exception
 	 */
-	public Identity getIdentity(@NonNull Map<String, Object> token) throws Exception;
+	public Identity getIdentity(Map<String, Object> token) throws Exception;
 
 	/**
 	 * Methods for adding permission rules with resource class
@@ -79,7 +78,7 @@ public interface ISecurityService {
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 * @param operation The operation this identity wants to perform, usually one of CRUD
 	 */
-	public void grantPermission(@NonNull Identity identity, @NonNull Class<?> resourceClass, String resourceIdentifier, @NonNull String operation);
+	public void grantPermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
 	
 	/**
 	 * Method for adding permission rules with arbitrary resource
@@ -88,7 +87,7 @@ public interface ISecurityService {
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 * @param operation
 	 */
-	public void grantPermission(@NonNull Identity identity, @NonNull String resourceName, String resourceIdentifier, @NonNull String operation);
+	public void grantPermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
 	
 	/**
 	 * Methods for removing permission rules with resource class
@@ -98,7 +97,7 @@ public interface ISecurityService {
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 * @param operation The operation this identity wants to perform, usually one of CRUD
 	 */
-	public void revokePermission(@NonNull Identity identity, @NonNull Class<?> resourceClass, String resourceIdentifier, @NonNull String operation);
+	public void revokePermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
 	
 	/**
 	 * Methods for removing permission rules with arbitrary resource
@@ -108,7 +107,7 @@ public interface ISecurityService {
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 * @param operation The operation this identity wants to perform, usually one of CRUD
 	 */
-	public void revokePermission(@NonNull Identity identity, @NonNull String resourceName, String resourceIdentifier, @NonNull String operation);
+	public void revokePermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
 	
 	/**
 	 * Utility function to remove all permissions from a resource class
@@ -116,7 +115,7 @@ public interface ISecurityService {
 	 * @param resourceClass Any object that has permission rules associated with it
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 */
-	public void clearPermission(@NonNull Class<?> resourceClass, String resourceIdentifier);
+	public void clearPermission(Class<?> resourceClass, String resourceIdentifier);
 	
 	/**
 	 * Utility function to remove all permissions from a resource
@@ -124,5 +123,5 @@ public interface ISecurityService {
 	 * @param resourceName The name of any object that has permission rules associated with it
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 */
-	public void clearPermission(@NonNull String resourceName, String resourceIdentifier);
+	public void clearPermission(String resourceName, String resourceIdentifier);
 }

@@ -53,9 +53,7 @@ public class DefaultModule  {
 					// second try
 					inStream = new FileInputStream(propertiesFileName);
 				}
-				if (inStream != null) {
-					properties.load(inStream);						
-				}
+				properties.load(inStream);						
 
 			} catch (Throwable t) {
 				logger.error("Caught exception loading properties:", t);

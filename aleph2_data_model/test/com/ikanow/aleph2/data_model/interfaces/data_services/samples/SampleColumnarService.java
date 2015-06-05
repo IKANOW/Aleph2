@@ -17,16 +17,14 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 
 public class SampleColumnarService implements IColumnarService {
 
 	@Override
-	public <T> @NonNull T getUnderlyingPlatformDriver(
-			@NonNull Class<T> driver_class, Optional<String> driver_options) {
-		// TODO Auto-generated method stub
+	public <T> T getUnderlyingPlatformDriver(
+			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}
 

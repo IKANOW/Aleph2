@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
@@ -39,7 +38,7 @@ public class ContextUtils {
 	 * @throws InstantiationException 
 	 * @throws ClassNotFoundException 
 	 */
-	public static IAccessContext getAccessContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {		
+	public static IAccessContext getAccessContext(final String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {		
 		String[] clazz_and_config = signature.split(":", 2);
 		@SuppressWarnings("unchecked")
 		Class<IAccessContext> access_clazz = (Class<IAccessContext>) Class.forName(clazz_and_config[0]);
@@ -57,7 +56,7 @@ public class ContextUtils {
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 */
-	public static @NonNull IHarvestContext getHarvestContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public static IHarvestContext getHarvestContext(final String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		String[] clazz_and_config = signature.split(":", 2);
 		@SuppressWarnings("unchecked")
 		Class<IHarvestContext> harvest_clazz = (Class<IHarvestContext>) Class.forName(clazz_and_config[0]);
@@ -74,7 +73,7 @@ public class ContextUtils {
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 */
-	public static @NonNull IAnalyticsContext getAnalyticsContext(final @NonNull String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public static IAnalyticsContext getAnalyticsContext(final String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		String[] clazz_and_config = signature.split(":", 2);
 		@SuppressWarnings("unchecked")
 		Class<IAnalyticsContext> analytics_clazz = (Class<IAnalyticsContext>) Class.forName(clazz_and_config[0]);

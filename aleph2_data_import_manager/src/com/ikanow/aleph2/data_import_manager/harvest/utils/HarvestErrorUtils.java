@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_import_manager.harvest.utils;
 
 import java.util.Date;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
@@ -41,8 +40,8 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	 * @param message - the original message that spawned this error
 	 * @return
 	 */
-	public static <M> BasicMessageBean buildErrorMessage(final @NonNull String handler, final @NonNull M message,
-			final @NonNull String error, final @NonNull Object... params)
+	public static <M> BasicMessageBean buildErrorMessage(final String handler, final M message,
+			final String error, final Object... params)
 	{
 		return new BasicMessageBean(
 					new Date(), // date

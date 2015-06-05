@@ -19,7 +19,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
@@ -38,14 +37,13 @@ public class ClassloaderUtils {
 	 * @param secondary_libs - optionally a set of other libraries
 	 * @return an instance of the desired function
 	 */
-	@NonNull
 	public static <R, M> Either<BasicMessageBean, R> getFromCustomClasspath(
-													final @NonNull Class<R> interface_clazz,
-													final @NonNull String implementation_classname,
-													final @NonNull Optional<String> primary_lib, 
-													final @NonNull List<String> secondary_libs,
-													final @NonNull String handler_for_errors,
-													final @NonNull M msg_for_errors
+													final Class<R> interface_clazz,
+													final String implementation_classname,
+													final Optional<String> primary_lib, 
+													final List<String> secondary_libs,
+													final String handler_for_errors,
+													final M msg_for_errors
 													)
 	{
 		try {

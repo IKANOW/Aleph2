@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -99,7 +98,7 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 	}
 
 	@Override
-	public @NonNull IManagementDbService getFilteredDb(
+	public IManagementDbService getFilteredDb(
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) {
 		return null;
@@ -107,7 +106,7 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 
 	@Override
 	public <T> ICrudService<T> getRetryStore(
-			@NonNull Class<T> retry_message_clazz) {
+			Class<T> retry_message_clazz) {
 		return null;
 	}
 

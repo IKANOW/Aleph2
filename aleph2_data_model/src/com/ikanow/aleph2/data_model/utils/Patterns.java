@@ -20,8 +20,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Simple pattern matching utility for Java
  * @author acp
@@ -34,14 +32,12 @@ public class Patterns {
 	 * @param g - the value to act on
 	 * @return an intermediate matcher, should call *either* .andAct() *or* .<R>andReturn() 
 	 */
-	@NonNull
-	public static <G> IntermediateMatcher<G> match(final @NonNull G g) {
+	public static <G> IntermediateMatcher<G> match(final G g) {
 		return new IntermediateMatcher<G>(g);
 	}
 	/** Sets up a (simple) pattern matching chain - can either return a value or perform an action (this version enables you to just do () -> return for the predicates and results, eg just using closures from the local/global scope)
 	 * @return an intermediate matcher, should call *either* .andAct() *or* .<R>andReturn() 
 	 */
-	@NonNull
 	public static IntermediateMatcher<Object> match() {
 		return new IntermediateMatcher<Object>(null);
 	}
@@ -53,20 +49,18 @@ public class Patterns {
 	 */
 	public static class IntermediateMatcher<G> {
 		protected final G _g;
-		protected IntermediateMatcher(final @NonNull G g) { _g = g; }
+		protected IntermediateMatcher(final G g) { _g = g; }
 		
 		/** Sets up a return value - should be used in the following way
 		 * Patterns.match(o).<RETURN_TYPE)andReturn().when(...)
 		 * @return the return matcher
 		 */
-		@NonNull
 		public <R> Matcher<R, G> andReturn() {
 			return new Matcher<R, G>(_g);
 		}
 		/** Sets up a match-then-act clause
 		 * @return the action matcher
 		 */
-		@NonNull
 		public ActionMatcher<G> andAct() {
 			return new ActionMatcher<G>(_g);
 		}
@@ -93,8 +87,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> Matcher<R, G> when(final @NonNull Class<P> clazz, final @NonNull Function<P, R> expression) {
+		public <P> Matcher<R, G> when(final Class<P> clazz, final Function<P, R> expression) {
 			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
 				_r = expression.apply(clazz.cast(_g));
 				_r_set = true;
@@ -106,8 +99,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> Matcher<R, G> when(final @NonNull Class<P> clazz, final @NonNull Supplier<R> expression) {
+		public <P> Matcher<R, G> when(final Class<P> clazz, final Supplier<R> expression) {
 			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
 				_r = expression.get();
 				_r_set = true;
@@ -121,8 +113,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> Matcher<R, G> when(final @NonNull Class<P> clazz, final @NonNull Predicate<P> predicate, final @NonNull Function<P, R> expression) {
+		public <P> Matcher<R, G> when(final Class<P> clazz, final Predicate<P> predicate, final Function<P, R> expression) {
 			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
 				P p = clazz.cast(_g);
 				if (predicate.test(p)) {
@@ -138,8 +129,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> Matcher<R, G> when(final @NonNull Class<P> clazz, final @NonNull Supplier<Boolean> predicate, final @NonNull Supplier<R> expression) {
+		public <P> Matcher<R, G> when(final Class<P> clazz, final Supplier<Boolean> predicate, final Supplier<R> expression) {
 			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
 				if (predicate.get()) {
 					_r = expression.get();
@@ -153,8 +143,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public Matcher<R, G> when(final @NonNull Predicate<G> predicate, final @NonNull Function<G, R> expression) {
+		public Matcher<R, G> when(final Predicate<G> predicate, final Function<G, R> expression) {
 			if (!_r_set && predicate.test(_g)) {
 				_r = expression.apply(_g);
 				_r_set = true;
@@ -166,8 +155,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public Matcher<R, G> when(final @NonNull Supplier<Boolean> predicate, final @NonNull Supplier<R> expression) {
+		public Matcher<R, G> when(final Supplier<Boolean> predicate, final Supplier<R> expression) {
 			if (!_r_set && predicate.get()) {
 				_r = expression.get();
 				_r_set = true;
@@ -182,7 +170,7 @@ public class Patterns {
 		 * @return the return value from the matching clause or this otherwise
 		 */
 		@Nullable
-		public R otherwise(final @NonNull Function<G, R> expression) {
+		public R otherwise(final Function<G, R> expression) {
 			if (_r_set) {
 				return _r;
 			}
@@ -195,7 +183,7 @@ public class Patterns {
 		 * @return the return value from the matching clause or this otherwise
 		 */
 		@Nullable
-		public R otherwise(final @NonNull Supplier<R> expression) {
+		public R otherwise(final Supplier<R> expression) {
 			if (_r_set) {
 				return _r;
 			}
@@ -218,7 +206,6 @@ public class Patterns {
 		/** Allows multiple actions to be performed it multiple when clauses match, otherwise only the first (matches in order)
 		 * @return The matching utility
 		 */
-		@NonNull
 		public ActionMatcher<G> allowMultiple() {
 			_allow_multiple = true;
 			return this;
@@ -231,8 +218,7 @@ public class Patterns {
 		 * @param expression performs some action, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> ActionMatcher<G> when(final @NonNull Class<P> clazz, final @NonNull Consumer<P> expression) {
+		public <P> ActionMatcher<G> when(final Class<P> clazz, final Consumer<P> expression) {
 			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
 				expression.accept(clazz.cast(_g));
 				_r_set = true;
@@ -244,8 +230,7 @@ public class Patterns {
 		 * @param expression performs some action, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> ActionMatcher<G> when(final @NonNull Class<P> clazz, final @NonNull Runnable expression) {
+		public <P> ActionMatcher<G> when(final Class<P> clazz, final Runnable expression) {
 			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
 				expression.run();
 				_r_set = true;
@@ -258,8 +243,7 @@ public class Patterns {
 		 * @param expression performs some action, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> ActionMatcher<G> when(final @NonNull Class<P> clazz, final @NonNull Predicate<P> predicate, final @NonNull Consumer<P> expression) {
+		public <P> ActionMatcher<G> when(final Class<P> clazz, final Predicate<P> predicate, final Consumer<P> expression) {
 			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
 				P p = clazz.cast(_g);
 				if (predicate.test(p)) {
@@ -275,8 +259,7 @@ public class Patterns {
 		 * @param expression performs some action, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public <P> ActionMatcher<G> when(final @NonNull Class<P> clazz, final @NonNull Supplier<Boolean> predicate, final @NonNull Runnable expression) {
+		public <P> ActionMatcher<G> when(final Class<P> clazz, final Supplier<Boolean> predicate, final Runnable expression) {
 			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
 				if (predicate.get()) {
 					expression.run();
@@ -290,8 +273,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public ActionMatcher<G> when(final @NonNull Predicate<G> predicate, final @NonNull Consumer<G> expression) {
+		public ActionMatcher<G> when(final Predicate<G> predicate, final Consumer<G> expression) {
 			if (!_r_set && predicate.test(_g)) {
 				expression.accept(_g);
 				_r_set = true;
@@ -303,8 +285,7 @@ public class Patterns {
 		 * @param expression evaluates to the return value, taking the matching variable as the input 
 		 * @return Matching utility
 		 */
-		@NonNull
-		public ActionMatcher<G> when(final @NonNull Supplier<Boolean> predicate, final @NonNull Runnable expression) {
+		public ActionMatcher<G> when(final Supplier<Boolean> predicate, final Runnable expression) {
 			if (!_r_set && predicate.get()) {
 				expression.run();
 				_r_set = true;
@@ -317,7 +298,7 @@ public class Patterns {
 		/** If none of the when clauses applies, then throws the specified exception  
 		 * @param t the exception to throw
 		 */
-		public void otherwise(final @NonNull Throwable t) throws Throwable {
+		public void otherwise(final Throwable t) throws Throwable {
 			if (!_r_set) {
 				throw t;
 			}
@@ -325,7 +306,7 @@ public class Patterns {
 		/** If none of the when clauses applies, then performs the specified action  
 		 * @param expression the lambda to perform, taking the matching variable as the input
 		 */
-		public void otherwise(final @NonNull Consumer<G> expression) {
+		public void otherwise(final Consumer<G> expression) {
 			if (!_r_set) {
 				expression.accept(_g);
 			}

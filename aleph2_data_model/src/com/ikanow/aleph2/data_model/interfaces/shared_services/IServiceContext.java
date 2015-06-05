@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
@@ -49,7 +48,7 @@ public interface IServiceContext {
 	* @param serviceClazz The class of the resource you want to access e.g. ISecurityService.class
 	* @return the data service requested or null if it does not exist
 	*/
-	public <I> I getService(@NonNull Class<I> serviceClazz, @NonNull Optional<String> serviceName);
+	public <I> I getService(Class<I> serviceClazz, Optional<String> serviceName);
 	
 	/////////////////////////////////////////////////////////////////////
 	

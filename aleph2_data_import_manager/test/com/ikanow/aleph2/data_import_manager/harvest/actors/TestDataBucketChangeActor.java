@@ -35,7 +35,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -129,7 +128,7 @@ public class TestDataBucketChangeActor {
 		}
 	}
 	
-	protected DataBucketBean createBucket(final @Nullable String harvest_tech_id) {
+	protected DataBucketBean createBucket(final String harvest_tech_id) {
 		return BeanTemplateUtils.build(DataBucketBean.class)
 							.with(DataBucketBean::_id, "test1")
 							.with(DataBucketBean::full_name, "/test/path/")

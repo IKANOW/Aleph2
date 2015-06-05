@@ -15,7 +15,6 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.data_model;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** Holds configuration information relating to the Core Distrubuted Services
  * @author acp
@@ -31,7 +30,7 @@ public class DistributedServicesPropertyBean {
 	/** User c'tor
 	 * @param zookeeper_connection
 	 */
-	protected DistributedServicesPropertyBean(final @NonNull String zookeeper_connection) {
+	protected DistributedServicesPropertyBean(final String zookeeper_connection) {
 		this.zookeeper_connection = zookeeper_connection;
 	}
 

@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.data_import.BucketDiffBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -40,7 +39,7 @@ public interface IHarvestTechnologyModule {
 	 * @param bucket - the bucket for which an instance of this module has been created
 	 * @param context - the context for which an instance of this module has been created
 	 */
-	void onInit(final @NonNull IHarvestContext context);
+	void onInit(final IHarvestContext context);
 	
 	/** This function should check the local environment, decide whether the technology module can run on this node
 	 *  (eg is the external software installed? are the environment variables set up correctly etc) and return 
@@ -48,7 +47,7 @@ public interface IHarvestTechnologyModule {
 	 * @param bucket - the bucket to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
 	 * @return true if this node can run this module's functionality
 	 */
-	boolean canRunOnThisNode(final @NonNull DataBucketBean bucket, final @NonNull IHarvestContext context);
+	boolean canRunOnThisNode(final DataBucketBean bucket, final IHarvestContext context);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -59,8 +58,7 @@ public interface IHarvestTechnologyModule {
 	 * @param enabled - whether the bucket is enabled
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onNewSource(final @NonNull DataBucketBean new_bucket, final @NonNull IHarvestContext context, final boolean enabled);
+	CompletableFuture<BasicMessageBean> onNewSource(final DataBucketBean new_bucket, final IHarvestContext context, final boolean enabled);
 	
 	/**
 	 * Handles changes to an existing bucket
@@ -72,8 +70,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onUpdatedSource(final @NonNull DataBucketBean old_bucket, final @NonNull DataBucketBean new_bucket, final boolean is_enabled, final Optional<BucketDiffBean> diff, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onUpdatedSource(final DataBucketBean old_bucket, final DataBucketBean new_bucket, final boolean is_enabled, final Optional<BucketDiffBean> diff, final IHarvestContext context);
 	
 	/**
 	 * Instruction to suspend the bucket processing
@@ -82,8 +79,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onSuspend(final @NonNull DataBucketBean to_suspend, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onSuspend(final DataBucketBean to_suspend, final IHarvestContext context);
 	
 	/**
 	 * Instruction to re-activate a previously suspended bucket
@@ -92,8 +88,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onResume(final @NonNull DataBucketBean to_resume, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onResume(final DataBucketBean to_resume, final IHarvestContext context);
 	
 	/**
 	 * Notification that all data for this bucket is to be purged
@@ -104,8 +99,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onPurge(final @NonNull DataBucketBean to_purge, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onPurge(final DataBucketBean to_purge, final IHarvestContext context);
 	
 	/**
 	 * Notification that this bucket is being deleted.
@@ -117,8 +111,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onDelete(final @NonNull DataBucketBean to_delete, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onDelete(final DataBucketBean to_delete, final IHarvestContext context);
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
@@ -127,8 +120,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onPeriodicPoll(final @NonNull DataBucketBean polled_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onPeriodicPoll(final DataBucketBean polled_bucket, final IHarvestContext context);
 	
 	/**
 	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
@@ -136,8 +128,7 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onHarvestComplete(final @NonNull DataBucketBean completed_bucket, final @NonNull IHarvestContext context);
+	CompletableFuture<BasicMessageBean> onHarvestComplete(final DataBucketBean completed_bucket, final IHarvestContext context);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -148,6 +139,5 @@ public interface IHarvestTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response (only completes when the test is complete)
 	 */
-	@NonNull 
-	CompletableFuture<BasicMessageBean> onTestSource(final @NonNull DataBucketBean test_bucket, final @NonNull ProcessingTestSpecBean test_spec, final @NonNull IHarvestContext context);		
+	CompletableFuture<BasicMessageBean> onTestSource(final DataBucketBean test_bucket, final ProcessingTestSpecBean test_spec, final IHarvestContext context);		
 }

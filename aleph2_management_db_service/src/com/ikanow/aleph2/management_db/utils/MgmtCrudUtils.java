@@ -26,7 +26,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
@@ -55,7 +54,7 @@ public class MgmtCrudUtils {
 	 * @param error
 	 * @return
 	 */
-	public static BasicMessageBean createValidationError(final @NonNull String error) {
+	public static BasicMessageBean createValidationError(final String error) {
 		return new BasicMessageBean(
 				new Date(), // date
 				false, // success
@@ -76,10 +75,10 @@ public class MgmtCrudUtils {
 	 * @return
 	 */
 	static public <T extends BucketActionMessage> CompletableFuture<Collection<BasicMessageBean>> applyRetriableManagementOperation(
-			final @NonNull ManagementDbActorContext actor_context,
-			final @NonNull ICrudService<BucketActionRetryMessage> retry_store,
-			final @NonNull T mgmt_operation,
-			final @NonNull Function<String, T> clone_lambda_with_source
+			final ManagementDbActorContext actor_context,
+			final ICrudService<BucketActionRetryMessage> retry_store,
+			final T mgmt_operation,
+			final Function<String, T> clone_lambda_with_source
 			)
 	{		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
@@ -109,10 +108,10 @@ public class MgmtCrudUtils {
 	 * @param status_store
 	 * @return
 	 */
-	static public CompletableFuture<Collection<BasicMessageBean>> handlePossibleEmptyNodeAffinity(final @NonNull DataBucketBean bucket,
+	static public CompletableFuture<Collection<BasicMessageBean>> handlePossibleEmptyNodeAffinity(final DataBucketBean bucket,
 			final boolean is_suspended,
 			final CompletableFuture<Collection<BasicMessageBean>> return_from_handlers,
-			final @NonNull ICrudService<DataBucketStatusBean> status_store
+			final ICrudService<DataBucketStatusBean> status_store
 			)
 	{
 		return return_from_handlers.thenApply(results -> {
@@ -146,9 +145,9 @@ public class MgmtCrudUtils {
 	 * @param status_store
 	 * @return
 	 */
-	static public CompletableFuture<Boolean> applyNodeAffinity(final @NonNull String bucket_id,
-			final @NonNull ICrudService<DataBucketStatusBean> status_store,
-			final @NonNull CompletableFuture<Set<String>> nodes_future)
+	static public CompletableFuture<Boolean> applyNodeAffinity(final String bucket_id,
+			final ICrudService<DataBucketStatusBean> status_store,
+			final CompletableFuture<Set<String>> nodes_future)
 	{
 		return nodes_future.thenCompose(nodes -> {
 			return status_store.updateObjectById(bucket_id, CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::node_affinity, nodes));
@@ -159,7 +158,7 @@ public class MgmtCrudUtils {
 	 * @param mgmt_results - management future including non-trivial side channel
 	 * @return
 	 */
-	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final @NonNull CompletableFuture<Collection<BasicMessageBean>> mgmt_results) {
+	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final CompletableFuture<Collection<BasicMessageBean>> mgmt_results) {
 		return mgmt_results.thenApply(list -> {
 			return list.stream().filter(msg -> msg.success()).map(msg -> msg.source()).collect(Collectors.toSet());
 		});

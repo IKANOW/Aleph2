@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -58,8 +56,7 @@ public class BeanTemplateUtils {
 	 * @throws JsonMappingException 
 	 * @throws JsonParseException 
 	 */
-	@NonNull
-	static public <T> T from(final @Nullable Config bean_root, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+	static public <T> T from(final Config bean_root, final Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
 		if (null != bean_root) {
 			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 			return object_mapper.readValue(bean_root.root().render(ConfigRenderOptions.concise()), bean_clazz);
@@ -73,8 +70,7 @@ public class BeanTemplateUtils {
 	 * @param bean - the bean to convert to JSON
 	 * @return - the JSON
 	 */
-	@NonNull 
-	static public <T> JsonNode toJson(final @NonNull T bean) {
+	static public <T> JsonNode toJson(final T bean) {
 		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		return object_mapper.valueToTree(bean);		
 	}
@@ -84,8 +80,7 @@ public class BeanTemplateUtils {
 	 * @param bean - the bean to convert to JSON
 	 * @return - the bean template
 	 */
-	@NonNull 
-	static public <T> BeanTemplate<T> from(final @NonNull JsonNode bean_json, final @NonNull Class<T> clazz) {
+	static public <T> BeanTemplate<T> from(final JsonNode bean_json, final Class<T> clazz) {
 		try {
 			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 			return BeanTemplate.of(object_mapper.treeToValue(bean_json, clazz));
@@ -112,7 +107,7 @@ public class BeanTemplateUtils {
 		 * @param getter
 		 * @return
 		 */
-		public <R> R get(final @NonNull Function<T, R> getter) {
+		public <R> R get(final Function<T, R> getter) {
 			return getter.apply(_element);
 		}
 		
@@ -134,8 +129,7 @@ public class BeanTemplateUtils {
 	 * @throws JsonMappingException
 	 * @throws IOException
 	 */
-	@NonNull 
-	static public <T> TemplateHelper<T> build(final @NonNull JsonNode json, final @NonNull Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+	static public <T> TemplateHelper<T> build(final JsonNode json, final Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
 		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		return build(object_mapper.treeToValue(json, bean_clazz));		
 	}	
@@ -145,8 +139,7 @@ public class BeanTemplateUtils {
 	 * @param clazz - the containing class for the fields
 	 * @return a MethodNamingHelper for this class
 	 */
-	@NonNull
-	public static <T> MethodNamingHelper<T> from(final @NonNull Class<T> clazz) {
+	public static <T> MethodNamingHelper<T> from(final Class<T> clazz) {
 		return new MethodNamingHelper<T>(clazz, Optional.empty());
 	}
 	
@@ -156,8 +149,7 @@ public class BeanTemplateUtils {
 	 * @return a MethodNamingHelper for this class
 	 */
 	@SuppressWarnings("unchecked")
-	@NonNull
-	public static <T> MethodNamingHelper<T> from(final @NonNull T a) {
+	public static <T> MethodNamingHelper<T> from(final T a) {
 		return new MethodNamingHelper<T>((Class<T>) a.getClass(), Optional.empty());
 	}
 	
@@ -165,8 +157,7 @@ public class BeanTemplateUtils {
 	 * @param the object to clone
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	@NonNull
-	public static <T> CloningHelper<T> clone(final @NonNull T a) {
+	public static <T> CloningHelper<T> clone(final T a) {
 		try {
 			return new CloningHelper<T>(a);
 		} catch (Exception e) {
@@ -177,8 +168,7 @@ public class BeanTemplateUtils {
 	 * @param a - the object determining the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	@NonNull
-	public static <T> TemplateHelper<T> build(final @NonNull T a) {
+	public static <T> TemplateHelper<T> build(final T a) {
 		try {
 			return new TemplateHelper<T>(a);
 		} catch (Exception e) {
@@ -189,8 +179,7 @@ public class BeanTemplateUtils {
 	 * @param a - the class to use
 	 * @return Clone Helper, finish with done() to return the class
 	 */
-	@NonNull
-	public static <T> TemplateHelper<T> build(final @NonNull Class<T> clazz) {
+	public static <T> TemplateHelper<T> build(final Class<T> clazz) {
 		try {
 			return new TemplateHelper<T>(clazz);
 		} catch (Exception e) {
@@ -209,18 +198,18 @@ public class BeanTemplateUtils {
 		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.lang.String, java.lang.Object)
 		 */
 		@Override
-		public <U> @NonNull TemplateHelper<T> with(@NonNull String fieldName,
-				@NonNull U val) {
-			return (@NonNull TemplateHelper<T>) super.with(fieldName, val);
+		public <U> TemplateHelper<T> with(String fieldName,
+				U val) {
+			return (TemplateHelper<T>) super.with(fieldName, val);
 		}
 
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.util.function.Function, java.lang.Object)
 		 */
 		@Override
-		public <U> @NonNull TemplateHelper<T> with(
-				@NonNull Function<T, ?> getter, @NonNull U val) {
-			return (@NonNull TemplateHelper<T>) super.with(getter, val);
+		public <U> TemplateHelper<T> with(
+				Function<T, ?> getter, U val) {
+			return (TemplateHelper<T>) super.with(getter, val);
 		}
 
 		/** Finishes the cloning process - returning as a template
@@ -250,18 +239,18 @@ public class BeanTemplateUtils {
 		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.lang.String, java.lang.Object)
 		 */
 		@Override
-		public <U> @NonNull CloningHelper<T> with(@NonNull String fieldName,
-				@NonNull U val) {
-			return (@NonNull CloningHelper<T>) super.with(fieldName, val);
+		public <U> CloningHelper<T> with(String fieldName,
+				U val) {
+			return (CloningHelper<T>) super.with(fieldName, val);
 		}
 
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.CommonHelper#with(java.util.function.Function, java.lang.Object)
 		 */
 		@Override
-		public <U> @NonNull CloningHelper<T> with(
-				@NonNull Function<T, ?> getter, @NonNull U val) {
-			return (@NonNull CloningHelper<T>) super.with(getter, val);
+		public <U> CloningHelper<T> with(
+				Function<T, ?> getter, U val) {
+			return (CloningHelper<T>) super.with(getter, val);
 		}
 
 		/** Finishes the cloning process - returning as a template
@@ -274,7 +263,6 @@ public class BeanTemplateUtils {
 		/** Finishes the building/cloning process
 		 * @return the final version of the element
 		 */
-		@NonNull
 		public T done() {
 			return _element;
 		}
@@ -299,8 +287,7 @@ public class BeanTemplateUtils {
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
-		@NonNull
-		public <U> CommonHelper<T> with(final @NonNull String fieldName, final @NonNull U val) {
+		public <U> CommonHelper<T> with(final String fieldName, final U val) {
 			try {
 				Field f = _element.getClass().getDeclaredField(fieldName);
 				f.setAccessible(true);
@@ -317,8 +304,7 @@ public class BeanTemplateUtils {
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
-		@NonNull
-		public <U> CommonHelper<T> with(final @NonNull Function<T, ?> getter, final @NonNull U val) {
+		public <U> CommonHelper<T> with(final Function<T, ?> getter, final U val) {
 			try {
 				if (null == _naming_helper) {
 					_naming_helper = from(_element);
@@ -333,7 +319,7 @@ public class BeanTemplateUtils {
 			return this;
 		}		
 		
-		protected void cloneInitialFields(final @NonNull T to_clone) {
+		protected void cloneInitialFields(final T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); } catch (Exception e) { return null; } })
@@ -341,13 +327,12 @@ public class BeanTemplateUtils {
 				.forEach(t -> { try { t._1().set(_element, t._2()); } catch (Exception e) { } } );
 		}
 		@SuppressWarnings("unchecked")
-		protected CommonHelper(final @NonNull Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
+		protected CommonHelper(final Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
 			final Constructor<T> contructor = (Constructor<T>) element_clazz.getDeclaredConstructor();
 			contructor.setAccessible(true);
 			_element = (T) contructor.newInstance();
 		}
-		@NonNull
-		protected CommonHelper(final @NonNull T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		protected CommonHelper(final T to_clone) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 			@SuppressWarnings("unchecked")
 			final Constructor<T> contructor = (Constructor<T>) to_clone.getClass().getDeclaredConstructor();
 			contructor.setAccessible(true);
@@ -371,7 +356,7 @@ public class BeanTemplateUtils {
 		protected T _recorder;
 		protected Optional<String> _parent_path;
 		@SuppressWarnings("unchecked")
-		protected MethodNamingHelper(final @NonNull Class<T> clazz, final Optional<String> parent_path) {
+		protected MethodNamingHelper(final Class<T> clazz, final Optional<String> parent_path) {
 			Enhancer enhancer = new Enhancer();
 			enhancer.setSuperclass(clazz);
 			enhancer.setCallback(this);
@@ -379,7 +364,6 @@ public class BeanTemplateUtils {
 			_parent_path = parent_path;
 		}
 		@Override
-		@Nullable
 		public Object intercept(final Object object, final Method method, final Object[] args,
 				final MethodProxy proxy) throws Throwable
 		{
@@ -395,8 +379,7 @@ public class BeanTemplateUtils {
 		 * @param getter - the method reference (T::<function>)
 		 * @return
 		 */
-		@NonNull
-		public String field(final @NonNull Function<T, ?> getter) {
+		public String field(final Function<T, ?> getter) {
 			getter.apply(_recorder);
 			return _name;
 		}
@@ -406,8 +389,7 @@ public class BeanTemplateUtils {
 		 * @return a MethodNamingHelper for the nested class
 		 */
 		@SuppressWarnings("unchecked")
-		@NonNull
-		public <U> MethodNamingHelper<U> nested(final @NonNull Function<T, ?> getter, final @NonNull U from) {
+		public <U> MethodNamingHelper<U> nested(final Function<T, ?> getter, final U from) {
 			return (MethodNamingHelper<U>) nested(getter, from.getClass());			
 		}
 		/** Returns a nested fieldname in an object hierarchy
@@ -415,8 +397,7 @@ public class BeanTemplateUtils {
 		 * @param nested_clazz - the class of the nested type
 		 * @return a MethodNamingHelper for the nested class
 		 */
-		@NonNull
-		public <U> MethodNamingHelper<U> nested(final @NonNull Function<T, ?> getter, final @NonNull Class<U> nested_clazz) {
+		public <U> MethodNamingHelper<U> nested(final Function<T, ?> getter, final Class<U> nested_clazz) {
 			String new_parent_path =  _parent_path.orElse("") + "." + field(getter) + ".";
 			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}
@@ -426,8 +407,7 @@ public class BeanTemplateUtils {
 	 * @param configure_me - leave this empty to create a new mapper, or add one to configure an existing mapper
 	 * @return
 	 */
-	@NonNull
-	public static ObjectMapper configureMapper(final @NonNull Optional<ObjectMapper> configure_me) {
+	public static ObjectMapper configureMapper(final Optional<ObjectMapper> configure_me) {
 		final ObjectMapper mapper = configure_me.orElse(new ObjectMapper());
 		mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		

@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.services;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HostInformationUtils;
 
@@ -28,7 +27,6 @@ public class GeneralInformationService {
 	/** Returns the hostname for this host 
 	 * @return
 	 */
-	@NonNull
 	public String getHostname() {
 		return HostInformationUtils.getHostname();
 	}
@@ -36,7 +34,6 @@ public class GeneralInformationService {
 	/** Returns a process UUID assigned once during the lifetime of the process 
 	 * @return
 	 */
-	@NonNull
 	public String getProcessUuid() {
 		return HostInformationUtils.getProcessUuid();
 	}	

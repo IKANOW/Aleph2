@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
@@ -73,9 +72,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	
 	/** User constructor, for wrapping
 	 */
-	public SharedLibraryCrudService(final @NonNull IManagementDbService underlying_management_db, 
-			final @NonNull IStorageService storage_service,
-			final @NonNull ICrudService<SharedLibraryBean> underlying_library_db
+	public SharedLibraryCrudService(final IManagementDbService underlying_management_db, 
+			final IStorageService storage_service,
+			final ICrudService<SharedLibraryBean> underlying_library_db
 			)
 	{
 		_underlying_management_db = underlying_management_db;
@@ -88,8 +87,8 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deregisterOptimizedQuery(java.util.List)
 	 */
 	@Override
-	public @NonNull boolean deregisterOptimizedQuery(
-			@NonNull List<String> ordered_field_list) {
+	public boolean deregisterOptimizedQuery(
+			List<String> ordered_field_list) {
 		return _underlying_library_db.deregisterOptimizedQuery(ordered_field_list);
 	}
 
@@ -97,16 +96,16 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getSearchService()
 	 */
 	@Override
-	public @NonNull Optional<IBasicSearchService<SharedLibraryBean>> getSearchService() {
+	public Optional<IBasicSearchService<SharedLibraryBean>> getSearchService() {
 		return _underlying_library_db.getSearchService();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T> @NonNull T getUnderlyingPlatformDriver(
-			@NonNull Class<T> driver_class, Optional<String> driver_options) {
+	public <T> T getUnderlyingPlatformDriver(
+			Class<T> driver_class, Optional<String> driver_options) {
 		if (driver_class == ICrudService.class) {
-			return (@NonNull T) _underlying_library_db;
+			return (T) _underlying_library_db;
 		}
 		else {
 			throw new RuntimeException("SharedLibraryCrudService.getUnderlyingPlatformDriver not supported");
@@ -114,8 +113,8 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	}
 
 	@Override
-	public @NonNull IManagementCrudService<SharedLibraryBean> getFilteredRepo(
-			@NonNull String authorization_fieldname,
+	public IManagementCrudService<SharedLibraryBean> getFilteredRepo(
+			String authorization_fieldname,
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) {
 		return new SharedLibraryCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
@@ -124,21 +123,21 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Supplier<Object>> storeObject(
-			@NonNull SharedLibraryBean new_object, boolean replace_if_present) {
+	public ManagementFuture<Supplier<Object>> storeObject(
+			SharedLibraryBean new_object, boolean replace_if_present) {
 		//TODO (ALEPH-19): convert this into an update, ie get old version, compare and overwrite
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObject(new_object, replace_if_present));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Supplier<Object>> storeObject(
-			@NonNull SharedLibraryBean new_object) {
+	public ManagementFuture<Supplier<Object>> storeObject(
+			SharedLibraryBean new_object) {
 		return this.storeObject(new_object, false);
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
-			@NonNull List<SharedLibraryBean> new_objects,
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
+			List<SharedLibraryBean> new_objects,
 			boolean continue_on_error) {
 		if (continue_on_error) {
 			throw new RuntimeException("Can't call storeObjects with continue_on_error: true, use update instead");
@@ -147,114 +146,114 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
-			@NonNull List<SharedLibraryBean> new_objects) {
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
+			List<SharedLibraryBean> new_objects) {
 		return this.storeObjects(new_objects, false);
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> optimizeQuery(
-			@NonNull List<String> ordered_field_list) {
+	public ManagementFuture<Boolean> optimizeQuery(
+			List<String> ordered_field_list) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.optimizeQuery(ordered_field_list));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec) {
+	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
+			QueryComponent<SharedLibraryBean> unique_spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec,
-			@NonNull List<String> field_list, boolean include) {
+	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
+			QueryComponent<SharedLibraryBean> unique_spec,
+			List<String> field_list, boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
-			@NonNull Object id) {
+	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
+			Object id) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
-			@NonNull Object id, @NonNull List<String> field_list,
+	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
+			Object id, List<String> field_list,
 			boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id, field_list, include));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> spec) {
+	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
+			QueryComponent<SharedLibraryBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> spec,
-			@NonNull List<String> field_list, boolean include) {
+	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
+			QueryComponent<SharedLibraryBean> spec,
+			List<String> field_list, boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec, field_list, include));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Long> countObjectsBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> spec) {
+	public ManagementFuture<Long> countObjectsBySpec(
+			QueryComponent<SharedLibraryBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.countObjectsBySpec(spec));
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Long> countObjects() {
+	public ManagementFuture<Long> countObjects() {
 		return FutureUtils.createManagementFuture(_underlying_library_db.countObjects());
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> updateObjectById(
-			@NonNull Object id,
-			@NonNull UpdateComponent<SharedLibraryBean> update) {
+	public ManagementFuture<Boolean> updateObjectById(
+			Object id,
+			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
 		return null;
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> updateObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec,
+	public ManagementFuture<Boolean> updateObjectBySpec(
+			QueryComponent<SharedLibraryBean> unique_spec,
 			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<SharedLibraryBean> update) {
+			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
 		return null;
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Long> updateObjectsBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> spec,
+	public ManagementFuture<Long> updateObjectsBySpec(
+			QueryComponent<SharedLibraryBean> spec,
 			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<SharedLibraryBean> update) {
+			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
 		return null;
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Optional<SharedLibraryBean>> updateAndReturnObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec,
+	public ManagementFuture<Optional<SharedLibraryBean>> updateAndReturnObjectBySpec(
+			QueryComponent<SharedLibraryBean> unique_spec,
 			Optional<Boolean> upsert,
-			@NonNull UpdateComponent<SharedLibraryBean> update,
-			Optional<Boolean> before_updated, @NonNull List<String> field_list,
+			UpdateComponent<SharedLibraryBean> update,
+			Optional<Boolean> before_updated, List<String> field_list,
 			boolean include) {
 		// TODO limited in what can change?
 		return null;
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> deleteObjectById(
-			@NonNull Object id) {		
+	public ManagementFuture<Boolean> deleteObjectById(
+			Object id) {		
 		final QueryComponent<SharedLibraryBean> query = CrudUtils.allOf(SharedLibraryBean.class).when(SharedLibraryBean::_id, id);
 		return deleteObjectBySpec(query);
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> deleteObjectBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> unique_spec) {		
+	public ManagementFuture<Boolean> deleteObjectBySpec(
+			QueryComponent<SharedLibraryBean> unique_spec) {		
 		return FutureUtils.createManagementFuture(
 			_underlying_library_db.getObjectBySpec(unique_spec).thenCompose(lib -> {
 				if (lib.isPresent()) {
@@ -277,19 +276,19 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Long> deleteObjectsBySpec(
-			@NonNull QueryComponent<SharedLibraryBean> spec) {
+	public ManagementFuture<Long> deleteObjectsBySpec(
+			QueryComponent<SharedLibraryBean> spec) {
 		// TODO also delete the file
 		return null;
 	}
 
 	@Override
-	public @NonNull ManagementFuture<Boolean> deleteDatastore() {
+	public ManagementFuture<Boolean> deleteDatastore() {
 		throw new RuntimeException("This method is not supported");
 	}
 
 	@Override
-	public @NonNull IManagementCrudService<JsonNode> getRawCrudService() {
+	public IManagementCrudService<JsonNode> getRawCrudService() {
 		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
 	}
 

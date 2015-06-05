@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -43,8 +42,7 @@ public class PropertiesUtils {
 	 * @param key the root key of the sub object
 	 * @return
 	 */
-	@NonNull
-	public static Optional<Config> getSubConfig(final @NonNull Config config, final @NonNull String key) {
+	public static Optional<Config> getSubConfig(final Config config, final String key) {
 		try {
 			return Optional.of(config.getConfig(key));
 		}
@@ -58,8 +56,7 @@ public class PropertiesUtils {
 	 * @param key the root key of the sub object
 	 * @return
 	 */
-	@NonNull
-	public static Optional<ConfigObject> getSubConfigObject(final @NonNull Config config, final @NonNull String key) {
+	public static Optional<ConfigObject> getSubConfigObject(final Config config, final String key) {
 		try {
 			return Optional.of(config.getObject(key));
 		}
@@ -76,7 +73,7 @@ public class PropertiesUtils {
 	 * @param defaultValue
 	 * @return
 	 */
-	private static String getConfigValue(final @NonNull Config config, final @NonNull String key, final @NonNull String defaultValue) {
+	private static String getConfigValue(final Config config, final String key, final String defaultValue) {
 		String value;
 		try {
 			value = config.getString(key);
@@ -94,7 +91,7 @@ public class PropertiesUtils {
 	 * @param defaultValue
 	 * @return
 	 */
-	private static boolean getConfigValue(final @NonNull Config config, final @NonNull String key, final @NonNull boolean defaultValue) {
+	private static boolean getConfigValue(final Config config, final String key, final boolean defaultValue) {
 		boolean value = defaultValue;
 		try {
 			value = config.getBoolean(key);

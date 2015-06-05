@@ -2,7 +2,6 @@ package com.ikanow.aleph2.management_db.services;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -34,7 +33,6 @@ public class ManagementDbActorContext {
 	/** Returns the global service context
 	 * @return the global service context
 	 */
-	@NonNull
 	public IServiceContext getServiceContext() {
 		return _service_context;
 	}
@@ -42,7 +40,6 @@ public class ManagementDbActorContext {
 	/** Returns the global actor system for the core management db service
 	 * @return the actor system
 	 */
-	@NonNull
 	public ActorSystem getActorSystem() {
 		return _distributed_services.getAkkaSystem();
 	}
@@ -64,7 +61,6 @@ public class ManagementDbActorContext {
 	/** Returns the various distributed services present 
 	 * @return the distributed services
 	 */
-	@NonNull
 	public ICoreDistributedServices getDistributedServices() {
 		return _distributed_services;
 	}

@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.utils;
 import java.util.Date;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.eaio.uuid.UUIDGen;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,7 +54,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 2 UUID
 	 */
 	@Override
-	public @NonNull String getTimeBasedUuid() {
+	public String getTimeBasedUuid() {
 		return new com.eaio.uuid.UUID(new Date().getTime(), UUIDGen.getClockSeqAndNode()).toString();
 	}
 
@@ -64,7 +63,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 2 UUID
 	 */
 	@Override
-	public @NonNull String getTimeBasedUuid(final long java_time) {
+	public String getTimeBasedUuid(final long java_time) {
 		return new com.eaio.uuid.UUID(java_time, 0L).toString();
 	}
 
@@ -73,7 +72,7 @@ public class UuidUtils implements IUuidService {
 	 * @return the time in java time
 	 */
 	@Override
-	public @NonNull long getTimeUuid(final @NonNull String uuid) {
+	public long getTimeUuid(final String uuid) {
 		return new com.eaio.uuid.UUID(uuid).getTime();
 	}
 
@@ -81,7 +80,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 1 UUID
 	 */
 	@Override
-	public @NonNull String getRandomUuid() {
+	public String getRandomUuid() {
 		return java.util.UUID.randomUUID().toString();
 	}
 
@@ -90,7 +89,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 3 UUID
 	 */
 	@Override
-	public <T> @NonNull String getContentBasedUuid(final @NonNull T bean) {
+	public <T> String getContentBasedUuid(final T bean) {
 		return getContentBasedUuid(_object_mapper.valueToTree(bean));
 	}
 
@@ -99,7 +98,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 3 UUID
 	 */
 	@Override
-	public <T> @NonNull String getContentBasedUuid(final @NonNull JsonNode json) {
+	public <T> String getContentBasedUuid(final JsonNode json) {
 		return getContentBasedUuid(json.toString().getBytes());
 	}
 
@@ -108,7 +107,7 @@ public class UuidUtils implements IUuidService {
 	 * @return a string representation of the type 3 UUID
 	 */
 	@Override
-	public <T> @NonNull String getContentBasedUuid(final @NonNull byte[] binary) {
+	public <T> String getContentBasedUuid(final byte[] binary) {
 		return java.util.UUID.nameUUIDFromBytes(binary).toString();
 	}
 }

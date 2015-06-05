@@ -23,7 +23,6 @@ import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import akka.actor.ActorSystem;
 
@@ -46,7 +45,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @throws Exception 
 	 */
 	@Inject
-	public CoreDistributedServices(@NonNull DistributedServicesPropertyBean config_bean) throws Exception {
+	public CoreDistributedServices(DistributedServicesPropertyBean config_bean) throws Exception {
 		String connection_string = Optional.ofNullable(config_bean.zookeeper_connection())
 									.orElse(DistributedServicesPropertyBean.__DEFAULT_ZOOKEEPER_CONNECTION);
 		
@@ -60,7 +59,6 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
-	@NonNull
 	public CuratorFramework getCuratorFramework() {
 		return _curator_framework;
 	}
@@ -82,7 +80,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
 	 */
 	@Override
-	public @NonNull ActorSystem getAkkaSystem() {
+	public ActorSystem getAkkaSystem() {
 		return _akka_system;
 	}
 }

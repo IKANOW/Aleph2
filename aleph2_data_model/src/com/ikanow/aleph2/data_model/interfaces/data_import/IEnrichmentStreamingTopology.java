@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -39,8 +38,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @param context The enrichment context passed in by the core
 	 * @return the topology and configuration for this streaming enrichment process
 	 */
-	@NonNull 
-	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final @NonNull DataBucketBean bean, final @NonNull IEnrichmentModuleContext context);
+	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bean, final IEnrichmentModuleContext context);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - For every object submitted to the streaming topology, this function is applied to generate a simpler object more amenable to being passed around
 	 * It is recommended to make the final element inserted be the entire object in string format (see incoming_object_string)
@@ -48,8 +46,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @param incoming_object_string - it will often be the case that one of the tuple elements should be the entire message. If the framework has the object in string form, it will pass it in here to avoid a spurious serialization. If it does not, the client will have to deserialize the object if he wants it in the stream object.
 	 * @return an object representing the simplified object (eg in Storm the keys will be used to declare the fields)
 	 */
-	@NonNull 
-	LinkedHashMap<String, Object> decomposeIncomingObject(final @NonNull JsonNode incoming_object, final Optional<String> incoming_object_string);
+	LinkedHashMap<String, Object> decomposeIncomingObject(final JsonNode incoming_object, final Optional<String> incoming_object_string);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
 	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 
@@ -57,6 +54,5 @@ public interface IEnrichmentStreamingTopology {
 	 * @param outgoing_object - the final object output via either the success or error endpoint
 	 * @return the final JsonNode to store
 	 */
-	@NonNull 
-	JsonNode rebuildObject(final @NonNull LinkedHashMap<String, Object> outgoing_object);
+	JsonNode rebuildObject(final LinkedHashMap<String, Object> outgoing_object);
 }

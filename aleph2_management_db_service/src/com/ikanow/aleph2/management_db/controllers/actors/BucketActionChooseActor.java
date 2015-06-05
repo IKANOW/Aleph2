@@ -27,7 +27,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.PartialFunction;
 import scala.Tuple2;
@@ -96,7 +95,7 @@ public class BucketActionChooseActor extends AbstractActor {
 	
 	/** Should only ever be called by the actor system, not by users
 	 */
-	public BucketActionChooseActor(final @NonNull Optional<FiniteDuration> timeout) {
+	public BucketActionChooseActor(final Optional<FiniteDuration> timeout) {
 		_timeout = timeout.orElse(BucketActionSupervisor.DEFAULT_TIMEOUT); // (Default timeout 5s) 
 		_system_context = ManagementDbActorContext.get();
 	}
@@ -214,7 +213,7 @@ public class BucketActionChooseActor extends AbstractActor {
 		}
 	}
 	
-	protected void broadcastAction(final @NonNull BucketActionMessage message) {
+	protected void broadcastAction(final BucketActionMessage message) {
 		try {
 			_state.original_sender.set(this.sender());
 			_state.original_message.set(message);
@@ -269,7 +268,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			this.pickAndSend();
 		}
 	}
-	protected void sendReplyAndClose(final @NonNull BasicMessageBean reply) {
+	protected void sendReplyAndClose(final BasicMessageBean reply) {
 		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(Arrays.asList(reply), Collections.emptySet()), 
 				this.self());		
 		this.context().stop(this.self());

@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** This bean encapsulates test-specific requests to the harvester
  * @author acp
@@ -28,8 +27,8 @@ public class ProcessingTestSpecBean {
 	 * @param requested_num_objects
 	 * @param max_run_time_secs
 	 */
-	public ProcessingTestSpecBean(final @NonNull Long requested_num_objects,
-			final @NonNull Long max_run_time_secs) {
+	public ProcessingTestSpecBean(final Long requested_num_objects,
+			final Long max_run_time_secs) {
 		this.requested_num_objects = requested_num_objects;
 		this.max_run_time_secs = max_run_time_secs;
 	}

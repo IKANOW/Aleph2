@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_import_manager.services;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -51,7 +50,6 @@ public class DataImportActorContext {
 	/** Returns the global properties bean
 	 * @return the global properties bean
 	 */
-	@NonNull
 	public GlobalPropertiesBean getGlobalProperties() {
 		return _service_context.getGlobalProperties();
 	}
@@ -59,7 +57,6 @@ public class DataImportActorContext {
 	/** Returns a new (non singleton) instance of a harvest context
 	 * @return the new harvest context
 	 */
-	@NonNull
 	public IHarvestContext getNewHarvestContext() {
 		return _injector.getInstance(HarvestContext.class);
 	}
@@ -67,7 +64,6 @@ public class DataImportActorContext {
 	/** Returns the information service providing eg hostname and process information
 	 * @return
 	 */
-	@NonNull
 	public GeneralInformationService getInformationService() {
 		return _information_service;
 	}
@@ -75,7 +71,6 @@ public class DataImportActorContext {
 	/** Returns the global service context
 	 * @return the global service context
 	 */
-	@NonNull
 	public IServiceContext getServiceContext() {
 		return _service_context;
 	}
@@ -83,7 +78,6 @@ public class DataImportActorContext {
 	/** Returns the global actor system for the data import manager
 	 * @return the actor system
 	 */
-	@NonNull
 	public ActorSystem getActorSystem() {
 		return _distributed_services.getAkkaSystem();
 	}
@@ -91,7 +85,6 @@ public class DataImportActorContext {
 	/** Returns the various distributed services present 
 	 * @return the distributed services
 	 */
-	@NonNull
 	public ICoreDistributedServices getDistributedServices() {
 		return _distributed_services;
 	}

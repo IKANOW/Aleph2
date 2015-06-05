@@ -32,7 +32,6 @@ import java.util.stream.Collector;
 
 import java.util.stream.StreamSupport;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 
 
@@ -128,7 +127,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#initializeNewContext(java.lang.String)
 	 */
 	@Override
-	public void initializeNewContext(final @NonNull String signature) {
+	public void initializeNewContext(final String signature) {
 		try {
 			// Inject dependencies
 			
@@ -159,8 +158,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I> @NonNull Optional<I> getService(@NonNull Class<I> service_clazz,
-			@NonNull Optional<String> service_name) {
+	public <I> Optional<I> getService(Class<I> service_clazz,
+			Optional<String> service_name) {
 		return Optional.ofNullable(_service_context.getService(service_clazz, service_name));
 	}
 
@@ -169,7 +168,7 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void sendObjectToStreamingPipeline(
-			@NonNull Optional<DataBucketBean> bucket, @NonNull JsonNode object) {
+			Optional<DataBucketBean> bucket, JsonNode object) {
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
 	}
@@ -179,7 +178,7 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public <T> void sendObjectToStreamingPipeline(
-			@NonNull Optional<DataBucketBean> bucket, @NonNull T object) {
+			Optional<DataBucketBean> bucket, T object) {
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
 	}
@@ -189,8 +188,8 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void sendObjectToStreamingPipeline(
-			@NonNull Optional<DataBucketBean> bucket,
-			@NonNull Map<String, Object> object) {
+			Optional<DataBucketBean> bucket,
+			Map<String, Object> object) {
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
 	}
@@ -199,7 +198,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
 	@Override
-	public @NonNull List<String> getHarvestContextLibraries(final @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
 		// Consists of:
 		// 1) This library ("uber" version - includes core deps and data model)
 		// 2) Libraries that are always needed:
@@ -251,8 +250,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextSignature(java.util.Optional)
 	 */
 	@Override
-	public @NonNull String getHarvestContextSignature(final @NonNull Optional<DataBucketBean> bucket, 
-			final @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services)
+	public String getHarvestContextSignature(final Optional<DataBucketBean> bucket, 
+			final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services)
 	{		
 		if (_state_name == State.IN_TECHNOLOGY) {
 			// Returns a config object containing:
@@ -307,8 +306,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getGlobalHarvestTechnologyObjectStore()
 	 */
 	@Override
-	@NonNull 
-	public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final @NonNull Class<S> clazz, final @NonNull Optional<DataBucketBean> bucket)
+	public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket)
 	{
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
@@ -318,8 +316,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestLibraries(java.util.Optional)
 	 */
 	@Override
-	public @NonNull CompletableFuture<Map<String, String>> getHarvestLibraries(
-			final @NonNull Optional<DataBucketBean> bucket) {
+	public CompletableFuture<Map<String, String>> getHarvestLibraries(
+			final Optional<DataBucketBean> bucket) {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
@@ -366,9 +364,9 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, boolean)
 	 */
 	@Override
-	public <S> @NonNull ICrudService<S> getBucketObjectStore(
-			@NonNull Class<S> clazz, @NonNull Optional<DataBucketBean> bucket,
-			@NonNull Optional<String> sub_collection, boolean auto_apply_prefix)
+	public <S> ICrudService<S> getBucketObjectStore(
+			Class<S> clazz, Optional<DataBucketBean> bucket,
+			Optional<String> sub_collection, boolean auto_apply_prefix)
 	{
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
@@ -378,8 +376,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucketStatus(java.util.Optional)
 	 */
 	@Override
-	public @NonNull CompletableFuture<DataBucketStatusBean> getBucketStatus(
-			final @NonNull Optional<DataBucketBean> bucket) {
+	public CompletableFuture<DataBucketStatusBean> getBucketStatus(
+			final Optional<DataBucketBean> bucket) {
 		return this._core_management_db
 				.getDataBucketStatusStore()
 				.getObjectById(bucket.orElseGet(() -> _mutable_state.bucket.get())._id())
@@ -392,8 +390,8 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void logStatusForBucketOwner(
-			@NonNull Optional<DataBucketBean> bucket,
-			@NonNull BasicMessageBean message, boolean roll_up_duplicates) 
+			Optional<DataBucketBean> bucket,
+			BasicMessageBean message, boolean roll_up_duplicates) 
 	{
 		//TODO (ALEPH-19): Fill this in later
 		throw new RuntimeException("This operation is not currently supported");
@@ -404,8 +402,8 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void logStatusForBucketOwner(
-			@NonNull Optional<DataBucketBean> bucket,
-			@NonNull BasicMessageBean message) {
+			Optional<DataBucketBean> bucket,
+			BasicMessageBean message) {
 		logStatusForBucketOwner(bucket, message, true);		
 	}
 
@@ -413,8 +411,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getTempOutputLocation(java.util.Optional)
 	 */
 	@Override
-	public @NonNull String getTempOutputLocation(
-			@NonNull Optional<DataBucketBean> bucket) {
+	public String getTempOutputLocation(
+			Optional<DataBucketBean> bucket) {
 		return _globals.distributed_root_dir() + "/" + bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name() + "/managed_bucket/import/temp/";
 	}
 
@@ -422,8 +420,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getFinalOutputLocation(java.util.Optional)
 	 */
 	@Override
-	public @NonNull String getFinalOutputLocation(
-			@NonNull Optional<DataBucketBean> bucket) {
+	public String getFinalOutputLocation(
+			Optional<DataBucketBean> bucket) {
 		return _globals.distributed_root_dir() + "/" + bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name() + "/managed_bucket/import/ready/";
 	}
 
@@ -431,7 +429,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#emergencyDisableBucket(java.util.Optional)
 	 */
 	@Override
-	public void emergencyDisableBucket(@NonNull Optional<DataBucketBean> bucket) {
+	public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
 		throw new RuntimeException("This operation is not currently supported");
 	}
@@ -441,8 +439,8 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void emergencyQuarantineBucket(
-			@NonNull Optional<DataBucketBean> bucket,
-			@NonNull String quarantine_duration) {
+			Optional<DataBucketBean> bucket,
+			String quarantine_duration) {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
 		throw new RuntimeException("This operation is not currently supported");
 	}

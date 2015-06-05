@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_analytics;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -35,7 +34,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param thread - the analytic thread to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
 	 * @return true if this node can run this module's functionality
 	 */
-	boolean canRunOnThisNode(final @NonNull AnalyticThreadBean thread);
+	boolean canRunOnThisNode(final AnalyticThreadBean thread);
 	
 	/**
 	 * Handles a new thread being created - note this notification does not mean that the thread should be started
@@ -45,8 +44,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onNewThread(final @NonNull AnalyticThreadBean new_thread, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onNewThread(final AnalyticThreadBean new_thread, final IAnalyticsContext context);
 	
 	/**
 	 * Handles changes to an existing analytic thread - note this notification does not mean that the thread should be started
@@ -57,8 +55,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onUpdatedThread(final @NonNull AnalyticThreadBean old_bucket, final @NonNull AnalyticThreadBean new_bucket, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onUpdatedThread(final AnalyticThreadBean old_bucket, final AnalyticThreadBean new_bucket, final IAnalyticsContext context);
 	
 	/**
 	 * Instruction to start a thread (including re-starting a suspended thread). Should return success==false and code==EAGAIN if already started
@@ -67,8 +64,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onStart(final @NonNull AnalyticThreadBean to_start, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onStart(final AnalyticThreadBean to_start, final IAnalyticsContext context);
 	
 	/**
 	 * Instruction to suspend the analytic thread processing
@@ -77,8 +73,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onSuspend(final @NonNull AnalyticThreadBean to_suspend, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onSuspend(final AnalyticThreadBean to_suspend, final IAnalyticsContext context);
 	
 	/**
 	 * Notification that all data for a bucket associated with this thread is to be purged
@@ -90,8 +85,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onPurge(final @NonNull AnalyticThreadBean related_thread, final @NonNull DataBucketBean bucket_being_purged, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onPurge(final AnalyticThreadBean related_thread, final DataBucketBean bucket_being_purged, final IAnalyticsContext context);
 	
 	/**
 	 * Notification that this analytic thread is being deleted.
@@ -103,8 +97,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onDelete(final @NonNull AnalyticThreadBean to_delete, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onDelete(final AnalyticThreadBean to_delete, final IAnalyticsContext context);
 	
 	/**
 	 * Periodic poll for statistics collection, health checks, etc.
@@ -113,8 +106,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onPeriodicPoll(final @NonNull AnalyticThreadBean polled_thread, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onPeriodicPoll(final AnalyticThreadBean polled_thread, final IAnalyticsContext context);
 	
 	/**
 	 * For batch type harvest technologies (eg file not streaming), this callback is called when a batch is complete
@@ -122,8 +114,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onThreadComplete(final @NonNull AnalyticThreadBean completed_bucket, final @NonNull IAnalyticsContext context);
+	CompletableFuture<BasicMessageBean> onThreadComplete(final AnalyticThreadBean completed_bucket, final IAnalyticsContext context);
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket
@@ -133,6 +124,5 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this harvester
 	 * @return A future for the response (only completes when the test is complete)
 	 */
-	@NonNull
-	CompletableFuture<BasicMessageBean> onTestThread(final @NonNull AnalyticThreadBean test_bucket, final @NonNull ProcessingTestSpecBean test_spec, final @NonNull IAnalyticsContext context);		
+	CompletableFuture<BasicMessageBean> onTestThread(final AnalyticThreadBean test_bucket, final ProcessingTestSpecBean test_spec, final IAnalyticsContext context);		
 }

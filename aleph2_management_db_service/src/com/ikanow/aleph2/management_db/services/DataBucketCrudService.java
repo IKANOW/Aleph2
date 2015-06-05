@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
@@ -124,10 +123,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 	/** User constructor, for wrapping
 	 */
-	public DataBucketCrudService(final @NonNull IManagementDbService underlying_management_db, 
-			final @NonNull IStorageService storage_service,
-			final @NonNull ICrudService<DataBucketBean> underlying_data_bucket_db,
-			final @NonNull ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
+	public DataBucketCrudService(final IManagementDbService underlying_management_db, 
+			final IStorageService storage_service,
+			final ICrudService<DataBucketBean> underlying_data_bucket_db,
+			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
 			)
 	{
 		_underlying_management_db = underlying_management_db;
@@ -141,11 +140,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getFilteredRepo(java.lang.String, java.util.Optional, java.util.Optional)
 	 */
-	@NonNull
 	public IManagementCrudService<DataBucketBean> getFilteredRepo(
-			final @NonNull String authorization_fieldname,
-			final @NonNull Optional<AuthorizationBean> client_auth,
-			final @NonNull Optional<ProjectBean> project_auth) 
+			final String authorization_fieldname,
+			final Optional<AuthorizationBean> client_auth,
+			final Optional<ProjectBean> project_auth) 
 	{
 		return new DataBucketCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_storage_service,
@@ -157,8 +155,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object, boolean)
 	 */
-	@NonNull
-	public ManagementFuture<Supplier<Object>> storeObject(final @NonNull DataBucketBean new_object, final boolean replace_if_present)
+	public ManagementFuture<Supplier<Object>> storeObject(final DataBucketBean new_object, final boolean replace_if_present)
 	{
 		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
 		
@@ -245,83 +242,74 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object)
 	 */
-	@NonNull
-	public ManagementFuture<Supplier<Object>> storeObject(final @NonNull DataBucketBean new_object) {
+	public ManagementFuture<Supplier<Object>> storeObject(final DataBucketBean new_object) {
 		return this.storeObject(new_object, false);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObjects(java.util.List, boolean)
 	 */
-	@NonNull
-	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<DataBucketBean> new_objects, final boolean continue_on_error) {
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<DataBucketBean> new_objects, final boolean continue_on_error) {
 		throw new RuntimeException("This method is not supported, call storeObject on each object separately");
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObjects(java.util.List)
 	 */
-	@NonNull
-	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final @NonNull List<DataBucketBean> new_objects) {
+	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<DataBucketBean> new_objects) {
 		return this.storeObjects(new_objects, false);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#optimizeQuery(java.util.List)
 	 */
-	@NonNull
-	public ManagementFuture<Boolean> optimizeQuery(final @NonNull List<String> ordered_field_list) {
+	public ManagementFuture<Boolean> optimizeQuery(final List<String> ordered_field_list) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.optimizeQuery(ordered_field_list));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deregisterOptimizedQuery(java.util.List)
 	 */
-	public boolean deregisterOptimizedQuery(final @NonNull List<String> ordered_field_list) {
+	public boolean deregisterOptimizedQuery(final List<String> ordered_field_list) {
 		return _underlying_data_bucket_db.deregisterOptimizedQuery(ordered_field_list);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	@NonNull
-	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(final @NonNull QueryComponent<DataBucketBean> unique_spec) {
+	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(final QueryComponent<DataBucketBean> unique_spec) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
 	 */
-	@NonNull
 	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(
-			final @NonNull QueryComponent<DataBucketBean> unique_spec,
-			final @NonNull List<String> field_list, final boolean include) {
+			final QueryComponent<DataBucketBean> unique_spec,
+			final List<String> field_list, final boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectById(java.lang.Object)
 	 */
-	@NonNull
-	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final @NonNull Object id) {
+	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final Object id) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectById(java.lang.Object, java.util.List, boolean)
 	 */
-	@NonNull
-	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final @NonNull Object id,
-			final @NonNull List<String> field_list, final boolean include) {
+	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final Object id,
+			final List<String> field_list, final boolean include) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	@NonNull
 	public ManagementFuture<ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
-			final @NonNull QueryComponent<DataBucketBean> spec)
+			final QueryComponent<DataBucketBean> spec)
 	{
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec));
 	}
@@ -329,9 +317,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
 	 */
-	@NonNull
 	public ManagementFuture<ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
-			final @NonNull QueryComponent<DataBucketBean> spec, final @NonNull List<String> field_list,
+			final QueryComponent<DataBucketBean> spec, final List<String> field_list,
 			final boolean include)
 	{
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec, field_list, include));
@@ -340,15 +327,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	@NonNull
-	public ManagementFuture<Long> countObjectsBySpec(final @NonNull QueryComponent<DataBucketBean> spec) {
+	public ManagementFuture<Long> countObjectsBySpec(final QueryComponent<DataBucketBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjects()
 	 */
-	@NonNull
 	public ManagementFuture<Long> countObjects() {
 		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjects());
 	}
@@ -356,8 +341,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectById(java.lang.Object)
 	 */
-	@NonNull
-	public ManagementFuture<Boolean> deleteObjectById(final @NonNull Object id) {		
+	public ManagementFuture<Boolean> deleteObjectById(final Object id) {		
 		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectById(id);		
 		try {
 			if (result.get().isPresent()) {
@@ -377,8 +361,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	@NonNull
-	public ManagementFuture<Boolean> deleteObjectBySpec(final @NonNull QueryComponent<DataBucketBean> unique_spec) {
+	public ManagementFuture<Boolean> deleteObjectBySpec(final QueryComponent<DataBucketBean> unique_spec) {
 		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectBySpec(unique_spec);
 		try {
 			if (result.get().isPresent()) {
@@ -398,7 +381,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
-	public ManagementFuture<Long> deleteObjectsBySpec(final @NonNull QueryComponent<DataBucketBean> spec) {
+	public ManagementFuture<Long> deleteObjectsBySpec(final QueryComponent<DataBucketBean> spec) {
 		
 		// Need to do these one by one:
 
@@ -418,8 +401,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param to_delete
 	 * @return a management future containing the result 
 	 */
-	@NonNull
-	private ManagementFuture<Boolean> deleteBucket(final @NonNull DataBucketBean to_delete) {
+	private ManagementFuture<Boolean> deleteBucket(final DataBucketBean to_delete) {
 		try {
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
 			deleteFilePath(to_delete, _storage_service);
@@ -477,7 +459,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteDatastore()
 	 */
-	@NonNull
 	public ManagementFuture<Boolean> deleteDatastore() {
 		throw new RuntimeException("This method is not supported");
 	}
@@ -485,7 +466,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawCrudService()
 	 */
-	@NonNull
 	public IManagementCrudService<JsonNode> getRawCrudService() {
 		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
 	}
@@ -493,7 +473,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getSearchService()
 	 */
-	@NonNull
 	public Optional<IBasicSearchService<DataBucketBean>> getSearchService() {
 		return _underlying_data_bucket_db.getSearchService();
 	}
@@ -502,12 +481,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
 	@SuppressWarnings("unchecked")
-	@NonNull
-	public <T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class,
-			final @NonNull Optional<String> driver_options)
+	public <T> T getUnderlyingPlatformDriver(final Class<T> driver_class,
+			final Optional<String> driver_options)
 	{
 		if (driver_class == ICrudService.class) {
-			return (@NonNull T) _underlying_data_bucket_db;
+			return (T) _underlying_data_bucket_db;
 		}
 		else {
 			throw new RuntimeException("DataBucketCrudService.getUnderlyingPlatformDriver not supported");
@@ -518,9 +496,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectById(java.lang.Object, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public @NonNull 
+	public 
 	ManagementFuture<Boolean> updateObjectById(
-			final @NonNull Object id, final @NonNull UpdateComponent<DataBucketBean> update) {
+			final Object id, final UpdateComponent<DataBucketBean> update) {
 		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
@@ -528,10 +506,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public @NonNull ManagementFuture<Boolean> updateObjectBySpec(
-			final @NonNull QueryComponent<DataBucketBean> unique_spec,
-			final @NonNull Optional<Boolean> upsert,
-			final @NonNull UpdateComponent<DataBucketBean> update) {
+	public ManagementFuture<Boolean> updateObjectBySpec(
+			final QueryComponent<DataBucketBean> unique_spec,
+			final Optional<Boolean> upsert,
+			final UpdateComponent<DataBucketBean> update) {
 		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
@@ -539,10 +517,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
 	 */
 	@Override
-	public @NonNull ManagementFuture<Long> updateObjectsBySpec(
-			final @NonNull QueryComponent<DataBucketBean> spec,
-			final @NonNull Optional<Boolean> upsert,
-			final @NonNull UpdateComponent<DataBucketBean> update) {
+	public ManagementFuture<Long> updateObjectsBySpec(
+			final QueryComponent<DataBucketBean> spec,
+			final Optional<Boolean> upsert,
+			final UpdateComponent<DataBucketBean> update) {
 		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
 
@@ -550,11 +528,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateAndReturnObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent, java.util.Optional, java.util.List, boolean)
 	 */
 	@Override
-	public @NonNull ManagementFuture<Optional<DataBucketBean>> updateAndReturnObjectBySpec(
-			final @NonNull QueryComponent<DataBucketBean> unique_spec,
-			final @NonNull Optional<Boolean> upsert,
-			final @NonNull UpdateComponent<DataBucketBean> update,
-			final @NonNull Optional<Boolean> before_updated, @NonNull List<String> field_list,
+	public ManagementFuture<Optional<DataBucketBean>> updateAndReturnObjectBySpec(
+			final QueryComponent<DataBucketBean> unique_spec,
+			final Optional<Boolean> upsert,
+			final UpdateComponent<DataBucketBean> update,
+			final Optional<Boolean> before_updated, List<String> field_list,
 			final boolean include) {
 		throw new RuntimeException("DataBucketCrudService.update* not supported (use storeObject with replace_if_present: true)");
 	}
@@ -569,8 +547,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @throws ExecutionException 
 	 * @throws InterruptedException 
 	 */
-	@NonNull
-	protected Collection<BasicMessageBean> validateBucket(final @NonNull DataBucketBean bucket, final @NonNull Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
+	protected Collection<BasicMessageBean> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
 		
 		// (will live with this being mutable)
 		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
@@ -759,7 +736,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param bucket - the bucket to validate
 	 * @return a future containing validation errors based on the path
 	 */
-	private CompletableFuture<Collection<BasicMessageBean>> validateOtherBucketsInPathChain(final @NonNull DataBucketBean bucket) {
+	private CompletableFuture<Collection<BasicMessageBean>> validateOtherBucketsInPathChain(final DataBucketBean bucket) {
 		final MethodNamingHelper<DataBucketBean> helper = BeanTemplateUtils.from(DataBucketBean.class);
 		final String bucket_full_name = normalize(bucket.full_name());
 
@@ -791,7 +768,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param bucket_full_name
 	 * @return
 	 */
-	protected static String normalize(final @NonNull String bucket_full_name) {
+	protected static String normalize(final String bucket_full_name) {
 		final String full_name_tmp = bucket_full_name.endsWith("/") ? bucket_full_name : (bucket_full_name + "/");
 		final String full_name = full_name_tmp.startsWith("/") ? full_name_tmp : ("/" + full_name_tmp);
 		return full_name;
@@ -801,7 +778,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param normalized_bucket_full_name
 	 * @return the query to use in "validateOtherBucketsInPathChain"
 	 */
-	protected static QueryComponent<DataBucketBean> getPathQuery(final @NonNull String normalized_bucket_full_name) {		
+	protected static QueryComponent<DataBucketBean> getPathQuery(final String normalized_bucket_full_name) {		
 		final Matcher m = Pattern.compile("(/(?:[^/]*/)*)([^/]*/)").matcher(normalized_bucket_full_name);
 		// This must match by construction of full_name above
 		m.matches();
@@ -840,9 +817,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @return the management side channel from the harvesters
 	 */
 	public static CompletableFuture<Collection<BasicMessageBean>> requestNewBucket(
-			final @NonNull DataBucketBean new_object, final boolean is_suspended,
-			final @NonNull ICrudService<DataBucketStatusBean> status_store,
-			final @NonNull ManagementDbActorContext actor_context 
+			final DataBucketBean new_object, final boolean is_suspended,
+			final ICrudService<DataBucketStatusBean> status_store,
+			final ManagementDbActorContext actor_context 
 			)
 	{
 		// OK if we're here then it's time to notify any interested harvesters
@@ -885,11 +862,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @return
 	 */
 	public static CompletableFuture<Collection<BasicMessageBean>> requestUpdatedBucket(
-			final @NonNull DataBucketBean new_object, 
-			final @NonNull DataBucketBean old_version,
-			final @NonNull DataBucketStatusBean status,
-			final @NonNull ManagementDbActorContext actor_context,
-			final @NonNull ICrudService<BucketActionRetryMessage> retry_store
+			final DataBucketBean new_object, 
+			final DataBucketBean old_version,
+			final DataBucketStatusBean status,
+			final ManagementDbActorContext actor_context,
+			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
@@ -904,7 +881,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	public static final String DELETE_TOUCH_FILE = ".DELETED";
 	
-	protected static void deleteFilePath(final @NonNull DataBucketBean to_delete, final @NonNull IStorageService storage_service) throws Exception {
+	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
 		
 		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
@@ -914,7 +891,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		{} //(ie close after creating)
 	}
 	
-	protected static void createFilePaths(final @NonNull DataBucketBean bucket, final @NonNull IStorageService storage_service) throws Exception {
+	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty());
 	
 		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();

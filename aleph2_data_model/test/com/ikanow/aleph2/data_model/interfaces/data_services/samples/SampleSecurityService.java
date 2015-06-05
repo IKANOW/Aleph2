@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
@@ -25,70 +24,56 @@ import com.ikanow.aleph2.data_model.objects.shared.Identity;
 public class SampleSecurityService implements ISecurityService {
 	
 	@Override
-	public boolean hasPermission(@NonNull Identity identity,
-			@NonNull Class<?> resourceClass, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
+	public boolean hasPermission(Identity identity,
+			Class<?> resourceClass, String resourceIdentifier,
+			String operation) {
 		return false;
 	}
 
 	@Override
-	public boolean hasPermission(@NonNull Identity identity,
-			@NonNull String resourceName, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
+	public boolean hasPermission(Identity identity,
+			String resourceName, String resourceIdentifier,
+			String operation) {
 		return false;
 	}
 
 	@Override
-	public Identity getIdentity(@NonNull Map<String, Object> token)
+	public Identity getIdentity(Map<String, Object> token)
 			throws Exception {
 		return null;
 	}
 
 	@Override
-	public void grantPermission(@NonNull Identity identity,
-			@NonNull Class<?> resourceClass, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
-
+	public void grantPermission(Identity identity,
+			Class<?> resourceClass, String resourceIdentifier,
+			String operation) {
 	}
 
 	@Override
-	public void grantPermission(@NonNull Identity identity,
-			@NonNull String resourceName, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
-
+	public void grantPermission(Identity identity,
+			String resourceName, String resourceIdentifier,
+			String operation) {
 	}
 
 	@Override
-	public void revokePermission(@NonNull Identity identity,
-			@NonNull Class<?> resourceClass, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
-
+	public void revokePermission(Identity identity,
+			Class<?> resourceClass, String resourceIdentifier,
+			String operation) {
 	}
 
 	@Override
-	public void revokePermission(@NonNull Identity identity,
-			@NonNull String resourceName, String resourceIdentifier,
-			@NonNull String operation) {
-		// TODO Auto-generated method stub
-
+	public void revokePermission(Identity identity,
+			String resourceName, String resourceIdentifier,
+			String operation) {
 	}
 
 	@Override
-	public void clearPermission(@NonNull Class<?> resourceClass,
+	public void clearPermission(Class<?> resourceClass,
 			String resourceIdentifier) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
-	public void clearPermission(@NonNull String resourceName,
+	public void clearPermission(String resourceName,
 			String resourceIdentifier) {
-		// TODO Auto-generated method stub
-
 	}
 }

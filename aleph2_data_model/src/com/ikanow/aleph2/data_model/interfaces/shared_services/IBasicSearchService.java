@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import scala.Tuple2;
 
@@ -34,7 +33,6 @@ public interface IBasicSearchService<O> {
 	 * @param filter_string - A lucene formatted filter (doesn't affect scoring-based sort order, is sometimes faster)
 	 * @return a future containing the number of matching objects
 	 */
-	@NonNull 
 	CompletableFuture<Long> count(final Optional<String> query_string, final Optional<String> filter_string);
 	
 	/** Performs a simple lucene-type query on the underlying data, where supported
@@ -47,7 +45,6 @@ public interface IBasicSearchService<O> {
 	 * @param facet_fields - A map of field name (supports dot notation) vs max number of terms to bring back as facets	  
 	 * @return a 2-tuple - the first is a collection of matching objects, the second is a map of fields to facet on (value is the long
 	 */
-	@NonNull 
 	CompletableFuture<Tuple2<Iterable<O>, Optional<Map<String, Collection<Tuple2<String, Long>>>>>> 
 		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
 				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields,
@@ -62,7 +59,6 @@ public interface IBasicSearchService<O> {
 	 * @param return_fields - list of fields to return
 	 * @return a a collection of matching objects
 	 */
-	@NonNull 
 	CompletableFuture<Iterable<O>> 
 		search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit,
 				final Optional<Tuple2<String, Integer>> orderBy, final Optional<Integer> skip, final Optional<Collection<String>> return_fields);
@@ -73,7 +69,6 @@ public interface IBasicSearchService<O> {
 	 * @param limit - Optional max number of objects to return (defaults to 100)
 	 * @return a a collection of matching objects
 	 */
-	@NonNull 
 	CompletableFuture<Iterable<O>> search(final Optional<String> query_string, final Optional<String> filter_string, final Optional<Integer> limit);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
@@ -82,6 +77,5 @@ public interface IBasicSearchService<O> {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	@NonNull 
-	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

@@ -19,8 +19,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Very simple status/log message format within Aleph2
  * @author acp
@@ -31,13 +29,13 @@ public class BasicMessageBean {
 	
 	/** User constructor
 	 */
-	public BasicMessageBean(final @NonNull Date date,
-			final @NonNull Boolean success,
-			final @Nullable String source,
-			final @Nullable String command,
-			final @Nullable Integer message_code,
-			final @NonNull String message,
-			final @Nullable Map<String, String> details
+	public BasicMessageBean(final Date date,
+			final Boolean success,
+			final String source,
+			final String command,
+			final Integer message_code,
+			final String message,
+			final Map<String, String> details
 								)
 	{
 		this.date = date;

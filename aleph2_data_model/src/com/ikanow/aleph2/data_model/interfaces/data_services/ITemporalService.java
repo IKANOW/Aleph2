@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface ITemporalService {
 
@@ -27,6 +26,5 @@ public interface ITemporalService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	@NonNull 
-	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

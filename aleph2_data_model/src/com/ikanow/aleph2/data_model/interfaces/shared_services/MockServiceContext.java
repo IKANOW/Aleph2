@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.HashMap;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
@@ -60,8 +59,8 @@ public class MockServiceContext implements IServiceContext {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public <I> I getService(@NonNull Class<I> serviceClazz,
-			@NonNull Optional<String> serviceName) {
+	public <I> I getService(Class<I> serviceClazz,
+			Optional<String> serviceName) {
 		return (I)Optional.ofNullable(_mocks.get(serviceClazz.getName()))
 						.orElse(new HashMap<String, Object>())
 						.get(serviceName.orElse(""));

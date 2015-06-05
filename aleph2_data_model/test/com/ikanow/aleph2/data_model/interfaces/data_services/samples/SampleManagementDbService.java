@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -32,73 +31,63 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 public class SampleManagementDbService implements IManagementDbService {
 
 	@Override
-	public @NonNull IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
-		// TODO Auto-generated method stub
+	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
 		return null;
 	}
 
 	@Override
-	public <T> @NonNull ICrudService<T> getPerLibraryState(
-			@NonNull Class<T> clazz, @NonNull SharedLibraryBean library,
-			@NonNull Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
+	public <T> ICrudService<T> getPerLibraryState(
+			Class<T> clazz, SharedLibraryBean library,
+			Optional<String> sub_collection) {
 		return null;
 	}
 
 	@Override
-	public @NonNull IManagementCrudService<DataBucketBean> getDataBucketStore() {
-		// TODO Auto-generated method stub
+	public IManagementCrudService<DataBucketBean> getDataBucketStore() {
 		return null;
 	}
 
 	@Override
-	public @NonNull IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
-		// TODO Auto-generated method stub
+	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
 		return null;
 	}
 
 	@Override
-	public <T> @NonNull ICrudService<T> getPerBucketState(
-			@NonNull Class<T> clazz, @NonNull DataBucketBean bucket,
-			@NonNull Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
+	public <T> ICrudService<T> getPerBucketState(
+			Class<T> clazz, DataBucketBean bucket,
+			Optional<String> sub_collection) {
 		return null;
 	}
 
 	@Override
-	public @NonNull IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
-		// TODO Auto-generated method stub
+	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
 		return null;
 	}
 
 	@Override
-	public <T> @NonNull ICrudService<T> getPerAnalyticThreadState(
-			@NonNull Class<T> clazz,
-			@NonNull AnalyticThreadBean analytic_thread,
-			@NonNull Optional<String> sub_collection) {
-		// TODO Auto-generated method stub
+	public <T> ICrudService<T> getPerAnalyticThreadState(
+			Class<T> clazz,
+			AnalyticThreadBean analytic_thread,
+			Optional<String> sub_collection) {
 		return null;
 	}
 
 	@Override
-	public <T> @NonNull T getUnderlyingPlatformDriver(
-			@NonNull Class<T> driver_class, Optional<String> driver_options) {
-		// TODO Auto-generated method stub
+	public <T> T getUnderlyingPlatformDriver(
+			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
 	}
 
 	@Override
-	public @NonNull IManagementDbService getFilteredDb(
+	public IManagementDbService getFilteredDb(
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public <T> ICrudService<T> getRetryStore(
-			@NonNull Class<T> retry_message_clazz) {
-		// TODO Auto-generated method stub
+			Class<T> retry_message_clazz) {
 		return null;
 	}
 

@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -50,7 +49,6 @@ public interface IManagementDbService {
 	/** Gets the store of shared JVM JAR libraries
 	 * @return the CRUD service for the shared libraries store
 	 */
-	@NonNull 
 	IManagementCrudService<SharedLibraryBean> getSharedLibraryStore();
 	
 	//TODO (ALEPH-19): shared schemas
@@ -65,8 +63,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per library generic object store
 	 */
-	@NonNull 
-	<T> ICrudService<T> getPerLibraryState(final @NonNull Class<T> clazz, final @NonNull SharedLibraryBean library, final @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerLibraryState(final Class<T> clazz, final SharedLibraryBean library, final Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -77,13 +74,11 @@ public interface IManagementDbService {
 	/** Gets the store of data buckets
 	 * @return  the CRUD service for the bucket store
 	 */
-	@NonNull 
 	IManagementCrudService<DataBucketBean> getDataBucketStore();
 	
 	/** Gets the store of data bucket statuses
 	 * @return  the CRUD service for the bucket status store
 	 */
-	@NonNull 
 	IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
@@ -92,8 +87,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per bucket generic object store
 	 */
-	@NonNull 
-	<T> ICrudService<T> getPerBucketState(final @NonNull Class<T> clazz, final @NonNull DataBucketBean bucket, final @NonNull Optional<String> sub_collection);
+	<T> ICrudService<T> getPerBucketState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
@@ -102,7 +96,6 @@ public interface IManagementDbService {
 	/** Gets the store of analytic threads
 	 * @return the CRUD service for the analytic thread store
 	 */
-	@NonNull 
 	IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore();
 	
 	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
@@ -111,8 +104,7 @@ public interface IManagementDbService {
 	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
-	@NonNull 
-	<T> ICrudService<T> getPerAnalyticThreadState(final @NonNull Class<T> clazz, final @NonNull AnalyticThreadBean analytic_thread, final @NonNull Optional<String> sub_collection);	
+	<T> ICrudService<T> getPerAnalyticThreadState(final Class<T> clazz, final AnalyticThreadBean analytic_thread, final Optional<String> sub_collection);	
 	
 	////////////////////////////////////
 
@@ -124,7 +116,6 @@ public interface IManagementDbService {
 	 * @param project_auth Optional specification of the projects's access rights
 	 * @return The filtered CRUD repo
 	 */
-	@NonNull 
 	IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
 		
 	////////////////////////////////////
@@ -135,7 +126,7 @@ public interface IManagementDbService {
 	 * @param retry_message_clazz - the class of the (internal) bean containing the lost message and some metadata
 	 * @return a CRUD service intended to support
 	 */
-	<T> ICrudService<T> getRetryStore(final @NonNull Class<T> retry_message_clazz);
+	<T> ICrudService<T> getRetryStore(final Class<T> retry_message_clazz);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -143,6 +134,5 @@ public interface IManagementDbService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	@NonNull 
-	<T> T getUnderlyingPlatformDriver(final @NonNull Class<T> driver_class, final Optional<String> driver_options);
+	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

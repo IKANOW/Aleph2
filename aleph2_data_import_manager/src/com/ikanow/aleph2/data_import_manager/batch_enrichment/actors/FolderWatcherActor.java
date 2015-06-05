@@ -21,13 +21,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.data.Stat;
 
 import scala.concurrent.duration.Duration;
 import akka.actor.ActorRef;
@@ -128,7 +125,7 @@ public class FolderWatcherActor extends UntypedActor {
 
 	}
 	
-	protected static String createFullName(@Nonnull String bucketPathStr, @Nonnull String dataPathStr) {
+	protected static String createFullName(String bucketPathStr, String dataPathStr) {
 		String fullName = bucketPathStr;
 		int dataPathPos = bucketPathStr.indexOf(dataPathStr);
 		if(dataPathPos>0 && bucketPathStr.length()> dataPathPos + dataPathStr.length()){
@@ -137,7 +134,7 @@ public class FolderWatcherActor extends UntypedActor {
 		return fullName;
 	}
 
-	protected static String createAgentName(@Nonnull String fullName) {
+	protected static String createAgentName(String fullName) {
 		String agentName = fullName.replace('/', '$').replace('\\', '$')+  UUID.randomUUID().toString();
 		return agentName;
 		

@@ -21,7 +21,6 @@ import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -101,7 +100,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getFilteredDb(java.lang.String, java.util.Optional, java.util.Optional)
 	 */
-	@NonNull 
 	public IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth)
 	{
 		return new CoreManagementDbService(_underlying_management_db, 
@@ -193,7 +191,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public <T> ICrudService<T> getRetryStore(
-			@NonNull Class<T> retry_message_clazz) {
+			Class<T> retry_message_clazz) {
 		return _underlying_management_db.getRetryStore(retry_message_clazz);
 	}
 }

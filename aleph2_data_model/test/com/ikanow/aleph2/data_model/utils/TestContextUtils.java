@@ -25,7 +25,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -119,7 +118,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
 			return null;
 		}
 
@@ -134,8 +133,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		@NonNull 
-		public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final @NonNull Class<S> clazz, final @NonNull Optional<DataBucketBean> bucket)
+		public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket)
 		{
 			//TODO
 			return null;
@@ -155,12 +153,12 @@ public class TestContextUtils {
 
 		@Override
 		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				@NonNull BasicMessageBean message, boolean roll_up_duplicates) {
+				BasicMessageBean message, boolean roll_up_duplicates) {
 		}
 
 		@Override
 		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				@NonNull BasicMessageBean message) {
+				BasicMessageBean message) {
 		}
 
 		@Override
@@ -180,26 +178,26 @@ public class TestContextUtils {
 
 		@Override
 		public void emergencyQuarantineBucket(Optional<DataBucketBean> bucket,
-				@NonNull String quarantineDuration) {
+				String quarantineDuration) {
 			
 		}
 
 		@Override
 		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, @NonNull JsonNode object) {
+				Optional<DataBucketBean> bucket, JsonNode object) {
 			
 		}
 
 		@Override
 		public <T> void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, @NonNull T object) {
+				Optional<DataBucketBean> bucket, T object) {
 			
 		}
 
 		@Override
 		public void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket,
-				@NonNull Map<String, Object> object) {
+				Map<String, Object> object) {
 			
 		}
 
@@ -217,49 +215,49 @@ public class TestContextUtils {
 		String dummySignature = null;
 
 		@Override
-		public <I> Optional<I> getService(@NonNull Class<I> service_clazz,
-				@NonNull Optional<String> service_name) {
+		public <I> Optional<I> getService(Class<I> service_clazz,
+				Optional<String> service_name) {
 			return null;
 		}
 
 		@Override
 		public CompletableFuture<BasicMessageBean> subscribeToBucket(
-				@NonNull DataBucketBean bucket,
-				@NonNull Optional<String> stage,
+				DataBucketBean bucket,
+				Optional<String> stage,
 				Consumer<JsonNode> on_new_object_callback) {
 			return null;
 		}
 
 		@Override
 		public CompletableFuture<BasicMessageBean> subscribeToAnalyticThread(
-				@NonNull AnalyticThreadBean analytic_thread,
-				@NonNull Optional<String> stage,
+				AnalyticThreadBean analytic_thread,
+				Optional<String> stage,
 				Consumer<JsonNode> on_new_object_callback) {
 			return null;
 		}
 
 		@Override
 		public CompletableFuture<Stream<JsonNode>> getObjectStreamFromBucket(
-				@NonNull DataBucketBean bucket, @NonNull Optional<String> stage) {
+				DataBucketBean bucket, Optional<String> stage) {
 			return null;
 		}
 
 		@Override
 		public Stream<JsonNode> getObjectStreamFromAnalyticThread(
-				@NonNull AnalyticThreadBean analytic_thread,
-				@NonNull Optional<String> stage) {
+				AnalyticThreadBean analytic_thread,
+				Optional<String> stage) {
 			return null;
 		}
 
 		@Override
 		public List<String> getAnalyticsContextLibraries(
-				@NonNull Optional<Set<Class<?>>> services) {
+				Optional<Set<Class<?>>> services) {
 			return null;
 		}
 
 		@Override
 		public String getAnalyticsContextSignature(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+				Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}
 
@@ -270,50 +268,50 @@ public class TestContextUtils {
 
 		@Override
 		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+				Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}
 
 		@Override
 		public <S> ICrudService<S> getThreadObjectStore(
-				@NonNull Class<S> clazz,
-				@NonNull Optional<AnalyticThreadBean> analytic_thread,
-				@NonNull Optional<String> sub_collection,
+				Class<S> clazz,
+				Optional<AnalyticThreadBean> analytic_thread,
+				Optional<String> sub_collection,
 				boolean auto_apply_prefix) {
 			return null;
 		}
 
 		@Override
 		public CompletableFuture<AnalyticThreadStatusBean> getThreadStatus(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+				Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}
 
 		@Override
 		public void logStatusForThreadOwner(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread,
-				@NonNull BasicMessageBean message, boolean roll_up_duplicates) {
+				Optional<AnalyticThreadBean> analytic_thread,
+				BasicMessageBean message, boolean roll_up_duplicates) {
 		}
 
 		@Override
 		public void logStatusForThreadOwner(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread,
-				@NonNull BasicMessageBean message) {
+				Optional<AnalyticThreadBean> analytic_thread,
+				BasicMessageBean message) {
 		}
 
 		@Override
 		public void emergencyDisableThread(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread) {
+				Optional<AnalyticThreadBean> analytic_thread) {
 		}
 
 		@Override
 		public void emergencyQuarantineThread(
-				@NonNull Optional<AnalyticThreadBean> analytic_thread,
-				@NonNull String quarantine_duration) {
+				Optional<AnalyticThreadBean> analytic_thread,
+				String quarantine_duration) {
 		}
 
 		@Override
-		public void initializeNewContext(@NonNull String signature) {
+		public void initializeNewContext(String signature) {
 			dummySignature = signature;			
 		}
 	}

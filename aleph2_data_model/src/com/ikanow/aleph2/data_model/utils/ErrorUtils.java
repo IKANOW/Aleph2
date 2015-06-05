@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.google.common.collect.ObjectArrays;
 
@@ -34,8 +33,7 @@ public class ErrorUtils {
 	 * @param vars - the set of substituion variables
 	 * @return - the formatted string
 	 */
-	@NonNull
-	public static String get(final @NonNull String template, final @NonNull Object... vars) {
+	public static String get(final String template, final Object... vars) {
 		return MessageFormat.format(template, vars);		
 	}
 
@@ -45,8 +43,7 @@ public class ErrorUtils {
 	 * @param vars - the set of substituion variables
 	 * @return - the formatted string
 	 */
-	@NonNull
-	public static String get(final @NonNull String template, final Throwable t, final @NonNull Object... vars) {
+	public static String get(final String template, final Throwable t, final Object... vars) {
 		return MessageFormat.format(template, ObjectArrays.concat((Object)shortExceptionMessage(t), vars));		
 	}
 
@@ -56,8 +53,7 @@ public class ErrorUtils {
 	 * @param vars - the set of substituion variables
 	 * @return - the formatted string
 	 */
-	@NonNull
-	public static String getLongForm(final @NonNull String template, final Throwable t, final @NonNull Object... vars) {
+	public static String getLongForm(final String template, final Throwable t, final Object... vars) {
 		return MessageFormat.format(template, ObjectArrays.concat((Object)longExceptionMessage(t), vars));		
 	}
 
@@ -65,8 +61,7 @@ public class ErrorUtils {
 	 * @param t - the throwable 
 	 * @return - the formatted message
 	 */
-	@NonNull
-	protected static String shortExceptionMessage(final @NonNull Throwable t) {
+	protected static String shortExceptionMessage(final Throwable t) {
 	    return ((t.getLocalizedMessage() == null) ? "(null)" : t.getLocalizedMessage()) 
 	    		+ (t.getCause() == null ? "" : (" (" + shortExceptionMessage(t.getCause()) + ")"));
 	}	
@@ -75,8 +70,7 @@ public class ErrorUtils {
 	 * @param t - the throwable 
 	 * @return - the formatted message
 	 */
-	@NonNull
-	protected static String longExceptionMessage(final @NonNull Throwable t) {
+	protected static String longExceptionMessage(final Throwable t) {
 		int n = 0;
 		StringBuffer sb = new StringBuffer();
 		String lastMethodName = null;

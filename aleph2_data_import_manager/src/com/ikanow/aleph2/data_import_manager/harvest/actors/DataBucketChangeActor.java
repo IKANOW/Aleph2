@@ -29,7 +29,6 @@ import java.util.stream.StreamSupport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -162,11 +161,11 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return
 	 */
 	protected static Either<BasicMessageBean, IHarvestTechnologyModule> getHarvestTechnology(
-			final @NonNull DataBucketBean bucket, 
+			final DataBucketBean bucket, 
 			boolean harvest_tech_only,
-			final @NonNull BucketActionMessage m, 
-			final @NonNull String source,
-			final @NonNull Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
+			final BucketActionMessage m, 
+			final String source,
+			final Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
 		try {
@@ -214,11 +213,11 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Either finally)
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage> talkToHarvester(
-			final @NonNull DataBucketBean bucket, 
-			final @NonNull BucketActionMessage m,
-			final @NonNull String source,
-			final @NonNull IHarvestContext context,
-			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
+			final DataBucketBean bucket, 
+			final BucketActionMessage m,
+			final String source,
+			final IHarvestContext context,
+			final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();
@@ -291,13 +290,12 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param return_value - either the user return value or a wrap of the exception
 	 * @return
 	 */
-	@NonNull
 	public static final CompletableFuture<BucketActionReplyMessage> handleTechnologyErrors(
-			final @NonNull DataBucketBean bucket, 
-			final @NonNull BucketActionMessage m,
-			final @NonNull String source,
-			final @NonNull Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module, 
-			final @NonNull CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
+			final DataBucketBean bucket, 
+			final BucketActionMessage m,
+			final String source,
+			final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module, 
+			final CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
 					)
 	{
 		if (return_value.isCompletedExceptionally()) { // Harvest Tech developer called completeExceptionally, ugh
@@ -331,11 +329,11 @@ public class DataBucketChangeActor extends AbstractActor {
 		cacheJars(
 				final DataBucketBean bucket, 
 				final boolean cache_tech_jar_only,
-				final @NonNull IManagementDbService management_db, 
-				final @NonNull GlobalPropertiesBean globals,
-				final @NonNull IStorageService fs, 
-				final @NonNull String handler_for_errors, 
-				final @NonNull M msg_for_errors
+				final IManagementDbService management_db, 
+				final GlobalPropertiesBean globals,
+				final IStorageService fs, 
+				final String handler_for_errors, 
+				final M msg_for_errors
 			)
 	{
 		try {

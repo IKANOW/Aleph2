@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class GlobalPropertiesBean {
 
@@ -29,9 +28,9 @@ public class GlobalPropertiesBean {
 	 * @param local_root_dir
 	 * @param local_yarn_config_dir
 	 */
-	public GlobalPropertiesBean(final @Nullable String local_root_dir, 
-			final @Nullable String local_yarn_config_dir, final @Nullable String local_cached_jar_dir, 
-			final @Nullable String distributed_root_dir
+	public GlobalPropertiesBean(final String local_root_dir, 
+			final String local_yarn_config_dir, final String local_cached_jar_dir, 
+			final String distributed_root_dir
 			)
 	{
 		this.local_root_dir = local_root_dir;

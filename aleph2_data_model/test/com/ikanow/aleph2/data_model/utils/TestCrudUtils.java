@@ -34,7 +34,6 @@ import java.util.stream.Collector;
 import java.util.stream.Collector.Characteristics;
 import java.util.stream.Collectors;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.Test;
 import org.mongojack.internal.MongoJackModule;
 import org.mongojack.internal.object.BsonObjectGenerator;
@@ -1387,7 +1386,7 @@ public class TestCrudUtils {
 	 * @throws JsonGenerationException 
 	 */
 	@SuppressWarnings("unchecked")
-	public static <O> DBObject createUpdateObject(final @NonNull UpdateComponent<O> update) {
+	public static <O> DBObject createUpdateObject(final UpdateComponent<O> update) {
 		final ObjectMapper object_mapper = MongoJackModule.configure(BeanTemplateUtils.configureMapper(Optional.empty()));
 		
 		return update.getAll().entries().stream()
@@ -1456,7 +1455,7 @@ public class TestCrudUtils {
 	 * @param nested the nested fieldname 
 	 * @param to_insert the object to insert
 	 */
-	protected static void nestedPut(final @NonNull BasicDBObject mutable, final @NonNull String parent, final @NonNull String nested, final @NonNull Object to_insert) {
+	protected static void nestedPut(final BasicDBObject mutable, final String parent, final String nested, final Object to_insert) {
 		final DBObject dbo = (DBObject) mutable.get(parent);
 		if (null != dbo) {
 			dbo.put(nested, to_insert);

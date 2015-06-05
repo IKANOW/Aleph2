@@ -18,7 +18,6 @@ package com.ikanow.aleph2.management_db.data_model;
 import java.util.List;
 import java.util.Set;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -38,10 +37,10 @@ public class BucketActionReplyMessage {
 		/** User c'tor for creating a timeout message
 		 * @param source - the source (host) that timed out
 		 */
-		public BucketActionTimeoutMessage(final @NonNull String source) {
+		public BucketActionTimeoutMessage(final String source) {
 			this.source = source;
 		}
-		@NonNull public String source() { return source; }
+		public String source() { return source; }
 		private String source;
 	}
 	
@@ -55,7 +54,7 @@ public class BucketActionReplyMessage {
 		 * @param replies - replies from any hosts that handled the message or timed out trying
 		 * @param timed_out - the set of hosts that timed out
 		 */
-		public BucketActionCollectedRepliesMessage(final @NonNull List<BasicMessageBean> replies, Set<String> timed_out)
+		public BucketActionCollectedRepliesMessage(final List<BasicMessageBean> replies, Set<String> timed_out)
 		{
 			this.replies = replies;
 			this.timed_out = timed_out;			
@@ -76,7 +75,7 @@ public class BucketActionReplyMessage {
 		/** User c'tor for a message indicating that the given data import manager can handle a bucket message
 		 * @param source - the source accepting the offer
 		 */
-		public BucketActionWillAcceptMessage(final @NonNull String source) {
+		public BucketActionWillAcceptMessage(final String source) {
 			this.source = source;
 		}
 		public String source() { return source; }
@@ -93,7 +92,7 @@ public class BucketActionReplyMessage {
 		/** User c'tor for a message indicating that the given data import manager _will not_ handle a bucket message
 		 * @param source - the source accepting the offer
 		 */
-		public BucketActionIgnoredMessage(final @NonNull String source) {
+		public BucketActionIgnoredMessage(final String source) {
 			this.source = source;
 		}
 		public String source() { return source; }
@@ -111,7 +110,7 @@ public class BucketActionReplyMessage {
 		 * @param source - the handling source (host)
 		 * @param reply - the reply from tha source
 		 */
-		public BucketActionHandlerMessage(final @NonNull String source, final @NonNull BasicMessageBean reply) {
+		public BucketActionHandlerMessage(final String source, final BasicMessageBean reply) {
 			this.source = source;
 			this.reply = reply;
 		}

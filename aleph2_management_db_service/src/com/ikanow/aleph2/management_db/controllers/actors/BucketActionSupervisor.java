@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
@@ -47,13 +46,13 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	/** Factory method for getting a distribution actor
 	 */
-	protected ActorRef getNewDistributionActor(final @NonNull FiniteDuration timeout) {
+	protected ActorRef getNewDistributionActor(final FiniteDuration timeout) {
 		return this.getContext().actorOf(Props.create(BucketActionDistributionActor.class, timeout));
 	}
 
 	/** Factory method for getting a "choose" actor (picks a destination randomly from a pool of replies)
 	 */
-	protected ActorRef getNewChooseActor(final @NonNull FiniteDuration timeout) {
+	protected ActorRef getNewChooseActor(final FiniteDuration timeout) {
 		return this.getContext().actorOf(Props.create(BucketActionChooseActor.class, timeout));
 	}
 
@@ -62,9 +61,9 @@ public class BucketActionSupervisor extends UntypedActor {
 	 */
 	private static class RequestMessage {
 		protected RequestMessage(
-				final @NonNull Class<? extends Actor> actor_type,
-				final @NonNull BucketActionMessage message,
-				final @NonNull Optional<FiniteDuration> timeout)
+				final Class<? extends Actor> actor_type,
+				final BucketActionMessage message,
+				final Optional<FiniteDuration> timeout)
 		{
 			this.actor_type = actor_type;
 			this.message = message;
@@ -83,9 +82,9 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return the future containing a collection of replies
 	 */
 	public static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				askDistributionActor(final @NonNull ActorRef supervisor, 
-						final @NonNull BucketActionMessage message, 
-						final @NonNull Optional<FiniteDuration> timeout)
+				askDistributionActor(final ActorRef supervisor, 
+						final BucketActionMessage message, 
+						final Optional<FiniteDuration> timeout)
 	{
 		if (null == message.bucket().harvest_technology_name_or_id()) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
@@ -106,9 +105,9 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return the future containing a collection of replies
 	 */
 	public static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				askChooseActor(final @NonNull ActorRef supervisor, 
-					final @NonNull BucketActionMessage message, 
-					final @NonNull Optional<FiniteDuration> timeout)
+				askChooseActor(final ActorRef supervisor, 
+					final BucketActionMessage message, 
+					final Optional<FiniteDuration> timeout)
 	{
 		if (null == message.bucket().harvest_technology_name_or_id()) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking

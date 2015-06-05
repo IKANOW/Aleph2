@@ -18,8 +18,6 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 import java.util.List;
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Immutable object describing the data from this bucket
@@ -32,14 +30,14 @@ public class DataSchemaBean {
 	
 	/** User constructor
 	 */
-	public DataSchemaBean(final @Nullable StorageSchemaBean storage_schema,
-			final @Nullable DocumentSchemaBean document_schema,
-			final @Nullable SearchIndexSchemaBean search_index_schema,
-			final @Nullable ColumnarSchemaBean columnar_schema,
-			final @Nullable TemporalSchemaBean temporal_schema,
-			final @Nullable GeospatialSchemaBean geospatial_schema,
-			final @Nullable GraphSchemaBean graph_schema,
-			final @Nullable DataWarehouseSchemaBean data_warehouse_schema
+	public DataSchemaBean(final StorageSchemaBean storage_schema,
+			final DocumentSchemaBean document_schema,
+			final SearchIndexSchemaBean search_index_schema,
+			final ColumnarSchemaBean columnar_schema,
+			final TemporalSchemaBean temporal_schema,
+			final GeospatialSchemaBean geospatial_schema,
+			final GraphSchemaBean graph_schema,
+			final DataWarehouseSchemaBean data_warehouse_schema
 			)
 	{
 		this.storage_schema = storage_schema;
@@ -119,15 +117,15 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public StorageSchemaBean(final @NonNull Boolean enabled, 
-				final @Nullable String service_name,
-				final @Nullable String raw_grouping_time_period,
-				final @Nullable String raw_exist_age_max,
-				final @Nullable String json_grouping_time_period,
-				final @Nullable String json_exist_age_max,
-				final @Nullable String processed_grouping_time_period,
-				final @Nullable String processed_exist_age_max,
-				final @Nullable Map<String, Object> technology_override_schema) {
+		public StorageSchemaBean(final Boolean enabled, 
+				final String service_name,
+				final String raw_grouping_time_period,
+				final String raw_exist_age_max,
+				final String json_grouping_time_period,
+				final String json_exist_age_max,
+				final String processed_grouping_time_period,
+				final String processed_exist_age_max,
+				final Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.raw_grouping_time_period = raw_grouping_time_period;
@@ -222,11 +220,11 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public DocumentSchemaBean(final @NonNull Boolean enabled, 
-				final @Nullable String service_name,
-				final @Nullable Boolean deduplicate,
-				final @Nullable List<String> deduplication_fields,
-				final @Nullable Map<String, Object> technology_override_schema) {
+		public DocumentSchemaBean(final Boolean enabled, 
+				final String service_name,
+				final Boolean deduplicate,
+				final List<String> deduplication_fields,
+				final Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.deduplicate = deduplicate;
@@ -288,9 +286,9 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public SearchIndexSchemaBean(final @NonNull Boolean enabled,
-				final @Nullable String service_name,
-				final @Nullable Map<String, Object> technology_override_schema) {
+		public SearchIndexSchemaBean(final Boolean enabled,
+				final String service_name,
+				final Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
 			this.service_name = service_name;
@@ -330,14 +328,14 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public ColumnarSchemaBean(final @NonNull Boolean enabled,
-				final @Nullable String service_name,
-				final @Nullable List<String> field_include_list,
-				final @Nullable List<String> field_exclude_list, String field_include_regex,
-				final @Nullable String field_exclude_regex,
-				final @Nullable List<String> field_type_include_list,
-				final @Nullable List<String> field_type_exclude_list,
-				final @Nullable Map<String, Object> technology_override_schema) {
+		public ColumnarSchemaBean(final Boolean enabled,
+				final String service_name,
+				final List<String> field_include_list,
+				final List<String> field_exclude_list, String field_include_regex,
+				final String field_exclude_regex,
+				final List<String> field_type_include_list,
+				final List<String> field_type_exclude_list,
+				final Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.field_include_list = field_include_list;
@@ -422,12 +420,12 @@ public class DataSchemaBean {
 		
 		/** User constructor
 		 */
-		public TemporalSchemaBean(@NonNull Boolean enabled, 
-				@Nullable String service_name,
-				@Nullable String grouping_time_period,
-				@Nullable String hot_age_max, @Nullable String warm_age_max, @Nullable String cold_age_max,
-				@Nullable String exist_age_max,
-				@Nullable Map<String, Object> technology_override_schema) {
+		public TemporalSchemaBean(Boolean enabled, 
+				String service_name,
+				String grouping_time_period,
+				String hot_age_max, String warm_age_max, String cold_age_max,
+				String exist_age_max,
+				Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.grouping_time_period = grouping_time_period;

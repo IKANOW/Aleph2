@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 import java.util.Collection;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -30,16 +29,14 @@ public interface IDocumentService {
 	 * @param bucket The data bucket or multi-bucket
 	 * @return the CRUD service
 	 */
-	@NonNull 
-	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull DataBucketBean bucket);
+	<O> ICrudService<O> getCrudService(final Class<O> clazz, final DataBucketBean bucket);
 	
 	/** Returns a CRUD service for the specified buckets or multi-buckets
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket The collection of data buckets or multi-buckets
 	 * @return the CRUD service
 	 */
-	@NonNull 
-	<O> ICrudService<O> getCrudService(final @NonNull Class<O> clazz, final @NonNull Collection<DataBucketBean> buckets);
+	<O> ICrudService<O> getCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -47,6 +44,5 @@ public interface IDocumentService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	@NonNull 
 	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

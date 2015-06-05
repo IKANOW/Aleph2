@@ -19,8 +19,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Bean controlling a harvester configuration - normally found embedded within a DataBucketBean
  * @author acp
@@ -29,8 +27,8 @@ public class HarvestControlMetadataBean {
 	
 	protected HarvestControlMetadataBean() {}
 	
-	public HarvestControlMetadataBean(final @NonNull String name, final @NonNull Boolean enabled, final @Nullable List<String> library_ids_or_names,
-			final @NonNull Map<String, Object> config) {
+	public HarvestControlMetadataBean(final String name, final Boolean enabled, final List<String> library_ids_or_names,
+			final Map<String, Object> config) {
 		this.name = name;
 		this.enabled = enabled;
 		this.library_ids_or_names = library_ids_or_names;
