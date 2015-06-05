@@ -60,6 +60,7 @@ import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 import com.mongodb.MongoException;
+
 import org.apache.log4j.Logger;
 
 public class TestDataBucketCrudService_Create {
@@ -111,6 +112,14 @@ public class TestDataBucketCrudService_Create {
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;
 		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db;
 		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store;
+	}	
+	
+	@Test
+	public void testSetup() {
+		if (File.separator.equals("\\")) { // windows mode!
+			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
+			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
+		}		
 	}	
 	
 	// Actors:

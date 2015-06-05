@@ -75,8 +75,8 @@ public class TestMockServiceContext {
 		assertNotNull(context.getSecurityService());
 		assertNotNull(context.getGlobalProperties());
 		
-		assertNull(context.getService(TestMockServiceContext.class, Optional.empty()));
-		assertNull(context.getService(ISearchIndexService.class, Optional.of("fail")));
+		assertEquals(Optional.empty(), context.getService(TestMockServiceContext.class, Optional.empty()));
+		assertEquals(Optional.empty(), context.getService(ISearchIndexService.class, Optional.of("fail")));
 		
 		
 		assertFalse("Shouldn't be equal", context.getCoreManagementDbService() == context.getService(IManagementDbService.class, Optional.empty()).get());

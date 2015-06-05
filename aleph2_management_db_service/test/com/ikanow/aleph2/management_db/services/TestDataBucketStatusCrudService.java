@@ -92,6 +92,14 @@ public class TestDataBucketStatusCrudService {
 		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store;
 	}	
 	
+	@Test
+	public void testSetup() {
+		if (File.separator.equals("\\")) { // windows mode!
+			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
+			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
+		}		
+	}	
+	
 	// Bucket insertion
 	
 	public void cleanDatabases() {
