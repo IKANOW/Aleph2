@@ -344,7 +344,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			// Maybe the user wanted to suspend/resume the bucket:
 			
 			final CompletableFuture<Collection<BasicMessageBean>> suspend_future = 
-				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
+				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>get(() -> {					
 					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::suspended))) {
 
 						// (note this handles suspending the bucket if no handlers are available)
@@ -360,7 +360,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			// Maybe the user wanted to set quarantine on/off:
 			
 			final CompletableFuture<Collection<BasicMessageBean>> quarantine_future = 
-				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>exec(() -> {					
+				Lambdas.<CompletableFuture<Collection<BasicMessageBean>>>get(() -> {					
 					if (update.getAll().containsKey(helper.field(DataBucketStatusBean::quarantined_until))) {
 						
 						// (note this handles suspending the bucket if no handlers are available)

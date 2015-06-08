@@ -209,7 +209,7 @@ public class HarvestContext implements IHarvestContext {
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
 			// This very JAR			
-			final String this_jar = Lambdas.exec(() -> {
+			final String this_jar = Lambdas.get(() -> {
 				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
 			});
 			

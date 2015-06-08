@@ -162,7 +162,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		try {			
 			// New bucket vs update - get the old bucket (we'll do this non-concurrently at least for now)
 			
-			final Optional<DataBucketBean> old_bucket = Lambdas.exec(() -> {
+			final Optional<DataBucketBean> old_bucket = Lambdas.get(() -> {
 				try {
 					if (replace_if_present && (null != new_object._id())) {
 						return _underlying_data_bucket_db.getObjectById(new_object._id()).get();
