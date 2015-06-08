@@ -25,6 +25,7 @@ import org.xeustechnologies.jcl.JclObjectFactory;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 
 import fj.data.Either;
 
@@ -51,13 +52,7 @@ public class ClassloaderUtils {
 			if (primary_lib.isPresent()) {
 				jcl.add(new URL(primary_lib.get()));
 			}
-			secondary_libs.forEach(j -> { 
-				try {
-					jcl.add(new URL(j));
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
+			secondary_libs.forEach(Lambdas.wrap_consumer_u(j -> jcl.add(new URL(j)))); 
 			
 			final JclObjectFactory factory = JclObjectFactory.getInstance();
 		

@@ -322,10 +322,11 @@ public class BeanTemplateUtils {
 		protected void cloneInitialFields(final T to_clone) {
 			Arrays.stream(_element.getClass().getDeclaredFields())
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
-				.map(f -> { try { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); } catch (Exception e) { return null; } })
+				.flatMap(Lambdas.flatWrap_i(f -> { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); }))
 				.filter(t -> (null != t) && (null != t._2()))
-				.forEach(t -> { try { t._1().set(_element, t._2()); } catch (Exception e) { } } );
+				.forEach(Lambdas.wrap_consumer_i(t -> t._1().set(_element, t._2())));
 		}
+		
 		@SuppressWarnings("unchecked")
 		protected CommonHelper(final Class<?> element_clazz) throws InstantiationException, IllegalAccessException, NoSuchMethodException, SecurityException, IllegalArgumentException, InvocationTargetException {
 			final Constructor<T> contructor = (Constructor<T>) element_clazz.getDeclaredConstructor();

@@ -98,14 +98,6 @@ public class TestLambdas {
 	}
 
 	/////////////////////////////////////////////
-		
-	@Test
-	public void testOptionalLambda() {
-				
-		//TODO
-	}
-
-	/////////////////////////////////////////////
 	
 	@Test
 	public void testStreamLambda_map() {
@@ -208,7 +200,19 @@ public class TestLambdas {
 	@Test
 	public void testMisc_filterWithIgnore() {
 		
-		// One that doesn't
+		// Flat map to ignore
+
+		final Stream<String> initial_stream1 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
+		
+		final List<String> ret_val1 = 
+					initial_stream1
+						.flatMap(Lambdas.flatWrap_i(clazz -> Class.forName(clazz)))
+						.map(Lambdas.wrap_u(clazz -> (String) clazz.newInstance()))
+						.collect(Collectors.toList());
+		
+		assertEquals(2, ret_val1.size());
+		
+		// Filter with ignore
 		
 		final Stream<String> initial_stream2 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
 		
@@ -379,14 +383,12 @@ public class TestLambdas {
 		assertEquals(2, ret_val4._2().size());		
 	}	
 	
-	//TODO flatmap filter - remaining cases
-	
-	//TODO reduce test for binary operator
 	
 	/////////////////////////////////////////////////////////////
 	
 	@Test
 	public void testMisc_biFunctions() {
+		//TODO including reduce test for binary operator 
 	}
 	
 	@Test

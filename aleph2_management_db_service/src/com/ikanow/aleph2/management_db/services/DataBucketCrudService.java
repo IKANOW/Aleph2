@@ -926,13 +926,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				)
 				.stream()
 				.map(s -> new Path(s))
-				.forEach(p -> {
-					try {
-						dfs.mkdir(p, FsPermission.getDefault(), true);
-					}
-					catch (Exception e) {
-						throw new RuntimeException(e);
-					}
-				});
+				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
 	}
 }
