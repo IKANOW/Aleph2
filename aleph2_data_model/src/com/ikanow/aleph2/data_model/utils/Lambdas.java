@@ -15,14 +15,21 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collector.Characteristics;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import scala.Tuple2;
 import fj.F;
 import fj.data.Either;
 
@@ -75,7 +82,7 @@ public class Lambdas {
 				return Either.right(f.get());
 			}
 			catch (RuntimeException re) {
-				return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());
+				return denest(re);
 			}
 			catch (Throwable err) {
 				return Either.left(err);
@@ -200,7 +207,7 @@ public class Lambdas {
 						}
 					}
 					catch (RuntimeException re) {
-						return Stream.of((null == re.getCause()) ? Either.left(re) : Either.left(re.getCause()));
+						return Stream.of(denest(re));
 					}
 					catch (Throwable err) {
 						return Stream.of(Either.left(err));
@@ -220,7 +227,7 @@ public class Lambdas {
 					t -> wrap_filter_u(f).test(t));
 		};
 	}
-	
+
 	//////////////////////////////////////////////////////////////////////////////////
 	
 	// FUNCTION
@@ -260,7 +267,7 @@ public class Lambdas {
 				return Either.right(f.apply(t));
 			}
 			catch (RuntimeException re) {
-				return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());
+				return denest(re);
 			}
 			catch (Throwable err) {
 				return Either.left(err);
@@ -303,29 +310,10 @@ public class Lambdas {
 				return Either.right(f.apply(t));
 			}
 			catch (RuntimeException re) {
-				return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());
+				return denest(re);
 			}
 			catch (Throwable err) {
 				return Either.left(err);
-			}
-		};		
-	}
-	
-	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Either<Throwable, ?> but no exception
-	 * @param f - the lambda that can return a checked throwable
-	 * @return - an identical function except throws unchecked instead of checked throwable
-	 */
-
-	public static <T, R> Function<T, Stream<Either<Throwable, R>>> flatWrap_e(ThrowableWrapper.Function<T, Stream<R>> f) {
-		return t -> {
-			try {
-				return f.apply(t).map(Either::right);
-			}
-			catch (RuntimeException re) {
-				return Stream.of((null == re.getCause()) ? Either.left(re) : Either.left(re.getCause()));
-			}
-			catch (Throwable err) {
-				return Stream.of(Either.left(err));
 			}
 		};		
 	}
@@ -359,7 +347,7 @@ public class Lambdas {
 				return Either.right(f.apply(t, u));
 			}
 			catch (RuntimeException re) {
-				return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());
+				return denest(re);
 			}
 			catch (Throwable err) {
 				return Either.left(err);
@@ -385,7 +373,90 @@ public class Lambdas {
 			}
 		};
 	}
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////
 
+	public static <T> Either<Throwable, T> denest(final RuntimeException re) {
+		return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());		
+	}
+	
+	/** Collects values from the collector, and a list of errors
+	 * @param value_collector
+	 * @return
+	 */
+	public static <T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<Object, A>, Tuple2<List<Throwable>, R>> collector_errs(final Collector<T, A, R> value_collector)
+	{
+		return collector(Collectors.toList(), value_collector);
+	}
+	
+	/** Collects values from the collector, and grabs the first error encountered
+	 * @param value_collector
+	 * @return
+	 */
+	public static <T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<ArrayList<Throwable>, A>, Tuple2<Optional<Throwable>, R>> collector_err(final Collector<T, A, R> value_collector)
+	{
+		final Collector<Throwable, ArrayList<Throwable>, Optional<Throwable>> err_collector = 
+				Collector.<Throwable, ArrayList<Throwable>, Optional<Throwable>>of(
+						() -> new ArrayList<Throwable>(1), 
+						(acc, val) -> { if (acc.isEmpty()) acc.add(val); }, 
+						(acc1, acc2) -> acc1.isEmpty() ? acc1 : acc2, 
+						acc -> acc.isEmpty() ? Optional.empty() : Optional.ofNullable(acc.get(0)),
+						Characteristics.UNORDERED);
+		
+		return collector(err_collector, value_collector);
+	}
+	
+	/** Generic double-collector
+	 * @param error_collector
+	 * @param value_collector
+	 * @return
+	 */
+	public static <A1, R1, T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>> collector(
+				final Collector<Throwable, A1, R1> error_collector,
+				final Collector<T, A, R> value_collector
+			)
+	{
+		return Collector.<Either<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>>of(
+				() -> new MutableAccumulator<A1, A>(error_collector.supplier().get(), value_collector.supplier().get())
+				, 
+				(acc, err_val) -> {
+					err_val.<MutableAccumulator<A1, A>>either(
+						err -> {
+							error_collector.accumulator().accept(acc.a1, err);
+							return null;
+						},
+						val -> {
+							value_collector.accumulator().accept(acc.a2, val);							
+							return null;
+						});
+				}
+				, 
+				(acc1, acc2) -> {
+					return new MutableAccumulator<A1, A>(
+							error_collector.combiner().apply(acc1.a1, acc1.a1),
+							value_collector.combiner().apply(acc1.a2, acc1.a2));
+					
+				}
+				,
+				acc -> {
+					return Tuples._2T(error_collector.finisher().apply(acc.a1), 
+										value_collector.finisher().apply(acc.a2));
+				}
+				, 
+				Characteristics.UNORDERED
+				);
+	}
+	
+	private static class MutableAccumulator<A1, A2> {
+		MutableAccumulator(A1 a1, A2 a2) {
+			this.a1 = a1; this.a2 = a2;
+		}
+		A1 a1;
+		A2 a2;
+	};
+	
 	//////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
