@@ -89,8 +89,14 @@ public class BeBucketActor extends UntypedActor {
 		if (message instanceof BucketEnrichmentMessage) {
 
 			BucketEnrichmentMessage bem = (BucketEnrichmentMessage) message;
-			this.bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + "/" + bem.getBucketId();
-			Stat bucketExists = _curator.checkExists().forPath(bucketZkPath);
+			Stat bucketExists = null;
+			try {
+				this.bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + bem.getBuckeFullName();				
+				bucketExists = _curator.checkExists().forPath(bucketZkPath);
+			} catch (Exception e) {
+				// do nothing on purpose, whole path might not exist in zk
+				//logger.debug("Caught exception for zk path:"+bucketZkPath,e);
+			}
 			if (bucketExists == null) {
 				// bucket is not registered yet, grab it and do the processing
 				// on this node

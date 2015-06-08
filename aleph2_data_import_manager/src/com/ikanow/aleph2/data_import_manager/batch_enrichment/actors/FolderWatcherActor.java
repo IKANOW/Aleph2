@@ -135,7 +135,7 @@ public class FolderWatcherActor extends UntypedActor {
 	}
 
 	protected static String createAgentName(String fullName) {
-		String agentName = fullName.replace('/', '$').replace('\\', '$')+  UUID.randomUUID().toString();
+		String agentName = fullName.replace('/', '@').replace('\\', '@')+  UUID.randomUUID().toString();
 		return agentName;
 		
 	}
@@ -144,27 +144,14 @@ public class FolderWatcherActor extends UntypedActor {
 		//curator_framework.
 	    logger.debug("checkAndScheduleBucketAgent for Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketFullName);
 		try{
-			/*			
-			Stat bucketExists = _curator.checkExists().forPath(bucketZkPath);
-			if(bucketExists==null ){
-*/				//bucket is not registered yet, grab it and do the processing on this node
-				// send message to batchBus so some actor will take care if this node
-				//_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
-				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),bucketFullName);
+			    String agentName = createAgentName(bucketFullName);
+				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),agentName);
 				String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + bucketFullName;
 				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketFullName, bucketZkPath), getSelf());						
-			/*}else{
-				// someone else already is working in it
-				logger.debug("Path "+bucketZkPath+" is already locked in zookeeper!");
-			} */
 		}
 		catch(Exception e){
 			logger.error("Caught Exception",e);
 		}
-		//_state.data_import_manager_set.addAll();
-		//
-
-
 	}
 
 	protected List<Path> detectBucketPaths(){

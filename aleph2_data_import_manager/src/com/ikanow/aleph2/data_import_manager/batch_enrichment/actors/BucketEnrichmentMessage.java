@@ -10,21 +10,22 @@ public class BucketEnrichmentMessage {
 		return bucketZkPath;
 	}
 
-	public String getBucketId() {
-		return bucketId;
-	}
 
 	private String bucketZkPath;
-	private String bucketId;
+	private String buckeFullName;
 
-	public BucketEnrichmentMessage(String bucketPathStr, String bucketId, String bucketZkPath) {
+	public String getBuckeFullName() {
+		return buckeFullName;
+	}
+
+	public BucketEnrichmentMessage(String bucketPathStr, String bucketFullName, String bucketZkPath) {
 		this.bucketPathStr = bucketPathStr;
-		this.bucketId = bucketId;
+		this.buckeFullName = bucketFullName;
 		this.bucketZkPath = bucketZkPath;
 	}
 
 	@Override
 	public String toString() {
-		return "bucketPathStr:"+bucketPathStr+"bucketId:"+bucketId+",bucketZkPath:"+bucketZkPath;
+		return "bucketPathStr:"+bucketPathStr+"bucketFullName:"+buckeFullName+",bucketZkPath:"+bucketZkPath;
 	}
 }
