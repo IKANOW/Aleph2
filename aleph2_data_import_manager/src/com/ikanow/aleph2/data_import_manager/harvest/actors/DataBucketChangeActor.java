@@ -116,33 +116,33 @@ public class DataBucketChangeActor extends AbstractActor {
 		    			final ActorRef closing_self = this.self();
 		    					    			
 	    				final String hostname = _context.getInformationService().getHostname();
-		    			try {
-		    				final boolean harvest_tech_only = m instanceof BucketActionOfferMessage;
+	    				final boolean harvest_tech_only = m instanceof BucketActionOfferMessage;
 		    				
-		    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, hostname, m)
-		    					.thenCompose(err_or_map -> {
-		    						
-									final IHarvestContext h_context = _context.getNewHarvestContext();
-									
-									final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
-											getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
-									
-									final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
-									return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
-									
-		    					})
-		    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
-									closing_sender.tell(reply,  closing_self);		    						
-		    					})
-		    					;
-		    			}
-		    			catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
-		    				final BasicMessageBean error_bean = 
-		    						HarvestErrorUtils.buildErrorMessage(hostname, m,
-		    								ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, m.bucket().full_name())
-		    								);
-		    				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
-		    			}
+	    				// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
+	    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, hostname, m)
+	    					.thenCompose(err_or_map -> {
+	    						
+								final IHarvestContext h_context = _context.getNewHarvestContext();
+								
+								final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
+										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
+								
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
+								return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
+								
+	    					})
+	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
+								closing_sender.tell(reply,  closing_self);		    						
+	    					})
+	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
+			    				final BasicMessageBean error_bean = 
+			    						HarvestErrorUtils.buildErrorMessage(hostname, m,
+			    								ErrorUtils.getLongForm(HarvestErrorUtils.HARVEST_UNKNOWN_ERROR, e, m.bucket().full_name())
+			    								);
+			    				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
+	    						return null;
+	    					})
+	    					;
 		    		})
 	    		.build();
 	 }
@@ -408,7 +408,7 @@ public class DataBucketChangeActor extends AbstractActor {
 						});
 					});
 		}
-		catch (Throwable e) {
+		catch (Throwable e) { // (can only occur if the DB call errors)
 			return CompletableFuture.completedFuture(
 				Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
 					ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())

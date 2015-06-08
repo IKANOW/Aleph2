@@ -16,13 +16,11 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import org.junit.Test;
-
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class TestErrorUtils {

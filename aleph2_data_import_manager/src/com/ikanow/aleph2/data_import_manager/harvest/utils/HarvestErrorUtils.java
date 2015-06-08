@@ -31,6 +31,7 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	public static final String ERROR_CACHING_SHARED_LIBS = "Misc error caching shared libs for bucket {1}: {0}";
 	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";
 	public static final String HARVEST_TECH_ERROR = "Harvest technology from bucket {1} (harvest tech {2}) manually called exception: {0}";
+	public static final String HARVEST_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";
 	 
 	///////////////////////////////////////////////////////////////////////////
 	
