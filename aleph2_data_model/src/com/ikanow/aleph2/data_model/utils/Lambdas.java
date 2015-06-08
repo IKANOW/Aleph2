@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -186,23 +185,40 @@ public class Lambdas {
 	 * @param f - the lambda (predicate) that can return a checked throwable
 	 * @return - a function that convert an identical function except returns either an error or an empty optional (if the predicate fails)
 	 */
-	public static <T> Function<T, Optional<Either<Throwable, T>>> filter_e(ThrowableWrapper.Predicate<T> f) {
-		return t -> {
-			try {
-				if (f.test(t)) {
-					return Optional.of(Either.right(t));
-				}
-				else {
-					return Optional.empty();
-				}
-			}
-			catch (RuntimeException re) {
-				return Optional.of((null == re.getCause()) ? Either.left(re) : Either.left(re.getCause()));
-			}
-			catch (Throwable err) {
-				return Optional.of(Either.left(err));
-			}
+	public static <T> Function<Either<Throwable, T>, Stream<Either<Throwable, T>>> filter_e(ThrowableWrapper.Predicate<T> f) {
+		return err_t -> {
+			return err_t.either(
+				err -> Stream.of(Either.left(err))
+				, 
+				t -> {
+					try {
+						if (f.test(t)) {
+							return Stream.of(Either.right(t));
+						}
+						else {
+							return Stream.empty();
+						}
+					}
+					catch (RuntimeException re) {
+						return Stream.of((null == re.getCause()) ? Either.left(re) : Either.left(re.getCause()));
+					}
+					catch (Throwable err) {
+						return Stream.of(Either.left(err));
+					}
+				});
 		};		
+	}
+	
+	/** Wraps a function that returns a checked throwable, and returns either an error or an empty optional (if the predicate fails)
+	 * @param f - the lambda (predicate) that can return a checked throwable
+	 * @return - a function that convert an identical function except returns either an error or an empty optional (if the predicate fails)
+	 */
+	public static <T> Predicate<Either<Throwable, T>> filter_u(final boolean drop_errors, ThrowableWrapper.Predicate<T> f) {
+		return err_t -> {
+			return err_t.either(__ -> !drop_errors
+					, 
+					t -> wrap_filter_u(f).test(t));
+		};
 	}
 	
 	//////////////////////////////////////////////////////////////////////////////////

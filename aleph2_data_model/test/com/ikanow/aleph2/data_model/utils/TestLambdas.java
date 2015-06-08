@@ -134,6 +134,9 @@ public class TestLambdas {
 
 	@Test
 	public void testEitherStreamLambda_map() {
+		
+		// "Fail"
+		
 		final Stream<String> initial_stream = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
 
 		final List<Either<Throwable, String>> ret_val = 
@@ -151,9 +154,79 @@ public class TestLambdas {
 		
 		assertEquals(1, errs.length());
 		assertEquals(2, valids.length());
+		
+		// "Pass" because of filter_e
+		
+		final Stream<String> initial_stream2 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
+
+		final List<Either<Throwable, String>> ret_val2 = 
+				initial_stream2
+					.map(Lambdas::startPipe)
+					.flatMap(Lambdas.filter_e((String clazz) -> !clazz.contains("xxx")))
+					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
+					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.collect(Collectors.toList())
+					;
+		
+		final fj.data.List<Either<Throwable, String>> l2 = fj.data.List.iterableList(ret_val2);
+		
+		final fj.data.List<Throwable> errs2 = Either.lefts(l2);
+		final fj.data.List<String> valids2 = Either.rights(l2);
+		
+		assertEquals(0, errs2.length());
+		assertEquals(2, valids2.length());
+		
+		// "pass" because filter_u, before error
+
+		final Stream<String> initial_stream3 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
+
+		final List<Either<Throwable, String>> ret_val3 = 
+				initial_stream3
+					.map(Lambdas::startPipe)
+					.filter(Lambdas.filter_u(false, (String clazz) -> !clazz.contains("xxx")))
+					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
+					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.collect(Collectors.toList())
+					;
+		
+		final fj.data.List<Either<Throwable, String>> l3 = fj.data.List.iterableList(ret_val3);
+		
+		final fj.data.List<Throwable> errs3 = Either.lefts(l3);
+		final fj.data.List<String> valids3 = Either.rights(l3);
+		
+		assertEquals(0, errs3.length());
+		assertEquals(2, valids3.length());
+		
+		// "pass" because filter_u, after error
+
+		final Stream<String> initial_stream4 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
+
+		final List<Either<Throwable, String>> ret_val4 = 
+				initial_stream4
+					.map(Lambdas::startPipe)
+					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
+					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.filter(Lambdas.filter_u(true, __ -> true))
+					.collect(Collectors.toList())
+					;
+		
+		final fj.data.List<Either<Throwable, String>> l4 = fj.data.List.iterableList(ret_val4);
+		
+		final fj.data.List<Throwable> errs4 = Either.lefts(l4);
+		final fj.data.List<String> valids4 = Either.rights(l4);
+		
+		assertEquals(0, errs4.length());
+		assertEquals(2, valids4.length());
+		
+		
 	}
 	
-	//TODO flatmap filter
+	//TODO flatmap filter - remaining cases
+	//TODO ignore filter cases
+	
+	//TODO reduce test for binary operator
 	
 	//TODO: custom collect (first error and list of errors)
+	
+	//TODO: quickly test consumer/runnable wrappers
 }
