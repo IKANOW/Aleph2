@@ -69,10 +69,13 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		
 		// Set up a config for Akka overrides
 		final Map<String, String> config_map = ImmutableMap.<String, String>builder()
-												.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
-												.put("akka.cluster.seed.zookeeper.url", connection_string)
-												.build();		
-		
+											.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
+											.put("akka.remote.netty.tcp.port", "0")
+											.put("akka.cluster.seed.zookeeper.url", connection_string)
+											.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
+											.put("akka.actor.serialization-bindings.\"com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable\"", "jackson")
+											.build();		
+	
 		_akka_system = ActorSystem.create("default", ConfigFactory.parseMap(config_map));
 		ZookeeperClusterSeed.get(_akka_system).join();
 	}

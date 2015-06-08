@@ -45,6 +45,8 @@ public class JsonSerializerService extends JSerializer {
 
 	@Override
 	public byte[] toBinary(Object arg0) {
+		/**/
+		System.out.println("toBinary!");		
 		try {
 			return _mapper.writeValueAsBytes(arg0);
 		} catch (Throwable e) {
@@ -54,6 +56,8 @@ public class JsonSerializerService extends JSerializer {
 
 	@Override
 	public Object fromBinaryJava(byte[] arg0, Class<?> arg1) {
+		/**/
+		System.out.println("fromBinary! " + (arg1 == null ? "null" : arg1.toString()));
 		try {
 			return _mapper.readValue(arg0, arg1);
 		} catch (Throwable e) {

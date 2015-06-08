@@ -15,8 +15,6 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -41,8 +39,6 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
 	
-	protected final static ConcurrentHashMap<String, LocalBroadcastMessageBus<?>> _buses = new ConcurrentHashMap<String, LocalBroadcastMessageBus<?>>();
-	
 	/** Guice-invoked constructor
 	 * @throws Exception 
 	 */
@@ -54,7 +50,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		_curator_framework = CuratorFrameworkFactory.newClient(_test_server.getConnectString(), retry_policy);
 		_curator_framework.start();		
 		
-		_akka_system = ActorSystem.create();
+		_akka_system = ActorSystem.create("default");
 	}	
 	 
 	/** Returns a connection to the Curator server
@@ -79,14 +75,6 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
 		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic)
 	{		
-		/**/
-		//TODO
-//		@SuppressWarnings("unchecked")
-//		LocalBroadcastMessageBus<M> ret_val = (LocalBroadcastMessageBus<M>) _buses.get(topic);
-//		
-//		if (null == ret_val) {
-//			_buses.put(topic, (ret_val = new LocalBroadcastMessageBus<M>(topic)));
-//		}
 		return new LocalBroadcastMessageBus<M>(topic);
 	}
 }
