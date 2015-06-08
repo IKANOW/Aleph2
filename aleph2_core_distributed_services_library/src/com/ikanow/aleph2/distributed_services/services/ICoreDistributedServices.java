@@ -20,7 +20,12 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import org.apache.curator.framework.CuratorFramework;
 
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.event.japi.LookupEventBus;
 
 /** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
  * @author acp
@@ -37,6 +42,13 @@ public interface ICoreDistributedServices {
 	 */
 	ActorSystem getAkkaSystem();
 
+	/** Returns a message bus for a specific topic
+	 * @param wrapper_clazz - the class of the _wrapper_ (not the underlying message)
+	 * @param topic
+	 * @return
+	 */
+	<U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
+	
 	//TODO (ALEPH-19): need to decide on Kafka API
 	
 	/** Returns a Kafka producer

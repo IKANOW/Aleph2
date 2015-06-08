@@ -15,15 +15,21 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.event.japi.LookupEventBus;
 
 import com.google.inject.Inject;
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 
 /** Implementation class for standalone Curator instance
  * @author acp
@@ -34,6 +40,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	protected final TestingServer _test_server;
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
+	
+	protected final static ConcurrentHashMap<String, LocalBroadcastMessageBus<?>> _buses = new ConcurrentHashMap<String, LocalBroadcastMessageBus<?>>();
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -62,5 +70,23 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	@Override
 	public ActorSystem getAkkaSystem() {
 		return _akka_system;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getBroadcastMessageBus(java.lang.Class, java.lang.String)
+	 */
+	@Override
+	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
+		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic)
+	{		
+		/**/
+		//TODO
+//		@SuppressWarnings("unchecked")
+//		LocalBroadcastMessageBus<M> ret_val = (LocalBroadcastMessageBus<M>) _buses.get(topic);
+//		
+//		if (null == ret_val) {
+//			_buses.put(topic, (ret_val = new LocalBroadcastMessageBus<M>(topic)));
+//		}
+		return new LocalBroadcastMessageBus<M>(topic);
 	}
 }

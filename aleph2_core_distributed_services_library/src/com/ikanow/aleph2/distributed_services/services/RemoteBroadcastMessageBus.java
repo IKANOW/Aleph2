@@ -13,21 +13,39 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.management_db.services;
+package com.ikanow.aleph2.distributed_services.services;
 
-import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
-import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.cluster.pubsub.DistributedPubSub;
+import akka.cluster.pubsub.DistributedPubSubMediator;
 import akka.event.japi.LookupEventBus;
 
-public class BucketActionMessageBus extends LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> {
+public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> extends LookupEventBus<M, ActorRef, String> {
 
-	//TODO (ALEPH-19): This needs to be the remote message bus ie handle clustering
+	final ActorRef _mediator;
+	protected final String _topic;
+	
+	/** Guice/user c'tor 
+	 * @param akka_system
+	 * @param topic
+	 */
+	public RemoteBroadcastMessageBus(ActorSystem akka_system, final String topic) {
+		_mediator = DistributedPubSub.get(akka_system).mediator();
+		_topic = topic;
+	}
 	
 	@Override
-	public String classify(BucketActionEventBusWrapper event) {
-		return ActorUtils.BUCKET_ACTION_EVENT_BUS;
+	public boolean subscribe(ActorRef subscriber, String to) {
+		_mediator.tell(new DistributedPubSubMediator.Subscribe(to, subscriber), subscriber);
+		return true;
+	}	
+	
+	@Override
+	public String classify(final M event) {
+		return _topic;
 	}
 
 	/* (non-Javadoc)
@@ -42,8 +60,8 @@ public class BucketActionMessageBus extends LookupEventBus<BucketActionEventBusW
 	 * @see akka.event.japi.LookupEventBus#publish(java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public void publish(BucketActionEventBusWrapper event, ActorRef subscriber) {
-		 subscriber.tell(event.message(), event.sender());
+	public void publish(M event, ActorRef subscriber) {
+		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message()), event.sender());
 	}
 
 	/* (non-Javadoc)

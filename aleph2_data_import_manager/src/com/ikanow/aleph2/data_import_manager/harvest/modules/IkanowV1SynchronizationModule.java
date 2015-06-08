@@ -34,7 +34,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -62,9 +61,8 @@ public class IkanowV1SynchronizationModule {
 		_core_management_db = context.getCoreManagementDbService();
 		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
 		_core_distributed_services = _context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		_db_actor_context = new ManagementDbActorContext(_context, new LocalBucketActionMessageBus());
-			//(^ injection issues with this because CoreManagementDbService is registered with a different injector
-			// need to copy the message bus into the local actor instead?)
+		_db_actor_context = new ManagementDbActorContext(_context);
+		
 		_local_actor_context = local_actor_context;
 	}
 	

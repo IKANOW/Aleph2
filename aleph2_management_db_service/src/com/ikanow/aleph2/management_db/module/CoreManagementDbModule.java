@@ -54,7 +54,6 @@ public class CoreManagementDbModule extends AbstractModule {
 		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);		
 		this.bind(DataBucketStatusCrudService.class).in(Scopes.SINGLETON);		
 		this.bind(SharedLibraryCrudService.class).in(Scopes.SINGLETON);		
-		//TODO (ALEPH-19): bind remote bucket action message bus to itself so context injection works
 	}
 	
 }

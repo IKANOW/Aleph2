@@ -18,13 +18,13 @@ package com.ikanow.aleph2.management_db.data_model;
 import java.util.List;
 import java.util.Set;
 
-
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 
 /** Just a top level message type for handling bucket actions 
  * @author acp
  */
-public class BucketActionReplyMessage {
+public class BucketActionReplyMessage implements IJsonSerializable {
 
 	private BucketActionReplyMessage() {}
 	

@@ -45,7 +45,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketA
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.DeleteBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
-import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
@@ -101,13 +100,11 @@ public class TestBucketActionDistributionActor {
 	@Before
 	public void testSetup() throws Exception {
 		MockServiceContext mock_service_context = new MockServiceContext();
-		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), new MockCoreDistributedServices());
+		MockCoreDistributedServices mock_core_distributed_services = new MockCoreDistributedServices();
+		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), mock_core_distributed_services);
 		
 		@SuppressWarnings("unused")
-		ManagementDbActorContext singleton = new ManagementDbActorContext(
-				mock_service_context, 
-				new LocalBucketActionMessageBus()
-				);
+		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context);		
 	}
 	
 	@Test
