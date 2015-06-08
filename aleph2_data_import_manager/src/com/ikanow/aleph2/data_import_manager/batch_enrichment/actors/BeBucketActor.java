@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.data.Stat;
 
+import akka.actor.ActorRef;
+import akka.actor.PoisonPill;
 import akka.actor.UntypedActor;
 
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -54,6 +56,7 @@ public class BeBucketActor extends UntypedActor {
 
 	private String bucketId;
 
+	
 	// not null means agent has been initialized.
 
 	public BeBucketActor(IStorageService storage_service) {
@@ -70,10 +73,6 @@ public class BeBucketActor extends UntypedActor {
 	@Override
 	public void postStop() {
 		logger.debug("postStop");
-		stopActor();
-	}
-
-	protected void stopActor(){
 		if (bucketZkPath != null) {
 			try {
 				logger.debug("Deleting bucket path in ZK:" + bucketZkPath);
@@ -83,6 +82,7 @@ public class BeBucketActor extends UntypedActor {
 			}
 		}		
 	}
+
 	@Override
 	public void onReceive(Object message) throws Exception {
 		logger.debug("Message received:" + message);
@@ -116,31 +116,30 @@ public class BeBucketActor extends UntypedActor {
 		}
 	}
 
-	protected void checkReady(String bucketId, String bucketPathStr) {
+	protected void checkReady(String bucketFullName, String bucketPathStr) {
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
 			if (fileContext.util().exists(bucketReady)) {
 				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);
 				if (statuss.length > 0) {
 					logger.debug("Detected " + statuss.length + " ready files.");
-					// TODO
-					// load cached bucket by id and see if it is enabled
-					String fullName = "TODO";
 					
 					IManagementCrudService<DataBucketBean> bucketStatusStore = _management_db.getDataBucketStore();
-					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", fullName);
+					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", bucketFullName);
+	    			final ActorRef closing_self = this.self();
+
 					bucketStatusStore.getObjectBySpec(query_comp_full_name).thenAccept(odb -> {
 						 if (odb.isPresent()) {
 							
 							boolean containsEnrichment = odb.get().batch_enrichment_configs().stream().map(EnrichmentControlMetadataBean::enabled).reduce(false, (a ,b)-> a ||  b);
 							//send self a stop message
 							if(!containsEnrichment){
-								stopActor();
+								closing_self.tell(PoisonPill.getInstance(), closing_self);								
 							}else{
 								// TODO enrichment work on bucket
 							}
 						} else { 
-							stopActor();
+							closing_self.tell(PoisonPill.getInstance(), closing_self);								
 						}
 							
 						});

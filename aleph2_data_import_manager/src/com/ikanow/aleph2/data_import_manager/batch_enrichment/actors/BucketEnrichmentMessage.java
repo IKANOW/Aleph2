@@ -1,6 +1,13 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
-public class BucketEnrichmentMessage {
+import java.io.Serializable;
+
+public class BucketEnrichmentMessage implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private String bucketPathStr;
 	public String getBucketPathStr() {
 		return bucketPathStr;

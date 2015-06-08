@@ -55,6 +55,10 @@ public class FolderWatcherActor extends UntypedActor {
 	protected FileContext fileContext = null;
 	protected Path dataPath = null;
 
+	public static String MSG_START = "start";
+	public static String MSG_STOP = "stop";
+	public static String MSG_FOLDER_WATCH = "folderWatch";
+	
     public FolderWatcherActor(IStorageService storage_service){
     	this._context = DataImportActorContext.get(); 
     	this._global_properties_Bean = _context.getGlobalProperties();
@@ -69,13 +73,13 @@ public class FolderWatcherActor extends UntypedActor {
     }
     
 	
-    private  Cancellable tick = null;
+    private  Cancellable folderWatch = null;
     
 	@Override
 	public void postStop() {
 		logger.debug("postStop");
-		if(tick!=null){
-			tick.cancel();
+		if(folderWatch!=null){
+			folderWatch.cancel();
 		}
 	}
 
@@ -83,7 +87,7 @@ public class FolderWatcherActor extends UntypedActor {
 	public void onReceive(Object message) throws Exception {
 		if ("start".equals(message)) {
 			logger.debug("Start message received");
-			tick = getContext()
+			folderWatch = getContext()
 			.system()
 			.scheduler()
 			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
@@ -91,13 +95,13 @@ public class FolderWatcherActor extends UntypedActor {
 					"tick", getContext().dispatcher(), null);				
 
 		}else
-		if ("tick".equals(message)) {
-			logger.debug("Tick message received");
+		if (MSG_FOLDER_WATCH.equals(message)) {
+			logger.debug("watchFolders message received");
 			traverseFolders();
-		}else 	if ("stop".equals(message)) {
+		}else 	if (MSG_STOP.equals(message)) {
 				logger.debug("Stop message received");
-				if(tick!=null){
-					tick.cancel();
+				if(folderWatch!=null){
+					folderWatch.cancel();
 				}	
 			} else {
 				logger.debug("unhandeld message:"+message);

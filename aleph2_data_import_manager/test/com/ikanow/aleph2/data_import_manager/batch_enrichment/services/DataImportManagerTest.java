@@ -1,6 +1,7 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -13,14 +14,21 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketActor;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BucketEnrichmentMessage;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
@@ -31,10 +39,15 @@ public class DataImportManagerTest {
 	@Inject 
 	protected IServiceContext _service_context = null;
 	
-	protected DataImportActorContext actor_context;
+	protected DataImportActorContext _actor_context;
 	//protected ManagementDbActorContext _db_actor_context;
 	
 	protected Config config = null;
+	protected DataImportManager dataImportManager = null;
+	
+	protected String bucketPath1 = null;
+	protected String buckeFullName1= "/misc/bucket1";
+	
 	@Before
 	public void setupDependencies() throws Exception {
 		if (null != _service_context) {
@@ -53,30 +66,30 @@ public class DataImportManagerTest {
 		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 
-		actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
-		app_injector.injectMembers(actor_context);
-		// create folder structure if it does not exist for testing.
-		
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
+		app_injector.injectMembers(_actor_context);
+
+		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
+		this.dataImportManager = serverInjector.getInstance(DataImportManager.class);
+
+		// create folder structure if it does not exist for testing.		
 		FileContext fileContext = _service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class,Optional.empty()).get();
-		logger.info("Root dir:"+actor_context.getGlobalProperties().distributed_root_dir());
-		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket1/managed_bucket/import/ready");
-		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket2/managed_bucket/import/ready");
-		DirUtils.createDirectory(fileContext,actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket3/managed_bucket/import/ready");
+		logger.info("Root dir:"+_actor_context.getGlobalProperties().distributed_root_dir());
+		this.bucketPath1 = _actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket1/managed_bucket/import/ready";
+		DirUtils.createDirectory(fileContext,bucketPath1);
+		DirUtils.createDirectory(fileContext,_actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket2/managed_bucket/import/ready");
+		DirUtils.createDirectory(fileContext,_actor_context.getGlobalProperties().distributed_root_dir()+"/data/misc/bucket3/managed_bucket/import/ready");
 }
 	
 	@Test
 	@Ignore
 	public void testCreate() throws Exception {
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
-		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 	}
 
 	@Test
 	@Ignore
 	public void testStartStop() throws Exception {
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
-		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 		dataImportManager.start();	
 		Thread.sleep(3000);
@@ -89,8 +102,21 @@ public class DataImportManagerTest {
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
-		dataImportManager.tick();	
+		dataImportManager.folderWatch();	
 		Thread.sleep(3000);
+	}
+
+	@Test
+	public void testBeBucketActor() throws Exception {
+		try {
+			Props props = Props.create(BeBucketActor.class,_service_context.getStorageService());
+			ActorSystem system = _actor_context.getActorSystem();
+		    ActorRef beBucketActor = system.actorOf(props,"beBucket1");		    
+			beBucketActor.tell(new BucketEnrichmentMessage(bucketPath1, "/misc/bucket1", ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + buckeFullName1),  ActorRef.noSender());
+		} catch (Exception e) {
+			logger.error("Caught exception",e);
+			fail(e.getMessage());
+		}
 	}
 	
 	

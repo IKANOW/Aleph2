@@ -59,16 +59,16 @@ public class DataImportManager  {
 	public void start() {
         // Create the 'greeter' actor
 		logger.info("DataImportManager starting...");
-		getFolderWatchActor().tell("start", ActorRef.noSender());
+		getFolderWatchActor().tell(FolderWatcherActor.MSG_START, ActorRef.noSender());
 	}
 
 	public void stop() {
 		logger.info("DataImportManager stopping...");
-		getFolderWatchActor().tell("stop", ActorRef.noSender());
+		getFolderWatchActor().tell(FolderWatcherActor.MSG_STOP, ActorRef.noSender());
 	}
 
-	public void tick() {
+	public void folderWatch() {
 		logger.info("DataImportManager sending tick.");
-		getFolderWatchActor().tell("tick", ActorRef.noSender());
+		getFolderWatchActor().tell(FolderWatcherActor.MSG_FOLDER_WATCH, ActorRef.noSender());
 	}
 }
