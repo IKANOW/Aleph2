@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -218,5 +219,55 @@ public class TestFutureUtils {
 		catch (Exception e) {
 			assertEquals("test4b", e.getCause().getMessage());
 		}		
+	}
+	
+	/** Doesn't test any code - just used to check exceptionally() works the way I'd expect
+	 */
+	@Test
+	public void testExceptionally() {
+		final CompletableFuture<String> test1a = CompletableFuture.completedFuture("test");
+		final HashSet<String> test = new HashSet<>();
+		
+		// Check called when there's an exception
+		
+		test1a
+			.thenCompose(s -> CompletableFuture.completedFuture(s + "1"))
+			.thenCompose(ss -> {
+				if (ss.equals("test1")) {
+					throw new RuntimeException("test2b");
+				}
+				return CompletableFuture.completedFuture(ss + "1");
+			})
+			.thenCompose(sss -> {
+				System.out.println("NEVER SEE THIS1");
+				return CompletableFuture.completedFuture(sss + "1");
+			})
+			.thenAccept(s -> { test.add(s); } )
+			.exceptionally(t -> { test.add("TEST"); return null; })
+			;
+
+		assertEquals(1, test.size());
+		assertEquals("TEST", test.iterator().next());
+		
+		// Check not called when there isn't
+		
+		test.clear();
+		assertEquals(0, test.size());
+		
+		test1a
+		.thenCompose(s -> CompletableFuture.completedFuture(s + "1"))
+		.thenCompose(ss -> {
+			return CompletableFuture.completedFuture(ss + "1");
+		})
+		.thenCompose(sss -> {
+			return CompletableFuture.completedFuture(sss + "1");
+		})
+		.thenAccept(s -> { test.add(s); } )
+		.exceptionally(t -> { test.add("TEST"); return null; })
+		;
+
+		assertEquals(1, test.size());
+		assertEquals("test111", test.iterator().next());
+		
 	}
 }
