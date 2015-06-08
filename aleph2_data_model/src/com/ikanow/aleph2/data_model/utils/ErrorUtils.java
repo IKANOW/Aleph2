@@ -17,8 +17,8 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 
-
 import com.google.common.collect.ObjectArrays;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class ErrorUtils {
 
@@ -169,11 +169,31 @@ public class ErrorUtils {
 	 * @param methodName
 	 * @return
 	 */
-	private static String stripLambdaMethodNumber(String methodName) {
-		int indexOfSlash = methodName.lastIndexOf("/");
+	private static String stripLambdaMethodNumber(final String methodName) {
+		final int indexOfSlash = methodName.lastIndexOf("/");
 		if (indexOfSlash < 0 )
 			return methodName;
-		return methodName.substring(0, indexOfSlash);
+		else
+			return methodName.substring(0, indexOfSlash);
 	}
 	
+	/** This class encapsulates a basic message bean in an unchecked exception
+	 * @author Alex
+	 */
+	public static class BasicMessageException extends RuntimeException {
+		private static final long serialVersionUID = -322389853093290491L;
+		protected final BasicMessageBean _message;
+		public BasicMessageException(BasicMessageBean message) {
+			_message = message;
+		}
+		public BasicMessageBean getMessageBean() { return _message; }
+		@Override
+		public String getMessage() {
+			return _message.message();
+		}
+		@Override
+		public String getLocalizedMessage() {
+			return _message.message();
+		}
+	}
 }

@@ -19,9 +19,11 @@ import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
-
 import org.junit.Test;
+
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class TestErrorUtils {
 
@@ -120,5 +122,22 @@ public class TestErrorUtils {
 			}			
 		});
 		assertTrue(output.get(0).startsWith("Test: [Exception in Lambda: Exception]:"));		
+	}
+	
+	@Test
+	public void testBasicMessageException() {
+		final BasicMessageBean test = new BasicMessageBean(
+				new Date(), false, "testsrc", "testcmd", null, "testmsg", null
+				);
+		
+		try {
+			throw new ErrorUtils.BasicMessageException(test);
+		}
+		catch (ErrorUtils.BasicMessageException me) {
+			assertEquals("testmsg", me.getMessage());
+			assertEquals("testmsg", me.getLocalizedMessage());
+			assertEquals("testmsg", me.getMessageBean().message());
+			assertEquals("testsrc", me.getMessageBean().source());
+		}
 	}
 }

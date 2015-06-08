@@ -386,9 +386,9 @@ public class Lambdas {
 	 * @param value_collector
 	 * @return
 	 */
-	public static <T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<Object, A>, Tuple2<List<Throwable>, R>> collector_errs(final Collector<T, A, R> value_collector)
+	public static <T, A, R> Collector<Either<Throwable, T>, ?, Tuple2<List<Throwable>, R>> collector_errs(final Collector<T, A, R> value_collector)
 	{
-		return collector(Collectors.toList(), value_collector);
+		return collector(Collectors.<Throwable>toList(), value_collector);
 	}
 	
 	/** Collects values from the collector, and grabs the first error encountered
