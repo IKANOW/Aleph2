@@ -187,7 +187,7 @@ public class Lambdas {
 	 */
 	public static <T> Function<Either<Throwable, T>, Stream<Either<Throwable, T>>> filter_e(ThrowableWrapper.Predicate<T> f) {
 		return err_t -> {
-			return err_t.either(
+			return err_t.<Stream<Either<Throwable, T>>>either(
 				err -> Stream.of(Either.left(err))
 				, 
 				t -> {
@@ -215,7 +215,7 @@ public class Lambdas {
 	 */
 	public static <T> Predicate<Either<Throwable, T>> filter_u(final boolean drop_errors, ThrowableWrapper.Predicate<T> f) {
 		return err_t -> {
-			return err_t.either(__ -> !drop_errors
+			return err_t.<Boolean>either(__ -> !drop_errors
 					, 
 					t -> wrap_filter_u(f).test(t));
 		};
