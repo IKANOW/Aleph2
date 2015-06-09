@@ -17,9 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 import java.util.Collection;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.apache.log4j.Logger;
