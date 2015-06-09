@@ -58,11 +58,12 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class TestDataBucketCrudService_Delete {
 
-	public static final Logger _logger = Logger.getLogger(TestDataBucketCrudService_Delete.class);	
+	public static final Logger _logger = LogManager.getLogger(TestDataBucketCrudService_Delete.class);	
 	
 	/////////////////////////////////////////////////////////////
 	

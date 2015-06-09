@@ -26,7 +26,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,7 +55,7 @@ import akka.actor.UntypedActor;
 
 public class TestBucketActionDistributionActor {
 
-	public static final Logger _logger = Logger.getLogger(TestBucketActionDistributionActor.class);
+	public static final Logger _logger = LogManager.getLogger(TestBucketActionDistributionActor.class);
 	
 	// Test actors:
 	// This one always refuses

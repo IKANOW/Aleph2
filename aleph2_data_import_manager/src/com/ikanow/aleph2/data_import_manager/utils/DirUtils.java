@@ -28,14 +28,15 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 /** 
  * Utility class working on FileContext.
  * @author jfreydank
  *
  */
 public class DirUtils {
-	private static final Logger logger = Logger.getLogger(DirUtils.class);
+	private static final Logger logger = LogManager.getLogger(DirUtils.class);
 
 	/**
 	 * This method returns the path to the first subdirectory matching the subDirectoryName parameter or null if not found.

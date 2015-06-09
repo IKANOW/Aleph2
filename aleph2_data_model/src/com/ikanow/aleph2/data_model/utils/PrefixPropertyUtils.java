@@ -22,7 +22,8 @@ import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 /**
  * 
  * @author Joern Freydank (jfreydank@ikanow.com)
@@ -30,7 +31,7 @@ import org.apache.log4j.Logger;
  */
 public class PrefixPropertyUtils {
 
-	static final Logger logger = Logger.getLogger(PrefixPropertyUtils.class);
+	static final Logger logger = LogManager.getLogger(PrefixPropertyUtils.class);
 
 	public static void setProperty(Properties properties, Object target, String propertyName, String fieldName, String prefix) {
 		if (properties != null && target != null && propertyName != null) {

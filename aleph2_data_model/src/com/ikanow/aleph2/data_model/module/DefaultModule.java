@@ -19,7 +19,8 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * 
@@ -31,7 +32,7 @@ public class DefaultModule  {
 	protected Properties properties = null;
 	protected String jsonStyleProperties;
 
-	private static final Logger logger = Logger.getLogger(DefaultModule.class);
+	private static final Logger logger = LogManager.getLogger(DefaultModule.class);
 
 	public DefaultModule(String jsonStyleProperties){
 		this.jsonStyleProperties = jsonStyleProperties;

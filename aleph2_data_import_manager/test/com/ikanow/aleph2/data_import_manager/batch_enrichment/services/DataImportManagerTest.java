@@ -5,13 +5,16 @@ import static org.junit.Assert.fail;
 
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.FileContext;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -20,6 +23,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketActor;
@@ -33,17 +37,20 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class DataImportManagerTest {
-    private static final Logger logger = Logger.getLogger(DataImportManagerTest.class);
+    private static final Logger logger = LogManager.getLogger(DataImportManagerTest.class);
 
 	@Inject 
 	protected IServiceContext _service_context = null;
@@ -152,8 +159,30 @@ public class DataImportManagerTest {
 			if(!oDataBucketBean.isPresent()){
 				EnrichmentControlMetadataBean ecm1 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::name,"bucketConfig1_1").with(EnrichmentControlMetadataBean::enabled, false).done().get();
 				EnrichmentControlMetadataBean ecm2 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::name,"bucketConfig1_2").with(EnrichmentControlMetadataBean::enabled, true).done().get();				
-				DataBucketBean bean = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::_id, buckeFullName1).with(DataBucketBean::full_name, buckeFullName1).with(DataBucketBean::batch_enrichment_configs, Arrays.asList(ecm1,ecm2)).done().get();
-				dataStore.storeObject(bean);
+
+				Date now = new Date();
+				DataBucketBean bean = BeanTemplateUtils.build(DataBucketBean.class)
+						.with(DataBucketBean::_id, buckeFullName1)
+						.with(DataBucketBean::full_name, buckeFullName1)
+						.with(DataBucketBean::created, now)
+						.with(DataBucketBean::modified, now)
+						.with(DataBucketBean::batch_enrichment_configs, Arrays.asList(ecm1,ecm2))
+						.with(DataBucketBean::display_name, "Test Bucket ")
+						.with(DataBucketBean::harvest_technology_name_or_id, "/app/aleph2/library/import/harvest/tech/here/" + 1)
+						.with(DataBucketBean::tags, Collections.emptySet())
+						.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
+						//.with(DataBucketBean::master_enrichment_type, val)
+						.with(DataBucketBean::access_rights, new AuthorizationBean(ImmutableMap.<String, String>builder().put("auth_token", "rw").build()))
+						.done().get();
+				
+
+				ErrorUtils.logManagedFuture(logger,dataStore.storeObject(bean));
+				// test if bucket was stored
+
+				//Optional<DataBucketBean> oDataBucketBean2 = dataStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
+				Optional<DataBucketBean> oDataBucketBean2 = dataStore.getObjectById(buckeFullName1).get(1, TimeUnit.SECONDS);
+				logger.debug(oDataBucketBean2);
+
 			}
 			
 	}

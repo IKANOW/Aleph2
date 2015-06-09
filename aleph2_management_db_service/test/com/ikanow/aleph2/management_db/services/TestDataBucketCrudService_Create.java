@@ -61,11 +61,12 @@ import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFact
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 import com.mongodb.MongoException;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class TestDataBucketCrudService_Create {
 
-	public static final Logger _logger = Logger.getLogger(TestDataBucketCrudService_Create.class);	
+	public static final Logger _logger = LogManager.getLogger(TestDataBucketCrudService_Create.class);	
 	
 	/////////////////////////////////////////////////////////////
 	
