@@ -164,9 +164,3 @@ public class BeBucketActor extends UntypedActor {
 	}
 }
 
-/*	protected Optional<DataBucketBean> loadBucket(String bucketId, String fullName, String bucketPathStr) {
-
-		Optional<DataBucketBean> odb  bucketStatusStore.getObjectBySpec(query_comp_full_name).thenComposeAsync(bucketBean -> {
-			return null;   }).thenAccept(action);
-                                        
-*/
