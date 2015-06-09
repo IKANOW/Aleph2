@@ -45,7 +45,7 @@ public class BeBucketActor extends UntypedActor {
 	private static final Logger logger = Logger.getLogger(BeBucketActor.class);
 
 	protected CuratorFramework _curator;
-	protected final DataImportActorContext _context;
+	protected final DataImportActorContext _actor_context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
 	protected final IStorageService storage_service;
@@ -54,18 +54,17 @@ public class BeBucketActor extends UntypedActor {
 	protected String bucketZkPath = null;
 	protected FileContext fileContext = null;
 
-	private String bucketId;
 
 	
 	// not null means agent has been initialized.
 
 	public BeBucketActor(IStorageService storage_service) {
-		this._context = DataImportActorContext.get();
-		this._global_properties_Bean = _context.getGlobalProperties();
+		this._actor_context = DataImportActorContext.get();
+		this._global_properties_Bean = _actor_context.getGlobalProperties();
 		logger.debug("_global_properties_Bean" + _global_properties_Bean);
-		this._core_distributed_services = _context.getDistributedServices();
+		this._core_distributed_services = _actor_context.getDistributedServices();
 		this._curator = _core_distributed_services.getCuratorFramework();
-		this._management_db = _context.getServiceContext().getCoreManagementDbService();
+		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
 		this.storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020")).get();
 	}
@@ -101,7 +100,7 @@ public class BeBucketActor extends UntypedActor {
 				// bucket is not registered yet, grab it and do the processing
 				// on this node
 				_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
-				checkReady(bucketId, bem.getBucketPathStr());
+				checkReady(bem.getBuckeFullName(), bem.getBucketPathStr());
 
 				// stop actor after all the processing
 				getContext().stop(getSelf());
@@ -123,29 +122,41 @@ public class BeBucketActor extends UntypedActor {
 				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);
 				if (statuss.length > 0) {
 					logger.debug("Detected " + statuss.length + " ready files.");
-					
-					IManagementCrudService<DataBucketBean> bucketStatusStore = _management_db.getDataBucketStore();
-					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", bucketFullName);
-	    			final ActorRef closing_self = this.self();
 
-					bucketStatusStore.getObjectBySpec(query_comp_full_name).thenAccept(odb -> {
-						 if (odb.isPresent()) {
-							
-							boolean containsEnrichment = odb.get().batch_enrichment_configs().stream().map(EnrichmentControlMetadataBean::enabled).reduce(false, (a ,b)-> a ||  b);
-							//send self a stop message
-							if(!containsEnrichment){
-								closing_self.tell(PoisonPill.getInstance(), closing_self);								
-							}else{
-								// TODO enrichment work on bucket
-							}
-						} else { 
-							closing_self.tell(PoisonPill.getInstance(), closing_self);								
-						}
-							
-						});
-					} // status length					
-					} 
-						
+					IManagementCrudService<DataBucketBean> dataStore = _management_db.getDataBucketStore();
+					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
+							bucketFullName);
+					final ActorRef closing_self = this.self();
+
+					dataStore.getObjectBySpec(query_comp_full_name).thenAccept(
+							odb -> {
+								if (odb.isPresent()) {
+
+									boolean containsEnrichment = odb.get().batch_enrichment_configs().stream()
+											.map(EnrichmentControlMetadataBean::enabled).reduce(false, (a, b) -> a || b);
+									// send self a stop message
+									if (!containsEnrichment) {
+										logger.info("Skipping Enrichment, no enrichment config enabled: "+bucketFullName );
+										closing_self.tell(PoisonPill.getInstance(), closing_self);
+									} else {
+										// TODO enrichment work on bucket
+										logger.info("Processing enrichment: "+bucketFullName );
+									}
+								} else {
+									logger.info("Skipping Enrichment, no enrichment config found in db: "+bucketFullName );
+									closing_self.tell(PoisonPill.getInstance(), closing_self);
+								}
+
+							});
+				} // status length
+				else{
+					logger.info("Skipping, no files found in ready folder: "+bucketReady );
+				}
+			}else {
+				logger.info("Skipping,  ready folder does not exist: "+bucketReady );
+
+			}
+
 		} catch (Exception e) {
 			logger.error("checkReady caught Exception:", e);
 		}
@@ -153,9 +164,3 @@ public class BeBucketActor extends UntypedActor {
 	}
 }
 
-/*	protected Optional<DataBucketBean> loadBucket(String bucketId, String fullName, String bucketPathStr) {
-
-		Optional<DataBucketBean> odb  bucketStatusStore.getObjectBySpec(query_comp_full_name).thenComposeAsync(bucketBean -> {
-			return null;   }).thenAccept(action);
-                                        
-*/
