@@ -235,7 +235,7 @@ public class ErrorUtils {
 	 * @param logger
 	 * @param mgmt_future_side_channel - the return value from mgmt_future.getManagementResults().join/get/then*, or from combineWithSideChannel
 	 */
-	public static void logManagedFutureSideChannel(final Logger logger, Collection<BasicMessageBean> mgmt_future_side_channel) {
+	public static void logManagedFutureSideChannel(final Logger logger, final Collection<BasicMessageBean> mgmt_future_side_channel) {
 		for (BasicMessageBean msg : mgmt_future_side_channel) {
 			final String log = show(msg); 
 			if (msg.success())
