@@ -133,7 +133,7 @@ public class TestHarvestContext {
 				IHarvestContext test_external1 = ContextUtils.getHarvestContext(signature);
 				fail("Should have thrown exception");
 			}
-			catch (Exception e) {
+			catch (Exception e) {				
 				assertEquals("java.lang.RuntimeException: Unable to locate bucket: test", e.getMessage());
 			}
 			

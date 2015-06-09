@@ -168,6 +168,9 @@ public class TestAkkaMessageBuses {
 		if (waiting >= MAX_WAIT) {
 			fail("Waited for 20s for the child process to finish");
 		}		
+		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
+			try { Thread.sleep(1000); } catch (Exception e) {}			
+		}
 		assertEquals(0, px.exitValue());		
 	}
 	

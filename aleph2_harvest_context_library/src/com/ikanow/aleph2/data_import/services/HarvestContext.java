@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.services;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -25,26 +26,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Collector;
-
-
-
-
-
 import java.util.stream.StreamSupport;
 
-
-
-
-
-
-
-
 import scala.Tuple2;
-
-
-
-
-
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableSet;
@@ -63,6 +47,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -75,6 +60,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValueFactory;
 
+@SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
 
 	public static final String __MY_ID = "030e2b82-0285-11e5-a322-1697f925ec7b";
@@ -150,6 +136,9 @@ public class HarvestContext implements IHarvestContext {
 			_mutable_state.bucket.set(retrieve_bucket.get());
 		}
 		catch (Exception e) {
+			//DEBUG
+			//System.out.println(ErrorUtils.getLongForm("{0}", e));
+			
 			throw new RuntimeException(e);
 		}
 	}
@@ -213,13 +202,15 @@ public class HarvestContext implements IHarvestContext {
 				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
 			});
 			
+			final String java_home = Optional.ofNullable(System.getenv("JAVA_HOME")).orElse("jre" + File.separator + "lib"); 
+			
 			// Libraries associated with services:
 			final Set<String> user_service_class_files = services.map(set -> {
 				return set.stream()
 						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
 						.filter(service -> service != null)
 						.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty() && !jar_path.contains(java_home))
 						.collect(Collectors.toSet());
 			})
 			.orElse(Collections.emptySet());
@@ -230,7 +221,7 @@ public class HarvestContext implements IHarvestContext {
 									_service_context.getService(IManagementDbService.class, Optional.empty())
 							).stream()
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty() && !jar_path.contains(java_home))
 							.collect(Collectors.toSet());
 			
 			// Combine them together
