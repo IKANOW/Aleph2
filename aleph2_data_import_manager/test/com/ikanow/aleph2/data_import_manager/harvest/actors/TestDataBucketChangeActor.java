@@ -70,7 +70,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
-import com.ikanow.aleph2.management_db.services.LocalBucketActionMessageBus;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -105,7 +104,7 @@ public class TestDataBucketChangeActor {
 		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 		
-		_db_actor_context = new ManagementDbActorContext(_service_context, new LocalBucketActionMessageBus());
+		_db_actor_context = new ManagementDbActorContext(_service_context);				
 		
 		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(_actor_context);

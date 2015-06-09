@@ -21,9 +21,13 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.event.japi.LookupEventBus;
 
 import com.google.inject.Inject;
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 
 /** Implementation class for standalone Curator instance
  * @author acp
@@ -46,7 +50,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		_curator_framework = CuratorFrameworkFactory.newClient(_test_server.getConnectString(), retry_policy);
 		_curator_framework.start();		
 		
-		_akka_system = ActorSystem.create();
+		_akka_system = ActorSystem.create("default");
 	}	
 	 
 	/** Returns a connection to the Curator server
@@ -62,5 +66,15 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	@Override
 	public ActorSystem getAkkaSystem() {
 		return _akka_system;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getBroadcastMessageBus(java.lang.Class, java.lang.String)
+	 */
+	@Override
+	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
+		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic)
+	{		
+		return new LocalBroadcastMessageBus<M>(topic);
 	}
 }

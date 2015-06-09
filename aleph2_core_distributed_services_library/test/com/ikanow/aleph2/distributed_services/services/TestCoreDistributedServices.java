@@ -26,8 +26,13 @@ import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
 import org.junit.Test;
 
+import akka.serialization.Serialization;
+import akka.serialization.SerializationExtension;
+import akka.serialization.Serializer;
+
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -36,7 +41,7 @@ public class TestCoreDistributedServices {
 	protected ICoreDistributedServices _core_distributed_services;
 	
 	@Before
-	public void setupMockCoreDistributedServices() throws Exception {
+	public void setupCoreDistributedServices() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
 		String connect_string = temp._test_server.getConnectString();
 				
@@ -52,10 +57,51 @@ public class TestCoreDistributedServices {
 		_core_distributed_services = new CoreDistributedServices(bean);
 	}
 	
+	public static class TestBean implements IJsonSerializable {
+		protected TestBean() {}
+		public String test1() { return test1; }
+		public EmbeddedTestBean embedded() { return embedded; };
+		private String test1;
+		private EmbeddedTestBean embedded;
+	};
+	
+	public static class EmbeddedTestBean {
+		protected EmbeddedTestBean() {}
+		public String test2() { return test2; }
+		private String test2;
+	};
+	
 	@Test
-	public void testMockCoreDistributedServices() throws KeeperException, InterruptedException, Exception {
+	public void testCoreDistributedServices() throws KeeperException, InterruptedException, Exception {
 		final CuratorFramework curator = _core_distributed_services.getCuratorFramework();
         String path = curator.getZookeeperClient().getZooKeeper().create("/test", new byte[]{1,2,3}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         assertEquals(path, "/test");
+        
+        // Test serialization is hooked up:
+        Serialization tester = SerializationExtension.get(_core_distributed_services.getAkkaSystem());
+        
+        TestBean test = BeanTemplateUtils.build(TestBean.class).with("test1", "val1")
+        				.with("embedded", 
+        						BeanTemplateUtils.build(EmbeddedTestBean.class).with("test2", "val2").done().get()).done().get();
+        
+        byte[] test_bytes = tester.serialize(test).get();
+        
+        assertEquals("{\"test1\":\"val1\",\"embedded\":{\"test2\":\"val2\"}}", new String(test_bytes, "UTF-8"));
+
+        Serializer serializer = tester.findSerializerFor(test);
+
+        assertEquals(true, serializer.includeManifest());
+        
+        byte[] test_bytes2 = serializer.toBinary(test);        
+        
+        assertEquals("{\"test1\":\"val1\",\"embedded\":{\"test2\":\"val2\"}}", new String(test_bytes2, "UTF-8"));
+        
+        TestBean test2 = (TestBean) serializer.fromBinary(test_bytes2, TestBean.class);
+        
+        assertEquals(test.test1(), test2.test1());
+        assertEquals(test.embedded().test2(), test2.embedded().test2());
+        
+        //(This doesn't really test what I wanted, which was that a manifest was passed along with the serialization info)
+        
 	}
 }

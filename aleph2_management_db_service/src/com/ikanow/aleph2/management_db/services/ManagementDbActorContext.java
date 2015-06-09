@@ -2,16 +2,18 @@ package com.ikanow.aleph2.management_db.services;
 
 import java.util.Optional;
 
-
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.event.japi.LookupEventBus;
 
 /** Possibly temporary class to provide minimal actor context, pending moving to Guice
  * @author acp
@@ -21,12 +23,11 @@ public class ManagementDbActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public ManagementDbActorContext(final IServiceContext service_context,
-										final BucketActionMessageBus bucket_action_message_bus)
+	public ManagementDbActorContext(final IServiceContext service_context)
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		_bucket_action_bus = bucket_action_message_bus;
+		_bucket_action_bus = _distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		_singleton = this;
 	}
 
@@ -54,7 +55,7 @@ public class ManagementDbActorContext {
 	/** Returns a static accessor to the bucket action message bus
 	 * @return the bucket action message bus
 	 */
-	public BucketActionMessageBus getBucketActionMessageBus() {
+	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getBucketActionMessageBus() {
 		return _bucket_action_bus;
 	}
 	
@@ -76,6 +77,6 @@ public class ManagementDbActorContext {
 	protected static ActorRef _bucket_action_supervisor;
 	protected static ManagementDbActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
-	protected final BucketActionMessageBus _bucket_action_bus;
+	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _bucket_action_bus;
 	protected final IServiceContext _service_context;
 }

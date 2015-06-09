@@ -16,17 +16,18 @@
 package com.ikanow.aleph2.management_db.data_model;
 
 import java.util.Collections;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import java.util.Set;
-
 
 import akka.actor.ActorRef;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 
 /** Just a top level message type for handling bucket actions 
  * @author acp
  */
-public class BucketActionMessage {
+public class BucketActionMessage implements IJsonSerializable {
 	private BucketActionMessage(final DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
 	private BucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) { 
 		this.bucket = bucket; 		
@@ -41,7 +42,7 @@ public class BucketActionMessage {
 	/** An internal class used to wrap event bus publications
 	 * @author acp
 	 */
-	public static class BucketActionEventBusWrapper {
+	public static class BucketActionEventBusWrapper implements IBroadcastEventBusWrapper<BucketActionMessage> {
 		@SuppressWarnings("unused")
 		private BucketActionEventBusWrapper() { }
 		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
@@ -52,7 +53,9 @@ public class BucketActionMessage {
 			this.sender = sender;
 			this.message = message;
 		}	
+		@Override
 		public ActorRef sender() { return sender; };
+		@Override
 		public BucketActionMessage message() { return message; };
 		
 		protected ActorRef sender;
