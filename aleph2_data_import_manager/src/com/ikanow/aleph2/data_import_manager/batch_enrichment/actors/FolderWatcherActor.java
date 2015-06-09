@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import scala.concurrent.duration.Duration;
 import akka.actor.ActorRef;
@@ -43,7 +44,7 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 public class FolderWatcherActor extends UntypedActor {
 	
 
-    private static final Logger logger = Logger.getLogger(FolderWatcherActor.class);
+    private static final Logger logger = LogManager.getLogger(FolderWatcherActor.class);
 
 	protected CuratorFramework _curator	;
 	protected final DataImportActorContext _context;

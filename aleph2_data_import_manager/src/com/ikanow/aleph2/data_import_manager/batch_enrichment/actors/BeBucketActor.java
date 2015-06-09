@@ -21,7 +21,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.data.Stat;
 
 import akka.actor.ActorRef;
@@ -42,7 +43,7 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 public class BeBucketActor extends UntypedActor {
 
-	private static final Logger logger = Logger.getLogger(BeBucketActor.class);
+	private static final Logger logger = LogManager.getLogger(BeBucketActor.class);
 
 	protected CuratorFramework _curator;
 	protected final DataImportActorContext _actor_context;

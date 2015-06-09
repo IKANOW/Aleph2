@@ -11,7 +11,8 @@ import java.util.Optional;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class DirUtilsTest {
-    private static final Logger logger = Logger.getLogger(DirUtilsTest.class);
+    private static final Logger logger = LogManager.getLogger(DirUtilsTest.class);
 
 	@Inject 
 	protected IServiceContext _service_context = null;

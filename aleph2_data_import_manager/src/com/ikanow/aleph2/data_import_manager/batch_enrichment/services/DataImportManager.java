@@ -15,7 +15,8 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -28,7 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 
 public class DataImportManager  {
-	private static final Logger logger = Logger.getLogger(DataImportManager.class);
+	private static final Logger logger = LogManager.getLogger(DataImportManager.class);
     private ActorSystem system = null;
     protected ActorRef folderWatchActor = null;
     
