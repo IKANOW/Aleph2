@@ -68,8 +68,10 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		_curator_framework.start();		
 		
 		// Set up a config for Akka overrides
-		final Map<String, String> config_map = ImmutableMap.<String, String>builder()
+		final Map<String, Object> config_map = ImmutableMap.<String, Object>builder()
+											//.put("akka.loglevel", "DEBUG") // (just in case it's quickly needed during unit testing)
 											.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
+											.put("akka.extensions", Arrays.asList("akka.cluster.pubsub.DistributedPubSub"))
 											.put("akka.remote.netty.tcp.port", "0")
 											.put("akka.cluster.seed.zookeeper.url", connection_string)
 											.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
