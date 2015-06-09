@@ -16,9 +16,17 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
+import java.util.Collection;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
+
+import org.apache.log4j.Logger;
 
 import com.google.common.collect.ObjectArrays;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class ErrorUtils {
 
@@ -195,5 +203,22 @@ public class ErrorUtils {
 		public String getLocalizedMessage() {
 			return _message.message();
 		}
+	}
+
+	public static ManagementFuture<Supplier<Object>> logManagedFuture(Logger logger,ManagementFuture<Supplier<Object>> managementFuture) {
+		
+		Collection<BasicMessageBean> errors = null;
+		try {
+			errors = managementFuture.getManagementResults().get(1, TimeUnit.SECONDS);
+		} catch (Exception e) {
+		}
+		if(errors!=null){
+			for (BasicMessageBean basicMessageBean : errors) {
+				logger.error(basicMessageBean.message());			
+			}
+		}
+		return managementFuture;
+		
+		
 	}
 }
