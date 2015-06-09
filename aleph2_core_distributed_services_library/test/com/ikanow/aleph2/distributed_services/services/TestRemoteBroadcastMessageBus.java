@@ -260,6 +260,7 @@ public class TestRemoteBroadcastMessageBus {
 		
 		assertEquals(MESSAGES_TO_SEND, _received_bus1);
 		assertEquals(MESSAGES_TO_SEND, _received_post_bus2);
+		assertEquals(0, _unexpected);
 		
 	}
 	
