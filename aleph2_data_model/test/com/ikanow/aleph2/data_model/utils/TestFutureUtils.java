@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -122,6 +126,120 @@ public class TestFutureUtils {
 		
 		assertEquals(pretest1.get(), test3_actual_1.get());		
 		assertEquals(Collections.emptyList(), test3_actual_2.get());		
+		
+		// Test 4: Test getting access to side channel on error:
+		
+		final HashSet<String> test_async = new HashSet<>();
+		final LinkedList<BasicMessageBean> test_messages = new LinkedList<>();
+		
+		FutureUtils.createManagementFuture(FutureUtils.returnError(new RuntimeException("test4a")), pretest2b)
+									.exceptionallyWithSideChannel((t, channel) -> {
+										test_async.add(t.getMessage());
+										test_messages.addAll(channel.join());
+										return null;
+									});
+		
+		assertTrue("Error handler ran", test_async.contains("test4a"));
+		assertEquals(1, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();
+
+		// 4b: no fail
+		
+		CompletableFuture<TestBean> test4b = FutureUtils.createManagementFuture(pretest1, pretest2b)
+										.exceptionallyWithSideChannel((t, channel) -> {
+											test_async.add(t.getMessage());
+											test_messages.addAll(channel.join());
+											return null;
+										});
+
+		assertEquals("alskdjfhg", test4b.get().field1);
+		
+		assertTrue("Error handler didn't ran", test_async.isEmpty());
+		assertEquals(0, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();
+		
+		// 4c: fail no side channel
+		
+		FutureUtils.createManagementFuture(FutureUtils.returnError(new RuntimeException("test4a")))
+		.exceptionallyWithSideChannel((t, channel) -> {
+			test_async.add(t.getMessage());
+			test_messages.addAll(channel.join());
+			return null;
+		});
+
+		assertTrue("Error handler ran", test_async.contains("test4a"));
+		assertEquals(0, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();
+		
+		// Test 5: test combining
+		
+		FutureUtils.createManagementFuture(FutureUtils.returnError(new RuntimeException("test5")), pretest2b)
+			.combineWithSideChannel(Optional.of((t, channel) -> {
+				test_async.add(t.getMessage());
+				test_messages.addAll(channel.join());
+				return null;
+			}));
+
+		assertTrue("Error handler ran", test_async.contains("java.lang.RuntimeException: test5"));
+		assertEquals(1, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();		
+		
+		// 5b: no fail
+		
+		CompletableFuture<Tuple2<TestBean, Collection<BasicMessageBean>>> test5b = FutureUtils.createManagementFuture(pretest1, pretest2b)
+										.combineWithSideChannel(Optional.of((t, channel) -> {
+											test_async.add(t.getMessage());
+											test_messages.addAll(channel.join());
+											return null;
+										}));
+
+		assertEquals("alskdjfhg", test5b.get()._1().field1);
+		assertEquals(1, test5b.get()._2().size());
+		
+		assertTrue("Error handler didn't ran", test_async.isEmpty());
+		assertEquals(0, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();
+		
+		// 5c: no fail, no side channel
+
+		CompletableFuture<Tuple2<TestBean, Collection<BasicMessageBean>>> test5c = FutureUtils.createManagementFuture(pretest1)
+				.combineWithSideChannel(Optional.of((t, channel) -> {
+					test_async.add(t.getMessage());
+					test_messages.addAll(channel.join());
+					return null;
+				}));
+
+		assertEquals("alskdjfhg", test5c.get()._1().field1);
+		assertEquals(0, test5c.get()._2().size());
+		
+		assertTrue("Error handler didn't ran", test_async.isEmpty());
+		assertEquals(0, test_messages.size());
+		
+		test_async.clear();
+		test_messages.clear();
+		
+		// 5d: fail, no error handler
+		
+		CompletableFuture<Tuple2<TestBean, Collection<BasicMessageBean>>> test5d = 
+				FutureUtils.<TestBean>createManagementFuture(FutureUtils.returnError(new RuntimeException("test5d")), pretest2b).combineWithSideChannel(Optional.empty());
+
+		try {
+			test5d.get();
+			fail("Should have errored");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: test5d", e.getMessage());
+		}		
 	}
 
 	@Test

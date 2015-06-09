@@ -20,8 +20,10 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-
+import scala.Tuple2;
 import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
 
@@ -95,6 +97,43 @@ public class FutureUtils {
 				else this.complete(value);
 			});
 			_management_side_channel = side_channel;
+		}
+		
+		/** Internal function to handle user error handling
+		 * @param error_handler - an error handler provided hte main channel's throwable + the side channels
+		 * @param channel - the side channel
+		 * @return - a function compatible with standard completable futures
+		 */
+		private static <X> Function<Throwable,? extends X> errorHandling(
+				final BiFunction<Throwable, CompletableFuture<Collection<BasicMessageBean>>, ? extends X> error_handler,
+				final Optional<CompletableFuture<Collection<BasicMessageBean>>> channel)
+		{
+			return err -> error_handler.apply(err, channel
+					.orElse(CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList())));
+		}
+		
+		/** Returns a version of the management future that provides an error handling routine that provides the side channel also
+		 * @param error_handler - a user error handler that also gets the side channel
+		 * @return - the future stripped of its side channel 
+		 */
+		public  CompletableFuture<T> exceptionallyWithSideChannel(final BiFunction<Throwable, CompletableFuture<Collection<BasicMessageBean>>, ? extends T> error_handler) {
+			return this.exceptionally(ManagementFuture.<T>errorHandling(error_handler, _management_side_channel));
+		}
+		/** Returns a version of the management future that provides an error handling routine that provides the side channel also, AND ALSO the future is combined with its side channel
+		 * @param error_handler - an optional user error handler that also gets the side channel
+		 * @return A version of the future complete only when both the main result and the side channel is complete, and providing both
+		 */
+		public CompletableFuture<Tuple2<T, Collection<BasicMessageBean>>> combineWithSideChannel(final Optional<
+				BiFunction<Throwable, CompletableFuture<Collection<BasicMessageBean>>, Tuple2<T, Collection<BasicMessageBean>>>> error_handler)
+		{
+			final CompletableFuture<Tuple2<T, Collection<BasicMessageBean>>> intermediate = 
+				this.<Collection<BasicMessageBean>, Tuple2<T, Collection<BasicMessageBean>>>thenCombine(this._management_side_channel
+						.orElse(CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList())),
+						(t, msgs) -> Tuples._2T(t, msgs))					
+						;
+			return error_handler.isPresent() 
+					? intermediate.exceptionally(ManagementFuture.errorHandling(error_handler.get(), _management_side_channel))
+					: intermediate;
 		}
 		
 		protected final CompletableFuture<T> _delegate;
