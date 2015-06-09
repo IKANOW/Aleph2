@@ -36,7 +36,10 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
@@ -152,21 +155,36 @@ public class DataImportManagerTest {
 	
 	protected void createEnhancementBeanInDb() throws InterruptedException, ExecutionException, TimeoutException{
 
-		IManagementCrudService<DataBucketBean> dataStore = _management_db.getDataBucketStore();		
+		IManagementCrudService<DataBucketBean> dataBucketStore = _management_db.getDataBucketStore();		
+		IManagementCrudService<DataBucketStatusBean> dataBucketStatusStore = _management_db.getDataBucketStatusStore();		
 		SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", buckeFullName1);
-			Optional<DataBucketBean> oDataBucketBean = dataStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
+			Optional<DataBucketBean> oDataBucketBean = dataBucketStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
 			logger.debug(oDataBucketBean);
 			if(!oDataBucketBean.isPresent()){
-				EnrichmentControlMetadataBean ecm1 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::name,"bucketConfig1_1").with(EnrichmentControlMetadataBean::enabled, false).done().get();
-				EnrichmentControlMetadataBean ecm2 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::name,"bucketConfig1_2").with(EnrichmentControlMetadataBean::enabled, true).done().get();				
-
+				EnrichmentControlMetadataBean ecm1 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_1")
+						.with(EnrichmentControlMetadataBean::enabled, false)
+						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("dummylib1.jar"))
+						.done().get();
+				EnrichmentControlMetadataBean ecm2 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_2")
+						.with(EnrichmentControlMetadataBean::enabled, true)
+						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("dummylib2.jar"))
+						.done().get();				
+				HarvestControlMetadataBean hcm1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+						.with(HarvestControlMetadataBean::name,"bucketEnrichment1")
+						.with(HarvestControlMetadataBean::enabled, true)
+						.done().get();
+				
 				Date now = new Date();
-				DataBucketBean bean = BeanTemplateUtils.build(DataBucketBean.class)
+				DataBucketBean valid_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 						.with(DataBucketBean::_id, buckeFullName1)
 						.with(DataBucketBean::full_name, buckeFullName1)
 						.with(DataBucketBean::created, now)
 						.with(DataBucketBean::modified, now)
 						.with(DataBucketBean::batch_enrichment_configs, Arrays.asList(ecm1,ecm2))
+						.with(DataBucketBean::harvest_configs, Arrays.asList(hcm1))
+						.with(DataBucketBean::master_enrichment_type,MasterEnrichmentType.batch)
 						.with(DataBucketBean::display_name, "Test Bucket ")
 						.with(DataBucketBean::harvest_technology_name_or_id, "/app/aleph2/library/import/harvest/tech/here/" + 1)
 						.with(DataBucketBean::tags, Collections.emptySet())
@@ -176,12 +194,18 @@ public class DataImportManagerTest {
 						.done().get();
 				
 
-				ErrorUtils.logManagedFuture(logger,dataStore.storeObject(bean));
-				// test if bucket was stored
+				final DataBucketStatusBean status = 
+						BeanTemplateUtils.build(DataBucketStatusBean.class)
+						.with(DataBucketStatusBean::_id, valid_bucket._id())
+						.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+						.with(DataBucketStatusBean::suspended, false)
+						.done().get();
 
-				//Optional<DataBucketBean> oDataBucketBean2 = dataStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
-				Optional<DataBucketBean> oDataBucketBean2 = dataStore.getObjectById(buckeFullName1).get(1, TimeUnit.SECONDS);
-				logger.debug(oDataBucketBean2);
+				dataBucketStatusStore.storeObject(status).get();
+				dataBucketStore.storeObject(valid_bucket).get();
+
+				//	Optional<DataBucketBean> oDataBucketBean2 = dataBucketStore.getObjectById(buckeFullName1).get(1, TimeUnit.SECONDS);
+				//logger.debug(oDataBucketBean2);
 
 			}
 			
