@@ -44,11 +44,11 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final ImmutableMap<String, String> NEW_BUCKET_ERROR_MAP = ImmutableMap.<String, String>builder()
 			.put("_id", BUCKET_NO_ID_FIELD)
 			.put("access_rights", BUCKET_NO_ACCESS_RIGHTS)
-			.put("owner_id", BUCKET_NO_ACCESS_RIGHTS)
-			.put("created", BUCKET_NO_ACCESS_RIGHTS)
-			.put("modified", BUCKET_NO_ACCESS_RIGHTS)
-			.put("display_name", BUCKET_NO_ACCESS_RIGHTS)
-			.put("full_name", BUCKET_NO_ACCESS_RIGHTS)
+			.put("owner_id", BUCKET_NO_OWNER_ID)
+			.put("created", BUCKET_NO_CREATED)
+			.put("modified", BUCKET_NO_MODIFIED)
+			.put("display_name", BUCKET_NO_DISPLAY_NAME)
+			.put("full_name", BUCKET_NO_FULL_NAME)
 			.build();
 
 	// More complex field rules
