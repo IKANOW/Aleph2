@@ -30,6 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -38,7 +40,8 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class TestFutureUtils {
-
+	static Logger logger = LogManager.getLogger();
+	
 	public static class TestBean {
 		String field1;
 	}
@@ -75,9 +78,11 @@ public class TestFutureUtils {
 		final CompletableFuture<TestBean> pretest2a = 
 				CompletableFuture.completedFuture(BeanTemplateUtils.build(TestBean.class).with("field1", "zmxncvb").done().get());
 		
-		final BasicMessageBean bean_pretest2b = BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::command, "qpwoeirutry").done().get(); 
+		final BasicMessageBean bean_pretest2b = BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::success, true).with(BasicMessageBean::command, "qpwoeirutry").done().get(); 
+		final BasicMessageBean bean_pretest2b_1 = BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::success, false).with(BasicMessageBean::command, "qpwoeirutry").done().get(); 
 		
 		final CompletableFuture<Collection<BasicMessageBean>> pretest2b = CompletableFuture.completedFuture(Arrays.asList(bean_pretest2b));
+		final CompletableFuture<Collection<BasicMessageBean>> pretest2b_1 = CompletableFuture.completedFuture(Arrays.asList(bean_pretest2b_1));
 
 		ManagementFuture<TestBean> test2 = FutureUtils.createManagementFuture(pretest2a, pretest2b);
 		
@@ -166,6 +171,7 @@ public class TestFutureUtils {
 		
 		FutureUtils.createManagementFuture(FutureUtils.returnError(new RuntimeException("test4a")))
 		.exceptionallyWithSideChannel((t, channel) -> {
+			ErrorUtils.logManagedFutureSideChannel(logger, channel);
 			test_async.add(t.getMessage());
 			test_messages.addAll(channel.join());
 			return null;
@@ -221,6 +227,17 @@ public class TestFutureUtils {
 
 		assertEquals("alskdjfhg", test5c.get()._1().field1);
 		assertEquals(0, test5c.get()._2().size());
+		
+		ErrorUtils.logManagedFutureSideChannel(logger, test5c.get()._2());		
+		ErrorUtils.logManagedFutureSideChannel(logger, FutureUtils.createManagementFuture(
+				FutureUtils.returnError(new RuntimeException("test5c.1")), 
+				FutureUtils.returnError(new RuntimeException("test5c.2"))).getManagementResults() 
+				);
+		
+		ErrorUtils.logManagedFuture(logger, FutureUtils.createManagementFuture(
+				FutureUtils.returnError(new RuntimeException("test5c.1")), 
+				pretest2b_1)
+				);
 		
 		assertTrue("Error handler didn't ran", test_async.isEmpty());
 		assertEquals(0, test_messages.size());

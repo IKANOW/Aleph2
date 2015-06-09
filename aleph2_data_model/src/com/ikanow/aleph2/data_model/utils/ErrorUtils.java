@@ -17,10 +17,9 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import java.util.concurrent.CompletableFuture;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.ObjectArrays;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -203,20 +202,47 @@ public class ErrorUtils {
 		}
 	}
 
-	public static ManagementFuture<Supplier<Object>> logManagedFuture(Logger logger,ManagementFuture<Supplier<Object>> managementFuture) {
-		
-		Collection<BasicMessageBean> errors = null;
-		try {
-			errors = managementFuture.getManagementResults().get(1, TimeUnit.SECONDS);
-		} catch (Exception e) {
-		}
-		if(errors!=null){
-			for (BasicMessageBean basicMessageBean : errors) {
-				logger.error(basicMessageBean.message());			
-			}
-		}
-		return managementFuture;
-		
-		
+	/** Creates a string version of BasicMessageBean
+	 * @param msg
+	 * @param include_success - turn this on for prints, for logging turn off and use info/error based on success
+	 * @return
+	 */
+	public static String show(final BasicMessageBean msg) {
+		return "[" + msg.date() + "] " + msg.source() + " (" + msg.command() + "): " + ((msg.success() ? "INFO" : "ERROR")) + ": " + msg.message();		
 	}
+	
+	/** Logs the side channel of a management future - when you only have the management future (ie mgmt_future.getManagementResults
+	 * @param logger
+	 * @param mgmt_future - the original management future
+	 */
+	public static void logManagedFuture(final Logger logger, final ManagementFuture<?> mgmt_future) {
+		logManagedFutureSideChannel(logger, mgmt_future.getManagementResults());
+	}
+	
+	/** Logs the side channel of a management future - when you only have the side channel future (ie mgmt_future.getManagementResults)
+	 * @param logger
+	 * @param mgmt_future_side_channel - the return value from mgmt_future.getManagementResults(), or the exceptionallyWithSideChannel method
+	 */
+	public static void logManagedFutureSideChannel(final Logger logger, final CompletableFuture<Collection<BasicMessageBean>> mgmt_future_side_channel) {
+		mgmt_future_side_channel.thenAccept(msgs -> logManagedFutureSideChannel(logger, msgs))
+		.exceptionally(t -> {
+			logger.error(ErrorUtils.getLongForm("managementFuture.getManagementResults failed: {0}", t));
+			return null;
+		});
+	}
+	
+	/** Logs the side channel of a management future - when you have the result of the future (ie mgmt_future.getManagementResults)
+	 * @param logger
+	 * @param mgmt_future_side_channel - the return value from mgmt_future.getManagementResults().join/get/then*, or from combineWithSideChannel
+	 */
+	public static void logManagedFutureSideChannel(final Logger logger, Collection<BasicMessageBean> mgmt_future_side_channel) {
+		for (BasicMessageBean msg : mgmt_future_side_channel) {
+			final String log = show(msg); 
+			if (msg.success())
+				logger.info(log);
+			else
+				logger.error(log);
+		}			
+	}
+	
 }
