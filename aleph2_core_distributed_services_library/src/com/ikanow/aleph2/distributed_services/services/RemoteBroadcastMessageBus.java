@@ -61,6 +61,14 @@ public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> e
 	 */
 	@Override
 	public void publish(M event, ActorRef subscriber) {
+		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message()), subscriber);
+	}
+
+	/* (non-Javadoc)
+	 * @see akka.event.japi.LookupEventBus#publish(java.lang.Object, java.lang.Object)
+	 */
+	@Override
+	public void publish(M event) {
 		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message()), event.sender());
 	}
 

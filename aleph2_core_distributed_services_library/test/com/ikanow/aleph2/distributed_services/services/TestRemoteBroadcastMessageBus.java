@@ -25,20 +25,165 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
+import akka.cluster.Cluster;
+import akka.cluster.pubsub.DistributedPubSubMediator;
+import akka.event.japi.LookupEventBus;
 
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
+import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class TestRemoteBroadcastMessageBus {
-
+	public static final Logger _logger = LogManager.getLogger();
+	
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// ALEPH-2 STATE
+	
 	protected ICoreDistributedServices _core_distributed_services;
 	protected String _connect_string;
 	
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// MESSAGES	
+	
+	public static class TestBeanWrapper implements IBroadcastEventBusWrapper<TestBean> {
+		TestBeanWrapper(TestBean message, ActorRef sender) {
+			this.message = message; this.sender = sender;
+		}
+		TestBean message;
+		ActorRef sender;
+		
+		@Override
+		public ActorRef sender() {
+			return sender;
+		}
+
+		@Override
+		public TestBean message() {
+			return message;
+		}
+		
+	}
+	public static class EmbeddedTestBeanWrapper implements IBroadcastEventBusWrapper<EmbeddedTestBean> {
+		EmbeddedTestBeanWrapper(EmbeddedTestBean message, ActorRef sender) {
+			this.message = message; this.sender = sender;
+		}
+		EmbeddedTestBean message;
+		ActorRef sender;
+		
+		@Override
+		public ActorRef sender() {
+			return sender;
+		}
+
+		@Override
+		public EmbeddedTestBean message() {
+			return message;
+		}
+		
+	}
+	public static class TestBean implements IJsonSerializable {
+		protected TestBean() {}
+		public String test1() { return test1; }
+		public EmbeddedTestBean embedded() { return embedded; };
+		private String test1;
+		private EmbeddedTestBean embedded;
+	};
+	
+	public static class EmbeddedTestBean implements IJsonSerializable {
+		protected EmbeddedTestBean() {}
+		public String test2() { return test2; }
+		private String test2;
+	};
+	
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// ACTORS	
+	
+	LookupEventBus<TestBeanWrapper, ActorRef, String> _test_bus1;
+	LookupEventBus<EmbeddedTestBeanWrapper, ActorRef, String> _test_bus2;
+	// Test actors:
+	public static class TestActor_Unwrapper extends UntypedActor { // (will sit on test bus 2)
+		TestRemoteBroadcastMessageBus _odd;
+		public TestActor_Unwrapper(TestRemoteBroadcastMessageBus odd) {
+			_odd = odd;
+		}
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Unwrap from: " + this.sender() + ": " + arg0.getClass());
+			if (arg0 instanceof TestBean) {
+				_odd._received_bus1++;
+				TestBean msg = (TestBean) arg0;
+				_odd._test_bus2.publish(new EmbeddedTestBeanWrapper(msg.embedded(), this.self()));
+			}
+			else if (arg0 instanceof EmbeddedTestBean) {
+				_odd._received_post_bus2++;
+			}
+			else if (arg0 instanceof DistributedPubSubMediator.SubscribeAck) {
+				_logger.info("Subscribed");
+			}
+			else {
+				_odd._unexpected++;
+			}
+		}		
+	}
+	
+	public static class TestActor_Echo extends UntypedActor { // (will sit on test bus1)
+		public TestActor_Echo() {
+		}
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("echo from: " + this.sender() + ": " + arg0.getClass()); 
+			if (arg0 instanceof DistributedPubSubMediator.SubscribeAck) {
+				_logger.info("Subscribed");
+			}
+			else if ((arg0 instanceof String) || (arg0 instanceof TestBean)) {
+				// (just do nothing, this is for testing)
+			}
+			else {
+				this.sender().tell(arg0, this.self());
+			}
+		}		
+	}
+	
+	public static class TestActor_Publisher extends UntypedActor {
+		final LookupEventBus<TestBeanWrapper, ActorRef, String> _test_bus1;
+		
+		public TestActor_Publisher(ICoreDistributedServices core_distributed_services) {
+			_test_bus1 = core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
+		}
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Publishing: " + arg0.getClass());
+			if (arg0 instanceof TestBeanWrapper) {
+				_test_bus1.publish((TestBeanWrapper) arg0);
+			}
+			else if (arg0 instanceof TestBean) {
+				_test_bus1.publish(new TestBeanWrapper((TestBean) arg0, this.self()));
+			}
+		}
+	}
+	
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// SETUP	
+		
 	@Before
 	public void setup() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
@@ -57,10 +202,26 @@ public class TestRemoteBroadcastMessageBus {
 		
 		// Create remote bus and subscribe:
 		
-		//TODO
+		Cluster.get(_core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
+		
+			_test_bus1 = _core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
+			_test_bus2 = _core_distributed_services.getBroadcastMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "embedded_test_bean");
+			
+			ActorRef handler = _core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Unwrapper.class, this));
+			_test_bus1.subscribe(handler, "test_bean");
+		});
 	}
 	
-	@Ignore
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// TEST	
+		
+	static final int MESSAGES_TO_SEND = 10;
+	int _unexpected = 0;
+	int _received_bus1 = 0;
+	int _received_post_bus2 = 0;
+	
 	@Test
 	public void testRemoteBroadcast() throws IOException {
 		
@@ -81,24 +242,31 @@ public class TestRemoteBroadcastMessageBus {
 		
 		int waiting = 0;
 		final int MAX_WAIT = 20;
-		while (px.isAlive() && (waiting++ < MAX_WAIT)) {			
+		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
+			if ((_received_bus1 >= MESSAGES_TO_SEND) && (_received_post_bus2 >= MESSAGES_TO_SEND)) {
+				break;
+			}
 			try { Thread.sleep(1000); } catch (Exception e) {}
 		}
-		if (waiting >= MAX_WAIT) {
-			px.destroyForcibly();
-			fail("Waited for 20s for the child process to finish");
+		if (px.isAlive()) {
+			px.destroyForcibly();			
 		}
-		
-		assertEquals(0, px.exitValue());
+		if (waiting >= MAX_WAIT) {
+			fail("Waited for 20s for the child process to finish");
+		}		
+		assertEquals(1, px.exitValue());
 		
 		// Check that my actor received all its messages
 		
-		//TODO
+		assertEquals(MESSAGES_TO_SEND, _received_bus1);
+		assertEquals(MESSAGES_TO_SEND, _received_post_bus2);
 		
-		//TODO: need to send some replies and check they arrived (have echo messanger?)
 	}
 	
-	//////////////////////////
+	///////////////////////////////////
+	///////////////////////////////////
+	
+	// REMOTE SENDER			
 	
 	// A "remote" service that will shoot messages over the broadcast bus
 	
@@ -115,15 +283,47 @@ public class TestRemoteBroadcastMessageBus {
 		
 		assertEquals(args[0], bean.zookeeper_connection());
 		
-		@SuppressWarnings("unused")
 		ICoreDistributedServices core_distributed_services = new CoreDistributedServices(bean);
 
-		//core_distributed_services.getBroadcastMessageBus(wrapper_clazz, base_message_clazz, topic)
+		Cluster.get(core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
+			
+			LookupEventBus<TestBeanWrapper, ActorRef, String> _test_bus1;
+			LookupEventBus<EmbeddedTestBeanWrapper, ActorRef, String> _test_bus2;
+			_test_bus1 = core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
+			_test_bus2 = core_distributed_services.getBroadcastMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "embedded_test_bean");
+			
+			ActorRef publisher = core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Publisher.class, core_distributed_services));
+			
+			ActorRef handler = core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Echo.class));
+			_test_bus2.subscribe(handler, "embedded_test_bean");
+
+			try { Thread.sleep(5000); } catch (Exception e) {}
+						
+			for (int i = 0; i < MESSAGES_TO_SEND; ++i) {
+				if (0 == (i%2)) {
+					_test_bus1.publish(new TestBeanWrapper(createMessage(), handler));
+				}
+				else {
+					publisher.tell(createMessage(), null);
+				}
+			}
+		});
 		
-		/**/
 		try { Thread.sleep(10000); } catch (Exception e) {}
 		
 		System.exit(0);			
+	}
+
+	////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////
+
+	// UTIL
+
+	private static TestBean createMessage() {
+        TestBean test = BeanTemplateUtils.build(TestBean.class).with("test1", "val1")
+				.with("embedded", 
+						BeanTemplateUtils.build(EmbeddedTestBean.class).with("test2", "val2").done().get()).done().get();
+		return test;
 	}
 	
 	private static void inheritIO(final InputStream src, final PrintStream dest) {
