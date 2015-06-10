@@ -28,6 +28,7 @@ import org.junit.Test;
 
 import scala.Tuple2;
 import fj.data.Either;
+import fj.data.Validation;
 
 public class TestLambdas {
 
@@ -40,48 +41,46 @@ public class TestLambdas {
 	}
 	
 	@Test
-	public void testEitherLambda() {
+	public void testValidationLambda() {
 
-		final Either<Throwable, String> ret_val =
-			Either.<Throwable, String>right("java.lang.String").right()
+		final Validation<Throwable, String> ret_val =
+			Validation.<Throwable, String>success("java.lang.String")
 				.bind(Lambdas.wrap_fj_e(clazz -> Class.forName(clazz)))
-				.right()
 				.bind(Lambdas.wrap_fj_e(clazz -> (String) clazz.newInstance()))
 				;
 		
-		assertTrue("No error", ret_val.isRight());
-		assertEquals("", ret_val.right().value());
+		assertTrue("No error", ret_val.isSuccess());
+		assertEquals("", ret_val.success());
 		
-		final Either<Throwable, String> ret_val2 =
-				Either.<Throwable, String>right("java.lang.xxxxString").right()
+		final Validation<Throwable, String> ret_val2 =
+				Validation.<Throwable, String>success("java.lang.xxxxString")
 					.bind(Lambdas.wrap_fj_e(clazz -> Class.forName(clazz)))
-					.right()
 					.bind(Lambdas.wrap_fj_e(clazz -> (String) clazz.newInstance()))
 					;
 			
-		assertTrue("Error", ret_val2.isLeft());
-		assertEquals(ClassNotFoundException.class, ret_val2.left().value().getClass());
+		assertTrue("Error", ret_val2.isFail());
+		assertEquals(ClassNotFoundException.class, ret_val2.fail().getClass());
 		
 		// A few misc other fj/wrap cases:
 		
-		final Either<Throwable, Object> ret_val3a = Lambdas.wrap_fj(s -> {
+		final Validation<Throwable, Object> ret_val3a = Lambdas.wrap_fj(s -> {
 			return (Object) Class.forName("java.lang.String").newInstance();
 		})
-		.f(Either.left(new RuntimeException("3a")));
-		assertTrue("Error", ret_val3a.isLeft());
+		.f(Validation.fail(new RuntimeException("3a")));
+		assertTrue("Error", ret_val3a.isFail());
 		
-		final Either<Throwable, Object> ret_val3b = Lambdas.wrap_fj(s -> {
+		final Validation<Throwable, Object> ret_val3b = Lambdas.wrap_fj(s -> {
 			return (Object) Class.forName(s.toString()).newInstance();
 		})
-		.f(Either.right("java.lang.String"));
-		assertTrue("Not Error", ret_val3b.isRight());
+		.f(Validation.success("java.lang.String"));
+		assertTrue("Not Error", ret_val3b.isSuccess());
 		
-		final Either<Throwable, Object> ret_val3c = Lambdas.wrap_fj(s -> {
+		final Validation<Throwable, Object> ret_val3c = Lambdas.wrap_fj(s -> {
 			throw new RuntimeException("no", new RuntimeException("test3c"));
 		})
-		.f(Either.right("java.lang.String"));
-		assertTrue("Error", ret_val3c.isLeft());
-		assertEquals("test3c", ret_val3c.left().value().getMessage());
+		.f(Validation.success("java.lang.String"));
+		assertTrue("Error", ret_val3c.isFail());
+		assertEquals("test3c", ret_val3c.fail().getMessage());
 		
 		// Finally...
 		
@@ -89,7 +88,7 @@ public class TestLambdas {
 			Lambdas.wrap_fj_u(s -> {
 				return (Object) Class.forName(s.toString()).newInstance();
 			})
-			.f(Either.right("java.lang.xxx.String"));
+			.f(Validation.success("java.lang.xxx.String"));
 			fail("Should have thrown exception");
 		}
 		catch (RuntimeException e) {
@@ -106,7 +105,7 @@ public class TestLambdas {
 		
 		final Stream<String> initial_stream = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
 
-		final Either<Throwable, List<String>> ret_val = 
+		final Validation<Throwable, List<String>> ret_val = 
 				Lambdas.wrap_e(() ->
 					initial_stream
 						.map(Lambdas.wrap_u(clazz -> Class.forName(clazz)))
@@ -114,14 +113,14 @@ public class TestLambdas {
 						.collect(Collectors.toList())
 					).get();
 		
-		assertTrue("Error", ret_val.isLeft());
-		assertEquals(ClassNotFoundException.class, ret_val.left().value().getClass());
+		assertTrue("Error", ret_val.isFail());
+		assertEquals(ClassNotFoundException.class, ret_val.fail().getClass());
 		
 		// One that doesn't
 		
 		final Stream<String> initial_stream2 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
 		
-		final Either<Throwable, List<String>> ret_val2 = 
+		final Validation<Throwable, List<String>> ret_val2 = 
 				Lambdas.wrap_e(() ->
 					initial_stream2
 						.filter(Lambdas.wrap_filter_u(clazz -> !clazz.contains("xxx")))
@@ -130,17 +129,17 @@ public class TestLambdas {
 						.collect(Collectors.toList())
 					).get();
 		
-		if (ret_val2.isLeft()) {
-			fail("Error: " + ret_val2.left().value().getMessage());
+		if (ret_val2.isFail()) {
+			fail("Error: " + ret_val2.fail().getMessage());
 		}
-		assertTrue("No error", ret_val2.isRight());
-		assertEquals(2, ret_val2.right().value().size());
+		assertTrue("No error", ret_val2.isSuccess());
+		assertEquals(2, ret_val2.success().size());
 		
 		// Runtime exception version
 	
 		final Stream<String> initial_stream3 = Stream.of("java.lang.String", "java.lang.xxxxString", "java.lang.String");
 		
-		final Either<Throwable, List<String>> ret_val3 = 
+		final Validation<Throwable, List<String>> ret_val3 = 
 				Lambdas.wrap_e(() ->
 					initial_stream3
 						.filter(Lambdas.wrap_filter_u(clazz -> !clazz.contains("xxx")))
@@ -153,17 +152,17 @@ public class TestLambdas {
 						.collect(Collectors.toList())
 					).get();
 
-		assertTrue("Error", ret_val3.isLeft());
-		assertEquals(RuntimeException.class, ret_val3.left().value().getClass());
+		assertTrue("Error", ret_val3.isFail());
+		assertEquals(RuntimeException.class, ret_val3.fail().getClass());
 		
 		// Handle checked exception
 		
-		Either<Throwable, String> ret_val4 = 
+		Validation<Throwable, String> ret_val4 = 
 				Lambdas.wrap_e((String clazz) -> (String) Class.forName(clazz).newInstance())
 					.apply("java.lang.xxx.String");
 		
-		assertTrue("Error", ret_val4.isLeft());
-		assertEquals(ClassNotFoundException.class, ret_val4.left().value().getClass());
+		assertTrue("Error", ret_val4.isFail());
+		assertEquals(ClassNotFoundException.class, ret_val4.fail().getClass());
 	}
 
 	/////////////////////////////////////////////
@@ -173,7 +172,7 @@ public class TestLambdas {
 	
 		// Normal mode
 		
-		final Either<Throwable, List<String>> ret_val = 
+		final Validation<Throwable, List<String>> ret_val = 
 				Lambdas.wrap_e(() ->
 					Stream.of(Arrays.asList("java.lang.String", "java.lang.xxxxString", "java.lang.String"))
 						.<String>flatMap(l -> l.stream().map(Lambdas.wrap_u(clazz -> 
@@ -181,8 +180,8 @@ public class TestLambdas {
 						.collect(Collectors.toList())
 				).get();
 
-		assertTrue("Error", ret_val.isLeft());
-		assertEquals(ClassNotFoundException.class, ret_val.left().value().getClass());
+		assertTrue("Error", ret_val.isFail());
+		assertEquals(ClassNotFoundException.class, ret_val.fail().getClass());
 		
 		// Use flatmap to initiate a pipeline
 		
@@ -231,7 +230,7 @@ public class TestLambdas {
 	/////////////////////////////////////////////
 	
 	@Test
-	public void testEitherStreamLambda_map() {
+	public void testValidationStreamLambda_map() {
 		
 		// "Fail"
 		
@@ -242,6 +241,7 @@ public class TestLambdas {
 					.map(Lambdas::startPipe)
 					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
 					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.map(v -> v.toEither())
 					.collect(Collectors.toList())
 					;
 		
@@ -263,6 +263,7 @@ public class TestLambdas {
 					.flatMap(Lambdas.filter_e((String clazz) -> !clazz.contains("xxx")))
 					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
 					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.map(v -> v.toEither())
 					.collect(Collectors.toList())
 					;
 		
@@ -284,6 +285,7 @@ public class TestLambdas {
 					.filter(Lambdas.filter_u(false, (String clazz) -> !clazz.contains("xxx")))
 					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
 					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
+					.map(v -> v.toEither())
 					.collect(Collectors.toList())
 					;
 		
@@ -305,6 +307,7 @@ public class TestLambdas {
 					.map(Lambdas.wrap((String clazz) -> Class.forName(clazz)))
 					.map(Lambdas.wrap(clazz -> (String) clazz.newInstance()))
 					.filter(Lambdas.filter_u(true, __ -> true))
+					.map(v -> v.toEither())
 					.collect(Collectors.toList())
 					;
 		
@@ -318,7 +321,7 @@ public class TestLambdas {
 	}
 	
 	@Test
-	public void testEitherStreamLambda() {
+	public void testValidationStreamLambda() {
 		
 		// "Fail" - grabs first error
 		
