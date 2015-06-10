@@ -196,7 +196,6 @@ public class TestHarvestContext {
 			final List<String> lib_paths = test_context.getHarvestContextLibraries(Optional.empty());
 
 			//(this doesn't work very well when run in test mode because it's all being found from file)
-			assertEquals(Arrays.asList("/opt/aleph2-home//lib/aleph2_harvest_context_library.jar"), lib_paths);
 			assertTrue("Finds some libraries", !lib_paths.isEmpty());
 			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
 			
