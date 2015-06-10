@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * 
- * Note contains code from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
- * Listed below, not covered by this license
- * 
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
@@ -73,7 +70,8 @@ public class FutureUtils {
 	}
 
 	/** Wraps a scala Future in a completable future efficiently using the underlying scala infrastructure
-	 * Code from http://onoffswitch.net/converting-akka-scala-futures-java-futures/ 
+	 * Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/ 
+	 * TODO: do not use this code as it has not yet been tested
 	 * @param f the scala Future
 	 * @return the CompletableFuture
 	 */
@@ -204,9 +202,9 @@ public class FutureUtils {
 	////////////////////////////////////////////
 	
 	// SCALA CONVERSION UTILS
-	// Code from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
+	// Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
 	
-	/**Code from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
+	/**Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
 	 */
 	protected static class FromScalaFuture<T> {
 		 
