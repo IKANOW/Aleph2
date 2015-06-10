@@ -171,7 +171,7 @@ public class TestAkkaMessageBuses {
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
 			try { Thread.sleep(1000); } catch (Exception e) {}			
 		}
-		assertTrue(px.exitValue() > 0);		
+		assertTrue("Process shouldn't exit with error: " + px.exitValue(), px.exitValue() >= 0);		
 	}
 	
 	///////////////////////////////////
