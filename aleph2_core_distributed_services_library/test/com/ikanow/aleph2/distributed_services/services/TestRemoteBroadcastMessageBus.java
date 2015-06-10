@@ -257,7 +257,7 @@ public class TestRemoteBroadcastMessageBus {
 		if (waiting >= MAX_WAIT) {
 			fail("Waited for 20s for the child process to finish");
 		}		
-		assertEquals(1, px.exitValue());
+		assertTrue(px.exitValue() > 0);
 		
 		// Check that my actor received all its messages
 		

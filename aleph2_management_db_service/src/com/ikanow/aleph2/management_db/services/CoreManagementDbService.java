@@ -63,7 +63,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			final SharedLibraryCrudService shared_library_service
 			)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
+		//(just return null here if underlying management not present, things will fail catastrophically unless this is a test)
+		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).orElse(null);
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;

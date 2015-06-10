@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
@@ -388,7 +389,9 @@ public class ModuleUtils {
 		 */
 		@Override
 		public IManagementDbService getCoreManagementDbService() {
-			return getService(IManagementDbService.class, Optional.of("CoreManagementDbService")).get();
+			try {
+				return getService(IManagementDbService.class, Optional.of("CoreManagementDbService")).get();
+			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: CoreManagementDbService", e); }					
 		}
 
 		/**
@@ -405,8 +408,10 @@ public class ModuleUtils {
 		 * 
 		 */
 		@Override
-		public IStorageService getStorageService() {
-			return getService(IStorageService.class, Optional.empty()).get();
+		public IStorageService getStorageService() {			
+			try {
+				return getService(IStorageService.class, Optional.empty()).get();
+			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: IStorageService", e); }					
 		}
 
 		/**
@@ -424,7 +429,9 @@ public class ModuleUtils {
 		 */
 		@Override
 		public ISecurityService getSecurityService() {
-			return getService(ISecurityService.class, Optional.empty()).get();
+			try {
+				return getService(ISecurityService.class, Optional.empty()).get();
+			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: ISecurityService", e); }					
 		}
 
 		@Override

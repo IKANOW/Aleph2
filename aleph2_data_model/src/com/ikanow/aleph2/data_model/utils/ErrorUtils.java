@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.ObjectArrays;
+import com.google.inject.spi.Message;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
@@ -92,19 +93,37 @@ public class ErrorUtils {
 			if (t instanceof com.google.inject.ConfigurationException) {
 				com.google.inject.ConfigurationException ce1 = (com.google.inject.ConfigurationException) t;
 				if (!ce1.getErrorMessages().isEmpty()) {
-					message = ce1.getErrorMessages().iterator().next().toString();
+					Message msg = ce1.getErrorMessages().iterator().next();
+					if (null != msg.getCause()) {
+						return longExceptionMessage(msg.getCause());
+					}
+					else {
+						message = ce1.getErrorMessages().iterator().next().toString();
+					}
 				}
 			}
 			else if (t instanceof com.google.inject.CreationException) {
 				com.google.inject.CreationException ce1 = (com.google.inject.CreationException) t;
 				if (!ce1.getErrorMessages().isEmpty()) {
-					message = ce1.getErrorMessages().iterator().next().toString();
+					Message msg = ce1.getErrorMessages().iterator().next();
+					if (null != msg.getCause()) {
+						return longExceptionMessage(msg.getCause());
+					}
+					else {
+						message = ce1.getErrorMessages().iterator().next().toString();
+					}
 				}				
 			}
 			else if (t instanceof com.google.inject.ProvisionException) {
 				com.google.inject.ProvisionException ce1 = (com.google.inject.ProvisionException) t;
 				if (!ce1.getErrorMessages().isEmpty()) {
-					message = ce1.getErrorMessages().iterator().next().toString();
+					Message msg = ce1.getErrorMessages().iterator().next();
+					if (null != msg.getCause()) {
+						return longExceptionMessage(msg.getCause());
+					}
+					else {
+						message = ce1.getErrorMessages().iterator().next().toString();
+					}
 				}				
 			}
 			//else just carry on
