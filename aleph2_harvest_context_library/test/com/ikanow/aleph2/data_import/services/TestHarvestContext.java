@@ -109,7 +109,7 @@ public class TestHarvestContext {
 			// Empty service set:
 			final String signature = test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());
 			
-			final String expected_sig = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
+			final String expected_sig = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}"; 
 			assertEquals(expected_sig, signature);
 			
 			// Additionals service set:
@@ -133,7 +133,7 @@ public class TestHarvestContext {
 				IHarvestContext test_external1 = ContextUtils.getHarvestContext(signature);
 				fail("Should have thrown exception");
 			}
-			catch (Exception e) {				
+			catch (Exception e) {					
 				assertEquals("java.lang.RuntimeException: Unable to locate bucket: test", e.getMessage());
 			}
 			
@@ -197,6 +197,7 @@ public class TestHarvestContext {
 
 			//(this doesn't work very well when run in test mode because it's all being found from file)
 			assertEquals(Arrays.asList("/opt/aleph2-home//lib/aleph2_harvest_context_library.jar"), lib_paths);
+			assertTrue("Finds some libraries", !lib_paths.isEmpty());
 			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
 			
 			// Now get the various shared libs

@@ -37,6 +37,7 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -137,8 +138,8 @@ public class HarvestContext implements IHarvestContext {
 		}
 		catch (Exception e) {
 			//DEBUG
-			//System.out.println(ErrorUtils.getLongForm("{0}", e));
-			
+			//System.out.println(ErrorUtils.getLongForm("{0}", e));			
+
 			throw new RuntimeException(e);
 		}
 	}
@@ -202,26 +203,27 @@ public class HarvestContext implements IHarvestContext {
 				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
 			});
 			
-			final String java_home = Optional.ofNullable(System.getenv("JAVA_HOME")).orElse("jre" + File.separator + "lib"); 
-			
 			// Libraries associated with services:
 			final Set<String> user_service_class_files = services.map(set -> {
 				return set.stream()
 						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
-						.filter(service -> service != null)
-						.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty() && !jar_path.contains(java_home))
+						.filter(service -> service.isPresent())
+						.map(service -> LiveInjector.findPathJar(service.get().getClass(), ""))
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 						.collect(Collectors.toSet());
 			})
 			.orElse(Collections.emptySet());
 			
 			// Mandatory services
 			final Set<String> mandatory_service_class_files = 
-					Arrays.asList(_service_context.getCoreManagementDbService(), 
-									_service_context.getService(IManagementDbService.class, Optional.empty())
-							).stream()
+					Arrays.asList(
+							_service_context.getCoreManagementDbService(), 
+							_service_context.getService(IManagementDbService.class, Optional.empty()).get(),
+							_service_context.getService(IStorageService.class, Optional.empty()).get()
+							)
+							.stream()
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty() && !jar_path.contains(java_home))
+						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 							.collect(Collectors.toSet());
 			
 			// Combine them together
@@ -259,6 +261,7 @@ public class HarvestContext implements IHarvestContext {
 							.addAll(services.orElse(Collections.emptySet()))
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
+							.add(Tuples._2T(IStorageService.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
 							.build();
 			
