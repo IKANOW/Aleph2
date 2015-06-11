@@ -53,7 +53,7 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 public class LocalHarvestTestModule {
 
@@ -151,7 +151,7 @@ public class LocalHarvestTestModule {
 		
 		// OK now we simply create an instance of the harvester and invoke it
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.of(new File(harvest_tech_jar_path).getAbsoluteFile().toURI().toString()),
@@ -159,11 +159,11 @@ public class LocalHarvestTestModule {
 						
 		final IHarvestContext context = _injector.getInstance(HarvestContext.class);
 		
-		if (ret_val.isLeft()) {
-			System.out.println("Failed to instantiate harvester: " + ret_val.left().value().message());
+		if (ret_val.isFail()) {
+			System.out.println("Failed to instantiate harvester: " + ret_val.fail().message());
 		}		
 		else {
-			final IHarvestTechnologyModule harvester = ret_val.right().value();
+			final IHarvestTechnologyModule harvester = ret_val.success();
 			if (command.equals("canRunOnThisNode")) {
 				System.out.println(command + ": " + harvester.canRunOnThisNode(bucket, context));
 			}

@@ -43,7 +43,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 public class TestJarCacheUtils {
 
@@ -110,10 +110,10 @@ public class TestJarCacheUtils {
 															.with(SharedLibraryBean::_id, "test1")
 															.done().get();
 		
-		final Either<BasicMessageBean, String> ret_val_1 =
+		final Validation<BasicMessageBean, String> ret_val_1 =
 				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "test1", new TestMessageBean()).get();
 		
-		assertEquals(expected_cache_path.toString(), ret_val_1.right().value());
+		assertEquals(expected_cache_path.toString(), ret_val_1.success());
 		
 		assertTrue("Local file now exists", new File(expected_cache_name).exists());		
 	}
@@ -157,10 +157,10 @@ public class TestJarCacheUtils {
 															.with(SharedLibraryBean::_id, "testX")
 															.done().get();
 		
-		final Either<BasicMessageBean, String> ret_val_1 =
+		final Validation<BasicMessageBean, String> ret_val_1 =
 				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "testX", new TestMessageBean()).get();
 		
-		assertEquals(expected_cache_path.toString(), ret_val_1.right().value());
+		assertEquals(expected_cache_path.toString(), ret_val_1.success());
 		
 		assertTrue("Local file still exists", new File(expected_cache_name).exists());
 		
@@ -200,10 +200,10 @@ public class TestJarCacheUtils {
 															.with(SharedLibraryBean::_id, "test1")
 															.done().get();
 		
-		final Either<BasicMessageBean, String> ret_val_1 =
+		final Validation<BasicMessageBean, String> ret_val_1 =
 				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "test1", new TestMessageBean()).get();
 		
-		assertEquals(expected_cache_path.toString(), ret_val_1.right().value());
+		assertEquals(expected_cache_path.toString(), ret_val_1.success());
 		
 		assertTrue("Local file still exists", new File(expected_cache_name).exists());
 		
@@ -221,10 +221,10 @@ public class TestJarCacheUtils {
 															.with(SharedLibraryBean::_id, "test1")
 															.done().get();
 		
-		final Either<BasicMessageBean, String> ret_val_1 =
+		final Validation<BasicMessageBean, String> ret_val_1 =
 				JarCacheUtils.getCachedJar(_globals.local_cached_jar_dir(), library_bean, _mock_hdfs, "test1", new TestMessageBean()).get();		
 		
-		BasicMessageBean error = ret_val_1.left().value();
+		BasicMessageBean error = ret_val_1.fail();
 		
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);

@@ -57,7 +57,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActi
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 
-import fj.data.Either;
+import fj.data.Validation;
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -124,7 +124,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    						
 								final IHarvestContext h_context = _context.getNewHarvestContext();
 								
-								final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
+								final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
 										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
 								
 								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
@@ -160,24 +160,24 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
-	protected static Either<BasicMessageBean, IHarvestTechnologyModule> getHarvestTechnology(
+	protected static Validation<BasicMessageBean, IHarvestTechnologyModule> getHarvestTechnology(
 			final DataBucketBean bucket, 
 			boolean harvest_tech_only,
 			final BucketActionMessage m, 
 			final String source,
-			final Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
+			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
 		try {
-			return err_or_libs.<Either<BasicMessageBean, IHarvestTechnologyModule>>either(
+			return err_or_libs.<Validation<BasicMessageBean, IHarvestTechnologyModule>>validation(
 					//Error:
-					error -> Either.left(error)
+					error -> Validation.fail(error)
 					,
 					// Normal
 					libs -> {
 						final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(bucket.harvest_technology_name_or_id());
 						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
-							return Either.left(
+							return Validation.fail(
 									HarvestErrorUtils.buildErrorMessage(source, m,
 											HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), bucket.harvest_technology_name_or_id()));
 						}
@@ -186,7 +186,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								? Collections.emptyList() 
 								: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
 						
-						final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+						final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 								ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 										libbean_path._1().misc_entry_point(), 
 										Optional.of(libbean_path._2()),
@@ -197,7 +197,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					});
 		}
 		catch (Throwable t) {
-			return Either.left(
+			return Validation.fail(
 					HarvestErrorUtils.buildErrorMessage(source, m,
 						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, t, bucket.harvest_technology_name_or_id())));  
 			
@@ -210,20 +210,20 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param bucket
 	 * @param tech_module
 	 * @param m
-	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Either finally)
+	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Validation finally)
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage> talkToHarvester(
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final String source,
 			final IHarvestContext context,
-			final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
+			final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();
 		
 		try {			
-			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>either(
+			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>validation(
 				//Error:
 				error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
 				,
@@ -271,10 +271,10 @@ public class DataBucketChangeActor extends AbstractActor {
 						});
 				});
 		}
-		catch (Throwable e) { // (trying to use Either to avoid this, but just in case...)
+		catch (Throwable e) { // (trying to use Validation to avoid this, but just in case...)
 			return CompletableFuture.completedFuture(
 					new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
-						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.right().value().getClass()))));
+						ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.success().getClass()))));
 		}		
 		finally {
 			Thread.currentThread().setContextClassLoader(saved_current_classloader);
@@ -294,7 +294,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final String source,
-			final Either<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module, 
+			final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module, 
 			final CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
 					)
 	{
@@ -306,7 +306,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				// Note if we're here then err_or_tech_module must be "right"
 				return CompletableFuture.completedFuture(
 						new BucketActionHandlerMessage(source, HarvestErrorUtils.buildErrorMessage(source, m,
-							ErrorUtils.getLongForm(HarvestErrorUtils.HARVEST_TECH_ERROR, t.getCause(), m.bucket().full_name(), err_or_tech_module.right().value().getClass()))));
+							ErrorUtils.getLongForm(HarvestErrorUtils.HARVEST_TECH_ERROR, t.getCause(), m.bucket().full_name(), err_or_tech_module.success().getClass()))));
 			}
 		}
 		//(else fall through to...)
@@ -325,7 +325,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return  a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
 	 */
 	@SuppressWarnings("unchecked")
-	protected static <M> CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> 
+	protected static <M> CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> 
 		cacheJars(
 				final DataBucketBean bucket, 
 				final boolean cache_tech_jar_only,
@@ -351,12 +351,12 @@ public class DataBucketChangeActor extends AbstractActor {
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 
-						final Map<Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Either<BasicMessageBean, String>>>> map_of_futures = 
+						final Map<Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Validation<BasicMessageBean, String>>>> map_of_futures = 
 							StreamSupport.stream(cursor.spliterator(), true)
 								.filter(lib -> {
 									return true;
 								})
-								.collect(Collectors.<SharedLibraryBean, Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Either<BasicMessageBean, String>>>>
+								.collect(Collectors.<SharedLibraryBean, Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Validation<BasicMessageBean, String>>>>
 									toMap(
 										// want to keep both the name and id versions - will flatten out below
 										lib -> Tuples._2T(lib.path_name(), lib._id()), //(key)
@@ -367,20 +367,20 @@ public class DataBucketChangeActor extends AbstractActor {
 						// denest from map of futures to future of maps, also handle any errors here:
 						// (some sort of "lift" function would be useful here - this are a somewhat inelegant few steps)
 						
-						final CompletableFuture<Either<BasicMessageBean, String>>[] futures = 
-								(CompletableFuture<Either<BasicMessageBean, String>>[]) map_of_futures
+						final CompletableFuture<Validation<BasicMessageBean, String>>[] futures = 
+								(CompletableFuture<Validation<BasicMessageBean, String>>[]) map_of_futures
 								.values()
 								.stream().map(t2 -> t2._2()).collect(Collectors.toList())
 								.toArray(new CompletableFuture[0]);
 						
 						// (have to embed this thenApply instead of bringing it outside as part of the toCompose chain, because otherwise we'd lose map_of_futures scope)
-						return CompletableFuture.allOf(futures).<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>>thenApply(f -> {								
+						return CompletableFuture.allOf(futures).<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>>thenApply(f -> {								
 							try {
 								final Map<String, Tuple2<SharedLibraryBean, String>> almost_there = map_of_futures.entrySet().stream()
 									.flatMap(kv -> {
-										final Either<BasicMessageBean, String> ret = kv.getValue()._2().join(); // (must have already returned if here
+										final Validation<BasicMessageBean, String> ret = kv.getValue()._2().join(); // (must have already returned if here
 										return ret.<Stream<Tuple2<String, Tuple2<SharedLibraryBean, String>>>>
-											either(
+											validation(
 												//Error:
 												err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
 												,
@@ -398,10 +398,10 @@ public class DataBucketChangeActor extends AbstractActor {
 											idname_path -> idname_path._2() // (value)
 											))
 									;								
-								return Either.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>right(almost_there);
+								return Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(almost_there);
 							}
 							catch (Exception e) { // handle the exception thrown above containing the message bean from whatever the original error was!
-								return Either.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>left(
+								return Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>fail(
 										HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
 												e.getMessage()));
 							}
@@ -410,7 +410,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 		catch (Throwable e) { // (can only occur if the DB call errors)
 			return CompletableFuture.completedFuture(
-				Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
+				Validation.fail(HarvestErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
 					ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
 					)));
 		}

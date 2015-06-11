@@ -18,7 +18,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 public class TestClassloaderUtils {
 
@@ -39,16 +39,16 @@ public class TestClassloaderUtils {
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology",
 						Optional.of(path2.toString()),
 						Collections.emptyList(), "test1", new TestMessageBean());						
 						
-		if (ret_val.isLeft()) {
-			System.out.println("About to crash with: " + ret_val.left().value().message());
+		if (ret_val.isFail()) {
+			System.out.println("About to crash with: " + ret_val.fail().message());
 		}		
-		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
+		assertEquals(true, ret_val.success().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
 		
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -74,17 +74,17 @@ public class TestClassloaderUtils {
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);		
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.empty(),
 						Arrays.asList(path2.toString()), 
 						"test1", new TestMessageBean());						
 						
-		if (ret_val.isLeft()) {
-			System.out.println("About to crash with: " + ret_val.left().value().message());
+		if (ret_val.isFail()) {
+			System.out.println("About to crash with: " + ret_val.fail().message());
 		}		
-		assertEquals(true, ret_val.right().value().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
+		assertEquals(true, ret_val.success().canRunOnThisNode(BeanTemplateUtils.build(DataBucketBean.class).done().get(), null));
 		
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -110,17 +110,17 @@ public class TestClassloaderUtils {
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);				
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.empty(),
 						Arrays.asList(path2.toString()), 
 						"test1", new TestMessageBean());						
 						
-		if (ret_val.isRight()) {
+		if (ret_val.isSuccess()) {
 			System.out.println("About to crash,found class?");
 		}		
-		BasicMessageBean error = ret_val.left().value();
+		BasicMessageBean error = ret_val.fail();
 		
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
@@ -149,17 +149,17 @@ public class TestClassloaderUtils {
 		final Path path = new Path(pathname);
 		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(path);				
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"java.lang.String", 
 						Optional.empty(),
 						Arrays.asList(path2.toString()), 
 						"test1", new TestMessageBean());						
 						
-		if (ret_val.isRight()) {
+		if (ret_val.isSuccess()) {
 			System.out.println("About to crash,found class?");
 		}		
-		BasicMessageBean error = ret_val.left().value();
+		BasicMessageBean error = ret_val.fail();
 		
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);

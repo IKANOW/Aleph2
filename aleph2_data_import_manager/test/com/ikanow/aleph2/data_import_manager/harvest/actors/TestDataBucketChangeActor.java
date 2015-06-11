@@ -77,7 +77,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 public class TestDataBucketChangeActor {
 
@@ -173,13 +173,13 @@ public class TestDataBucketChangeActor {
 		
 		final BasicMessageBean error = HarvestErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketChangeActor.getHarvestTechnology(bucket, true, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Either.left(error));
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketChangeActor.getHarvestTechnology(bucket, true, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
-		assertTrue("Got error back", test1.isLeft());
-		assertEquals("test_source", test1.left().value().source());
-		assertEquals("test_message", test1.left().value().command());
-		assertEquals("test_error", test1.left().value().message());
+		assertTrue("Got error back", test1.isFail());
+		assertEquals("test_source", test1.fail().source());
+		assertEquals("test_message", test1.fail().command());
+		assertEquals("test_error", test1.fail().message());
 		
 		//////////////////////////////////////////////////////
 
@@ -190,29 +190,29 @@ public class TestDataBucketChangeActor {
 					.put("test_tech_id_2b", Tuples._2T(null, null))
 					.build();
 
-		final Either<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2a").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
-				Either.right(test2_input));
+				Validation.success(test2_input));
 
-		assertTrue("Got error back", test2a.isLeft());
-		assertEquals("test_source2a", test2a.left().value().source());
-		assertEquals("BucketActionOfferMessage", test2a.left().value().command());
+		assertTrue("Got error back", test2a.isFail());
+		assertEquals("test_source2a", test2a.fail().source());
+		assertEquals("BucketActionOfferMessage", test2a.fail().command());
 		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
-						test2a.left().value().message());
+						test2a.fail().message());
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2b").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
-				Either.right(test2_input));
+				Validation.success(test2_input));
 
-		assertTrue("Got error back", test2b.isLeft());
-		assertEquals("test_source2b", test2b.left().value().source());
-		assertEquals("BucketActionOfferMessage", test2b.left().value().command());
+		assertTrue("Got error back", test2b.isFail());
+		assertEquals("test_source2b", test2b.fail().source());
+		assertEquals("BucketActionOfferMessage", test2b.fail().command());
 		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
-						test2a.left().value().message());
+						test2a.fail().message());
 		
 		//////////////////////////////////////////////////////
 
@@ -223,13 +223,13 @@ public class TestDataBucketChangeActor {
 		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
 		
 		// Requires that the file has already been cached:
-		final Either<BasicMessageBean, String> cached_file = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+		final Validation<BasicMessageBean, String> cached_file = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
 				lib_elements.get(0), 
 				_service_context.getStorageService(),
 				"test3", "test3").get();
 		
-		if (cached_file.isLeft()) {
-			fail("About to crash with: " + cached_file.left().value().message());
+		if (cached_file.isFail()) {
+			fail("About to crash with: " + cached_file.fail().message());
 		}		
 		
 		assertTrue("The cached file exists: " + java_name, new File(java_name).exists());
@@ -240,21 +240,21 @@ public class TestDataBucketChangeActor {
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
 					.put("test_tech_id", Tuples._2T(
 							lib_elements.get(0),
-							cached_file.right().value()))
+							cached_file.success()))
 					.build();		
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
-				Either.right(test3_input));
+				Validation.success(test3_input));
 
-		if (test3.isLeft()) {
-			fail("About to crash with: " + test3.left().value().message());
+		if (test3.isFail()) {
+			fail("About to crash with: " + test3.fail().message());
 		}		
-		assertTrue("getHarvestTechnology call succeeded", test3.isRight());
-		assertTrue("harvest tech created: ", test3.right().value() != null);
-		assertEquals(lib_elements.get(0).misc_entry_point(), test3.right().value().getClass().getName());
+		assertTrue("getHarvestTechnology call succeeded", test3.isSuccess());
+		assertTrue("harvest tech created: ", test3.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3.success().getClass().getName());
 		
 		// Now check with the "not just the harvest tech" flag set
 		
@@ -263,13 +263,13 @@ public class TestDataBucketChangeActor {
 		System.out.println("Needed to delete locally cached file? " + java_name2 + ": " + new File(java_name2).delete());		
 		
 		// Requires that the file has already been cached:
-		final Either<BasicMessageBean, String> cached_file2 = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+		final Validation<BasicMessageBean, String> cached_file2 = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
 				lib_elements.get(1), 
 				_service_context.getStorageService(),
 				"test3b", "test3b").get();
 		
-		if (cached_file2.isLeft()) {
-			fail("About to crash with: " + cached_file2.left().value().message());
+		if (cached_file2.isFail()) {
+			fail("About to crash with: " + cached_file2.fail().message());
 		}		
 		
 		assertTrue("The cached file exists: " + java_name, new File(java_name2).exists());				
@@ -278,31 +278,31 @@ public class TestDataBucketChangeActor {
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
 					.put("test_tech_id", Tuples._2T(
 							lib_elements.get(0),
-							cached_file.right().value()))
+							cached_file.success()))
 					.put("test_module_id", Tuples._2T(
 							lib_elements.get(1),
-							cached_file.right().value()))
+							cached_file.success()))
 					.build();		
 		
 		final HarvestControlMetadataBean harvest_module = new HarvestControlMetadataBean(
 				"test_tech_name", true, Arrays.asList("test_module_id"), null
 				);
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket)
 					.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
 					.done(), 
 				false, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
-				Either.right(test3b_input));
+				Validation.success(test3b_input));
 
-		if (test3b.isLeft()) {
-			fail("About to crash with: " + test3b.left().value().message());
+		if (test3b.isFail()) {
+			fail("About to crash with: " + test3b.fail().message());
 		}		
-		assertTrue("getHarvestTechnology call succeeded", test3b.isRight());
-		assertTrue("harvest tech created: ", test3b.right().value() != null);
-		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.right().value().getClass().getName());		
+		assertTrue("getHarvestTechnology call succeeded", test3b.isSuccess());
+		assertTrue("harvest tech created: ", test3b.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
 	}
 	
 	@Test
@@ -311,18 +311,18 @@ public class TestDataBucketChangeActor {
 		
 		// Get the harvest tech module standalone ("in app" way is covered above)
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", "test");						
 		
-		if (ret_val.isLeft()) {
-			fail("getHarvestTechnology call failed: " + ret_val.left().value().message());
+		if (ret_val.isFail()) {
+			fail("getHarvestTechnology call failed: " + ret_val.fail().message());
 		}
-		assertTrue("harvest tech created: ", ret_val.right().value() != null);
+		assertTrue("harvest tech created: ", ret_val.success() != null);
 		
-		final IHarvestTechnologyModule harvest_tech = ret_val.right().value();
+		final IHarvestTechnologyModule harvest_tech = ret_val.success();
 		
 		// Test 1: pass along errors:
 		
@@ -330,7 +330,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToHarvester(
 				bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 
-				Either.left(error));
+				Validation.fail(error));
 
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
@@ -346,7 +346,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketChangeActor.talkToHarvester(
 				bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
 		final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
@@ -358,7 +358,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketChangeActor.talkToHarvester(
 				bucket, delete, "test3", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
@@ -372,7 +372,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToHarvester(
 				bucket, create, "test4", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
@@ -386,7 +386,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToHarvester(
 				bucket, update, "test5", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
@@ -400,7 +400,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test6 = DataBucketChangeActor.talkToHarvester(
 				bucket, update_state, "test6", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test6_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6.get();
@@ -412,7 +412,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test6b = DataBucketChangeActor.talkToHarvester(
 				bucket, update_stateb, "test6b", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6b.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test6b_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6b.get();
@@ -429,7 +429,7 @@ public class TestDataBucketChangeActor {
 
 		final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketChangeActor.talkToHarvester(
 				bucket, bad_msg, "test7", _actor_context.getNewHarvestContext(), 
-				Either.right(harvest_tech));		
+				Validation.success(harvest_tech));		
 		
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();
@@ -444,18 +444,18 @@ public class TestDataBucketChangeActor {
 		
 		// Get the harvest tech module standalone ("in app" way is covered above)
 		
-		final Either<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
 						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
 						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
 						Collections.emptyList(), "test1", "test");						
 		
-		if (ret_val.isLeft()) {
-			fail("getHarvestTechnology call failed: " + ret_val.left().value().message());
+		if (ret_val.isFail()) {
+			fail("getHarvestTechnology call failed: " + ret_val.fail().message());
 		}
-		assertTrue("harvest tech created: ", ret_val.right().value() != null);
+		assertTrue("harvest tech created: ", ret_val.success() != null);
 		
-		final IHarvestTechnologyModule harvest_tech = ret_val.right().value();
+		final IHarvestTechnologyModule harvest_tech = ret_val.success();
 		
 		final CompletableFuture<BucketActionReplyMessage> return_value = FutureUtils.returnError(new RuntimeException("test1"));
 
@@ -463,7 +463,7 @@ public class TestDataBucketChangeActor {
 		
 		final CompletableFuture<BucketActionReplyMessage> test1 = 
 				DataBucketChangeActor.handleTechnologyErrors(bucket, 
-						new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", Either.right(harvest_tech), 
+						new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", Validation.success(harvest_tech), 
 						return_value);
 		
 		assertTrue("Reply message type", test1.get() instanceof BucketActionHandlerMessage);
@@ -509,35 +509,35 @@ public class TestDataBucketChangeActor {
 			
 			// 1) Normal operation
 			
-			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
+			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
 				DataBucketChangeActor.cacheJars(bucket, true, 
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
 						"test1_source", "test1_command"
 					);
 			
-			if (reply_structure.get().isLeft()) {
-				fail("About to crash with: " + reply_structure.get().left().value().message());
+			if (reply_structure.get().isFail()) {
+				fail("About to crash with: " + reply_structure.get().fail().message());
 			}		
-			assertTrue("cacheJars should return valid reply", reply_structure.get().isRight());
+			assertTrue("cacheJars should return valid reply", reply_structure.get().isSuccess());
 		
-			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().right().value();
+			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().success();
 			
 			assertEquals(2L, reply_map.size()); // (harves tech only, one for name, one for id) 
 			
 			// 2) Normal operation - tech + module
 			
-			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
+			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
 					DataBucketChangeActor.cacheJars(bucket2, false, 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
 							"test2_source", "test2_command"
 						);
 				
-			if (reply_structure2.get().isLeft()) {
-				fail("About to crash with: " + reply_structure2.get().left().value().message());
+			if (reply_structure2.get().isFail()) {
+				fail("About to crash with: " + reply_structure2.get().fail().message());
 			}		
-			assertTrue("cacheJars should return valid reply", reply_structure2.get().isRight());
+			assertTrue("cacheJars should return valid reply", reply_structure2.get().isSuccess());
 		
-			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map2 = reply_structure2.get().right().value();
+			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map2 = reply_structure2.get().success();
 			
 			assertEquals(4L, reply_map2.size()); // (harves tech only, one for name, one for id)
 				
@@ -545,13 +545,13 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id, "failtest").done();
 			
-			CompletableFuture<Either<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
+			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
 					DataBucketChangeActor.cacheJars(bucket3, false, 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
 							"test2_source", "test2_command"
 						);
 			
-			assertTrue("cacheJars should return error", reply_structure3.get().isLeft());
+			assertTrue("cacheJars should return error", reply_structure3.get().isFail());
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("guice? {0}", e));
