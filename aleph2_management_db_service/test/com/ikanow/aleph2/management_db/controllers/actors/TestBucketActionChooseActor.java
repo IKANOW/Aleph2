@@ -160,7 +160,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -198,7 +198,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -241,7 +241,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -289,7 +289,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -354,7 +354,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -411,7 +411,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -466,7 +466,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -512,7 +512,7 @@ public class TestBucketActionChooseActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																

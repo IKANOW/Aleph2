@@ -66,6 +66,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -634,7 +635,7 @@ public class TestDataBucketChangeActor {
 		final BucketActionMessage.UpdateBucketStateActionMessage suspend =
 				new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
 		
-		final CompletableFuture<BucketActionReplyMessage> reply4 = FutureUtils.wrap(Patterns.ask(handler, suspend, 5000L));
+		final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, suspend, 5000L), _db_actor_context.getActorSystem().dispatcher());
 		final BucketActionReplyMessage msg4 = reply4.get();
 	
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, msg4.getClass());

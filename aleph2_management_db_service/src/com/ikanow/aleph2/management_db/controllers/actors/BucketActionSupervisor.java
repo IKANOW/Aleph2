@@ -20,8 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-
-import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 
@@ -29,6 +28,7 @@ import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.Actor;
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.pattern.Patterns;
@@ -82,7 +82,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return the future containing a collection of replies
 	 */
 	public static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				askDistributionActor(final ActorRef supervisor, 
+				askDistributionActor(final ActorRef supervisor, final ActorSystem actor_context,
 						final BucketActionMessage message, 
 						final Optional<FiniteDuration> timeout)
 	{
@@ -95,7 +95,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		}
 		RequestMessage m = new RequestMessage(BucketActionDistributionActor.class, message, timeout);
 		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
-		return FutureUtils.wrap(Patterns.ask(supervisor, m, 2*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));
+		return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 2*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
 	}
 	
 	/** Send an action message to the multi-node distribution actor, get a future containing the reply 
@@ -105,7 +105,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return the future containing a collection of replies
 	 */
 	public static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				askChooseActor(final ActorRef supervisor, 
+				askChooseActor(final ActorRef supervisor, final ActorSystem actor_context,
 					final BucketActionMessage message, 
 					final Optional<FiniteDuration> timeout)
 	{
@@ -118,7 +118,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		}
 		RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, timeout);
 		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
-		return FutureUtils.wrap(Patterns.ask(supervisor, m, 5*timeout.orElse(DEFAULT_TIMEOUT).toMillis()));
+		return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 5*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
 			//(choose has longer timeout because of retries)
 	}
 	/* (non-Javadoc)

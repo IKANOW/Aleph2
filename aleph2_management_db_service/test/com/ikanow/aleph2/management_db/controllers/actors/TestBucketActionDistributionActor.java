@@ -120,7 +120,7 @@ public class TestBucketActionDistributionActor {
 		_logger.info("sending message");		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -158,7 +158,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -210,7 +210,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -256,7 +256,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -322,7 +322,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -380,7 +380,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -460,7 +460,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
@@ -538,7 +538,7 @@ public class TestBucketActionDistributionActor {
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askDistributionActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(), 
 						(BucketActionMessage)test_message, 
 						Optional.of(timeout));
 																
