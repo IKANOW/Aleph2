@@ -44,8 +44,14 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public class FutureUtils {
 
+	/** Wraps a scala Future in a completable future very simply using a spare thread from the general executor pool
+	 *  For Akka futures, now AkkaFutureUtils.efficientWrap should be used - for general scala, ideally FutureUtils.efficientWrap should be used
+	 *  though this has not been tested.
+	 * @param f the scala Future
+	 * @return the CompletableFuture
+	 */
 	@SuppressWarnings("unchecked")
-	public static <T> CompletableFuture<T> wrap(final scala.concurrent.Future<Object> f) {
+	public static <T> CompletableFuture<T> simpleWrap(final scala.concurrent.Future<Object> f) {
 		// Note the beginnings of a better way are here: http://onoffswitch.net/converting-akka-scala-futures-java-futures/
 		// but needs completing (basically: register a callback with the scala future, when that completes call complete/completeExceptionally)
 		// In the meantime this works but clogs up one of the threads from the common pool
@@ -70,9 +76,11 @@ public class FutureUtils {
 	}
 
 	/** Wraps a scala Future in a completable future efficiently using the underlying scala infrastructure
+	 *  For Akka (where a ActorSystem.dispatcher() is available as the execution context), should use AkkaFutureUtils.efficientWrap instead
 	 * Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/ 
 	 * TODO: do not use this code as it has not yet been tested
 	 * @param f the scala Future
+	 * @param execution_context - the scala execution context within which this should be run (if one is not available, use simpleWrap instead)  
 	 * @return the CompletableFuture
 	 */
 	@SuppressWarnings("unchecked")

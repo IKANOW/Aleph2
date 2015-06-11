@@ -43,6 +43,7 @@ public class AkkaFutureUtils {
 	/** Wraps an scala Future returned from Akka in a completable future efficiently using the underlying scala infrastructure
 	 * Code from http://onoffswitch.net/converting-akka-scala-futures-java-futures/ 
 	 * @param f the scala Future
+	 * @param execution_context - the scala execution context - should always be ActorSystem.dispatcher()  
 	 * @return the CompletableFuture
 	 */
 	@SuppressWarnings("unchecked")
