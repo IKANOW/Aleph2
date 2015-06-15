@@ -9,7 +9,7 @@
  * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, Validation express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
@@ -31,7 +31,7 @@ import java.util.stream.Stream;
 
 import scala.Tuple2;
 import fj.F;
-import fj.data.Either;
+import fj.data.Validation;
 
 public class Lambdas {
 
@@ -41,8 +41,8 @@ public class Lambdas {
 	
 	// WRAPPERS THAT CONVERT EXCEPTIONS
 	
-	public static <T> Either<Throwable, T> startPipe(final T t) {
-		return Either.right(t);
+	public static <T> Validation<Throwable, T> startPipe(final T t) {
+		return Validation.success(t);
 	}
 	
 	//////////////////////////////////////////////////////////////////////////////////
@@ -72,20 +72,20 @@ public class Lambdas {
 		};
 	}
 
-	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Either<Throwable, ?> but no exception
+	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Validation<Throwable, ?> but no exception
 	 * @param f - the lambda that can return a checked throwable
 	 * @return - an identical function except throws unchecked instead of checked throwable
 	 */
-	public static <R> Supplier<Either<Throwable, R>> wrap_e(ThrowableWrapper.Supplier<R> f) {
+	public static <R> Supplier<Validation<Throwable, R>> wrap_e(ThrowableWrapper.Supplier<R> f) {
 		return () -> {
 			try {
-				return Either.right(f.get());
+				return Validation.success(f.get());
 			}
 			catch (RuntimeException re) {
 				return denest(re);
 			}
 			catch (Throwable err) {
-				return Either.left(err);
+				return Validation.fail(err);
 			}
 		};		
 	}
@@ -188,19 +188,19 @@ public class Lambdas {
 		};
 	}
 
-	/** Wraps a function that returns a checked throwable, and returns either an error or an empty optional (if the predicate fails)
+	/** Wraps a function that returns a checked throwable, and returns Validation an error or an empty optional (if the predicate fails)
 	 * @param f - the lambda (predicate) that can return a checked throwable
-	 * @return - a function that convert an identical function except returns either an error or an empty optional (if the predicate fails)
+	 * @return - a function that convert an identical function except returns Validation an error or an empty optional (if the predicate fails)
 	 */
-	public static <T> Function<Either<Throwable, T>, Stream<Either<Throwable, T>>> filter_e(ThrowableWrapper.Predicate<T> f) {
+	public static <T> Function<Validation<Throwable, T>, Stream<Validation<Throwable, T>>> filter_e(ThrowableWrapper.Predicate<T> f) {
 		return err_t -> {
-			return err_t.<Stream<Either<Throwable, T>>>either(
-				err -> Stream.of(Either.left(err))
+			return err_t.<Stream<Validation<Throwable, T>>>validation(
+				err -> Stream.of(Validation.fail(err))
 				, 
 				t -> {
 					try {
 						if (f.test(t)) {
-							return Stream.of(Either.right(t));
+							return Stream.of(Validation.success(t));
 						}
 						else {
 							return Stream.empty();
@@ -210,19 +210,19 @@ public class Lambdas {
 						return Stream.of(denest(re));
 					}
 					catch (Throwable err) {
-						return Stream.of(Either.left(err));
+						return Stream.of(Validation.fail(err));
 					}
 				});
 		};		
 	}
 	
-	/** Wraps a function that returns a checked throwable, and returns either an error or an empty optional (if the predicate fails)
+	/** Wraps a function that returns a checked throwable, and returns Validation an error or an empty optional (if the predicate fails)
 	 * @param f - the lambda (predicate) that can return a checked throwable
-	 * @return - a function that convert an identical function except returns either an error or an empty optional (if the predicate fails)
+	 * @return - a function that convert an identical function except returns Validation an error or an empty optional (if the predicate fails)
 	 */
-	public static <T> Predicate<Either<Throwable, T>> filter_u(final boolean drop_errors, ThrowableWrapper.Predicate<T> f) {
+	public static <T> Predicate<Validation<Throwable, T>> filter_u(final boolean drop_errors, ThrowableWrapper.Predicate<T> f) {
 		return err_t -> {
-			return err_t.<Boolean>either(__ -> !drop_errors
+			return err_t.<Boolean>validation(__ -> !drop_errors
 					, 
 					t -> wrap_filter_u(f).test(t));
 		};
@@ -232,10 +232,10 @@ public class Lambdas {
 	
 	// FUNCTION
 	
-	public static <T, R> Function<Either<Throwable, T>, Either<Throwable, R>> wrap(ThrowableWrapper.Function<T, R> f) {
+	public static <T, R> Function<Validation<Throwable, T>, Validation<Throwable, R>> wrap(ThrowableWrapper.Function<T, R> f) {
 		return err_t -> {
-			return err_t.<Either<Throwable, R>>either(
-					err -> Either.left(err)
+			return err_t.<Validation<Throwable, R>>validation(
+					err -> Validation.fail(err)
 					, 
 					t -> wrap_e(f).apply(t)
 					);
@@ -272,28 +272,28 @@ public class Lambdas {
 		};
 	}
 
-	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Either<Throwable, ?> but no exception
+	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Validation<Throwable, ?> but no exception
 	 * @param f - the lambda that can return a checked throwable
 	 * @return - an identical function except throws unchecked instead of checked throwable
 	 */
-	public static <T, R> Function<T, Either<Throwable, R>> wrap_e(ThrowableWrapper.Function<T, R> f) {
+	public static <T, R> Function<T, Validation<Throwable, R>> wrap_e(ThrowableWrapper.Function<T, R> f) {
 		return t -> {
 			try {
-				return Either.right(f.apply(t));
+				return Validation.success(f.apply(t));
 			}
 			catch (RuntimeException re) {
 				return denest(re);
 			}
 			catch (Throwable err) {
-				return Either.left(err);
+				return Validation.fail(err);
 			}
 		};		
 	}
 	
-	public static <T, R> F<Either<Throwable, T>, Either<Throwable, R>> wrap_fj(ThrowableWrapper.Function<T, R> f) {
+	public static <T, R> F<Validation<Throwable, T>, Validation<Throwable, R>> wrap_fj(ThrowableWrapper.Function<T, R> f) {
 		return err_t -> {
-			return err_t.<Either<Throwable, R>>either(
-					err -> Either.left(err)
+			return err_t.<Validation<Throwable, R>>validation(
+					err -> Validation.fail(err)
 					, 
 					t -> wrap_e(f).apply(t)
 					);
@@ -315,20 +315,20 @@ public class Lambdas {
 		};
 	}
 
-	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Either<Throwable, ?> but no exception
+	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Validation<Throwable, ?> but no exception
 	 * @param f - the lambda that can return a checked throwable
 	 * @return - an identical function except throws unchecked instead of checked throwable
 	 */
-	public static <T, R> F<T, Either<Throwable, R>> wrap_fj_e(ThrowableWrapper.Function<T, R> f) {
+	public static <T, R> F<T, Validation<Throwable, R>> wrap_fj_e(ThrowableWrapper.Function<T, R> f) {
 		return t -> {
 			try {
-				return Either.right(f.apply(t));
+				return Validation.success(f.apply(t));
 			}
 			catch (RuntimeException re) {
 				return denest(re);
 			}
 			catch (Throwable err) {
-				return Either.left(err);
+				return Validation.fail(err);
 			}
 		};		
 	}
@@ -352,20 +352,20 @@ public class Lambdas {
 		};
 	}
 
-	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Either<Throwable, ?> but no exception
+	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Validation<Throwable, ?> but no exception
 	 * @param f - the lambda that can return a checked throwable
 	 * @return - an identical function except throws unchecked instead of checked throwable
 	 */
-	public static <T, U, R> BiFunction<T, U, Either<Throwable, R>> wrap_e(ThrowableWrapper.BiFunction<T, U, R> f) {
+	public static <T, U, R> BiFunction<T, U, Validation<Throwable, R>> wrap_e(ThrowableWrapper.BiFunction<T, U, R> f) {
 		return (t, u) -> {
 			try {
-				return Either.right(f.apply(t, u));
+				return Validation.success(f.apply(t, u));
 			}
 			catch (RuntimeException re) {
 				return denest(re);
 			}
 			catch (Throwable err) {
-				return Either.left(err);
+				return Validation.fail(err);
 			}
 		};		
 	}
@@ -393,15 +393,15 @@ public class Lambdas {
 	//////////////////////////////////////////////////////////////////////////////////
 	//////////////////////////////////////////////////////////////////////////
 
-	public static <T> Either<Throwable, T> denest(final RuntimeException re) {
-		return (null == re.getCause()) ? Either.left(re) : Either.left(re.getCause());		
+	public static <T> Validation<Throwable, T> denest(final RuntimeException re) {
+		return (null == re.getCause()) ? Validation.fail(re) : Validation.fail(re.getCause());		
 	}
 	
 	/** Collects values from the collector, and a list of errors
 	 * @param value_collector
 	 * @return
 	 */
-	public static <T, A, R> Collector<Either<Throwable, T>, ?, Tuple2<List<Throwable>, R>> collector_errs(final Collector<T, A, R> value_collector)
+	public static <T, A, R> Collector<Validation<Throwable, T>, ?, Tuple2<List<Throwable>, R>> collector_errs(final Collector<T, A, R> value_collector)
 	{
 		return collector(Collectors.<Throwable>toList(), value_collector);
 	}
@@ -410,7 +410,7 @@ public class Lambdas {
 	 * @param value_collector
 	 * @return
 	 */
-	public static <T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<ArrayList<Throwable>, A>, Tuple2<Optional<Throwable>, R>> collector_err(final Collector<T, A, R> value_collector)
+	public static <T, A, R> Collector<Validation<Throwable, T>, MutableAccumulator<ArrayList<Throwable>, A>, Tuple2<Optional<Throwable>, R>> collector_err(final Collector<T, A, R> value_collector)
 	{
 		final Collector<Throwable, ArrayList<Throwable>, Optional<Throwable>> err_collector = 
 				Collector.<Throwable, ArrayList<Throwable>, Optional<Throwable>>of(
@@ -428,16 +428,16 @@ public class Lambdas {
 	 * @param value_collector
 	 * @return
 	 */
-	public static <A1, R1, T, A, R> Collector<Either<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>> collector(
+	public static <A1, R1, T, A, R> Collector<Validation<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>> collector(
 				final Collector<Throwable, A1, R1> error_collector,
 				final Collector<T, A, R> value_collector
 			)
 	{
-		return Collector.<Either<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>>of(
+		return Collector.<Validation<Throwable, T>, MutableAccumulator<A1, A>, Tuple2<R1, R>>of(
 				() -> new MutableAccumulator<A1, A>(error_collector.supplier().get(), value_collector.supplier().get())
 				, 
 				(acc, err_val) -> {
-					err_val.<MutableAccumulator<A1, A>>either(
+					err_val.<MutableAccumulator<A1, A>>validation(
 						err -> {
 							error_collector.accumulator().accept(acc.a1, err);
 							return null;

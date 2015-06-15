@@ -837,12 +837,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				Optional.ofNullable(new_object.multi_node_enabled()).orElse(false)
 				? 					
 				BucketActionSupervisor.askDistributionActor(
-						actor_context.getBucketActionSupervisor(), 
+						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)new_message, 
 						Optional.empty())
 				:
 				BucketActionSupervisor.askChooseActor(
-						actor_context.getBucketActionSupervisor(), 
+						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)new_message, 
 						Optional.empty());
 		

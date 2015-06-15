@@ -27,7 +27,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 public class ClassloaderUtils {
 
@@ -38,7 +38,7 @@ public class ClassloaderUtils {
 	 * @param secondary_libs - optionally a set of other libraries
 	 * @return an instance of the desired function
 	 */
-	public static <R, M> Either<BasicMessageBean, R> getFromCustomClasspath(
+	public static <R, M> Validation<BasicMessageBean, R> getFromCustomClasspath(
 													final Class<R> interface_clazz,
 													final String implementation_classname,
 													final Optional<String> primary_lib, 
@@ -62,15 +62,15 @@ public class ClassloaderUtils {
 				throw new RuntimeException("Unknown error");
 			}
 			else if (!interface_clazz.isAssignableFrom(ret_val.getClass())) {
-				return Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+				return Validation.fail(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 						msg_for_errors, 
 						ErrorUtils.get(HarvestErrorUtils.ERROR_CLASS_NOT_SUPERCLASS, implementation_classname, interface_clazz) 
 						));				
 			}
-			else return Either.right(ret_val);
+			else return Validation.success(ret_val);
 		}
 		catch (Throwable e) {
-			return Either.left(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+			return Validation.fail(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
 							ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 
 							));

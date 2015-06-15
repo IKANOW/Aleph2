@@ -29,7 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
-import fj.data.Either;
+import fj.data.Validation;
 
 /** Utilities for retrieving shared JARs to a local spot from where they can easily be used by a classloader
  * @author acp
@@ -41,7 +41,7 @@ public class JarCacheUtils {
 	 * @param fs
 	 * @return either a basic message bean containing an error, or the fully qualified path of the cached JAR
 	 */
-	public static <M> CompletableFuture<Either<BasicMessageBean, String>> getCachedJar(
+	public static <M> CompletableFuture<Validation<BasicMessageBean, String>> getCachedJar(
 			final String local_cached_jar_dir,
 			final SharedLibraryBean library_bean, final IStorageService fs,
 			final String handler_for_errors, final M msg_for_errors)
@@ -71,10 +71,10 @@ public class JarCacheUtils {
 				
 				lfs.util().copy(original_jar_file, cached_jar_file);
 			}
-			return CompletableFuture.completedFuture(Either.right(cached_jar_file.toString()));
+			return CompletableFuture.completedFuture(Validation.success(cached_jar_file.toString()));
 			
 		} catch (Throwable e) {
-			return CompletableFuture.completedFuture(Either.left
+			return CompletableFuture.completedFuture(Validation.fail
 					(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
 							HarvestErrorUtils.getLongForm(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, e, library_bean.path_name()) 

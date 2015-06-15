@@ -12,10 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Collection;
+
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -23,24 +25,33 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import scala.Function1;
 import scala.Tuple2;
 import scala.concurrent.Await;
+import scala.concurrent.ExecutionContext;
+import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
+import scala.runtime.AbstractFunction1;
+import scala.runtime.BoxedUnit;
+import scala.util.Try;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  
 /** Utilities relating to the specific use of futures within Aleph2
+ * Contains code fragments from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
  * @author acp
  *
  */
 public class FutureUtils {
 
-	/** Wraps a scala Future in a completable future 
+	/** Wraps a scala Future in a completable future very simply using a spare thread from the general executor pool
+	 *  For Akka futures, now AkkaFutureUtils.efficientWrap should be used - for general scala, ideally FutureUtils.efficientWrap should be used
+	 *  though this has not been tested.
 	 * @param f the scala Future
 	 * @return the CompletableFuture
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> CompletableFuture<T> wrap(final scala.concurrent.Future<Object> f) {
+	public static <T> CompletableFuture<T> simpleWrap(final scala.concurrent.Future<Object> f) {
 		// Note the beginnings of a better way are here: http://onoffswitch.net/converting-akka-scala-futures-java-futures/
 		// but needs completing (basically: register a callback with the scala future, when that completes call complete/completeExceptionally)
 		// In the meantime this works but clogs up one of the threads from the common pool
@@ -63,6 +74,19 @@ public class FutureUtils {
 			}
 		});
 	}
+
+	/** Wraps a scala Future in a completable future efficiently using the underlying scala infrastructure
+	 *  For Akka (where a ActorSystem.dispatcher() is available as the execution context), should use AkkaFutureUtils.efficientWrap instead
+	 * Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/ 
+	 * TODO: do not use this code as it has not yet been tested
+	 * @param f the scala Future
+	 * @param execution_context - the scala execution context within which this should be run (if one is not available, use simpleWrap instead)  
+	 * @return the CompletableFuture
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> CompletableFuture<T> efficientWrap(final scala.concurrent.Future<Object> f, final ExecutionContext execution_context) {
+		return (CompletableFuture<T>) new FromScalaFuture<>(f).executeOn(execution_context);
+	}	
 	
 	/** Creates a trivial management future with no side channel - ie equivalent to the input future itself
 	 * @return the management future (just containing the base future)
@@ -183,4 +207,38 @@ public class FutureUtils {
 			}
 		};		
 	}	
+	////////////////////////////////////////////
+	
+	// SCALA CONVERSION UTILS
+	// Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
+	
+	/**Code adapted from http://onoffswitch.net/converting-akka-scala-futures-java-futures/
+	 */
+	protected static class FromScalaFuture<T> {
+		 
+	    private final Future<T> future;
+	 
+	    public FromScalaFuture(Future<T> future) {
+	        this.future = future;
+	    }
+	 
+	    public CompletableFuture<T> executeOn(ExecutionContext context) {
+	        final CompletableFuture<T> completableFuture = new CompletableFuture<>();
+	 
+	        Function1<Try<T>, BoxedUnit> f = new AbstractFunction1<Try<T>, BoxedUnit>() {
+	        	public BoxedUnit apply(Try<T> in) {
+	        		if (in.isSuccess()) {
+		                completableFuture.complete(in.get());	        			
+	        		}
+	        		else {
+	        			completableFuture.completeExceptionally(in.failed().get());
+	        		}	        		
+	        		return BoxedUnit.UNIT;
+	        	}
+	        	
+	        };	        
+	        future.onComplete(f, context);	 
+	        return completableFuture;
+	    }
+	}		
 }
