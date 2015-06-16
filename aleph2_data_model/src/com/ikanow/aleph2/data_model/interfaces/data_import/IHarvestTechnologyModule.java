@@ -114,6 +114,17 @@ public interface IHarvestTechnologyModule {
 	CompletableFuture<BasicMessageBean> onDelete(final DataBucketBean to_delete, final IHarvestContext context);
 	
 	/**
+	 * Notification that this bucket is no longer the responsibility of this node (eg the node failed for too long and was removed from the bucket's node affinity).
+	 * This method should check that any external processes running on this node are cleaned up - but the bucket itself's state has not changed, therefore eg if 
+	 * managing a distributed technology then the bucket shoud be left alone.
+	 * 
+	 * @param to_delete - the bucket that is being deleted
+	 * @param context - the context available to this harvester
+	 * @return A future for the response
+	 */
+	CompletableFuture<BasicMessageBean> onDecommission(final DataBucketBean to_decommission, final IHarvestContext context);
+	
+	/**
 	 * Periodic poll for statistics collection, health checks, etc.
 	 * The poll frequency is determined by the bucket
 	 * @param polled_bucket The bucket being polled
