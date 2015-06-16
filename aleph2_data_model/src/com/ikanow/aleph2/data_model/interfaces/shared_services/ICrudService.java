@@ -75,13 +75,13 @@ public interface ICrudService<O> {
 	
 	/**
 	 * @param objects - a list of objects to insert
-	 * @param continue_on_error if true then duplicate objects are ignored (not inserted) but the store continues
+	 * @param replace_if_present if true then duplicate objects will update the existing ones, if not the behavior is undefined (in terms of error/success, and how many other non-dup objects are stored)
 	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
 	 */
-	CompletableFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<O> new_objects, final boolean continue_on_error);
+	CompletableFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<O> new_objects, final boolean replace_if_present);
 	
 	/**
-	 * @param objects - a list of objects to insert, failing out as soon as a duplicate is inserted 
+	 * @param objects - a list of objects to insert, not handling duplicates
 	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
 	 */
 	CompletableFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<O> new_objects);
