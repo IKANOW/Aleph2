@@ -33,7 +33,7 @@ public class SampleSearchIndexService implements ISearchIndexService {
 
 	@Override
 	public <O> ICrudService<O> getCrudService(Class<O> clazz,
-			Collection<DataBucketBean> buckets) {
+			Collection<String> buckets) {
 		return null;
 	}
 

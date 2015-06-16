@@ -78,6 +78,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
+import java.util.stream.Stream;
 
 //TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data (for now, add a .DELETED file just so we know)
 //TODO (ALEPH-19): ... handle the update poll messaging, needs an indexed "next poll" query, do a findAndMod from every thread every minute
@@ -568,18 +569,27 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// We have a full name if we're here, so no check for uniqueness
 		
-		if (!old_version.isPresent()) { // (create not update)
-			if (this._underlying_data_bucket_db.countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
-																.when(DataBucketBean::full_name, bucket.full_name())
-															).get() > 0)
-			{			
+		// Check for some bucket path restrictions
+		if (null != bucket.full_name()) {
+			if (!bucketPathFormatValidationCheck(bucket.full_name())) {
 				errors.add(MgmtCrudUtils.createValidationError(
-						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
+						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_FORMAT_ERROR, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
 				
-				return errors; // (this is catastrophic obviously)
+				return errors; // (this is catastrophic obviously)			
 			}
-		}
-		
+			
+			if (!old_version.isPresent()) { // (create not update)
+				if (this._underlying_data_bucket_db.countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
+																	.when(DataBucketBean::full_name, bucket.full_name())
+																).get() > 0)
+				{			
+					errors.add(MgmtCrudUtils.createValidationError(
+							ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
+					
+					return errors; // (this is catastrophic obviously)
+				}
+			}
+		}		
 		// More complex missing field checks
 		
 		// - if has enrichment then must have harvest_technology_name_or_id (1) 
@@ -895,6 +905,24 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		try (final FSDataOutputStream out = 
 				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
 		{} //(ie close after creating)
+	}
+	
+	/** Bucket valdiation rules:
+	 *  in the format /path/to/<etc>/here where:
+	 *  - leading /, no trailing /
+	 *  - no /../, /./ or //s 
+	 *  - no " "s or ","s or ":"s or ';'s
+	 * @param bucket_path
+	 * @return
+	 */
+	public static boolean bucketPathFormatValidationCheck(final String bucket_path) {
+		return 0 != Stream.of(bucket_path)
+				.filter(p -> p.startsWith("/")) // not allowed for/example
+				.filter(p -> !p.endsWith("/")) // not allowed /for/example/
+				.filter(p -> !Pattern.compile("/[.]+(?:/|$)").matcher(p).find()) // not allowed /./ or /../
+				.filter(p -> !Pattern.compile("//").matcher(p).find())
+				.filter(p -> !Pattern.compile("(?:\\s|[,:;])").matcher(p).find())
+				.count();
 	}
 	
 	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {

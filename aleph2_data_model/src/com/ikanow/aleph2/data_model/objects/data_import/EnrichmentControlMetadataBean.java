@@ -58,7 +58,7 @@ public class EnrichmentControlMetadataBean {
 		return enabled;
 	}
 	/** A list of ids or names (within either the bucket or global library) of enrichment JARs to be
-	 *  used as part of this enrichment. Exactly on of the JARs must be of type IEnrichmentLibraryModule  
+	 *  used as part of this enrichment. Exactly one of the JARs must be of type IEnrichmentBatchModule or IEnrichmentBatchTopology  
 	 * @return the library_ids_or_names
 	 */
 	public List<String> library_ids_or_names() {

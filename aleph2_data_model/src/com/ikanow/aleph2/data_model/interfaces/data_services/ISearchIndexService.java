@@ -33,10 +33,10 @@ public interface ISearchIndexService {
 	
 	/** Returns a CRUD service (including simple searching) for the specified buckets or multi-buckets
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
-	 * @param bucket The collection of data buckets or multi-buckets
+	 * @param buckets A collection of bucket paths or aliases (including supporting wildcarding)
 	 * @return the CRUD service
 	 */
-	<O> ICrudService<O> getCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets);
+	<O> ICrudService<O> getCrudService(final Class<O> clazz, final Collection<String> buckets);
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
@@ -44,5 +44,5 @@ public interface ISearchIndexService {
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
-	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, Optional<String> driver_options);
+	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }
