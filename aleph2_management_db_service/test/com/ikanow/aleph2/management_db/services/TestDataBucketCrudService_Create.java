@@ -21,9 +21,11 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
@@ -216,6 +218,53 @@ public class TestDataBucketCrudService_Create {
 	/////////////////////////////////////////////////////////////	
 	
 	// Store bucket
+
+	@Test
+	public void testValidateName() throws Exception {
+		cleanDatabases();
+
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.done().get();
+
+		//(delete the file path)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+
+		// Try out the various ways in which it should be broken
+
+		{
+			final List<String> invalid_names = Arrays.asList("name1/embedded/dir", "/name1/embedded/dir/", "/name1/embedded//dir", 
+															"/name1/../dir", "/name1/./dir", "/name1/embedded/dir/.", "/name1/embedded/dir/..",
+															"/name1/embedded/ dir", "/name1/embedded/:dir", "/name1/embedded/;dir", "/name1/embedded/,dir"
+															);
+			for (String invalid_name: invalid_names) {
+				final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(BeanTemplateUtils.clone(valid_bucket).with(DataBucketBean::full_name, invalid_name).done());
+				try {
+					assertEquals(1, result.getManagementResults().get().size());
+					assertEquals(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_FORMAT_ERROR, invalid_name), result.getManagementResults().get().iterator().next().message());
+					result.get();
+					fail("Should have thrown an exception");
+				}
+				catch (Exception e) {
+					System.out.println("expected, err=" + e.getCause().getMessage());
+					assertEquals(RuntimeException.class, e.getCause().getClass());
+				}
+			}
+		}
+	}	
 	
 	@Test
 	public void testValidateInsert() throws Exception {
@@ -226,7 +275,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -292,6 +341,9 @@ public class TestDataBucketCrudService_Create {
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket).with(DataBucketBean::full_name, null).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			/**/
+			result.get();
+			
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty());
 			
 			result.get();
@@ -519,7 +571,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -552,18 +604,18 @@ public class TestDataBucketCrudService_Create {
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + ".DELETED").createNewFile();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + ".DELETED").createNewFile();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 
-		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + ".DELETED").exists());
+		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + ".DELETED").exists());
 		
 		// OK now try inserting the bucket, should error:
 		
 		try {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_bucket);
 			result.get();
-			fail("Should have thrown an exception");
+			fail("Should have thrown an exception: " + result.getManagementResults().get().stream().map(m -> m.message()).collect(Collectors.joining(",")));
 		}
 		catch (Exception e) {
 			System.out.println("expected, err=" + e.getCause().getMessage());
@@ -591,7 +643,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -652,7 +704,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -717,7 +769,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -804,7 +856,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean valid_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id1")
-				.with(DataBucketBean::full_name, "/name1/embedded/dir/")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
 				.with(DataBucketBean::display_name, "name1")
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
@@ -866,7 +918,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean bucket = _bucket_crud.getObjectById("id1").get().get();
 		
 		final DataBucketBean mod_bucket1 = BeanTemplateUtils.clone(bucket)
-											.with(DataBucketBean::full_name, "Something else")
+											.with(DataBucketBean::full_name, "/Something/else")
 											.with(DataBucketBean::owner_id, "Someone else")
 											.done();
 		
@@ -901,9 +953,6 @@ public class TestDataBucketCrudService_Create {
 				.done();
 		
 		final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
-		
-		/**/
-		System.out.println("??? " + update_future3.getManagementResults().get().iterator().next().message());
 		
 		assertEquals("id1", update_future3.get().get());
 

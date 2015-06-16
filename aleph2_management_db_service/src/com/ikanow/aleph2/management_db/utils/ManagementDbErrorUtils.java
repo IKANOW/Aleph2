@@ -30,6 +30,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED = "Bucket {0} was created, but no data import managers were available to handle it, so it was created in suspended mode";
 	public static final String DELETE_TOUCH_FILE_PRESENT = "Bucket {0} was recently deleted and has not yet been cleaned up";
 	public static final String BUCKET_FULL_NAME_UNIQUENESS = "Bucket {0} already exists, choose another full_name";
+	public static final String BUCKET_FULL_NAME_FORMAT_ERROR = "Bucket {0} should have the format /path/to/here (as deep as desired) with leading /, no trailing / and no '//'s or '..'s or '.'s";
 	
 	// Simple field rules
 	
