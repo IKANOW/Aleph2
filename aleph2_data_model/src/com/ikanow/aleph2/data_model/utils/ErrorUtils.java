@@ -30,7 +30,8 @@ public class ErrorUtils {
 
 	// Generic error messages
 	
-	public static final String INVALID_CONFIG_ERROR = "Invalid configuration for {0}: {1}";	
+	public static final String INVALID_CONFIG_ERROR = "Invalid configuration for {0}: {1}";
+	public static final String INVALID_DATETIME_FORMAT = "Could not parse human readable datetime string: {0}";
 	
 	// Interface
 	
