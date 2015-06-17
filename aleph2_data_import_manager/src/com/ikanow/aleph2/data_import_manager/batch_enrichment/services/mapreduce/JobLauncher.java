@@ -405,6 +405,7 @@ public class JobLauncher {
 		boolean success = false;
 		try {
 			Job job = Job.getInstance( config ,jobName);
+		    job.setJarByClass(BatchEnrichmentJob.class);
 			
 		    job.setOutputKeyClass(Text.class);
 		    job.setOutputValueClass(IntWritable.class);
@@ -418,7 +419,6 @@ public class JobLauncher {
 		    FileInputFormat.setInputPaths(job, bucketInput);
 		    FileOutputFormat.setOutputPath(job, bucketOutput);		    
 		    
-		    job.setJarByClass(BatchEnrichmentJob.class);
 		    
 		    // TODO do we want asynchronous?
 		    //job.submit();	
