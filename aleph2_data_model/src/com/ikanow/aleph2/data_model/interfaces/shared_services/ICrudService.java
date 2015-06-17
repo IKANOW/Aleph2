@@ -24,6 +24,7 @@ import org.apache.metamodel.DataContext;
 import org.apache.metamodel.schema.Table;
 
 import scala.Tuple2;
+import scala.concurrent.duration.FiniteDuration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -238,7 +239,8 @@ public interface ICrudService<O> {
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
 	 *  The exception is that ICrudService.IMetaModel will be available for many technologies and can
-	 *  typically be used safely.
+	 *  typically be used safely. (just try and check whether the optional return value is filled)
+	 *  Also ICrudService.IBatchSubservice may be available (just try and check whether the optional return value is filled)
 	 *  None of these underlying drivers support any user or project authentication or filtering
 	 * @param driver_class the class of the driver
 	 * @param a string containing options in some technology-specific format
@@ -247,6 +249,7 @@ public interface ICrudService<O> {
 	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 	
 	/** A table-level interface to the CRUD store using the open MetaModel library
+	 *  Can be retrieved using ICrudService.getUnderlyingPlatformDriver(IMetaModel.class, Optional.empty()
 	 * @author acp
 	 */
 	public static interface IMetaModel {
@@ -260,4 +263,28 @@ public interface ICrudService<O> {
 		 */
 		Table getTable();		
 	}
+	
+	/** A more efficiently batch interface that may or may not be implemented
+	 * @author Alex
+	 */
+	public static interface IBatchSubservice<O> {
+		/** Sets the batching parameters
+		 * @param size_kb - the max size before a batch is flushed
+		 * @param flush_interval - the max time before a batch is flushed
+		 */
+		void setBatchProperties(final Optional<Long> size_kb, final Optional<FiniteDuration> flush_interval);
+		
+		/** Efficiently store the list of objects with the subservice's batching parameters
+		 * @param new_objects - the list of objects to store
+		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent)
+		 */
+		void storeObjects(final List<O> new_objects, final boolean replace_if_present);
+		
+		/** Efficiently store the single object with the subservice's batching parameters
+		 * @param new_object - the single object to store efficiently
+		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent)
+		 */
+		void storeObject(final O new_object, final boolean replace_if_present);
+	}
+	
 }
