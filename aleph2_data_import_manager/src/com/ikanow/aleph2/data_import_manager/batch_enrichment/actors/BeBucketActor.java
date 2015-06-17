@@ -119,6 +119,7 @@ public class BeBucketActor extends UntypedActor {
 	protected void checkReady(String bucketFullName, String bucketPathStr) {
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
+			Path bucketTmp = new Path(bucketPathStr + "/managed_bucket/import/temp");
 			if (fileContext.util().exists(bucketReady)) {
 				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);
 				if (statuss.length > 0) {
