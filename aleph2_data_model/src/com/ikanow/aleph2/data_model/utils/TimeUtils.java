@@ -89,16 +89,16 @@ public class TimeUtils {
 	}
 	
 	/** Attempts to parse a (typically recurring) time  
-	 * @param human_readable_duration
-	 * @return
+	 * @param human_readable_duration - Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
+	 * @return the machine readable duration, or an error
 	 */
 	public static Validation<String, Duration> getDuration(final String human_readable_duration) {
 		return getDuration(human_readable_duration, Optional.empty());
 	}
 	/** Attempts to parse a (typically recurring) time  
-	 * @param human_readable_duration
+	 * @param human_readable_duration - Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
 	 * @param base_date - for relative date, locks the date to this origin (mainly for testing in this case?)
-	 * @return
+	 * @return the machine readable duration, or an error
 	 */
 	public static Validation<String, Duration> getDuration(final String human_readable_duration, Optional<Date> base_date) {
 		// There's a few different cases:
@@ -128,9 +128,9 @@ public class TimeUtils {
 	}
 	
 	/** Returns a date from a human readable date
-	 * @param human_readable_date - the date expressed in words, eg "next wednesday"
+	 * @param human_readable_date - the date expressed in words, eg "next wednesday".. Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
 	 * @param base_date - for relative date, locks the date to this origin
-	 * @return
+	 * @return the machine readable date, or an error
 	 */
 	public static Validation<String, Date> getSchedule(final String human_readable_date, Optional<Date> base_date) {
 		try { // just read the first - note can ignore all the error checking here, just fail out using the try/catch
