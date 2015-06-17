@@ -54,6 +54,8 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 
 	// More complex field rules
 	
+	public static final String BUCKET_INVALID_TIME = "Bucket {0}, field {1} has time-related error: {2}";
+	
 	// Other rules:
 	
 	// - if has enrichment then must have harvest_technology_name_or_id 

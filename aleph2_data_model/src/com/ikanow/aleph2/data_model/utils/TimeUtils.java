@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.utils;
 import java.util.Date;
 import java.util.Optional;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -114,7 +115,10 @@ public class TimeUtils {
 			final Matcher m = date_parser.matcher(human_readable_duration);
 			if (m.matches()) {
 				final Validation<String, Duration> candidate_ret = getTimePeriod(m.group(2))
-						.map(cu -> Duration.of(Integer.parseInt(m.group(1)), cu));
+						.map(cu -> {
+							final LocalDateTime now = LocalDateTime.now();
+							return Duration.between(now, now.plus(Integer.parseInt(m.group(1)), cu));
+						});
 				
 				if (candidate_ret.isSuccess()) return candidate_ret;
 			}

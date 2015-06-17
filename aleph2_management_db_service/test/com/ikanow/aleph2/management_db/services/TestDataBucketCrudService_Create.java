@@ -41,6 +41,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -220,6 +221,139 @@ public class TestDataBucketCrudService_Create {
 	// Store bucket
 
 	@Test
+	public void testValidateTimes_pass() throws Exception {
+		cleanDatabases();
+
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.done().get();
+
+		
+		// 1) add all errors:
+		{
+			final DataBucketBean valid_times = BeanTemplateUtils.clone(valid_bucket)
+													.with(DataBucketBean::poll_frequency, "every 1 hour")
+													.with(DataBucketBean::data_schema,
+														BeanTemplateUtils.build(DataSchemaBean.class)
+															.with(DataSchemaBean::temporal_schema, 
+																BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class)
+																	.with(DataSchemaBean.TemporalSchemaBean::grouping_time_period, "month")
+																	.with(DataSchemaBean.TemporalSchemaBean::cold_age_max, "30d")
+																	.with(DataSchemaBean.TemporalSchemaBean::hot_age_max, "4 weeks")
+																	.with(DataSchemaBean.TemporalSchemaBean::exist_age_max, "1 month")
+																	.done().get()
+															)
+															.with(DataSchemaBean::storage_schema, 
+																BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
+																	.with(DataSchemaBean.StorageSchemaBean::json_grouping_time_period, "day")
+																	.with(DataSchemaBean.StorageSchemaBean::raw_grouping_time_period, "year")
+																	.with(DataSchemaBean.StorageSchemaBean::processed_grouping_time_period, "hour")
+																	.with(DataSchemaBean.StorageSchemaBean::json_exist_age_max, "100s")
+																	.with(DataSchemaBean.StorageSchemaBean::raw_exist_age_max, "10d")
+																	.with(DataSchemaBean.StorageSchemaBean::processed_exist_age_max, "next year")
+																	.done().get()
+															)
+															.done().get()
+													)												
+													.done();
+			
+			//(delete the file path)
+			try {
+				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			}
+			catch (Exception e) {} // (fine, dir prob dones't delete)
+			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			
+			try {
+				final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_times);
+				
+				assertEquals(0, result.getManagementResults().get().size());			
+				result.get();
+				fail("Should have thrown an exception");
+			}
+			catch (Exception e) {
+				System.out.println("expected, err=" + e.getCause().getMessage());
+				assertEquals(RuntimeException.class, e.getCause().getClass());
+			}
+		}
+	}	
+	
+	@Test
+	public void testValidateTimes_fail() throws Exception {
+		cleanDatabases();
+
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.done().get();
+
+		
+		// 1) add all errors:
+		{
+			final DataBucketBean invalid_times = BeanTemplateUtils.clone(valid_bucket)
+													.with(DataBucketBean::poll_frequency, "apple")
+													.with(DataBucketBean::data_schema,
+														BeanTemplateUtils.build(DataSchemaBean.class)
+															.with(DataSchemaBean::temporal_schema, 
+																BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class)
+																	.with(DataSchemaBean.TemporalSchemaBean::grouping_time_period, "orange")
+																	.with(DataSchemaBean.TemporalSchemaBean::cold_age_max, "pear")
+																	.with(DataSchemaBean.TemporalSchemaBean::hot_age_max, "mango")
+																	.with(DataSchemaBean.TemporalSchemaBean::exist_age_max, "banana!")
+																	.done().get()
+															)
+															.with(DataSchemaBean::storage_schema, 
+																BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
+																	.with(DataSchemaBean.StorageSchemaBean::json_grouping_time_period, "tomato")
+																	.with(DataSchemaBean.StorageSchemaBean::raw_grouping_time_period, "pomegranate")
+																	.with(DataSchemaBean.StorageSchemaBean::processed_grouping_time_period, "lychee")
+																	.with(DataSchemaBean.StorageSchemaBean::json_exist_age_max, "kiwi")
+																	.with(DataSchemaBean.StorageSchemaBean::raw_exist_age_max, "pineapple")
+																	.with(DataSchemaBean.StorageSchemaBean::processed_exist_age_max, "grapefruit")
+																	.done().get()
+															)
+															.done().get()
+													)												
+													.done();
+			
+			//(delete the file path)
+			try {
+				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			}
+			catch (Exception e) {} // (fine, dir prob dones't delete)
+			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(invalid_times);
+			try {
+				assertEquals(11, result.getManagementResults().get().size());
+				result.get();
+				fail("Should have thrown an exception");
+			}
+			catch (Exception e) {
+				System.out.println("expected, err=" + e.getCause().getMessage());
+				assertEquals(RuntimeException.class, e.getCause().getClass());
+			}
+		}		
+	}	
+	
+	@Test
 	public void testValidateName() throws Exception {
 		cleanDatabases();
 
@@ -341,9 +475,6 @@ public class TestDataBucketCrudService_Create {
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket).with(DataBucketBean::full_name, null).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
-			/**/
-			result.get();
-			
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty());
 			
 			result.get();
