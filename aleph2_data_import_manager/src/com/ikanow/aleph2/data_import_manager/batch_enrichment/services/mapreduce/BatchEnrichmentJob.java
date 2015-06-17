@@ -16,8 +16,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.data_model.utils.ModuleUtils;
-import com.typesafe.config.Config;
 
 public class BatchEnrichmentJob{
 
