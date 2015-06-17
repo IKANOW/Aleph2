@@ -272,7 +272,7 @@ public interface ICrudService<O> {
 		 * @param size_kb - the max size before a batch is flushed
 		 * @param flush_interval - the max time before a batch is flushed
 		 */
-		void setBatchProperties(final Optional<Long> size_kb, final Optional<FiniteDuration> flush_interval);
+		void setBatchProperties(final Optional<Integer> max_objects, final Optional<Long> size_kb, final Optional<FiniteDuration> flush_interval);
 		
 		/** Efficiently store the list of objects with the subservice's batching parameters
 		 * @param new_objects - the list of objects to store
