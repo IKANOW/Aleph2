@@ -15,9 +15,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.typesafe.config.Config;
 
 public class BatchEnrichmentJob{
 
+	public static String DATA_BUCKET_BEAN_PARAM = "dataBucketBean";
 
 	public class BatchErichmentMapper extends Mapper<Object, Object, Object, Object>{
 
@@ -27,7 +31,9 @@ public class BatchEnrichmentJob{
 		
 		@Override
 		protected void setup(Mapper<Object, Object, Object, Object>.Context context) throws IOException, InterruptedException {
-			
+			String dataBucketBeanJson = context.getConfiguration().get(DATA_BUCKET_BEAN_PARAM);
+			this.bucket = BeanTemplateUtils.from(dataBucketBeanJson, DataBucketBean.class).get();
+
 		} // setup
 
 		@Override

@@ -80,6 +80,21 @@ public class BeanTemplateUtils {
 	 * @param bean - the bean to convert to JSON
 	 * @return - the bean template
 	 */
+	static public <T> BeanTemplate<T> from(final String string_json, final Class<T> clazz) {
+		try {
+			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+			return BeanTemplate.of(object_mapper.readValue(string_json, clazz));
+		}
+		catch (Exception e) { // on fail returns an unchecked error
+			throw new RuntimeException(e); // (this can only happen due to "static" code type issues, so unchecked exception is fine
+		}
+	}
+
+	/** Converts a JsonNode to a bean template of the specified type
+	 * (note: not very high performance, should only be used for management-type operations)
+	 * @param bean - the bean to convert to JSON
+	 * @return - the bean template
+	 */
 	static public <T> BeanTemplate<T> from(final JsonNode bean_json, final Class<T> clazz) {
 		try {
 			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
