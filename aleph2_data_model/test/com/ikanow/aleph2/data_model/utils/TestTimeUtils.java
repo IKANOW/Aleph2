@@ -18,7 +18,9 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -114,9 +116,11 @@ public class TestTimeUtils {
 		{
 			final Date now = new Date(946706400000L); //1am 1 Jan 2000
 			
+			Calendar calendar = GregorianCalendar.getInstance();
+			calendar.setTime(now);			
 			final Validation<String, Duration> res1 = TimeUtils.getDuration("3pm", Optional.of(now));
 			assertTrue("Passes", res1.isSuccess());
-			assertEquals(14*3600L, res1.success().getSeconds());
+			assertEquals((15 - calendar.get(Calendar.HOUR))*3600L, res1.success().getSeconds());
 			
 			final Validation<String, Duration> err1 = TimeUtils.getDuration("1 bananas");
 			
