@@ -30,8 +30,11 @@ import org.junit.Test;
 
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService1;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService2;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleBadExtraDepedencyService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceOne;
+import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServicePlain;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceThree;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleCustomServiceTwo;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleModule;
@@ -266,5 +269,40 @@ public class TestModuleUtils {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
 		assertNull(ModuleUtils.getService(SampleCustomServiceOne.class, Optional.empty()));
+	}
+	
+	/**
+	 * Two services that use the same class should use the same injector
+	 * 
+	 * @throws Excpetion
+	 */
+	@Test
+	public void testSameServiceUsesSingleInjector() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		configMap.put("service.SampleMultipleService1.service", SampleCustomServicePlain.class.getCanonicalName());
+		configMap.put("service.SampleMultipleService1.interface", ICustomService1.class.getCanonicalName());
+		configMap.put("service.SampleMultipleService2.service", SampleCustomServicePlain.class.getCanonicalName());
+		configMap.put("service.SampleMultipleService2.interface", ICustomService2.class.getCanonicalName());
+		
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		SampleCustomServicePlain service1 = (SampleCustomServicePlain) ModuleUtils.getService(ICustomService1.class, Optional.of("SampleMultipleService1"));		
+		SampleCustomServicePlain service2 = (SampleCustomServicePlain) ModuleUtils.getService(ICustomService2.class, Optional.of("SampleMultipleService2"));
+		assertTrue(service1.initialization_id.equals(service2.initialization_id));
+	}
+	
+	//TODO fix this
+	@Test
+	public void testBindingSameThingTwiceDiffAnnotation() throws Exception {
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		
+		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
+		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());
+		configMap.put("service.SampleCustomServiceTwo.interface", ICustomService.class.getCanonicalName());
+		configMap.put("service.SampleCustomServiceTwo.service", SampleCustomServiceOne.class.getCanonicalName());
+		
+		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+		SampleCustomServiceOne service1 = (SampleCustomServiceOne) ModuleUtils.getService(ICustomService.class, Optional.of("SampleCustomServiceOne"));		
+		SampleCustomServiceOne service2 = (SampleCustomServiceOne) ModuleUtils.getService(ICustomService.class, Optional.of("SampleCustomServiceTwo"));
+		assertEquals(service1.dep.getANumber(), service2.dep.getANumber());
 	}
 }

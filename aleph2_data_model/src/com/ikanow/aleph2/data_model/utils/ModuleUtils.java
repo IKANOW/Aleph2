@@ -23,10 +23,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
-
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -77,6 +79,8 @@ public class ModuleUtils {
 	private static GlobalPropertiesBean globals = BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get();
 		//(do it this way to avoid having to keep changing this test every time globals changes)
 	private static Config saved_config = null;
+	@SuppressWarnings("rawtypes")
+	private static BiFunction<Injector,Key,Object> getInstance = ModuleUtils.memoize(ModuleUtils::getInstance_onceOnly);
 	
 	/** Returns the static config set up by a call to loadModulesFromConfig or createInjector
 	 *  INTENDED TO BE CALLED FROM guice_submodule.configure() (or later of course, though you should be using injected beans by then)
@@ -109,6 +113,10 @@ public class ModuleUtils {
 	 * Service name.  If default is set to true they can be retrieved by their
 	 * interface/service directly.
 	 * 
+	 * If a service has already been created with the same {full path to service} as
+	 * another service, the second service will use the first as an injector, then we go back
+	 * and replace the original injectors with the new one.
+	 * 
 	 * @param config
 	 * @param parent_injector
 	 * @return
@@ -116,14 +124,42 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
-			Config config, Injector parent_injector) throws Exception {				
+			Config config, Injector parent_injector) throws Exception {	
+		//temporary map so we don't create multiple injectors for the same service class
+		Map<String, Injector> service_class_injectors = new HashMap<String, Injector>(); 
+		//actual list of key->injector we are returning
 		Map<Key, Injector> injectors = new HashMap<Key, Injector>();
 		List<ConfigDataServiceEntry> serviceProperties = PropertiesUtils.getDataServiceProperties(config, SERVICES_PROPERTY);
 		List<Exception> exceptions = new ArrayList<Exception>();
 		serviceProperties.stream()
 			.forEach( entry -> {
-				try {
-					injectors.putAll(bindServiceEntry(entry, parent_injector));
+				try {			
+					Map<Key, Injector> injector_entries;
+					Injector sibling_injector = service_class_injectors.get(entry.serviceName);
+					//if there is not an injector for this serviceName, just use the parent binding
+					if ( sibling_injector == null ) {
+						injector_entries = bindServiceEntry(entry, parent_injector, true);
+						if ( injector_entries.size() > 0 ) {
+							Injector injector_entry = injector_entries.entrySet().iterator().next().getValue();		
+							service_class_injectors.put(entry.serviceName, injector_entry);
+						}
+					} else {
+						//an injector already exists, use it to create the injector, then replace all existing entries w/ it
+						injector_entries = bindServiceEntry(entry, sibling_injector, false);
+						if ( injector_entries.size() > 0 ) {
+							Injector injector_entry = injector_entries.entrySet().iterator().next().getValue();		
+							service_class_injectors.put(entry.serviceName, injector_entry);
+							//replace any existing entries in injectors w/ this new copy
+							for ( Entry<Key, Injector> inj : injectors.entrySet() ) {
+								if ( inj.getValue() == sibling_injector ) {
+									logger.info("replacing previous injector with child");
+									injectors.put(inj.getKey(), injector_entry);
+								}
+							}
+						}
+					}
+					//always bind all the new entries we created					
+					injectors.putAll(injector_entries);
 				} catch (Exception e) {
 					if (e instanceof CreationException) { // (often fails to provide useful information, so we'll insert it ourselves..)
 						CreationException ce = (CreationException) e;
@@ -164,17 +200,20 @@ public class ModuleUtils {
 	 * 
 	 * @param entry
 	 * @param parent_injector
+	 * @param addExtraDependencies 
+	 * @param optional 
 	 * @throws Exception
 	 */
 	@SuppressWarnings("rawtypes")
-	private static Map<Key, Injector> bindServiceEntry(ConfigDataServiceEntry entry, Injector parent_injector) throws Exception {
+	private static Map<Key, Injector> bindServiceEntry(ConfigDataServiceEntry entry, Injector parent_injector, boolean addExtraDependencies) throws Exception {
 		Map<Key, Injector> injectorMap = new HashMap<Key, Injector>();
 		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));
-		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault);
-		
+		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault + " " + addExtraDependencies );
+				
 		Class serviceClazz = Class.forName(entry.serviceName);		
 		List<Module> modules = new ArrayList<Module>();
-		modules.addAll(getExtraDepedencyModules(serviceClazz));
+		if ( addExtraDependencies )
+			modules.addAll(getExtraDepedencyModules(serviceClazz));
 		Optional<Class> interfaceClazz = getInterfaceClass(entry.interfaceName);
 		if ( entry.isDefault && interfaceClazz.isPresent() )
 			validateOnlyOneDefault(interfaceClazz);		
@@ -286,15 +325,71 @@ public class ModuleUtils {
 				logger.error("Error loading modules", e);
 			}
 		}
-		Key key = getKey(serviceClazz, serviceName);
-		Injector injector = serviceInjectors.get(key);
+		Key key = getKey(serviceClazz, serviceName);		
+		Injector injector = serviceInjectors.get(key);		
 		if ( injector != null ) {
-			return (I) injector.getInstance(key);
+			return (I) getInstance.apply(injector, key);
+			//return (I) injector.getInstance(key);
 		}
 		else 
 			return null;
 	}
 	
+	/**
+	 * Helper function to make creating an instance of our memoized bifunction easier to read.
+	 * 
+	 * @param function
+	 * @return
+	 */
+	public static <T, U, R> BiFunction<T, U, R> memoize(final BiFunction<T, U, R> function) {
+		return new BiFunctionMemoize<T, U, R>().doMemoizeIgnoreSecondArg(function);
+	}
+	
+	/**
+	 * Class to handle a bifunction memoize.
+	 * 
+	 * @author Burch
+	 *
+	 * @param <T>
+	 * @param <U>
+	 * @param <R>
+	 */
+	public static class BiFunctionMemoize<T, U, R> {
+		protected BiFunctionMemoize() {}
+		private final Map<T, R> instance_cache = new ConcurrentHashMap<T, R>();
+
+		/**
+		 * If T is in the cache, returns the instance, otherwise calls function with T,U.
+		 * 
+		 * @param function
+		 * @return
+		 */
+		public BiFunction<T, U, R> doMemoizeIgnoreSecondArg(final BiFunction<T, U, R> function) {
+			return (input1, input2) -> instance_cache.computeIfAbsent(input1, ___ -> function.apply(input1, input2));
+		}
+	}
+	
+	/**
+	 * Returns an instance of the key given an injector
+	 * 
+	 * @param injector
+	 * @param key
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static Object getInstance_onceOnly(Injector injector, Key key) {
+		return injector.getInstance(key);
+	}
+	
+	/**
+	 * Initializes the module utils class.
+	 * 
+	 * This includes reading in the properties and setting up all the initial bindings
+	 * found in the config.
+	 * 
+	 * @param config
+	 * @throws Exception
+	 */
 	private static void initialize(Config config) throws Exception {
 		saved_config = config;
 		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);

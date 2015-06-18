@@ -331,8 +331,8 @@ public class DataSchemaBean {
 		public ColumnarSchemaBean(final Boolean enabled,
 				final String service_name,
 				final List<String> field_include_list,
-				final List<String> field_exclude_list, String field_include_regex,
-				final String field_exclude_regex,
+				final List<String> field_exclude_list, String field_include_pattern,
+				final String field_exclude_pattern,
 				final List<String> field_type_include_list,
 				final List<String> field_type_exclude_list,
 				final Map<String, Object> technology_override_schema) {
@@ -340,8 +340,8 @@ public class DataSchemaBean {
 			this.service_name = service_name;
 			this.field_include_list = field_include_list;
 			this.field_exclude_list = field_exclude_list;
-			this.field_include_regex = field_include_regex;
-			this.field_exclude_regex = field_exclude_regex;
+			this.field_include_pattern = field_include_pattern;
+			this.field_exclude_pattern = field_exclude_pattern;
 			this.field_type_include_list = field_type_include_list;
 			this.field_type_exclude_list = field_type_exclude_list;
 			this.technology_override_schema = technology_override_schema;
@@ -371,16 +371,16 @@ public class DataSchemaBean {
 			return field_exclude_list;
 		}
 		/** A regular expression to select fields to index as a "column"
-		 * @return the field_include_regex
+		 * @return the field_include_pattern
 		 */
-		public String field_include_regex() {
-			return field_include_regex;
+		public String field_include_pattern() {
+			return field_include_pattern;
 		}
 		/** A regular expression to select fields to exclude as a "column"
-		 * @return the field_exclude_regex
+		 * @return the field_exclude_pattern
 		 */
-		public String field_exclude_regex() {
-			return field_exclude_regex;
+		public String field_exclude_pattern() {
+			return field_exclude_pattern;
 		}
 		/** A list of field types to decide which fields to index as a "column"
 		 * @return the field_type_include_list
@@ -405,8 +405,8 @@ public class DataSchemaBean {
 		private String service_name;
 		private List<String> field_include_list;
 		private List<String> field_exclude_list;
-		private String field_include_regex;
-		private String field_exclude_regex;
+		private String field_include_pattern;
+		private String field_exclude_pattern;
 		private List<String> field_type_include_list;
 		private List<String> field_type_exclude_list;
 		private Map<String, Object> technology_override_schema;
