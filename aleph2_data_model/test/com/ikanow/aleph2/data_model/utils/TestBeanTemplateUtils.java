@@ -194,6 +194,55 @@ public class TestBeanTemplateUtils {
 		assertEquals("test6Fields should be this map", test.test6Fields, expected);		
 	}
 
+	public static class TestCloneBean2 extends TestCloneBean {
+		String another_field1;
+		String another_field2;
+		public String another_field2() { return another_field2; }
+	}
+	
+	
+	@Test
+	public void testBeanCloner_inherits() {
+		
+		final TestCloneBean2 to_clone = new TestCloneBean2();
+		to_clone.testField = "1"; // change
+		to_clone.test2Field = "2"; // null
+		to_clone.test3Field = null; // write
+		to_clone.test4Field = null; // leave
+		to_clone.test5Field = "5"; // leave
+		to_clone.test6Fields = new HashMap<String, Integer>();
+		to_clone.test6Fields.put("6", 6);
+		to_clone.another_field1 = "x";
+		to_clone.another_field2 = "xx";
+		
+		final TestCloneBean2 test = BeanTemplateUtils.clone(to_clone)
+								.with(TestCloneBean2::testField, "1b")
+								.with("test2Field", null)
+								.with(TestCloneBean2::another_field2, "yy")
+								.with(TestCloneBean::test3Field, "3")
+								.with("test6Fields",
+										ImmutableMap.<String, Integer>builder()
+											.putAll(to_clone.test6Fields)
+											.put("7", 7)
+											.build()
+										)
+								.done();
+		
+		final HashMap<String, Integer> expected = new HashMap<String, Integer>();
+		expected.put("6", 6);
+		expected.put("7", 7);
+		
+		assertEquals("testField should have been changed", "1b", test.testField());
+		assertEquals("test2Field should have nulled", null, test.test2Field);
+		assertEquals("test3Field should have have been set", "3", test.test3Field());
+		assertEquals("test4Field should have have been left null", null, test.test4Field);
+		assertEquals("test5Field should have have been left 5", "5", test.test5Field);
+		assertEquals("test6Fields should be this map", test.test6Fields, expected);		
+		assertEquals("x", test.another_field1);		
+		assertEquals("yy", test.another_field2);		
+	}
+	
+	
 	@Test
 	public void testBeanCloner_ContainersImmutable() {
 		final TestCloneBean to_clone = new TestCloneBean();
