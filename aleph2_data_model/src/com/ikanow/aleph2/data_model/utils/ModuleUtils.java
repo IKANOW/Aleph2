@@ -138,14 +138,14 @@ public class ModuleUtils {
 					Injector sibling_injector = service_class_injectors.get(entry.serviceName);
 					//if there is not an injector for this serviceName, just use the parent binding
 					if ( sibling_injector == null ) {
-						injector_entries = bindServiceEntry(entry, parent_injector);
+						injector_entries = bindServiceEntry(entry, parent_injector, true);
 						if ( injector_entries.size() > 0 ) {
 							Injector injector_entry = injector_entries.entrySet().iterator().next().getValue();		
 							service_class_injectors.put(entry.serviceName, injector_entry);
 						}
 					} else {
 						//an injector already exists, use it to create the injector, then replace all existing entries w/ it
-						injector_entries = bindServiceEntry(entry, sibling_injector);
+						injector_entries = bindServiceEntry(entry, sibling_injector, false);
 						if ( injector_entries.size() > 0 ) {
 							Injector injector_entry = injector_entries.entrySet().iterator().next().getValue();		
 							service_class_injectors.put(entry.serviceName, injector_entry);
@@ -200,18 +200,20 @@ public class ModuleUtils {
 	 * 
 	 * @param entry
 	 * @param parent_injector
+	 * @param addExtraDependencies 
 	 * @param optional 
 	 * @throws Exception
 	 */
 	@SuppressWarnings("rawtypes")
-	private static Map<Key, Injector> bindServiceEntry(ConfigDataServiceEntry entry, Injector parent_injector) throws Exception {
+	private static Map<Key, Injector> bindServiceEntry(ConfigDataServiceEntry entry, Injector parent_injector, boolean addExtraDependencies) throws Exception {
 		Map<Key, Injector> injectorMap = new HashMap<Key, Injector>();
 		entry = new ConfigDataServiceEntry(entry.annotationName, entry.interfaceName, entry.serviceName, entry.isDefault || serviceDefaults.contains(entry.annotationName));
-		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault );
+		logger.info("BINDING: " + entry.annotationName + " " + entry.interfaceName + " " + entry.serviceName + " " + entry.isDefault + " " + addExtraDependencies );
 				
 		Class serviceClazz = Class.forName(entry.serviceName);		
 		List<Module> modules = new ArrayList<Module>();
-		modules.addAll(getExtraDepedencyModules(serviceClazz));
+		if ( addExtraDependencies )
+			modules.addAll(getExtraDepedencyModules(serviceClazz));
 		Optional<Class> interfaceClazz = getInterfaceClass(entry.interfaceName);
 		if ( entry.isDefault && interfaceClazz.isPresent() )
 			validateOnlyOneDefault(interfaceClazz);		
