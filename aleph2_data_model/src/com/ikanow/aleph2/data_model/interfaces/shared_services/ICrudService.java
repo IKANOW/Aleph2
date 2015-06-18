@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -24,7 +25,6 @@ import org.apache.metamodel.DataContext;
 import org.apache.metamodel.schema.Table;
 
 import scala.Tuple2;
-import scala.concurrent.duration.FiniteDuration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -272,7 +272,7 @@ public interface ICrudService<O> {
 		 * @param size_kb - the max size before a batch is flushed
 		 * @param flush_interval - the max time before a batch is flushed
 		 */
-		void setBatchProperties(final Optional<Long> size_kb, final Optional<FiniteDuration> flush_interval);
+		void setBatchProperties(final Optional<Integer> max_objects, final Optional<Long> size_kb, final Optional<Duration> flush_interval);
 		
 		/** Efficiently store the list of objects with the subservice's batching parameters
 		 * @param new_objects - the list of objects to store

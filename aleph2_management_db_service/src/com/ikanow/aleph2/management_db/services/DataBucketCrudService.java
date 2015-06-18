@@ -66,6 +66,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -592,6 +593,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		}		
 		// More complex missing field checks
 		
+		errors.addAll(
+				validateBucketTimes(bucket).stream()
+					.map(s -> MgmtCrudUtils.createValidationError(s)).collect(Collectors.toList()));
+		
 		// - if has enrichment then must have harvest_technology_name_or_id (1) 
 		// - if has harvest_technology_name_or_id then must have harvest_configs (2)
 		// - if has enrichment then must have master_enrichment_type (3)
@@ -642,7 +647,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Embedded object field rules
 		
-		Consumer<Tuple2<String, List<String>>> list_test = list -> {
+		final Consumer<Tuple2<String, List<String>>> list_test = list -> {
 			if (null != list._2()) for (String s: list._2()) {
 				if ((s == null) || s.isEmpty()) {
 					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
@@ -714,7 +719,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				
 		//TODO (ALEPH-19): multi buckets - authorization; other - authorization
 		
-		CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
+		final CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
 		
 		errors.addAll(bucket_path_errors_future.join());
 		
@@ -955,5 +960,70 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.stream()
 				.map(s -> new Path(s))
 				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
+	}
+	
+	protected static List<String> validateBucketTimes(final DataBucketBean bean) {
+		final LinkedList<String> errs = new LinkedList<String>();
+		
+		if (null != bean.poll_frequency()) {
+			TimeUtils.getDuration(bean.poll_frequency())
+				.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "poll_frequency", s)));			
+		}
+		
+		if (null != bean.data_schema()) {
+			if (null != bean.data_schema().temporal_schema()) {
+				if (Optional.ofNullable(bean.data_schema().temporal_schema().enabled()).orElse(true)) {
+					// Grouping times
+					if (null != bean.data_schema().temporal_schema().grouping_time_period()) {
+						TimeUtils.getTimePeriod(bean.data_schema().temporal_schema().grouping_time_period())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.temporal_schema.grouping_time_period", s)));						
+					}
+					// Max ages
+					if (null != bean.data_schema().temporal_schema().cold_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().temporal_schema().cold_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.temporal_schema.cold_age_max", s)));
+					}
+					if (null != bean.data_schema().temporal_schema().hot_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().temporal_schema().hot_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.temporal_schema.hot_age_max", s)));
+					}
+					if (null != bean.data_schema().temporal_schema().exist_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().temporal_schema().exist_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.temporal_schema.exist_age_max", s)));
+					}
+				}
+			}
+			if (null != bean.data_schema().storage_schema()) { 
+				if (Optional.ofNullable(bean.data_schema().storage_schema().enabled()).orElse(true)) {
+					// Grouping times
+					if (null != bean.data_schema().storage_schema().json_grouping_time_period()) {
+						TimeUtils.getTimePeriod(bean.data_schema().storage_schema().json_grouping_time_period())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.json_grouping_time_period", s)));						
+					}
+					if (null != bean.data_schema().storage_schema().raw_grouping_time_period()) {
+						TimeUtils.getTimePeriod(bean.data_schema().storage_schema().raw_grouping_time_period())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.raw_grouping_time_period", s)));						
+					}
+					if (null != bean.data_schema().storage_schema().processed_grouping_time_period()) {
+						TimeUtils.getTimePeriod(bean.data_schema().storage_schema().raw_grouping_time_period())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.processed_grouping_time_period", s)));						
+					}
+					// Max ages
+					if (null != bean.data_schema().storage_schema().json_exist_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().storage_schema().json_exist_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.json_exist_age_max", s)));						
+					}
+					if (null != bean.data_schema().storage_schema().raw_exist_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().storage_schema().raw_exist_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.raw_exist_age_max", s)));						
+					}
+					if (null != bean.data_schema().storage_schema().processed_exist_age_max()) {
+						TimeUtils.getDuration(bean.data_schema().storage_schema().json_exist_age_max())
+							.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.processed_exist_age_max", s)));						
+					}
+				}				
+			}
+		}		
+		return errs;
 	}
 }

@@ -99,6 +99,12 @@ public class TestTimeUtils {
 			assertTrue("Fails", err1.isFail());
 			assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "1x"), err1.fail());
 		}
+		// Check very simple
+		{
+			final Validation<String, Duration> res1 = TimeUtils.getDuration("2w");
+			assertTrue("Passes", res1.isSuccess());
+			assertEquals(res1.success().getSeconds(), 14*24*3600L);
+		}
 		
 		// Check slightly more complex
 		{
