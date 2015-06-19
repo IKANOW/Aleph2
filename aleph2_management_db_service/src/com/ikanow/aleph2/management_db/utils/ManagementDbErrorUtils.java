@@ -99,6 +99,10 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String LIBRARY_AUTHORIZATION_ERROR = "Bucket {0}: user {1} does not have access to these libraries: {3}";
 	//TODO (ALEPH-19): the other rules
 	
+	// Schema validation
+	
+	public static final String SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT = "Bucket {0}: schema {1} enabled but not present";
+	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	// BUCKET UPDATE

@@ -46,8 +46,12 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -100,6 +104,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	
 	protected final ManagementDbActorContext _actor_context;
+	protected final IServiceContext _service_context;
 	
 	/** Guice invoked constructor
 	 */
@@ -115,6 +120,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_storage_service = service_context.getStorageService();
 		
 		_actor_context = actor_context;
+		_service_context = service_context;
 		
 		// Handle some simple optimization of the data bucket CRUD repo:
 		Executors.newSingleThreadExecutor().submit(() -> {
@@ -125,12 +131,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 	/** User constructor, for wrapping
 	 */
-	public DataBucketCrudService(final IManagementDbService underlying_management_db, 
+	public DataBucketCrudService(final IServiceContext service_context,
+			final IManagementDbService underlying_management_db, 
 			final IStorageService storage_service,
 			final ICrudService<DataBucketBean> underlying_data_bucket_db,
 			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
 			)
 	{
+		_service_context = service_context;
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db = underlying_data_bucket_db;
 		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
@@ -147,7 +155,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final Optional<AuthorizationBean> client_auth,
 			final Optional<ProjectBean> project_auth) 
 	{
-		return new DataBucketCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
+		return new DataBucketCrudService(_service_context, _underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_storage_service,
 				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth),
 				_underlying_data_bucket_status_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth)
@@ -180,12 +188,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 			// Validation
 			
-			final Collection<BasicMessageBean> errors = validateBucket(new_object, old_bucket);
-		
-			if (!errors.isEmpty()) {
+			final Collection<BasicMessageBean> validation_info = validateBucket(new_object, old_bucket);
+			
+			if (!validation_info.isEmpty() && validation_info.stream().anyMatch(m -> !m.success())) {
 				return FutureUtils.createManagementFuture(
 						FutureUtils.returnError(new RuntimeException("Bucket not valid, see management channels")),
-						CompletableFuture.completedFuture(errors)
+						CompletableFuture.completedFuture(validation_info)
 						);
 			}
 
@@ -232,7 +240,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// If we got no responses then leave the object but suspend it
 					
 			return FutureUtils.createManagementFuture(ret_val,
-					MgmtCrudUtils.handlePossibleEmptyNodeAffinity(new_object, is_suspended, mgmt_results, _underlying_data_bucket_status_db));
+					MgmtCrudUtils.handlePossibleEmptyNodeAffinity(new_object, is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
+										.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
@@ -593,10 +602,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		}		
 		// More complex missing field checks
 		
-		errors.addAll(
-				validateBucketTimes(bucket).stream()
-					.map(s -> MgmtCrudUtils.createValidationError(s)).collect(Collectors.toList()));
-		
 		// - if has enrichment then must have harvest_technology_name_or_id (1) 
 		// - if has harvest_technology_name_or_id then must have harvest_configs (2)
 		// - if has enrichment then must have master_enrichment_type (3)
@@ -743,7 +748,88 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			if (!bucket.owner_id().equals(old_bucket.owner_id())) {
 				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name())));
 			}
-		}		
+		}
+		
+		/////////////////
+		
+		// PHASE 4 - DATA SCHEMA NOT MESSAGES AT THIS POINT CAN BE INFO, YOU NEED TO CHECK THE SUCCESS()
+
+		errors.addAll(validateSchema(bucket, _service_context));
+		
+		return errors;
+	}
+	
+	/** Validates that all enabled schema point to existing services and are well formed
+	 * @param bucket
+	 * @param service_context
+	 * @return
+	 */
+	protected static List<BasicMessageBean> validateSchema(final DataBucketBean bucket, final IServiceContext service_context) {
+		List<BasicMessageBean> errors = new LinkedList<>();
+		
+		// Generic data schema:
+		errors.addAll(
+				validateBucketTimes(bucket).stream()
+					.map(s -> MgmtCrudUtils.createValidationError(s)).collect(Collectors.toList()));
+		
+		// Specific data schema
+		if (null != bucket.data_schema()) {
+			// Columnar
+			if ((null != bucket.data_schema().columnar_schema()) && Optional.ofNullable(bucket.data_schema().columnar_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IColumnarService.class, Optional.ofNullable(bucket.data_schema().columnar_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.data_schema().columnar_schema()))
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "columnar_schema")))));
+			}
+			// Document
+			if ((null != bucket.data_schema().document_schema()) && Optional.ofNullable(bucket.data_schema().document_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IDocumentService.class, Optional.ofNullable(bucket.data_schema().document_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.data_schema().document_schema()))
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "document_schema")))));
+			}
+			// Search Index
+			if ((null != bucket.data_schema().search_index_schema()) && Optional.ofNullable(bucket.data_schema().search_index_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(ISearchIndexService.class, Optional.ofNullable(bucket.data_schema().search_index_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.data_schema().search_index_schema()))
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "search_index_schema")))));
+			}
+			// Storage
+			if ((null != bucket.data_schema().storage_schema()) && Optional.ofNullable(bucket.data_schema().storage_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IStorageService.class, Optional.ofNullable(bucket.data_schema().storage_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.data_schema().storage_schema()))
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "storage_schema")))));
+			}
+			if ((null != bucket.data_schema().temporal_schema()) && Optional.ofNullable(bucket.data_schema().temporal_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(ITemporalService.class, Optional.ofNullable(bucket.data_schema().temporal_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.data_schema().temporal_schema()))
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "temporal_schema")))));
+			}
+			//TODO (ALEPH-19) Data warehouse schema, graph schame, geospatial schema
+			if (null != bucket.data_schema().geospatial_schema())
+			{
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "geospatial_schema")));
+			}
+			if (null != bucket.data_schema().graph_schema())
+			{
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "graph_schema")));
+			}
+			if (null != bucket.data_schema().data_warehouse_schema())
+			{
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "data_warehouse_schema")));
+			}
+		}
 		return errors;
 	}
 	
