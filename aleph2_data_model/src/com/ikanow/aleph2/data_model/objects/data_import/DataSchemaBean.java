@@ -331,8 +331,9 @@ public class DataSchemaBean {
 		public ColumnarSchemaBean(final Boolean enabled,
 				final String service_name,
 				final List<String> field_include_list,
-				final List<String> field_exclude_list, String field_include_pattern,
-				final String field_exclude_pattern,
+				final List<String> field_exclude_list, 
+				final List<String> field_include_pattern_list,
+				final List<String> field_exclude_pattern_list,
 				final List<String> field_type_include_list,
 				final List<String> field_type_exclude_list,
 				final Map<String, Object> technology_override_schema) {
@@ -340,8 +341,8 @@ public class DataSchemaBean {
 			this.service_name = service_name;
 			this.field_include_list = field_include_list;
 			this.field_exclude_list = field_exclude_list;
-			this.field_include_pattern = field_include_pattern;
-			this.field_exclude_pattern = field_exclude_pattern;
+			this.field_include_pattern_list = field_include_pattern_list;
+			this.field_exclude_pattern_list = field_exclude_pattern_list;
 			this.field_type_include_list = field_type_include_list;
 			this.field_type_exclude_list = field_type_exclude_list;
 			this.technology_override_schema = technology_override_schema;
@@ -370,17 +371,17 @@ public class DataSchemaBean {
 		public List<String> field_exclude_list() {
 			return field_exclude_list;
 		}
-		/** A regular expression to select fields to index as a "column"
-		 * @return the field_include_pattern
+		/** A set of patterns (this _might_ end up being technology dependent - ie regexes on some platforms, globs on others... for now they are globs), defines inclusion patterns
+		 * @return the field_include_patterns
 		 */
-		public String field_include_pattern() {
-			return field_include_pattern;
+		public List<String> field_include_pattern_list() {
+			return field_include_pattern_list;
 		}
-		/** A regular expression to select fields to exclude as a "column"
-		 * @return the field_exclude_pattern
+		/** A set of patterns (this _might_ end up being technology dependent - ie regexes on some platforms, globs on others... for now they are globs), defines exclusions patterns
+		 * @return the field_exclude_patterns
 		 */
-		public String field_exclude_pattern() {
-			return field_exclude_pattern;
+		public List<String> field_exclude_pattern_list() {
+			return field_exclude_pattern_list;
 		}
 		/** A list of field types to decide which fields to index as a "column"
 		 * @return the field_type_include_list
@@ -405,8 +406,8 @@ public class DataSchemaBean {
 		private String service_name;
 		private List<String> field_include_list;
 		private List<String> field_exclude_list;
-		private String field_include_pattern;
-		private String field_exclude_pattern;
+		private List<String> field_include_pattern_list;
+		private List<String> field_exclude_pattern_list;
 		private List<String> field_type_include_list;
 		private List<String> field_type_exclude_list;
 		private Map<String, Object> technology_override_schema;
