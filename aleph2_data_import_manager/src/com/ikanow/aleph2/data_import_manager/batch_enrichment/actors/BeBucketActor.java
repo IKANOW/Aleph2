@@ -39,12 +39,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
-import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-
-import edu.emory.mathcs.backport.java.util.Collections;
 
 public class BeBucketActor extends UntypedActor {
 
