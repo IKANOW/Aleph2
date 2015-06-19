@@ -147,12 +147,12 @@
 	<dependency>
 	    <groupId>org.functionaljava</groupId>
 	    <artifactId>functionaljava</artifactId>
-	    <version>4.2</version>
+	    <version>4.3</version>
 	</dependency>
 	<dependency>
 	    <groupId>org.functionaljava</groupId>
 	    <artifactId>functionaljava-java8</artifactId>
-	    <version>4.2</version>
+	    <version>4.3</version>
 	</dependency>	
   	<dependency>
   		<groupId>org.mongodb</groupId>
