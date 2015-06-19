@@ -16,14 +16,25 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
-
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
+/** The interface for the data warehouse service
+ * @author alex
+ */
 public interface IDocumentService {
 
+	/** Validate the schema for this service
+	 * @param schema - the schema to validate
+	 * @return a list of errors, empty if none
+	 */
+	List<BasicMessageBean> validateSchema(final DataSchemaBean.DocumentSchemaBean schema);
+	
 	/** Returns a CRUD service for the specified bucket or multi-bucket
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket The data bucket or multi-bucket

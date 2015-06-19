@@ -15,11 +15,23 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
+import java.util.List;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
+/** The interface for the storage service
+ * @author alex
+ */
 public interface IStorageService {
 
+	/** Validate the schema for this service
+	 * @param schema - the schema to validate
+	 * @return a list of errors, empty if none
+	 */
+	List<BasicMessageBean> validateSchema(final DataSchemaBean.StorageSchemaBean schema);
+	
 	/** Returns the root path for all Aleph2 DB related activities
 	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
 	 */

@@ -16,12 +16,15 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
-
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class SampleDocumentService implements IDocumentService {
 
@@ -41,6 +44,11 @@ public class SampleDocumentService implements IDocumentService {
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
 		return null;
+	}
+
+	@Override
+	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema) {
+		return Collections.emptyList();
 	}
 
 }
