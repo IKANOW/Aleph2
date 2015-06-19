@@ -114,8 +114,8 @@ public class TestDataSchemaBean {
 		assertEquals("Columnar bean service_name", columnar_bean.service_name(), "service_name");
 		assertEquals("Columnar bean field_include_list", columnar_bean.field_include_list(), Arrays.asList("field_include_list"));
 		assertEquals("Columnar bean field_exclude_list", columnar_bean.field_exclude_list(), Arrays.asList("field_exclude_list"));
-		assertEquals("Columnar bean field_include_regex", columnar_bean.field_include_pattern_list(), "field_include_regex");
-		assertEquals("Columnar bean field_exclude_regex", columnar_bean.field_exclude_pattern_list(), "field_exclude_regex");
+		assertEquals("Columnar bean field_include_pattern_list", columnar_bean.field_include_pattern_list(), "field_include_pattern_list");
+		assertEquals("Columnar bean field_exclude_pattern_list", columnar_bean.field_exclude_pattern_list(), "field_exclude_pattern_list");
 		assertEquals("Columnar bean field_type_include_list", columnar_bean.field_type_include_list(), Arrays.asList("field_type_include_list"));
 		assertEquals("Columnar bean field_type_exclude_list", columnar_bean.field_type_exclude_list(), Arrays.asList("field_type_exclude_list"));
 		assertEquals("Columnar bean technology_override_schema", columnar_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
