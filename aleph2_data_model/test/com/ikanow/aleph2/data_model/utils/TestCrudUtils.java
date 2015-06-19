@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collector.Characteristics;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 import org.mongojack.internal.MongoJackModule;
@@ -624,7 +625,7 @@ public class TestCrudUtils {
 		final MultiQueryComponent<TestBean> multi_query_3 = CrudUtils.allOf(query_comp_1, query_comp_2).limit(5);
 		final MultiQueryComponent<TestBean> multi_query_4 = CrudUtils.anyOf(query_comp_1, query_comp_2).orderBy(Tuples._2T("test_field_2", -1));
 
-		final MultiQueryComponent<TestBean> multi_query_5 = CrudUtils.<TestBean>allOf(query_comp_1).also(query_comp_2).limit(5);
+		final MultiQueryComponent<TestBean> multi_query_5 = CrudUtils.<TestBean>allOf(Stream.of(query_comp_1)).also(query_comp_2).limit(5);
 		final MultiQueryComponent<TestBean> multi_query_6 = CrudUtils.<TestBean>anyOf(query_comp_1).also(query_comp_2).orderBy().orderBy(Tuples._2T("test_field_2", -1));
 		
 		
@@ -962,7 +963,7 @@ public class TestCrudUtils {
 				.limit(200); // should be ignored
 
 		final MultiQueryComponent<JsonNode> multi_query_1 = CrudUtils.<JsonNode>allOf(query_comp_1).orderBy(Tuples._2T("test_field_2", -1)).limit(5);
-		final MultiQueryComponent<JsonNode> multi_query_2 = CrudUtils.<JsonNode>anyOf(query_comp_1);
+		final MultiQueryComponent<JsonNode> multi_query_2 = CrudUtils.<JsonNode>anyOf(Stream.of(query_comp_1));
 				
 		final QueryBuilder expected_1 = QueryBuilder.start().and(
 				QueryBuilder.start("string_field").greaterThan("bbb").get(), 
@@ -1012,8 +1013,8 @@ public class TestCrudUtils {
 				)
 				.withPresent("long_field");
 		
-		final MultiQueryComponent<JsonNode> multi_query_3 = CrudUtils.allOf(query_comp_1, query_comp_2).limit(5);
-		final MultiQueryComponent<JsonNode> multi_query_4 = CrudUtils.anyOf(query_comp_1, query_comp_2).orderBy(Tuples._2T("test_field_2", -1));
+		final MultiQueryComponent<JsonNode> multi_query_3 = CrudUtils.allOf(Arrays.asList(query_comp_1, query_comp_2)).limit(5);
+		final MultiQueryComponent<JsonNode> multi_query_4 = CrudUtils.anyOf(Arrays.asList(query_comp_1, query_comp_2)).orderBy(Tuples._2T("test_field_2", -1));
 
 		final MultiQueryComponent<JsonNode> multi_query_5 = CrudUtils.<JsonNode>allOf(query_comp_1).also(query_comp_2).limit(5);
 		final MultiQueryComponent<JsonNode> multi_query_6 = CrudUtils.<JsonNode>anyOf(query_comp_1).also(query_comp_2).orderBy().orderBy(Tuples._2T("test_field_2", -1));

@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 
 import scala.Tuple2;
 
@@ -194,6 +194,22 @@ public class CrudUtils {
 		return new MultiQueryComponent<T>(Operator.all_of, component1, components);
 	}
 	
+	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
+	 * @param components - a list of query components
+	 * @return the "multi" query component "helper"
+	 */
+	public static <T> MultiQueryComponent<T> allOf(final List<SingleQueryComponent<T>> components) {
+		return new MultiQueryComponent<T>(Operator.all_of, components);
+	}
+	
+	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
+	 * @param components - a stream of query components
+	 * @return the "multi" query component "helper"
+	 */
+	public static <T> MultiQueryComponent<T> allOf(final Stream<SingleQueryComponent<T>> components) {
+		return new MultiQueryComponent<T>(Operator.all_of, components.collect(Collectors.toList()));
+	}
+	
 	/** Returns a "multi" query component where any of the QueryComponents in the list (and added via andAlso) can match (NOTE: each component *internally* can use ORs or ANDs)
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
@@ -203,6 +219,22 @@ public class CrudUtils {
 		return new MultiQueryComponent<T>(Operator.any_of, component1, components);
 	}
 
+	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
+	 * @param components - a list of query components
+	 * @return the "multi" query component "helper"
+	 */
+	public static <T> MultiQueryComponent<T> anyOf(final List<SingleQueryComponent<T>> components) {
+		return new MultiQueryComponent<T>(Operator.any_of, components);
+	}
+	
+	/** Returns a "multi" query component where all of the QueryComponents in the list (and added via andAlso) must match (NOTE: each component *internally* can use ORs or ANDs)
+	 * @param components - a stream of query components
+	 * @return the "multi" query component "helper"
+	 */
+	public static <T> MultiQueryComponent<T> anyOf(final Stream<SingleQueryComponent<T>> components) {
+		return new MultiQueryComponent<T>(Operator.any_of, components.collect(Collectors.toList()));
+	}
+		
 	///////////////////////////////////////////////////////////////////
 
 	public static BeanUpdateComponent<JsonNode> update() {
@@ -314,6 +346,11 @@ public class CrudUtils {
 		List<SingleQueryComponent<T>> _elements;
 		Operator _op;
 		
+		protected MultiQueryComponent(final Operator op, final List<SingleQueryComponent<T>> components) {
+			_op = op;
+			_elements = components;
+		}
+
 		@SafeVarargs
 		protected MultiQueryComponent(final Operator op, final SingleQueryComponent<T> component1, SingleQueryComponent<T>... components) {
 			_op = op;
@@ -321,6 +358,7 @@ public class CrudUtils {
 			_elements.add(component1);
 			if (null != components) _elements.addAll(Arrays.asList(components));
 		}
+
 	}
 	
 	///////////////////////////////////////////////////////////////////

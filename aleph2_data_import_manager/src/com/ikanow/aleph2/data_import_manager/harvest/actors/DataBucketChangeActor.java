@@ -17,12 +17,10 @@ package com.ikanow.aleph2.data_import_manager.harvest.actors;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -422,7 +420,6 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param cache_tech_jar_only
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
 	protected static QueryComponent<SharedLibraryBean> getQuery(
 			final DataBucketBean bucket, 
 			final boolean cache_tech_jar_only)
@@ -432,22 +429,16 @@ public class DataBucketChangeActor extends AbstractActor {
 					.when(SharedLibraryBean::_id, bucket.harvest_technology_name_or_id())
 					.when(SharedLibraryBean::path_name, bucket.harvest_technology_name_or_id());
 		
-		final List<SingleQueryComponent<SharedLibraryBean>> other_libs = cache_tech_jar_only 
-			? Collections.emptyList()
+		final Stream<SingleQueryComponent<SharedLibraryBean>> other_libs = cache_tech_jar_only 
+			? Stream.empty()
 			: Optionals.ofNullable(bucket.harvest_configs()).stream()
 				.flatMap(hcfg -> Optionals.ofNullable(hcfg.library_ids_or_names()).stream())
 				.map(name -> {
 					return CrudUtils.anyOf(SharedLibraryBean.class)
 							.when(SharedLibraryBean::_id, name)
 							.when(SharedLibraryBean::path_name, name);
-				})
-				.collect(Collector.of(
-						LinkedList::new,
-						LinkedList::add,
-						(left, right) -> { left.addAll(right); return left; }
-						));
+				});
 
-		return CrudUtils.<SharedLibraryBean>anyOf(tech_query,
-				other_libs.toArray(new SingleQueryComponent[other_libs.size()]));
+		return CrudUtils.<SharedLibraryBean>anyOf(Stream.concat(Stream.of(tech_query), other_libs));
 	}
 }
