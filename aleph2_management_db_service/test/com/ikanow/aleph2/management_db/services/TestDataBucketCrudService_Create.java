@@ -30,18 +30,27 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
+import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DataWarehouseSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GeospatialSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GraphSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -66,6 +75,8 @@ import com.mongodb.MongoException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+//TODO test bucket validation
 
 public class TestDataBucketCrudService_Create {
 
@@ -220,6 +231,118 @@ public class TestDataBucketCrudService_Create {
 	
 	// Store bucket
 
+	@Test 
+	public void testValidateSchemas() {
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.done().get();				
+		
+		final DataSchemaBean enabled_schema = BeanTemplateUtils.build(DataSchemaBean.class)
+												.with(DataSchemaBean::columnar_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).with(DataSchemaBean.ColumnarSchemaBean::enabled, true).done().get())
+												.with(DataSchemaBean::document_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class).with(DataSchemaBean.DocumentSchemaBean::enabled, true).done().get())
+												.with(DataSchemaBean::search_index_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).with(DataSchemaBean.SearchIndexSchemaBean::enabled, true).done().get())
+												.with(DataSchemaBean::storage_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).with(DataSchemaBean.StorageSchemaBean::enabled, true).done().get())
+												.with(DataSchemaBean::temporal_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).with(DataSchemaBean.TemporalSchemaBean::enabled, true).done().get())
+												.done().get();
+		
+		final DataBucketBean bucket_with_schema = BeanTemplateUtils.clone(valid_bucket)
+													.with(DataBucketBean::data_schema, enabled_schema).done();
+		
+		// Test validation runs:
+
+		MockServiceContext test_context = new MockServiceContext();
+		
+		IColumnarService service1 = Mockito.mock(IColumnarService.class);
+		Mockito.when(service1.validateSchema(Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		test_context.addService(IColumnarService.class, Optional.empty(), service1);
+
+		IDocumentService service2 = Mockito.mock(IDocumentService.class);
+		Mockito.when(service2.validateSchema(Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		test_context.addService(IDocumentService.class, Optional.empty(), service2);
+
+		ISearchIndexService service3 = Mockito.mock(ISearchIndexService.class);
+		Mockito.when(service3.validateSchema(Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		test_context.addService(ISearchIndexService.class, Optional.empty(), service3);
+
+		IStorageService service4 = Mockito.mock(IStorageService.class);
+		Mockito.when(service4.validateSchema(Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		test_context.addService(IStorageService.class, Optional.empty(), service4);
+
+		ITemporalService service5 = Mockito.mock(ITemporalService.class);
+		Mockito.when(service5.validateSchema(Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		test_context.addService(ITemporalService.class, Optional.empty(), service5);
+
+		final List<BasicMessageBean> results1 = DataBucketCrudService.validateSchema(bucket_with_schema, test_context);
+		assertEquals(5, results1.size());
+		assertTrue("All returned success==true", results1.stream().allMatch(m -> m.success()));
+		
+		// Not present tests:
+		
+		final DataSchemaBean enabled_by_default_schema = BeanTemplateUtils.build(DataSchemaBean.class)
+				.with(DataSchemaBean::columnar_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).done().get())
+				.with(DataSchemaBean::document_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class).done().get())
+				.with(DataSchemaBean::search_index_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).done().get())
+				.with(DataSchemaBean::storage_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).done().get())
+				.with(DataSchemaBean::temporal_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).done().get())
+				.with(DataSchemaBean::data_warehouse_schema, 
+						BeanTemplateUtils.build(DataWarehouseSchemaBean.class).done().get())
+				.with(DataSchemaBean::graph_schema, 
+						BeanTemplateUtils.build(GraphSchemaBean.class).done().get())
+				.with(DataSchemaBean::geospatial_schema, 
+						BeanTemplateUtils.build(GeospatialSchemaBean.class).done().get())
+				.done().get();
+		
+		final DataBucketBean bucket_with_other_schema = BeanTemplateUtils.clone(valid_bucket)
+				.with(DataBucketBean::data_schema, enabled_by_default_schema).done();
+		
+		MockServiceContext test_context2 = new MockServiceContext();
+		
+		final List<BasicMessageBean> results2 = DataBucketCrudService.validateSchema(bucket_with_other_schema, test_context2);
+		assertEquals(8, results2.size());
+		
+		assertTrue("All returned success==false", results2.stream().allMatch(m -> !m.success()));		
+		
+		// Failure - but ignored because enabled turned off
+		
+		final DataSchemaBean not_enabled_schema = BeanTemplateUtils.build(DataSchemaBean.class)
+				.with(DataSchemaBean::columnar_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).with(DataSchemaBean.ColumnarSchemaBean::enabled, false).done().get())
+				.with(DataSchemaBean::document_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class).with(DataSchemaBean.DocumentSchemaBean::enabled, false).done().get())
+				.with(DataSchemaBean::search_index_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).with(DataSchemaBean.SearchIndexSchemaBean::enabled, false).done().get())
+				.with(DataSchemaBean::storage_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).with(DataSchemaBean.StorageSchemaBean::enabled, false).done().get())
+				.with(DataSchemaBean::temporal_schema, 
+						BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).with(DataSchemaBean.TemporalSchemaBean::enabled, false).done().get())
+				.done().get();
+		
+		final DataBucketBean bucket_with_disabled_schema = BeanTemplateUtils.clone(valid_bucket)
+				.with(DataBucketBean::data_schema, not_enabled_schema).done();		
+		
+		final List<BasicMessageBean> results3 = DataBucketCrudService.validateSchema(bucket_with_disabled_schema, test_context2);
+		assertEquals(0, results3.size());
+	}
+	
 	@Test
 	public void testValidateTimes_pass() throws Exception {
 		cleanDatabases();
@@ -276,7 +399,7 @@ public class TestDataBucketCrudService_Create {
 			try {
 				final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_times);
 				
-				assertEquals(0, result.getManagementResults().get().size());			
+				assertEquals(1, result.getManagementResults().get().size());			
 				result.get();
 				fail("Should have thrown an exception");
 			}
@@ -342,7 +465,7 @@ public class TestDataBucketCrudService_Create {
 			
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(invalid_times);
 			try {
-				assertEquals(11, result.getManagementResults().get().size());
+				assertEquals(12, result.getManagementResults().get().size());
 				result.get();
 				fail("Should have thrown an exception");
 			}
