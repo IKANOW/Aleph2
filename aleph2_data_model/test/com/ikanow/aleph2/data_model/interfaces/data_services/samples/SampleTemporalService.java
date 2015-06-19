@@ -15,10 +15,13 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
-
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.TemporalSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class SampleTemporalService implements ITemporalService {
 
@@ -26,6 +29,11 @@ public class SampleTemporalService implements ITemporalService {
 	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
+	}
+
+	@Override
+	public List<BasicMessageBean> validateSchema(TemporalSchemaBean schema) {
+		return Collections.emptyList();
 	}
 
 }

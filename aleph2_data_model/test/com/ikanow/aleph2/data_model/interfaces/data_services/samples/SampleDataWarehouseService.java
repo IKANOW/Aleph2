@@ -15,10 +15,13 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
-
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DataWarehouseSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class SampleDataWarehouseService implements IDataWarehouseService {
 
@@ -26,6 +29,11 @@ public class SampleDataWarehouseService implements IDataWarehouseService {
 	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		return null;
+	}
+
+	@Override
+	public List<BasicMessageBean> validateSchema(DataWarehouseSchemaBean schema) {
+		return Collections.emptyList();
 	}
 
 }

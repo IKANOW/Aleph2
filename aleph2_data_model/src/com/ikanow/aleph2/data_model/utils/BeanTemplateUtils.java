@@ -24,8 +24,9 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-
+import com.codepoetics.protonpack.StreamUtils;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -304,7 +305,7 @@ public class BeanTemplateUtils {
 		 */
 		public <U> CommonHelper<T> with(final String fieldName, final U val) {
 			try {
-				Field f = _element.getClass().getDeclaredField(fieldName);
+				final Field f = getDeclaredAndInheritedField(fieldName, _element.getClass());
 				f.setAccessible(true);
 				f.set(_element, val);
 			}
@@ -314,32 +315,39 @@ public class BeanTemplateUtils {
 			return this;
 		}
 		
+		private Field getDeclaredAndInheritedField(final String field, Class<?> clazz) throws NoSuchFieldException {
+			try {
+				return clazz.getDeclaredField(field);
+			}
+			catch (NoSuchFieldException e) {
+				final Class<?> next_clazz = clazz.getSuperclass();
+				if (null == next_clazz) { 
+					throw e;
+				}
+				return getDeclaredAndInheritedField(field, next_clazz);
+			}
+		}
+		
 		/**Set a field in a cloned/new object
 		 * @param fieldName The field to set
 		 * @param val the value to which it should be set
 		 * @return Clone Helper, finish with done() to return the class
 		 */
 		public <U> CommonHelper<T> with(final Function<T, ?> getter, final U val) {
-			try {
-				if (null == _naming_helper) {
-					_naming_helper = from(_element);
-				}
-				Field f = _element.getClass().getDeclaredField(_naming_helper.field(getter));
-				f.setAccessible(true);
-				f.set(_element, val);
+			if (null == _naming_helper) {
+				_naming_helper = from(_element);
 			}
-			catch (Exception e) {
-				throw new RuntimeException("CloningHelper", e);
-			}
-			return this;
+			return with(_naming_helper.field(getter), val);
 		}		
 		
-		protected void cloneInitialFields(final T to_clone) {
-			Arrays.stream(_element.getClass().getDeclaredFields())
+		protected void cloneInitialFields(final T to_clone) {			
+			StreamUtils.<Class<?>>takeWhile(Stream.iterate(_element.getClass(), c -> c.getSuperclass()), c -> null != c)
+				.<Field>flatMap(c -> Arrays.stream(c.getDeclaredFields()))
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.flatMap(Lambdas.flatWrap_i(f -> { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); }))
 				.filter(t -> (null != t) && (null != t._2()))
 				.forEach(Lambdas.wrap_consumer_i(t -> t._1().set(_element, t._2())));
+			;
 		}
 		
 		@SuppressWarnings("unchecked")
