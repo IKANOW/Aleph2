@@ -327,7 +327,8 @@ public class ModuleUtils {
 		}
 		Key key = getKey(serviceClazz, serviceName);		
 		Injector injector = serviceInjectors.get(key);		
-		if ( injector != null ) {
+		if ( injector != null ) {			
+			//return (I) getInstance_onceOnly(injector, key);
 			return (I) getInstance.apply(injector, key);
 			//return (I) injector.getInstance(key);
 		}
@@ -365,7 +366,19 @@ public class ModuleUtils {
 		 * @return
 		 */
 		public BiFunction<T, U, R> doMemoizeIgnoreSecondArg(final BiFunction<T, U, R> function) {
-			return (input1, input2) -> instance_cache.computeIfAbsent(input1, ___ -> function.apply(input1, input2));
+			return (input1, input2) -> {
+				if (instance_cache.keySet().contains(input1)) {
+					return instance_cache.get(input1);
+				}
+				else {
+					final R res = function.apply(input1, input2);
+					instance_cache.put(input1, res);
+					return res;
+				}
+			};
+			//computeIfAbsent cannot be called recursively currently (oracle claims to fix that up later)
+			//if they fix it, this function can be minimized to this:
+			//return (input1, input2) -> instance_cache.computeIfAbsent(input1, ___ -> function.apply(input1, input2));
 		}
 	}
 	
@@ -377,7 +390,7 @@ public class ModuleUtils {
 	 * @return
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static Object getInstance_onceOnly(Injector injector, Key key) {
+	private static Object getInstance_onceOnly(Injector injector, Key key) {		
 		return injector.getInstance(key);
 	}
 	

@@ -44,7 +44,16 @@ public class Functions {
 		private FunctionMemoizer() {}
 
 		private Function<T, U> doMemoize(final Function<T, U> function) {
-			return input -> cache.computeIfAbsent(input, function::apply);
+			return input -> {
+				if (cache.keySet().contains(input)) {
+					return cache.get(input);
+				}
+				else {
+					final U res = function.apply(input);
+					cache.put(input, res);
+					return res;
+				}
+			};
 		}
 	}
 }
