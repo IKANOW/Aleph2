@@ -341,8 +341,8 @@ public class BeanTemplateUtils {
 		}		
 		
 		protected void cloneInitialFields(final T to_clone) {			
-			StreamUtils.takeWhile(Stream.iterate(_element.getClass(), c -> c.getSuperclass()), c -> null != c)
-				.flatMap(c -> Arrays.stream(c.getDeclaredFields()))
+			StreamUtils.<Class<?>>takeWhile(Stream.iterate(_element.getClass(), c -> c.getSuperclass()), c -> null != c)
+				.<Field>flatMap(c -> Arrays.stream(c.getDeclaredFields()))
 				.filter(f -> !Modifier.isStatic(f.getModifiers())) // (ignore static fields)
 				.flatMap(Lambdas.flatWrap_i(f -> { f.setAccessible(true); return Tuples._2T(f, f.get(to_clone)); }))
 				.filter(t -> (null != t) && (null != t._2()))
