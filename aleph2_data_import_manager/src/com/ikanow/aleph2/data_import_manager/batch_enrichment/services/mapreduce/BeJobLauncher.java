@@ -20,15 +20,15 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
 
-public class JobLauncher {
+public class BeJobLauncher {
 
-	private static final Logger logger = LogManager.getLogger(JobLauncher.class);
+	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 
 	private Configuration config;
 	protected GlobalPropertiesBean _globals = null;
 
 	@Inject 
-	JobLauncher(GlobalPropertiesBean globals) {
+	BeJobLauncher(GlobalPropertiesBean globals) {
 		_globals = globals;	
 	}
 	
@@ -77,6 +77,8 @@ public class JobLauncher {
 			    job.setInputFormatClass(TextInputFormat.class);
 			    job.setOutputFormatClass(TextOutputFormat.class);
 	
+			    job.setInputFormatClass(BeFileInputFormat.class);
+
 			    FileInputFormat.setInputPaths(job, bucketInput);
 			    FileOutputFormat.setOutputPath(job, bucketOutput);		    
 			    
@@ -97,10 +99,6 @@ public class JobLauncher {
 	     		
 	}
 	
-	private Path ensureOutputDirectory(MapReduceJob job) {
-	// TODO Auto-generated method stub
-	return null;
-	}
 
 }
 

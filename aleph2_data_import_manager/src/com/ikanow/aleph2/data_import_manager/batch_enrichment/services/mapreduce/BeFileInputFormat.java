@@ -34,7 +34,6 @@ public class BeFileInputFormat extends CombineFileInputFormat<String, Tuple3<Lon
 		}
 		return reader;
 	} // createRecordReader
-
 	
 	
 }

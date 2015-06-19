@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> {
 
-	private static final Logger logger = LogManager.getLogger(JobLauncher.class);
+	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 
 	protected CombineFileSplit _fileSplit;
 	protected InputStream _inStream = null;
