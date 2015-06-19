@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -36,6 +37,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -125,31 +127,34 @@ public class BeBucketActor extends UntypedActor {
 				if (statuss.length > 0) {
 					logger.debug("Detected " + statuss.length + " ready files.");
 
-					IManagementCrudService<DataBucketBean> dataStore = _management_db.getDataBucketStore();
-					SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
+					IManagementCrudService<DataBucketBean> dataBucketStore = _management_db.getDataBucketStore();
+					SingleQueryComponent<DataBucketBean> querydatBucketFullName = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
 							bucketFullName);
+					
 					final ActorRef closing_self = this.self();
-
-					dataStore.getObjectBySpec(query_comp_full_name).thenAccept(
+					dataBucketStore.getObjectBySpec(querydatBucketFullName).thenAccept(
 							odb -> {
 								if (odb.isPresent()) {
-
-									boolean containsEnrichment = odb.get().batch_enrichment_configs().stream()
-											.map(EnrichmentControlMetadataBean::enabled).reduce(false, (a, b) -> a || b);
-									// send self a stop message
-									if (!containsEnrichment) {
-										logger.info("Skipping Enrichment, no enrichment config enabled: "+bucketFullName );
-										closing_self.tell(PoisonPill.getInstance(), closing_self);
-									} else {
-										// TODO enrichment work on bucket
-										logger.info("Processing enrichment: "+bucketFullName );
-									}
+									List<EnrichmentControlMetadataBean> enrichmentConfigs = odb.get().batch_enrichment_configs();
+									// TDOD sort by dependencies
+									for (EnrichmentControlMetadataBean ec : enrichmentConfigs) {										
+										if (ec.enabled()) {											
+											// TODO enrichment work on bucket
+											logger.info("Loading libraries: "+bucketFullName );										
+											// TODO create list of batch_enrichment_configs().
+											SingleQueryComponent<SharedLibraryBean> querySharedLibrary = CrudUtils.anyOf(SharedLibraryBean.class).when(SharedLibraryBean::type, SharedLibraryBean.LibraryType.enrichment_module);
+											IManagementCrudService<SharedLibraryBean> shareLibraryStore = _management_db.getSharedLibraryStore();
+											
+											
+										} // else contains
+									} // for
 								} else {
 									logger.info("Skipping Enrichment, no enrichment config found in db: "+bucketFullName );
 									closing_self.tell(PoisonPill.getInstance(), closing_self);
 								}
+							}); 
+					
 
-							});
 				} // status length
 				else{
 					logger.info("Skipping, no files found in ready folder: "+bucketReady );

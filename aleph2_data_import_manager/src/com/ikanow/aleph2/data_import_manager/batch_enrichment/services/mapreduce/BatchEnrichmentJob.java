@@ -40,6 +40,10 @@ public class BatchEnrichmentJob{
 			this.bucket = BeanTemplateUtils.from(dataBucketBeanJson, DataBucketBean.class).get();
 			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);
 			boolean final_stage = true;
+			// TODO initialize module
+			//this.module = // 
+			// TODO initialize context
+			//this.enrichmentContext = // 
 			module.onStageInitialize(enrichmentContext, bucket, final_stage);
 		} // setup
 
