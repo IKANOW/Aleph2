@@ -17,7 +17,18 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import kafka.consumer.ConsumerIterator;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.javaapi.producer.Producer;
+import kafka.message.MessageAndMetadata;
+import kafka.producer.KeyedMessage;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
@@ -30,14 +41,20 @@ import akka.serialization.Serialization;
 import akka.serialization.SerializationExtension;
 import akka.serialization.Serializer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class TestCoreDistributedServices {
 
+	private static final String TOPIC_NAME = "TEST_CDS";
+	private static final int NUM_THREADS = 1;
 	protected ICoreDistributedServices _core_distributed_services;
 	
 	@Before
@@ -103,5 +120,28 @@ public class TestCoreDistributedServices {
         
         //(This doesn't really test what I wanted, which was that a manifest was passed along with the serialization info)
         
+	}
+	
+	@Test
+	public void testKafka() throws Exception {
+//		ICoreDistributedServices cds = new MockCoreDistributedServices();
+//		//throw an item on the queue
+//		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+//		String original_message = jsonNode.toString();
+//		cds.produce(TOPIC_NAME, original_message);
+//		
+//		//grab the consumer
+//		Iterator<String> consumer = cds.consume(TOPIC_NAME);
+//		String consumed_message = null;
+//		int message_count = 0;
+//		//read the item off the queue
+//		while ( consumer.hasNext() ) {
+//			consumed_message = consumer.next();
+//        	message_count++;
+//            System.out.println(consumed_message);
+//		}
+//		
+//        assertEquals(message_count, 1);
+//        assertTrue(original_message.equals(consumed_message));
 	}
 }
