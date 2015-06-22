@@ -18,10 +18,17 @@ package com.ikanow.aleph2.distributed_services.services;
 //import kafka.javaapi.consumer.ConsumerConnector;
 //import kafka.javaapi.producer.Producer;
 
+import java.util.Iterator;
+
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.javaapi.producer.Producer;
+import kafka.message.MessageAndMetadata;
+
 import org.apache.curator.framework.CuratorFramework;
 
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -50,17 +57,18 @@ public interface ICoreDistributedServices {
 	<U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
 	
 	//TODO (ALEPH-19): need to decide on Kafka API
-	
-	/** Returns a Kafka producer
+	//TODO hide these interfaces so we aren't exposing kafka things, just take what we need to produce and do it internally
+	/** Returns a Kafka producer, you can then call producer.send()
 	 * @return
 	 */
-//	@NonNull
 //	<T1, T2> Producer<T1, T2> getKafkaProducer();
-	
-	/** Returns a Kafka consumer of messages
-	 * @return
-	 */
-//	@NonNull
+//	
+//	/** Returns a Kafka consumer of messages
+//	 * @return
+//	 */
 //	ConsumerConnector getKafkaConsumer();
+
+	void produce(String topic, String message);
+	Iterator<String> consume(String topic);
 	
 }
