@@ -15,8 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collector;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
@@ -39,6 +41,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -135,26 +138,49 @@ public class BeBucketActor extends UntypedActor {
 					dataBucketStore.getObjectBySpec(querydatBucketFullName).thenAccept(
 							odb -> {
 								if (odb.isPresent()) {
-									List<EnrichmentControlMetadataBean> enrichmentConfigs = odb.get().batch_enrichment_configs();
+									DataBucketBean dataBucketBean = odb.get();
+									List<EnrichmentControlMetadataBean> enrichmentConfigs = dataBucketBean.batch_enrichment_configs();
 									// TDOD sort by dependencies
 									for (EnrichmentControlMetadataBean ec : enrichmentConfigs) {										
 										if (ec.enabled()) {											
-											// TODO enrichment work on bucket
-											logger.info("Loading libraries: "+bucketFullName );										
-											// TODO create list of batch_enrichment_configs().
-											SingleQueryComponent<SharedLibraryBean> querySharedLibrary = CrudUtils.anyOf(SharedLibraryBean.class).when(SharedLibraryBean::type, SharedLibraryBean.LibraryType.enrichment_module);
+											logger.info("Loading libraries: "+bucketFullName );
+											
+											List<SingleQueryComponent<SharedLibraryBean>> sharedLibsQuery = ec.library_ids_or_names().stream().map(name -> {
+															return CrudUtils.anyOf(SharedLibraryBean.class)
+																	.when(SharedLibraryBean::_id, name)
+																	.when(SharedLibraryBean::path_name, name);
+														})
+														.collect(Collector.of(
+																LinkedList::new,
+																LinkedList::add,
+																(left, right) -> { left.addAll(right); return left; }
+																));
+
+											
+											MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(sharedLibsQuery);
 											IManagementCrudService<SharedLibraryBean> shareLibraryStore = _management_db.getSharedLibraryStore();
+											try {
+												//Cursor<SharedLibraryBean> sharedLibraries =
+												shareLibraryStore.getObjectsBySpec(spec).thenAccept(cursor->{
+													// TODO enrichment work on bucket
+													
+													
+												});
+											} catch (Exception e) {
+												logger.error("Caught exception loading shared libraries:",e);
+
+											}										
 											
-											
-										} // else contains
+										} // if enabled
+										else{
+											logger.info("Skipping Enrichment, no enrichment enabled:"+bucketFullName +" ec:"+ec.name());
+										}
 									} // for
 								} else {
 									logger.info("Skipping Enrichment, no enrichment config found in db: "+bucketFullName );
 									closing_self.tell(PoisonPill.getInstance(), closing_self);
 								}
-							}); 
-					
-
+							});
 				} // status length
 				else{
 					logger.info("Skipping, no files found in ready folder: "+bucketReady );
