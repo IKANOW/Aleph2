@@ -22,6 +22,9 @@ import org.apache.logging.log4j.Logger;
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.BeJobLauncher;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.MockBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 
 public class DataImportManagerModule extends AbstractModule { 
@@ -31,8 +34,14 @@ public class DataImportManagerModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
-	    bind(DataImportManager.class).in(Scopes.SINGLETON);
 	    bind(DataImportActorContext.class).in(Scopes.SINGLETON);
-	    
+	    bind(IBeJobService.class).to(MockBeJobService.class).in(Scopes.SINGLETON);
+	    configureServices();
+	}
+	
+	protected void configureServices(){
+	    bind(DataImportManager.class).in(Scopes.SINGLETON);
+	    bind(IBeJobService.class).to(BeJobLauncher.class).in(Scopes.SINGLETON);
+		
 	}
 }

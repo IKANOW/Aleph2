@@ -24,6 +24,7 @@ import akka.actor.Props;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.FolderWatcherActor;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -37,12 +38,13 @@ public class DataImportManager  {
 	protected final DataImportActorContext _context;
 	protected IStorageService _storage_service;
 	protected IServiceContext _serviceContext;
+	protected IBeJobService beJobService;
 	
 	protected ActorRef getFolderWatchActor(){
 		if(folderWatchActor==null){
 		system = _context.getActorSystem();
 		
-		Props props = Props.create(FolderWatcherActor.class,_storage_service);
+		Props props = Props.create(FolderWatcherActor.class,_storage_service,beJobService);
 		folderWatchActor = system.actorOf(props,"folderWatch");
 		}
 		return folderWatchActor;
@@ -50,10 +52,11 @@ public class DataImportManager  {
 	}
 
 	@Inject
-    public DataImportManager(DataImportActorContext context, IServiceContext serviceContext){
+    public DataImportManager(DataImportActorContext context, IServiceContext serviceContext, IBeJobService beJobService){
     	this._context = context;
     	this._serviceContext = serviceContext;
     	this._storage_service = serviceContext.getStorageService();
+    	this.beJobService = beJobService;
     	
     }
     
