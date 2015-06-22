@@ -159,7 +159,7 @@ public class DataImportManagerTest {
 		    ActorRef beBucketActor = system.actorOf(props,"beBucket1");		    
 			createEnhancementBeanInDb();			
 			beBucketActor.tell(new BucketEnrichmentMessage(bucketPath1, "/misc/bucket1", ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + buckeFullName1),  ActorRef.noSender());
-			Thread.sleep(3000);
+			Thread.sleep(9000);
 		} catch (Exception e) {
 			logger.error("Caught exception",e);
 			fail(e.getMessage());
