@@ -33,7 +33,7 @@ public interface ISearchIndexService {
 	 * @param schema - the schema to validate
 	 * @return a list of errors, empty if none
 	 */
-	List<BasicMessageBean> validateSchema(final DataSchemaBean.SearchIndexSchemaBean schema);	
+	List<BasicMessageBean> validateSchema(final DataSchemaBean.SearchIndexSchemaBean schema, final DataBucketBean bucket);	
 
 	/** Returns a CRUD service (including simple searching) for the specified bucket or multi-bucket
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)

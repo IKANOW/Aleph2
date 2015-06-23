@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -32,7 +33,7 @@ public class SampleGraphService implements IGraphService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

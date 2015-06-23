@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GeospatialSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -32,7 +33,7 @@ public class SampleGeospatialService implements IGeospatialService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(GeospatialSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(GeospatialSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

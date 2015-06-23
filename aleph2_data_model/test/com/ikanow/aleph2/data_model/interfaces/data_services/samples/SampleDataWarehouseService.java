@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DataWarehouseSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -32,7 +33,7 @@ public class SampleDataWarehouseService implements IDataWarehouseService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(DataWarehouseSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(DataWarehouseSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

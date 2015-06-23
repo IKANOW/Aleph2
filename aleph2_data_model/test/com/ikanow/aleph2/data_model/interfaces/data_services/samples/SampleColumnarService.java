@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.ColumnarSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -32,7 +33,7 @@ public class SampleColumnarService implements IColumnarService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(ColumnarSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(ColumnarSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

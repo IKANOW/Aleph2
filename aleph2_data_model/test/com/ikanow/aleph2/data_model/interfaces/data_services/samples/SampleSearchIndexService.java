@@ -47,7 +47,7 @@ public class SampleSearchIndexService implements ISearchIndexService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(SearchIndexSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(SearchIndexSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

@@ -47,7 +47,7 @@ public class SampleDocumentService implements IDocumentService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 

@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.TemporalSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -32,7 +33,7 @@ public class SampleTemporalService implements ITemporalService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(TemporalSchemaBean schema) {
+	public List<BasicMessageBean> validateSchema(TemporalSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
 	}
 
