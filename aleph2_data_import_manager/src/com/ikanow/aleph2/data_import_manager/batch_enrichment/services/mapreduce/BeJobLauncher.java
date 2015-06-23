@@ -1,6 +1,7 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
 import java.io.File;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -16,11 +17,13 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 
-public class BeJobLauncher {
+public class BeJobLauncher implements IBeJobService{
 
 	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 
@@ -58,7 +61,8 @@ public class BeJobLauncher {
 	}
 
 
-	public boolean runEnhancementJob(DataBucketBean bucket,Path bucketInput,Path bucketOutput){
+	@Override
+	public boolean runEnhancementJob(DataBucketBean bucket,EnrichmentControlMetadataBean ec ,List<SharedLibraryBean> sharedLibraries,Path bucketInput,Path bucketOutput){
 		
 		Configuration config = getConfiguration();
 		String jobName = bucket.full_name()+"_BatchEnrichment";

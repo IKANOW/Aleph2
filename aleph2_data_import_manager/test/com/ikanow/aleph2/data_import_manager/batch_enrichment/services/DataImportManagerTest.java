@@ -26,9 +26,12 @@ import akka.actor.Props;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Scopes;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketActor;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BucketEnrichmentMessage;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.MockBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
@@ -69,6 +72,8 @@ public class DataImportManagerTest {
 	
 	protected IManagementDbService _management_db;
 
+	protected IBeJobService beJoBService;
+
 	@Before
 	public void setupDependencies() throws Exception {
 		if (null != _service_context) {
@@ -90,8 +95,17 @@ public class DataImportManagerTest {
 		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(_actor_context);
 
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
+		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule(){
+
+			@Override
+			protected void configureServices() {
+			    bind(DataImportManager.class).in(Scopes.SINGLETON);
+			    bind(IBeJobService.class).to(MockBeJobService.class).in(Scopes.SINGLETON);
+			}
+			
+		}), Optional.of(config));
 		this.dataImportManager = serverInjector.getInstance(DataImportManager.class);
+		this.beJoBService = serverInjector.getInstance(IBeJobService.class);
 
 		createFolderStructure();
 		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
@@ -130,8 +144,8 @@ public class DataImportManagerTest {
 
 	@Test
 	public void testFolderWatch() throws Exception {
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
-		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
+//		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
+//		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 		dataImportManager.folderWatch();	
 		Thread.sleep(3000);
@@ -140,12 +154,12 @@ public class DataImportManagerTest {
 	@Test
 	public void testBeBucketActor() throws Exception {
 		try {
-			Props props = Props.create(BeBucketActor.class,_service_context.getStorageService());
+			Props props = Props.create(BeBucketActor.class,_service_context.getStorageService(),beJoBService);
 			ActorSystem system = _actor_context.getActorSystem();
 		    ActorRef beBucketActor = system.actorOf(props,"beBucket1");		    
 			createEnhancementBeanInDb();			
 			beBucketActor.tell(new BucketEnrichmentMessage(bucketPath1, "/misc/bucket1", ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + buckeFullName1),  ActorRef.noSender());
-			Thread.sleep(3000);
+			Thread.sleep(9000);
 		} catch (Exception e) {
 			logger.error("Caught exception",e);
 			fail(e.getMessage());

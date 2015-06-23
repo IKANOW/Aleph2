@@ -16,10 +16,21 @@
 package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+
+import kafka.consumer.ConsumerIterator;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.javaapi.producer.Producer;
+import kafka.message.MessageAndMetadata;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -41,6 +52,8 @@ import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesProp
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.ikanow.aleph2.distributed_services.modules.CoreDistributedServicesModule;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
+import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 import com.typesafe.config.ConfigFactory;
 
 /** Implementation class for full Curator service
@@ -126,5 +139,20 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			_buses.put(key, (ret_val = new RemoteBroadcastMessageBus<M>(_akka_system, topic)));
 		}
 		return ret_val;
+	}
+
+	@Override
+	public void produce(String topic, String message) {
+		//TODO we should probably cache producers for a bit? or return back some wrapped object?
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		producer.send(new KeyedMessage<String, String>(topic, message));
+		//TODO close out the producer, we shouldn't be doing this after each message because its costly to start		
+		producer.close();
+	}
+	
+	@Override
+	public Iterator<String> consume(String topic) {
+		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
+		return new WrappedConsumerIterator(consumer, topic);
 	}
 }

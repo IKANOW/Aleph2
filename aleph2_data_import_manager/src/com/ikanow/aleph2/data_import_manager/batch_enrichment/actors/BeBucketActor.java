@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
@@ -30,6 +32,7 @@ import akka.actor.ActorRef;
 import akka.actor.PoisonPill;
 import akka.actor.UntypedActor;
 
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -39,6 +42,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -57,11 +61,13 @@ public class BeBucketActor extends UntypedActor {
 	protected String bucketZkPath = null;
 	protected FileContext fileContext = null;
 
+	private IBeJobService beJobService;
+
 
 	
 	// not null means agent has been initialized.
 
-	public BeBucketActor(IStorageService storage_service) {
+	public BeBucketActor(IStorageService storage_service, IBeJobService beJobService) {
 		this._actor_context = DataImportActorContext.get();
 		this._global_properties_Bean = _actor_context.getGlobalProperties();
 		logger.debug("_global_properties_Bean" + _global_properties_Bean);
@@ -70,6 +76,8 @@ public class BeBucketActor extends UntypedActor {
 		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
 		this.storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020")).get();
+		this.beJobService = beJobService;
+		
 	}
 
 	@Override
@@ -135,26 +143,51 @@ public class BeBucketActor extends UntypedActor {
 					dataBucketStore.getObjectBySpec(querydatBucketFullName).thenAccept(
 							odb -> {
 								if (odb.isPresent()) {
-									List<EnrichmentControlMetadataBean> enrichmentConfigs = odb.get().batch_enrichment_configs();
+									DataBucketBean dataBucketBean = odb.get();
+									List<EnrichmentControlMetadataBean> enrichmentConfigs = dataBucketBean.batch_enrichment_configs();
 									// TDOD sort by dependencies
 									for (EnrichmentControlMetadataBean ec : enrichmentConfigs) {										
 										if (ec.enabled()) {											
-											// TODO enrichment work on bucket
-											logger.info("Loading libraries: "+bucketFullName );										
-											// TODO create list of batch_enrichment_configs().
-											SingleQueryComponent<SharedLibraryBean> querySharedLibrary = CrudUtils.anyOf(SharedLibraryBean.class).when(SharedLibraryBean::type, SharedLibraryBean.LibraryType.enrichment_module);
+											logger.info("Loading libraries: "+bucketFullName );
+											
+											List<SingleQueryComponent<SharedLibraryBean>> sharedLibsQuery = ec.library_ids_or_names().stream().map(name -> {
+															return CrudUtils.anyOf(SharedLibraryBean.class)
+																	.when(SharedLibraryBean::_id, name)
+																	.when(SharedLibraryBean::path_name, name);
+														})
+/*														.collect(Collector.of(
+																LinkedList::new,
+																LinkedList::add,
+																(left, right) -> { left.addAll(right); return left; }
+																)); */
+											.collect(Collectors.toList());
+
+											
+											MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(sharedLibsQuery);
 											IManagementCrudService<SharedLibraryBean> shareLibraryStore = _management_db.getSharedLibraryStore();
+											try {
+																								
+												shareLibraryStore.getObjectsBySpec(spec).thenAccept(sharedLibraryCursor->{
+													List<SharedLibraryBean> sharedLibraries = StreamSupport.stream(sharedLibraryCursor.spliterator(), false).collect(Collectors.toList());
+													// run enrichment job  on bucket
+													beJobService.runEnhancementJob(dataBucketBean, ec, sharedLibraries, bucketReady, bucketTmp);
+													
+												});
+											} catch (Exception e) {
+												logger.error("Caught exception loading shared libraries for job:"+bucketFullName,e);
+
+											}								
 											
-											
-										} // else contains
+										} // if enabled
+										else{
+											logger.info("Skipping Enrichment, no enrichment enabled:"+bucketFullName +" ec:"+ec.name());
+										}
 									} // for
 								} else {
 									logger.info("Skipping Enrichment, no enrichment config found in db: "+bucketFullName );
 									closing_self.tell(PoisonPill.getInstance(), closing_self);
 								}
-							}); 
-					
-
+							});
 				} // status length
 				else{
 					logger.info("Skipping, no files found in ready folder: "+bucketReady );
