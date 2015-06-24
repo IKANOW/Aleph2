@@ -34,12 +34,12 @@ public class KafkaUtils {
 	
 	public static void setProperties(Config parseMap) {
 		kafka_properties = new Properties();
-		kafka_properties.put("host.name", "burchwhitebeast");
+		kafka_properties.put("host.name", "localhost");
 		//PRODUCER PROPERTIES
 		//kafka_properties.put("metadata.broker.list", "api001.dev.ikanow.com:6667");
 		kafka_properties.put("brokerid", "1");
-		kafka_properties.put("broker.list", "burchwhitebeast:6661");
-		kafka_properties.put("metadata.broker.list", "burchwhitebeast:6661");
+		kafka_properties.put("broker.list", "localhost:6661");
+		kafka_properties.put("metadata.broker.list", "localhost:6661");
         //props.put("zk.connect", "127.0.0.1:2181");
 		kafka_properties.put("serializer.class", "kafka.serializer.StringEncoder");
         //props.put("partitioner.class", "kafka_test.SimplePartitioner");
@@ -48,7 +48,7 @@ public class KafkaUtils {
         //CONSUMER PROPERTIES
 		//kafka_properties.put("zookeeper.connect", "api001.dev.ikanow.com:2181");
 		String zk = parseMap.getString("zookeeper.connect");
-		zk = zk.replaceAll("127\\.0\\.0\\.1", "burchwhitebeast");
+		zk = zk.replaceAll("127\\.0\\.0\\.1", "localhost");
 		System.out.println("ZOOKEEPER: " + zk);
 		kafka_properties.put("zookeeper.connect", zk);
 		kafka_properties.put("group.id", "somegroup");

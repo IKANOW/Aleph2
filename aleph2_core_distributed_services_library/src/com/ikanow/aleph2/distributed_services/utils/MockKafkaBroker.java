@@ -21,10 +21,10 @@ public class MockKafkaBroker {
 		props.put("log.dir", System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp");
 		System.out.println("log dir is: " + props.getProperty("log.dir"));
 		String zk = zookeeper_connection;
-		zk = zk.replaceAll("127\\.0\\.0\\.1", "burchwhitebeast");
+		zk = zk.replaceAll("127\\.0\\.0\\.1", "localhost");
 		System.out.println("ZOOKEEPER: " + zk);
 		props.put("zookeeper.connect", zk);
-		props.put("host.name", "burchwhitebeast");
+		props.put("host.name", "localhost");
 		KafkaConfig config = new KafkaConfig(props);
 		//NOTE: scala version won't work here for some reason, copied same implementation as {@link kafka.utils.SystemTime}
 		kafka_server = new KafkaServer(config, new Time() {

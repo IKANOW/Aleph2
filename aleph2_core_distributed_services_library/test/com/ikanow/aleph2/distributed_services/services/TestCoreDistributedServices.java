@@ -37,6 +37,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import akka.serialization.Serialization;
@@ -125,6 +126,7 @@ public class TestCoreDistributedServices {
         
 	}
 	
+	@Ignore
 	@Test
 	public void testKafka() throws Exception {
 		final String TOPIC_NAME = "TEST_CDS_1"; 
@@ -149,6 +151,7 @@ public class TestCoreDistributedServices {
         assertTrue(original_message.equals(consumed_message));
 	}
 	
+	@Ignore
 	@Test
 	public void testGrabProducerMultipleTimes() throws Exception {
 		final String TOPIC_NAME = "TEST_CDS_2";
@@ -159,6 +162,7 @@ public class TestCoreDistributedServices {
 		_core_distributed_services.produce(TOPIC_NAME, original_message);
 	}
 	
+	@Ignore
 	@Test
 	public void testLocalKafka() throws Exception {
 		final String TOPIC_NAME = "TEST_CDS_4";

@@ -19,12 +19,14 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -255,6 +257,24 @@ public class TestHarvestContext {
 			fail("Threw exception");
 		}
 		
+	}
+	
+	@Ignore
+	@Test
+	public void testProduceConsume() {
+		//TODO in the future test something, mock CDS does nothing for these 2 functions
+		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		String message = "{\"key\":\"val\"}";
+		//currently mock cds produce does nothing
+		test_context._distributed_services.produce("TEST_HARVEST_CONTEXT", message);
+		
+		//nothing will be in consume
+		Iterator<String> iter = test_context._distributed_services.consume("TEST_HARVEST_CONTEXT");
+		long count = 0;
+		while ( iter.hasNext() ) {
+			count++;
+		}
+		assertEquals(count,0);
 	}
 		
 }

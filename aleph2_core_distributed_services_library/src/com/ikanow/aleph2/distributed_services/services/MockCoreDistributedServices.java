@@ -51,7 +51,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	protected final TestingServer _test_server;
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
-	protected final MockKafkaBroker _kafka_broker;
+	//protected final MockKafkaBroker _kafka_broker;
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -66,7 +66,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		
 		_akka_system = ActorSystem.create("default");
 		
-		_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
+		//_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
 	}	
 	 
 	/** Returns a connection to the Curator server
