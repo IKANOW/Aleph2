@@ -19,41 +19,33 @@ public class MiniClusterBeJobLauncher extends BeJobLauncher {
 
     private MiniMRYarnCluster mrCluster;
     private 
-//    private JobConf mrClusterConf;
-//    private FileSystem localFileSystem;
 
     
 	@Inject 
 	MiniClusterBeJobLauncher(GlobalPropertiesBean globals) {
 		super(globals);
-		// TODO Auto-generated constructor stub
 	}
 
 
 	@Override
-	protected Configuration getConfiguration() {// TODO Auto-generated method stub
-		if(configuration == null){
+	protected Configuration getConfiguration() {
+		if (configuration == null) {
 
-		//super.getConfiguration();
-		this.configuration = new Configuration(true);
-		String stagingdir = configuration.get("yarn.app.mapreduce.am.staging-dir");
-		logger.debug("staging dir:"+stagingdir);
-		configuration.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,true);
-		configuration.setBoolean(JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS,true);
-		//configuration.set(YarnConfiguration.RM_ADDRESS,MiniMRYarnCluster.getHostname() + ":" + this.rmPort);
-		//configuration.set(JHAdminConfig.MR_HISTORY_ADDRESS,MiniMRYarnCluster.getHostname() + ":" + this.jhsPort);
-	    
-		try {			
-        //localFileSystem = FileSystem.get(configuration);		
-        //mrCluster = new MiniMRCluster(1, localFileSystem.getUri().toString(), 1, null, null, new JobConf(configuration));
-        mrCluster = new MiniMRYarnCluster("StandaloneTest",1);
-        mrCluster.init(configuration);                      
-        start();
-		} catch (Exception e) {
-			logger.error("getConfiguration caused exception",e);
+			this.configuration = new Configuration(true);
+			String stagingdir = configuration.get("yarn.app.mapreduce.am.staging-dir");
+			logger.debug("staging dir:" + stagingdir);
+			configuration.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
+			configuration.setBoolean(JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS, true);
+
+			try {
+				mrCluster = new MiniMRYarnCluster("StandaloneTest", 1);
+				mrCluster.init(configuration);
+				start();
+			} catch (Exception e) {
+				logger.error("getConfiguration caused exception", e);
+			}
 		}
-		}
-        return configuration;
+		return configuration;
 	}
 
     public void start() {
