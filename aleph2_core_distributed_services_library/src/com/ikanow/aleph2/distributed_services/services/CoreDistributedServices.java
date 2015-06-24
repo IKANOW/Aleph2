@@ -16,22 +16,15 @@
 package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
-import kafka.message.MessageAndMetadata;
 import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
-
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -93,6 +86,28 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	
 		_akka_system = ActorSystem.create("default", ConfigFactory.parseMap(config_map));
 		ZookeeperClusterSeed.get(_akka_system).join();
+		
+		//TODO where can we get the config from?!
+		//set up a config for kafka overrides
+		//TODO add override variables in DSPbean
+		//zookeeper
+		//"api001.dev.ikanow.com:2181"
+		//broker
+		//"api001.dev.ikanow.com:6667"
+		final String broker_list_string = Optional.ofNullable(config_bean.broker_list())
+				.orElse(DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);
+		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				//.put("metadata.broker.list", broker_list_string)
+				.put("metadata.broker.list", "localhost:6661")
+				.put("serializer.class", "kafka.serializer.StringEncoder")
+				.put("request.required.acks", "1")
+				.put("zookeeper.connect", connection_string)
+				.put("group.id", "somegroup")
+				.put("zookeeper.session.timeout.ms", "400")
+				.put("zookeeper.sync.time.ms", "200")
+		        .put("auto.commit.interval.ms", "1000")			
+				.build();	
+		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
 	}
 	
 	/** Returns a connection to the Curator server
@@ -147,7 +162,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		producer.send(new KeyedMessage<String, String>(topic, message));
 		//TODO close out the producer, we shouldn't be doing this after each message because its costly to start		
-		producer.close();
+		//producer.close();
 	}
 	
 	@Override

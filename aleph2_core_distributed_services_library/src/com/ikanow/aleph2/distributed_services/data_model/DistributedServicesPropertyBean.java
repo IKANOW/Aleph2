@@ -25,13 +25,16 @@ public class DistributedServicesPropertyBean {
 	// Constants for "raw" access
 	public static final String PROPERTIES_ROOT = "CoreDistributedServices"; 
 	public static final String ZOOKEEPER_CONNECTION = "CoreDistributedServices.zookeeper_connection"; 
-	public static final String __DEFAULT_ZOOKEEPER_CONNECTION = "localhost:2181"; 
+	public static final String BROKER_LIST = "CoreDistributedServices.broker_list"; 
+	public static final String __DEFAULT_ZOOKEEPER_CONNECTION = "localhost:2181";
+	public static final String __DEFAULT_BROKER_LIST = "localhost:6667";	 
 	
 	/** User c'tor
 	 * @param zookeeper_connection
 	 */
-	protected DistributedServicesPropertyBean(final String zookeeper_connection) {
+	protected DistributedServicesPropertyBean(final String zookeeper_connection, final String broker_list) {
 		this.zookeeper_connection = zookeeper_connection;
+		this.broker_list = broker_list;
 	}
 
 	/** Serializer c'tor
@@ -44,4 +47,8 @@ public class DistributedServicesPropertyBean {
 	public String zookeeper_connection() { return zookeeper_connection; }	
 	
 	private String zookeeper_connection;
+
+	public String broker_list() { return broker_list; }
+	
+	private String broker_list;
 }
