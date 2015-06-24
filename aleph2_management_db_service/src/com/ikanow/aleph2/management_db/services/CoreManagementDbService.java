@@ -16,6 +16,8 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -194,5 +196,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
 		return _underlying_management_db.getRetryStore(retry_message_clazz);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getUnderlyingArtefacts()
+	 */
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		final LinkedList<Object> ll = new LinkedList<Object>();
+		ll.add(_underlying_management_db);
+		ll.addAll(_underlying_management_db.getUnderlyingArtefacts());
+		return ll;
 	}
 }

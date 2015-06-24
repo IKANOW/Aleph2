@@ -15,8 +15,8 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
+import java.util.Collection;
 import java.util.Optional;
-
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -127,6 +127,13 @@ public interface IManagementDbService {
 	 * @return a CRUD service intended to support
 	 */
 	<T> ICrudService<T> getRetryStore(final Class<T> retry_message_clazz);
+	
+	/** This method needs to be implemented by the underlying management DB and return an object from each dependency (normally just the CRUD service, maybe the search index service also)
+	 *  This enables context libraries to grab the associated JAR files and place them in external processes' classpaths. This method will also return the underlying CRUD service itself,
+	 *  for convenience
+	 * @return
+	 */
+	Collection<Object> getUnderlyingArtefacts();
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
