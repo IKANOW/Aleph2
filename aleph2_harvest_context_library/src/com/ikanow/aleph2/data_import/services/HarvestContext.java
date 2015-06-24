@@ -204,13 +204,18 @@ public class HarvestContext implements IHarvestContext {
 			final String this_jar = Lambdas.get(() -> {
 				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
 			});
+			// Data model			
+			final String data_model_jar = Lambdas.get(() -> {
+				return LiveInjector.findPathJar(_service_context.getClass(), _globals.local_root_dir() + "/lib/aleph2_data_model.jar");	
+			});
 			
 			// Libraries associated with services:
 			final Set<String> user_service_class_files = services.map(set -> {
 				return set.stream()
 						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
 						.filter(service -> service.isPresent())
-						.map(service -> LiveInjector.findPathJar(service.get().getClass(), ""))
+						.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
+						.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
 						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 						.collect(Collectors.toSet());
 			})
@@ -218,16 +223,12 @@ public class HarvestContext implements IHarvestContext {
 			
 			// Mandatory services
 			final Set<String> mandatory_service_class_files =
-					Stream.concat(						
 						Arrays.asList(
-								_service_context, // data model
-								_distributed_services, //CDS
-								_service_context.getCoreManagementDbService(), // core management 
-								_service_context.getService(IStorageService.class, Optional.empty()).get() // storage service
-								).stream()
-							,
-							_service_context.getCoreManagementDbService().getUnderlyingArtefacts().stream() // underlying management db, crud service, etc							
-							)
+								_distributed_services.getUnderlyingArtefacts(),
+								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
+								)
+							.stream()
+							.flatMap(x -> x.stream())
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 							.collect(Collectors.toSet());

@@ -204,7 +204,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		final LinkedList<Object> ll = new LinkedList<Object>();
-		ll.add(_underlying_management_db);
+		ll.add(this);
 		ll.addAll(_underlying_management_db.getUnderlyingArtefacts());
 		return ll;
 	}

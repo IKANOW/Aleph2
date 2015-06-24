@@ -27,7 +27,7 @@ public class BeJobLauncher implements IBeJobService{
 
 	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 
-	private Configuration config;
+	protected Configuration configuration;
 	protected GlobalPropertiesBean _globals = null;
 
 	@Inject 
@@ -40,24 +40,24 @@ public class BeJobLauncher implements IBeJobService{
 	 * @return
 	 */
 	protected Configuration getConfiguration(){
-		if(config == null){
-			this.config = new Configuration(false);
+		if(configuration == null){
+			this.configuration = new Configuration(false);
 		
 			if (new File(_globals.local_yarn_config_dir()).exists()) {
-				config.addResource(new Path(_globals.local_yarn_config_dir() +"/core-site.xml"));
-				config.addResource(new Path(_globals.local_yarn_config_dir() +"/yarn-site.xml"));
-				config.addResource(new Path(_globals.local_yarn_config_dir() +"/hdfs-site.xml"));
-				config.addResource(new Path(_globals.local_yarn_config_dir() +"/hadoop-site.xml"));
-				config.addResource(new Path(_globals.local_yarn_config_dir() +"/mapred-site.xml"));
+				configuration.addResource(new Path(_globals.local_yarn_config_dir() +"/core-site.xml"));
+				configuration.addResource(new Path(_globals.local_yarn_config_dir() +"/yarn-site.xml"));
+				configuration.addResource(new Path(_globals.local_yarn_config_dir() +"/hdfs-site.xml"));
+				configuration.addResource(new Path(_globals.local_yarn_config_dir() +"/hadoop-site.xml"));
+				configuration.addResource(new Path(_globals.local_yarn_config_dir() +"/mapred-site.xml"));
 			}
 			// These are not added by Hortonworks, so add them manually
-			config.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");									
-			config.set("fs.AbstractFileSystem.hdfs.impl", "org.apache.hadoop.fs.Hdfs");
+			configuration.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");									
+			configuration.set("fs.AbstractFileSystem.hdfs.impl", "org.apache.hadoop.fs.Hdfs");
 			// Some other config defaults:
 			// (not sure if these are actually applied, or derived from the defaults - for some reason they don't appear in CDH's client config)
-			config.set("mapred.reduce.tasks.speculative.execution", "false");
+			configuration.set("mapred.reduce.tasks.speculative.execution", "false");
 		}
-		return config;
+		return configuration;
 	}
 
 

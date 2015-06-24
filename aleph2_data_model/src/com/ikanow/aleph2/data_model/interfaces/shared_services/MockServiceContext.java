@@ -34,13 +34,13 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
  */
 public class MockServiceContext implements IServiceContext {
 
-	protected final HashMap<String, HashMap<String, Object>> _mocks;
+	protected final HashMap<String, HashMap<String, IUnderlyingService>> _mocks;
 	protected GlobalPropertiesBean _globals = null;
 	
 	/** User constructor 
 	 */
 	public MockServiceContext() {
-		_mocks = new HashMap<String, HashMap<String, Object>>();
+		_mocks = new HashMap<String, HashMap<String, IUnderlyingService>>();
 	}
 	
 	/** Enables users to insert their own services into the service context
@@ -49,9 +49,9 @@ public class MockServiceContext implements IServiceContext {
 	 * @param instance - the instance to insert
 	 */
 	public <I extends IUnderlyingService> void addService(Class<I> clazz, Optional<String> service_name, I instance) {
-		HashMap<String, Object> submock = _mocks.get(clazz.getName());
+		HashMap<String, IUnderlyingService> submock = _mocks.get(clazz.getName());
 		if (null == submock) {
-			submock = new HashMap<String, Object>();
+			submock = new HashMap<String, IUnderlyingService>();
 			_mocks.put(clazz.getName(), submock);
 		}
 		submock.put(service_name.orElse(""), instance);
@@ -65,7 +65,7 @@ public class MockServiceContext implements IServiceContext {
 	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz,
 			Optional<String> serviceName) {
 		return (Optional<I>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
-								.orElse(new HashMap<String, Object>())
+								.orElse(new HashMap<String, IUnderlyingService>())
 								.get(serviceName.orElse("")));
 	}
 

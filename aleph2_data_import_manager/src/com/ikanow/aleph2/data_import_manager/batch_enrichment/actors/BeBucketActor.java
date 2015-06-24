@@ -111,7 +111,7 @@ public class BeBucketActor extends UntypedActor {
 				// bucket is not registered yet, grab it and do the processing
 				// on this node
 				_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
-				checkReady(bem.getBuckeFullName(), bem.getBucketPathStr());
+				launchReadyJobs(fileContext,bem.getBuckeFullName(), bem.getBucketPathStr(),beJobService,_management_db,this.self());
 
 				// stop actor after all the processing
 				getContext().stop(getSelf());
@@ -126,7 +126,8 @@ public class BeBucketActor extends UntypedActor {
 		}
 	}
 
-	protected void checkReady(String bucketFullName, String bucketPathStr) {
+
+	public  static void launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IBeJobService beJobService,IManagementDbService managementDbService,ActorRef closingSelf) {
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
 			Path bucketTmp = new Path(bucketPathStr + "/managed_bucket/import/temp");
@@ -135,11 +136,9 @@ public class BeBucketActor extends UntypedActor {
 				if (statuss.length > 0) {
 					logger.debug("Detected " + statuss.length + " ready files.");
 
-					IManagementCrudService<DataBucketBean> dataBucketStore = _management_db.getDataBucketStore();
-					SingleQueryComponent<DataBucketBean> querydatBucketFullName = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
-							bucketFullName);
+					IManagementCrudService<DataBucketBean> dataBucketStore = managementDbService.getDataBucketStore();
+					SingleQueryComponent<DataBucketBean> querydatBucketFullName = CrudUtils.anyOf(DataBucketBean.class).when("full_name",bucketFullName);
 					
-					final ActorRef closing_self = this.self();
 					dataBucketStore.getObjectBySpec(querydatBucketFullName).thenAccept(
 							odb -> {
 								if (odb.isPresent()) {
@@ -164,7 +163,7 @@ public class BeBucketActor extends UntypedActor {
 
 											
 											MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(sharedLibsQuery);
-											IManagementCrudService<SharedLibraryBean> shareLibraryStore = _management_db.getSharedLibraryStore();
+											IManagementCrudService<SharedLibraryBean> shareLibraryStore = managementDbService.getSharedLibraryStore();
 											try {
 																								
 												shareLibraryStore.getObjectsBySpec(spec).thenAccept(sharedLibraryCursor->{
@@ -185,7 +184,9 @@ public class BeBucketActor extends UntypedActor {
 									} // for
 								} else {
 									logger.info("Skipping Enrichment, no enrichment config found in db: "+bucketFullName );
-									closing_self.tell(PoisonPill.getInstance(), closing_self);
+									if(closingSelf!=null){
+									closingSelf.tell(PoisonPill.getInstance(), closingSelf);
+									}
 								}
 							});
 				} // status length
