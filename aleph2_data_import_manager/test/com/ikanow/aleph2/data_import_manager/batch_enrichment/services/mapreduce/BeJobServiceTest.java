@@ -2,10 +2,7 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.fs.FileContext;
 import org.junit.Before;
 
 import com.google.inject.Injector;
