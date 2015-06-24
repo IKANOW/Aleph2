@@ -26,6 +26,7 @@ public interface IUnderlyingService {
 	/** This method needs to be implemented by the underlying management DB and return an object from each dependency (normally just the CRUD service, maybe the search index service also)
 	 *  This enables context libraries to grab the associated JAR files and place them in external processes' classpaths. This method will also return the underlying CRUD service itself,
 	 *  for convenience
+	 *  NOTE: by convention should also return "this"
 	 * @return
 	 */
 	Collection<Object> getUnderlyingArtefacts();
