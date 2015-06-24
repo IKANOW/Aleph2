@@ -16,7 +16,9 @@
 package com.ikanow.aleph2.data_model.interfaces.data_access.samples;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -38,5 +40,16 @@ public class SampleCustomServiceTwo implements ICustomService, IExtraDependencyL
 	@Override
 	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
 		//empty
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return null;
 	}
 }

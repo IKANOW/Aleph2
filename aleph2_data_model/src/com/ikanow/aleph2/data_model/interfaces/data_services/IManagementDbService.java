@@ -15,10 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
-import java.util.Collection;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -30,7 +30,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 /** The interface to the management database
  * @author acp
  */
-public interface IManagementDbService {
+public interface IManagementDbService extends IUnderlyingService {
 
 	////////////////////////////////////
 	
@@ -128,18 +128,4 @@ public interface IManagementDbService {
 	 */
 	<T> ICrudService<T> getRetryStore(final Class<T> retry_message_clazz);
 	
-	/** This method needs to be implemented by the underlying management DB and return an object from each dependency (normally just the CRUD service, maybe the search index service also)
-	 *  This enables context libraries to grab the associated JAR files and place them in external processes' classpaths. This method will also return the underlying CRUD service itself,
-	 *  for convenience
-	 * @return
-	 */
-	Collection<Object> getUnderlyingArtefacts();
-	
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,11 @@ public class SampleDataWarehouseService implements IDataWarehouseService {
 	@Override
 	public List<BasicMessageBean> validateSchema(DataWarehouseSchemaBean schema, final DataBucketBean bucket) {
 		return Collections.emptyList();
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
 	}
 
 }

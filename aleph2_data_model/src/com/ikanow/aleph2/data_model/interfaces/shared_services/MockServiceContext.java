@@ -18,7 +18,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.HashMap;
 import java.util.Optional;
 
-
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
@@ -36,6 +35,7 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 public class MockServiceContext implements IServiceContext {
 
 	protected final HashMap<String, HashMap<String, Object>> _mocks;
+	protected GlobalPropertiesBean _globals = null;
 	
 	/** User constructor 
 	 */
@@ -48,7 +48,7 @@ public class MockServiceContext implements IServiceContext {
 	 * @param service_name - optional service name
 	 * @param instance - the instance to insert
 	 */
-	public <I> void addService(Class<I> clazz, Optional<String> service_name, I instance) {
+	public <I extends IUnderlyingService> void addService(Class<I> clazz, Optional<String> service_name, I instance) {
 		HashMap<String, Object> submock = _mocks.get(clazz.getName());
 		if (null == submock) {
 			submock = new HashMap<String, Object>();
@@ -56,10 +56,13 @@ public class MockServiceContext implements IServiceContext {
 		}
 		submock.put(service_name.orElse(""), instance);
 	}
+	public void addGlobals(final GlobalPropertiesBean globals) {
+		_globals = globals;
+	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public <I> Optional<I> getService(Class<I> serviceClazz,
+	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz,
 			Optional<String> serviceName) {
 		return (Optional<I>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
 								.orElse(new HashMap<String, Object>())
@@ -113,7 +116,7 @@ public class MockServiceContext implements IServiceContext {
 
 	@Override
 	public GlobalPropertiesBean getGlobalProperties() {
-		return getService(GlobalPropertiesBean.class, Optional.empty()).get();
+		return _globals;
 	}
 
 }

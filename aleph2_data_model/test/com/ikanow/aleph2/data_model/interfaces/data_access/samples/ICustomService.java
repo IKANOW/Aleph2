@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access.samples;
 
-public interface ICustomService {
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
+
+public interface ICustomService extends IUnderlyingService {
 
 }

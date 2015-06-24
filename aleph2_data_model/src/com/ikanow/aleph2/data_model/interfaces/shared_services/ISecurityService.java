@@ -30,7 +30,7 @@ import com.ikanow.aleph2.data_model.objects.shared.Identity;
  * @author Burch
  *
  */
-public interface ISecurityService {
+public interface ISecurityService extends IUnderlyingService {
 	
 	/**
 	 * Checks if the given identifier has permission to access the given resource/resource_id and perform the

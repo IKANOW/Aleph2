@@ -40,6 +40,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -149,7 +150,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I> Optional<I> getService(Class<I> service_clazz,
+	public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz,
 			Optional<String> service_name) {
 		return _service_context.getService(service_clazz, service_name);
 	}
@@ -189,7 +190,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
 	@Override
-	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 		// Consists of:
 		// 1) This library 
 		// 2) Libraries that are always needed:		

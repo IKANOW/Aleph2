@@ -21,11 +21,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -46,7 +46,7 @@ public interface IHarvestContext {
 	 * @param service_name - optional - if ommitted, this is the default service of this type
 	 * @return the requested service
 	 */
-	<I> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
+	<I extends IUnderlyingService> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
@@ -77,7 +77,7 @@ public interface IHarvestContext {
 	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
-	List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
+	List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

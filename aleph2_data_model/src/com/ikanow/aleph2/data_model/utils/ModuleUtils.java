@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -51,6 +52,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -450,7 +452,7 @@ public class ModuleUtils {
 		 * 
 		 */
 		@Override
-		public <I> Optional<I> getService(Class<I> serviceClazz,
+		public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz,
 				Optional<String> serviceName) {
 			return Optional.ofNullable(ModuleUtils.getService(serviceClazz, serviceName));
 		}

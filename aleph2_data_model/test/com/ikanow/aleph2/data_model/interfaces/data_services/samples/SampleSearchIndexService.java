@@ -51,4 +51,8 @@ public class SampleSearchIndexService implements ISearchIndexService {
 		return Collections.emptyList();
 	}
 
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
 }

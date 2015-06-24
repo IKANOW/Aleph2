@@ -16,17 +16,16 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
-import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
-
 /** The interface for the graph service
  * @author alex
  */
-public interface IGraphService {
+public interface IGraphService extends IUnderlyingService {
 
 	//TODO (ALEPH-15): implement tinkerpop?
 	
@@ -35,12 +34,4 @@ public interface IGraphService {
 	 * @return a list of errors, empty if none
 	 */
 	List<BasicMessageBean> validateSchema(final DataSchemaBean.DocumentSchemaBean schema, final DataBucketBean bucket);
-		
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

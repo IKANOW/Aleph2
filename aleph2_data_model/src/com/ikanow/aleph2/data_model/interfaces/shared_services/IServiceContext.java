@@ -48,7 +48,7 @@ public interface IServiceContext {
 	* @param serviceClazz The class of the resource you want to access e.g. ISecurityService.class
 	* @return the data service requested or null if it does not exist
 	*/
-	public <I> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
+	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
 	
 	/////////////////////////////////////////////////////////////////////
 	

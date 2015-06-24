@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -169,5 +171,16 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	public Iterator<String> consume(String topic) {
 		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
 		return new WrappedConsumerIterator(consumer, topic);
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return Arrays.asList(this);
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return Optional.empty();
 	}
 }

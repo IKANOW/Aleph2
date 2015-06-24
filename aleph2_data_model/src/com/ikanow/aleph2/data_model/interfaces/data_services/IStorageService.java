@@ -16,8 +16,8 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
-import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -25,7 +25,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the storage service
  * @author alex
  */
-public interface IStorageService {
+public interface IStorageService extends IUnderlyingService {
 
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
@@ -37,14 +37,4 @@ public interface IStorageService {
 	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
 	 */
 	String getRootPath();
-	
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 *  In this particular case, it will always point to HDFS FileSystem class, so it _can_ be used
-	 *  safely (the FileSystem API requires a huge set of JARs so this is left generic)
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }

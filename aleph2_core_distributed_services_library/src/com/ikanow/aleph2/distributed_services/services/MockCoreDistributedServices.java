@@ -15,7 +15,10 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Properties;
 
 import kafka.javaapi.producer.Producer;
@@ -130,5 +133,15 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 //				
 //		consumer.close();
 //		return results.iterator();		
+	}
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return Arrays.asList(this);
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return Optional.empty();
 	}
 }

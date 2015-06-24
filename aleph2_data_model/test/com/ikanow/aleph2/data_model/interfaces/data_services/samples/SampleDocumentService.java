@@ -51,4 +51,8 @@ public class SampleDocumentService implements IDocumentService {
 		return Collections.emptyList();
 	}
 
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
 }

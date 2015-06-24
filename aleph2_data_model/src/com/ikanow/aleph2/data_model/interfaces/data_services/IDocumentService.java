@@ -17,9 +17,9 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -27,7 +27,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the data warehouse service
  * @author alex
  */
-public interface IDocumentService {
+public interface IDocumentService extends IUnderlyingService {
 
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
@@ -48,12 +48,4 @@ public interface IDocumentService {
 	 * @return the CRUD service
 	 */
 	<O> ICrudService<O> getCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets);
-	
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }
