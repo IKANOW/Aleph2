@@ -224,12 +224,17 @@ public class HarvestContext implements IHarvestContext {
 						.collect(Collectors.toSet());
 			})
 			.orElse(Collections.emptySet());
-			
+
+			final IManagementDbService underlying_mgmt_db = 
+					_service_context.getService(IManagementDbService.class, Optional.empty());			
+					
 			// Mandatory services
 			final Set<String> mandatory_service_class_files = 
 					Arrays.asList(_service_context, //(ie something in the data model)
-									_service_context.getCoreManagementDbService(), 
-									_service_context.getService(IManagementDbService.class, Optional.empty())
+									_distributed_services, // (CDS)
+									_service_context.getCoreManagementDbService(), //core management db
+									underlying_mgmt_db, // underlying db
+									underlying_mgmt_db.getRetryStore(JsonNode.class) // underlying CRUD service, if different									
 							).stream()
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
