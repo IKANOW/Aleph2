@@ -201,7 +201,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public @NonNull List<String> getHarvestContextLibraries(final @NonNull Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
 		// Consists of:
-		// 1) This library ("uber" version - includes core deps and data model)
+		// 1) This library + data model 
 		// 2) Libraries that are always needed:
 		//    - core distributed services (implicit)
 		//    - management db (core + underlying?)
@@ -227,7 +227,8 @@ public class HarvestContext implements IHarvestContext {
 			
 			// Mandatory services
 			final Set<String> mandatory_service_class_files = 
-					Arrays.asList(_service_context.getCoreManagementDbService(), 
+					Arrays.asList(_service_context, //(ie something in the data model)
+									_service_context.getCoreManagementDbService(), 
 									_service_context.getService(IManagementDbService.class, Optional.empty())
 							).stream()
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
