@@ -134,6 +134,7 @@ public class TestDataSchemaBean {
 						"warm_age_max",
 						"cold_age_max",
 						"exist_age_max",
+						"@timestamp",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 
@@ -144,6 +145,7 @@ public class TestDataSchemaBean {
 		assertEquals("Temporal bean warm_age_max", temporal_bean.warm_age_max(), "warm_age_max");
 		assertEquals("Temporal bean cold_age_max", temporal_bean.cold_age_max(), "cold_age_max");
 		assertEquals("Temporal bean exist_age_max", temporal_bean.exist_age_max(), "exist_age_max");
+		assertEquals("Temporal bean timestamp", temporal_bean.time_field(), "@timestamp");
 		assertEquals("Temporal bean technology_override_schema", temporal_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());		
 		
 		// Geospatial

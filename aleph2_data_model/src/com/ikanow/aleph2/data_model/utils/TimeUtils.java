@@ -40,7 +40,7 @@ public class TimeUtils {
 	 * @return a ChronoUnit if successful, else a generic error string
 	 */
 	public static Validation<String, ChronoUnit> getTimePeriod(final String human_readable_period) {		
-		return Patterns.match(human_readable_period.toLowerCase().replaceAll("\\s+", ""))
+		return Patterns.match(Optional.ofNullable(human_readable_period).orElse("").toLowerCase().replaceAll("\\s+", ""))
 				.<Validation<String, ChronoUnit>>andReturn()
 				.when(d -> d.equals("1d"), __ -> Validation.success(ChronoUnit.DAYS))
 				.when(d -> d.equals("d"), __ -> Validation.success(ChronoUnit.DAYS))

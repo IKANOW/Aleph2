@@ -426,6 +426,7 @@ public class DataSchemaBean {
 				String grouping_time_period,
 				String hot_age_max, String warm_age_max, String cold_age_max,
 				String exist_age_max,
+				String time_field,				
 				Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
@@ -434,6 +435,7 @@ public class DataSchemaBean {
 			this.warm_age_max = warm_age_max;
 			this.cold_age_max = cold_age_max;
 			this.exist_age_max = exist_age_max;
+			this.time_field = time_field;
 			this.technology_override_schema = technology_override_schema;
 		}
 		
@@ -485,6 +487,12 @@ public class DataSchemaBean {
 		public String exist_age_max() {
 			return exist_age_max;
 		}
+		/** The field in the data object that determines the time of the object
+		 * @return the time_field
+		 */
+		public String time_field() {
+			return time_field;
+		}		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -499,6 +507,7 @@ public class DataSchemaBean {
 		private String warm_age_max;
 		private String cold_age_max;
 		private String exist_age_max;
+		private String time_field;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Geospatial Service
