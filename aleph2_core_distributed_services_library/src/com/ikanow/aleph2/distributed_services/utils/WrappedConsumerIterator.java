@@ -47,8 +47,9 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 			}			
 		});
 		try {
-			return future.get(1, TimeUnit.SECONDS);
+			return future.get(10, TimeUnit.SECONDS);
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
+			System.out.println("next timed out, closing");
 			close();
 			return null;
 		}
@@ -59,12 +60,14 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 		Future<Boolean> future = executor.submit(new Callable<Boolean>() {
 			@Override
 			public Boolean call() throws Exception {
+				System.out.println("trying to get hasNext");
 				return iterator.hasNext();
 			}			
 		});
 		try {
-			return future.get(1, TimeUnit.SECONDS);
+			return future.get(10, TimeUnit.SECONDS);
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
+			System.out.println("hasNext timed out, closing");
 			close();
 			return false;
 		}

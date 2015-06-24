@@ -778,7 +778,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			if ((null != bucket.data_schema().columnar_schema()) && Optional.ofNullable(bucket.data_schema().columnar_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(IColumnarService.class, Optional.ofNullable(bucket.data_schema().columnar_schema().service_name()))
-								.map(s -> s.validateSchema(bucket.data_schema().columnar_schema()))
+								.map(s -> s.validateSchema(bucket.data_schema().columnar_schema(), bucket))
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "columnar_schema")))));
 			}
@@ -786,7 +786,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			if ((null != bucket.data_schema().document_schema()) && Optional.ofNullable(bucket.data_schema().document_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(IDocumentService.class, Optional.ofNullable(bucket.data_schema().document_schema().service_name()))
-								.map(s -> s.validateSchema(bucket.data_schema().document_schema()))
+								.map(s -> s.validateSchema(bucket.data_schema().document_schema(), bucket))
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "document_schema")))));
 			}
@@ -794,7 +794,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			if ((null != bucket.data_schema().search_index_schema()) && Optional.ofNullable(bucket.data_schema().search_index_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(ISearchIndexService.class, Optional.ofNullable(bucket.data_schema().search_index_schema().service_name()))
-								.map(s -> s.validateSchema(bucket.data_schema().search_index_schema()))
+								.map(s -> s.validateSchema(bucket.data_schema().search_index_schema(), bucket))
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "search_index_schema")))));
 			}
@@ -802,14 +802,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			if ((null != bucket.data_schema().storage_schema()) && Optional.ofNullable(bucket.data_schema().storage_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(IStorageService.class, Optional.ofNullable(bucket.data_schema().storage_schema().service_name()))
-								.map(s -> s.validateSchema(bucket.data_schema().storage_schema()))
+								.map(s -> s.validateSchema(bucket.data_schema().storage_schema(), bucket))
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "storage_schema")))));
 			}
 			if ((null != bucket.data_schema().temporal_schema()) && Optional.ofNullable(bucket.data_schema().temporal_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(ITemporalService.class, Optional.ofNullable(bucket.data_schema().temporal_schema().service_name()))
-								.map(s -> s.validateSchema(bucket.data_schema().temporal_schema()))
+								.map(s -> s.validateSchema(bucket.data_schema().temporal_schema(), bucket))
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "temporal_schema")))));
 			}

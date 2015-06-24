@@ -15,6 +15,9 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_access.samples;
 
+import java.util.Collection;
+import java.util.Optional;
+
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
@@ -25,6 +28,17 @@ public class SampleCustomServiceThree implements ICustomService {
 	@Inject
 	public SampleCustomServiceThree(GlobalPropertiesBean globals) {
 		this._globals = globals;
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return null;
 	}
 	
 }

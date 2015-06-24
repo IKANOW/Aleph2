@@ -16,9 +16,9 @@
 package com.ikanow.aleph2.management_db.module;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -107,6 +107,11 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 	@Override
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
+		return null;
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
 		return null;
 	}
 

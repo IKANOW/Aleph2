@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -113,7 +114,7 @@ public class TestContextUtils {
 		
 		@Override
 		public List<String> getHarvestContextLibraries(
-				Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+				Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 			return null;
 		}
 
@@ -123,7 +124,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <I> Optional<I> getService(Class<I> service_clazz, Optional<String> service_name) {
+		public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz, Optional<String> service_name) {
 			return Optional.empty();
 		}
 

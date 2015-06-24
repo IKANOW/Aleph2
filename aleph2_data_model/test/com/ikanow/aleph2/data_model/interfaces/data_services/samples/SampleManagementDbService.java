@@ -15,8 +15,8 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.util.List;
 import java.util.Optional;
-
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -88,6 +88,11 @@ public class SampleManagementDbService implements IManagementDbService {
 	@Override
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
+		return null;
+	}
+
+	@Override
+	public List<Object> getUnderlyingArtefacts() {
 		return null;
 	}
 

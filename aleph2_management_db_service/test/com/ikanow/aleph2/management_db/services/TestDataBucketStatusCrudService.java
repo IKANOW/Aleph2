@@ -77,7 +77,7 @@ public class TestDataBucketStatusCrudService {
 		_crud_factory = new MockMongoDbCrudServiceFactory();
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null, null);
 		_core_distributed_services = new MockCoreDistributedServices();
-		_mock_service_context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
+		_mock_service_context.addGlobals(new GlobalPropertiesBean(null, null, null, null));
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _core_distributed_services);
 		_mock_service_context.addService(IStorageService.class, Optional.empty(),_storage_service);

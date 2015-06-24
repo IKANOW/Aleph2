@@ -15,8 +15,9 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.util.Collection;
 import java.util.Map;
-
+import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.Identity;
@@ -75,5 +76,16 @@ public class SampleSecurityService implements ISecurityService {
 	@Override
 	public void clearPermission(String resourceName,
 			String resourceIdentifier) {
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return null;
 	}
 }

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import static org.junit.Assert.*;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import org.junit.Test;
@@ -42,7 +43,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleStora
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleTemporalService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
-public class TestMockServiceContext {
+public class TestMockServiceContext implements IUnderlyingService {
 
 	@Test
 	public void testAll() {
@@ -62,7 +63,7 @@ public class TestMockServiceContext {
 		context.addService(ISearchIndexService.class, Optional.empty(), new SampleSearchIndexService());
 		context.addService(IStorageService.class, Optional.empty(), new SampleStorageService());
 		context.addService(ITemporalService.class, Optional.empty(), new SampleTemporalService());
-		context.addService(GlobalPropertiesBean.class, Optional.empty(), new GlobalPropertiesBean(null, null, null, null));
+		context.addGlobals(new GlobalPropertiesBean(null, null, null, null));
 		
 		assertNotNull(context.getColumnarService());
 		assertNotNull(context.getDocumentService());
@@ -80,6 +81,17 @@ public class TestMockServiceContext {
 		
 		
 		assertFalse("Shouldn't be equal", context.getCoreManagementDbService() == context.getService(IManagementDbService.class, Optional.empty()).get());
+	}
+
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
+			Optional<String> driver_options) {
+		return null;
 	}
 	
 }

@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Collector;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import scala.Tuple2;
@@ -39,6 +40,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -148,7 +150,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I> Optional<I> getService(Class<I> service_clazz,
+	public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz,
 			Optional<String> service_name) {
 		return _service_context.getService(service_clazz, service_name);
 	}
@@ -188,13 +190,13 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
 	@Override
-	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 		// Consists of:
-		// 1) This library ("uber" version - includes core deps and data model)
-		// 2) Libraries that are always needed:
+		// 1) This library 
+		// 2) Libraries that are always needed:		
 		//    - core distributed services (implicit)
-		//    - management db (core + underlying?)
-		//    - data model (implicit)
+		//    - management db (core + underlying + any underlying drivers)
+		//    - data model 
 		// 3) Any libraries associated with the services		
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
@@ -215,13 +217,17 @@ public class HarvestContext implements IHarvestContext {
 			.orElse(Collections.emptySet());
 			
 			// Mandatory services
-			final Set<String> mandatory_service_class_files = 
-					Arrays.asList(
-							_service_context.getCoreManagementDbService(), 
-							_service_context.getService(IManagementDbService.class, Optional.empty()).get(),
-							_service_context.getService(IStorageService.class, Optional.empty()).get()
+			final Set<String> mandatory_service_class_files =
+					Stream.concat(						
+						Arrays.asList(
+								_service_context, // data model
+								_distributed_services, //CDS
+								_service_context.getCoreManagementDbService(), // core management 
+								_service_context.getService(IStorageService.class, Optional.empty()).get() // storage service
+								).stream()
+							,
+							_service_context.getCoreManagementDbService().getUnderlyingArtefacts().stream() // underlying management db, crud service, etc							
 							)
-							.stream()
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 							.collect(Collectors.toSet());

@@ -26,6 +26,7 @@ import kafka.message.MessageAndMetadata;
 
 import org.apache.curator.framework.CuratorFramework;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
@@ -37,7 +38,7 @@ import akka.event.japi.LookupEventBus;
 /** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
  * @author acp
  */
-public interface ICoreDistributedServices {
+public interface ICoreDistributedServices extends IUnderlyingService {
 
 	/** Returns a connection to the Curator server
 	 * @return

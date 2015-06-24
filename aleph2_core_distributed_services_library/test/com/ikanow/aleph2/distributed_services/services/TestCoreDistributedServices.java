@@ -25,7 +25,9 @@ import java.util.Map;
 
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
+import kafka.javaapi.FetchRequest;
 import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.javaapi.producer.Producer;
 import kafka.message.MessageAndMetadata;
 import kafka.producer.KeyedMessage;
@@ -53,7 +55,6 @@ import com.typesafe.config.ConfigFactory;
 
 public class TestCoreDistributedServices {
 
-	private static final String TOPIC_NAME = "TEST_CDS";
 	private static final int NUM_THREADS = 1;
 	protected ICoreDistributedServices _core_distributed_services;
 	
@@ -61,9 +62,11 @@ public class TestCoreDistributedServices {
 	public void setupCoreDistributedServices() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
 		String connect_string = temp._test_server.getConnectString();
+		String broker_list_string = ""; //TODO
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, connect_string);
+		config_map.put(DistributedServicesPropertyBean.BROKER_LIST, broker_list_string);
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
@@ -124,24 +127,60 @@ public class TestCoreDistributedServices {
 	
 	@Test
 	public void testKafka() throws Exception {
-//		ICoreDistributedServices cds = new MockCoreDistributedServices();
-//		//throw an item on the queue
-//		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
-//		String original_message = jsonNode.toString();
-//		cds.produce(TOPIC_NAME, original_message);
-//		
-//		//grab the consumer
-//		Iterator<String> consumer = cds.consume(TOPIC_NAME);
-//		String consumed_message = null;
-//		int message_count = 0;
-//		//read the item off the queue
-//		while ( consumer.hasNext() ) {
-//			consumed_message = consumer.next();
-//        	message_count++;
-//            System.out.println(consumed_message);
-//		}
-//		
-//        assertEquals(message_count, 1);
-//        assertTrue(original_message.equals(consumed_message));
+		final String TOPIC_NAME = "TEST_CDS_1"; 
+		//ICoreDistributedServices cds = new MockCoreDistributedServices();
+		//throw an item on the queue
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+		String original_message = jsonNode.toString();
+		_core_distributed_services.produce(TOPIC_NAME, original_message);
+		
+		//grab the consumer
+		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+		String consumed_message = null;
+		int message_count = 0;
+		//read the item off the queue
+		while ( consumer.hasNext() ) {
+			consumed_message = consumer.next();
+        	message_count++;
+            System.out.println(consumed_message);
+		}
+		
+        assertEquals(message_count, 1);
+        assertTrue(original_message.equals(consumed_message));
+	}
+	
+	@Test
+	public void testGrabProducerMultipleTimes() throws Exception {
+		final String TOPIC_NAME = "TEST_CDS_2";
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+		String original_message = jsonNode.toString();
+		_core_distributed_services.produce(TOPIC_NAME, original_message);
+		_core_distributed_services.produce(TOPIC_NAME, original_message);
+		_core_distributed_services.produce(TOPIC_NAME, original_message);
+	}
+	
+	@Test
+	public void testLocalKafka() throws Exception {
+		final String TOPIC_NAME = "TEST_CDS_4";
+		
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+		String original_message = jsonNode.toString();
+		System.out.println("PRODUCING");
+		_core_distributed_services.produce(TOPIC_NAME, original_message);
+		
+		//grab the consumer
+		System.out.println("CONSUMING");		
+		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+		String consumed_message = null;
+		int message_count = 0;
+		//read the item off the queue
+		while ( consumer.hasNext() ) {
+			consumed_message = consumer.next();
+        	message_count++;
+            System.out.println(consumed_message);
+		}
+		
+        assertEquals(1, message_count);
+        assertTrue(original_message.equals(consumed_message));
 	}
 }
