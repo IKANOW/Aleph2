@@ -26,11 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
-
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import scala.Tuple3;
 import akka.actor.ActorRef;
@@ -59,6 +60,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
+	private final static Logger logger = LogManager.getLogger();
 	
 	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>> _buses = 
 			new ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>>();
@@ -100,10 +102,14 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				.orElse(DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				//.put("metadata.broker.list", broker_list_string)
-				.put("metadata.broker.list", "localhost:6661")
+				//
+				//.put("metadata.broker.list", "127.0.01:" + MockKafkaBroker.getBrokerPort())
+				.put("metadata.broker.list", broker_list_string)
+				//.put("metadata.broker.list", "api001.dev.ikanow.com:6667")
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
 				.put("zookeeper.connect", connection_string)
+				//.put("zookeeper.connect", "api001.dev.ikanow.com:2181")				
 				.put("group.id", "somegroup")
 				.put("zookeeper.session.timeout.ms", "400")
 				.put("zookeeper.sync.time.ms", "200")
@@ -160,15 +166,22 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 
 	@Override
 	public void produce(String topic, String message) {
+		//TODO memoize this function?
+		KafkaUtils.createTopic(topic);
+		
 		//TODO we should probably cache producers for a bit? or return back some wrapped object?
-		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		logger.debug("PRODUCING");
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
+		logger.debug("SENDING");
 		producer.send(new KeyedMessage<String, String>(topic, message));
+		logger.debug("DONE SENDING");
 		//TODO close out the producer, we shouldn't be doing this after each message because its costly to start		
 		//producer.close();
 	}
 	
 	@Override
 	public Iterator<String> consume(String topic) {
+		logger.debug("CONSUMING");
 		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
 		return new WrappedConsumerIterator(consumer, topic);
 	}

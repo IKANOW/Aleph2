@@ -47,7 +47,7 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 			}			
 		});
 		try {
-			return future.get(10, TimeUnit.SECONDS);
+			return future.get(1, TimeUnit.SECONDS);
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
 			System.out.println("next timed out, closing");
 			close();
@@ -65,7 +65,7 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 			}			
 		});
 		try {
-			return future.get(10, TimeUnit.SECONDS);
+			return future.get(1, TimeUnit.SECONDS);
 		} catch (InterruptedException | ExecutionException | TimeoutException e) {
 			System.out.println("hasNext timed out, closing");
 			close();

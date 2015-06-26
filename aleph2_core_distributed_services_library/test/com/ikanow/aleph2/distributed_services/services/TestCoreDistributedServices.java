@@ -17,53 +17,37 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import kafka.consumer.ConsumerIterator;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.FetchRequest;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.consumer.SimpleConsumer;
-import kafka.javaapi.producer.Producer;
-import kafka.message.MessageAndMetadata;
-import kafka.producer.KeyedMessage;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import akka.serialization.Serialization;
 import akka.serialization.SerializationExtension;
 import akka.serialization.Serializer;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
-import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class TestCoreDistributedServices {
-
-	private static final int NUM_THREADS = 1;
 	protected ICoreDistributedServices _core_distributed_services;
 	
 	@Before
 	public void setupCoreDistributedServices() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
 		String connect_string = temp._test_server.getConnectString();
-		String broker_list_string = ""; //TODO
+		String broker_list_string = "localhost:" + temp._kafka_broker.getBrokerPort();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, connect_string);
@@ -126,15 +110,24 @@ public class TestCoreDistributedServices {
         
 	}
 	
-	@Ignore
+	
+	/**
+	 * Tests kafka by creating a new topic, throwing 50 items on the queue
+	 * and making sure we get those 50 items off the queue.
+	 * 
+	 * @throws Exception
+	 */
 	@Test
 	public void testKafka() throws Exception {
-		final String TOPIC_NAME = "TEST_CDS_1"; 
-		//ICoreDistributedServices cds = new MockCoreDistributedServices();
-		//throw an item on the queue
+		//create a random topic so its new (has to call create function)
+		final String TOPIC_NAME = "TEST_CDS_" + System.currentTimeMillis();  
+		final int num_to_test = 50;
+		//throw items on the queue
+		
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
-		String original_message = jsonNode.toString();
-		_core_distributed_services.produce(TOPIC_NAME, original_message);
+		String original_message = jsonNode.toString();	
+		for ( int i = 0; i < num_to_test; i++ ) 
+			_core_distributed_services.produce(TOPIC_NAME, original_message);	
 		
 		//grab the consumer
 		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
@@ -147,44 +140,9 @@ public class TestCoreDistributedServices {
             System.out.println(consumed_message);
 		}
 		
-        assertEquals(message_count, 1);
-        assertTrue(original_message.equals(consumed_message));
-	}
-	
-	@Ignore
-	@Test
-	public void testGrabProducerMultipleTimes() throws Exception {
-		final String TOPIC_NAME = "TEST_CDS_2";
-		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
-		String original_message = jsonNode.toString();
-		_core_distributed_services.produce(TOPIC_NAME, original_message);
-		_core_distributed_services.produce(TOPIC_NAME, original_message);
-		_core_distributed_services.produce(TOPIC_NAME, original_message);
-	}
-	
-	@Ignore
-	@Test
-	public void testLocalKafka() throws Exception {
-		final String TOPIC_NAME = "TEST_CDS_4";
+		KafkaUtils.deleteTopic(TOPIC_NAME);
 		
-		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
-		String original_message = jsonNode.toString();
-		System.out.println("PRODUCING");
-		_core_distributed_services.produce(TOPIC_NAME, original_message);
-		
-		//grab the consumer
-		System.out.println("CONSUMING");		
-		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
-		String consumed_message = null;
-		int message_count = 0;
-		//read the item off the queue
-		while ( consumer.hasNext() ) {
-			consumed_message = consumer.next();
-        	message_count++;
-            System.out.println(consumed_message);
-		}
-		
-        assertEquals(1, message_count);
+        assertEquals(message_count, num_to_test);
         assertTrue(original_message.equals(consumed_message));
 	}
 }
