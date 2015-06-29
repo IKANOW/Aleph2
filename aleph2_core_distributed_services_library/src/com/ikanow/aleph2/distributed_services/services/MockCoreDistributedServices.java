@@ -19,18 +19,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Optional;
-import java.util.Properties;
-
+import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
-import kafka.producer.ProducerConfig;
-import kafka.server.KafkaServer;
-
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -39,6 +37,7 @@ import akka.event.japi.LookupEventBus;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.MockKafkaBroker;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 
@@ -51,7 +50,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	protected final TestingServer _test_server;
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
-	//protected final MockKafkaBroker _kafka_broker;
+	protected final MockKafkaBroker _kafka_broker;
+	private final static Logger logger = LogManager.getLogger();
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -65,8 +65,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		_curator_framework.start();		
 		
 		_akka_system = ActorSystem.create("default");
-		
-		//_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
+		_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
 	}	
 	 
 	/** Returns a connection to the Curator server
@@ -95,45 +94,27 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	}
 
 	@Override
-	public void produce(String topic, String message) {		
-		com.ikanow.aleph2.distributed_services.utils.MockProducer<String, String> producer = new com.ikanow.aleph2.distributed_services.utils.MockProducer<String, String>(new ProducerConfig(new Properties()));
-		producer.send(new KeyedMessage<String, String>("TOPIC_1", "some message"));
-		//this pretends to send a message, does nothing
-//		MockProducer producer = new MockProducer(true);
-//		producer.send(new ProducerRecord<byte[], byte[]>(topic, message.getBytes()));
-//		producer.close();
+	public void produce(String topic, String message) {
+		//TODO memoize this function?
+		KafkaUtils.createTopic(topic);
+		
+		//TODO we should probably cache producers for a bit? or return back some wrapped object?
+		logger.debug("PRODUCING");
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
+		logger.debug("SENDING");
+		producer.send(new KeyedMessage<String, String>(topic, message));
+		logger.debug("DONE SENDING");
+		//TODO close out the producer, we shouldn't be doing this after each message because its costly to start		
+		//producer.close();
 	}
 	
 	@Override
 	public Iterator<String> consume(String topic) {
-		com.ikanow.aleph2.distributed_services.utils.MockConsumer consumer = new com.ikanow.aleph2.distributed_services.utils.MockConsumer();
-		Iterator<String> iterator = new WrappedConsumerIterator(consumer, topic);
-		return iterator;
-		
-		//this mock has nothing to read from
-//		MockConsumer consumer = new MockConsumer();
-//		Map<TopicPartition, Long> topicCountMap = new HashMap<TopicPartition, Long>();
-//		topicCountMap.put(new TopicPartition(topic, 0), 0L);
-//		consumer.commit(topicCountMap, true);
-//		List<String> results = new ArrayList<String>();
-//		Map<String, ConsumerRecords<byte[], byte[]>> map = consumer.poll(1000);
-//		ConsumerRecords<byte[], byte[]> records = map.get(topic);
-//		if ( records != null ) {
-//			List<ConsumerRecord<byte[], byte[]>> record_list = records.records(0);
-//			if ( record_list != null ) {
-//				for( ConsumerRecord<byte[], byte[]> record : record_list) {
-//					try {
-//						results.add(new String( record.value()));
-//					} catch (Exception e) {
-//						e.printStackTrace();
-//					}
-//				}
-//			}
-//		}
-//				
-//		consumer.close();
-//		return results.iterator();		
+		logger.debug("CONSUMING");
+		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
+		return new WrappedConsumerIterator(consumer, topic);
 	}
+	
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		return Arrays.asList(this);

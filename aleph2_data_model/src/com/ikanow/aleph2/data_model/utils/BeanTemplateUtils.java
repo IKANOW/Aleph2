@@ -150,6 +150,19 @@ public class BeanTemplateUtils {
 		return build(object_mapper.treeToValue(json, bean_clazz));		
 	}	
 	
+	/** Returns a template builder of the designated type from the JSON (note: not very high performance, should only be used for management-type operations)
+	 * @param json_str
+	 * @param bean_clazz
+	 * @return
+	 * @throws JsonParseException
+	 * @throws JsonMappingException
+	 * @throws IOException
+	 */
+	static public <T> TemplateHelper<T> build(final String json_str, final Class<T> bean_clazz) throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+		return build(object_mapper.treeToValue(object_mapper.readTree(json_str.getBytes()), bean_clazz));		
+	}	
+	
 	/**
 	 * Enables type-safe access to a single classes
 	 * @param clazz - the containing class for the fields
