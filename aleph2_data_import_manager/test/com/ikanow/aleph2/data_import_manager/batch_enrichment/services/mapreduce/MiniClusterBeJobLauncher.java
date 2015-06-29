@@ -18,17 +18,15 @@ public class MiniClusterBeJobLauncher extends BeJobLauncher {
     private static final Logger logger = LogManager.getLogger(DataBucketTest.class);
 
     private MiniMRYarnCluster mrCluster;
-    private 
-
     
 	@Inject 
-	MiniClusterBeJobLauncher(GlobalPropertiesBean globals) {
-		super(globals);
+	public MiniClusterBeJobLauncher(GlobalPropertiesBean globals,BeJobLoader beJobLoader) {
+		super(globals,beJobLoader);
 	}
 
 
 	@Override
-	protected Configuration getConfiguration() {
+	public Configuration getConf() {
 		if (configuration == null) {
 
 			this.configuration = new Configuration(true);
@@ -38,7 +36,7 @@ public class MiniClusterBeJobLauncher extends BeJobLauncher {
 			configuration.setBoolean(JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS, true);
 
 			try {
-				mrCluster = new MiniMRYarnCluster("StandaloneTest", 1);
+				mrCluster = new MiniMRYarnCluster("MiniClusterTest", 1);
 				mrCluster.init(configuration);
 				start();
 			} catch (Exception e) {

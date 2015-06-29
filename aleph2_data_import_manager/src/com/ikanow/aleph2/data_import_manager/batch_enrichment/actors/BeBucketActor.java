@@ -130,7 +130,7 @@ public class BeBucketActor extends UntypedActor {
 	public  static void launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IBeJobService beJobService,IManagementDbService managementDbService,ActorRef closingSelf) {
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
-			Path bucketTmp = new Path(bucketPathStr + "/managed_bucket/import/temp");
+			//Path bucketTmp = new Path(bucketPathStr + "/managed_bucket/import/temp");
 			if (fileContext.util().exists(bucketReady)) {
 				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);
 				if (statuss.length > 0) {
@@ -144,39 +144,12 @@ public class BeBucketActor extends UntypedActor {
 								if (odb.isPresent()) {
 									DataBucketBean dataBucketBean = odb.get();
 									List<EnrichmentControlMetadataBean> enrichmentConfigs = dataBucketBean.batch_enrichment_configs();
-									// TDOD sort by dependencies
 									for (EnrichmentControlMetadataBean ec : enrichmentConfigs) {										
 										if (ec.enabled()) {											
-											logger.info("Loading libraries: "+bucketFullName );
-											
-											List<SingleQueryComponent<SharedLibraryBean>> sharedLibsQuery = ec.library_ids_or_names().stream().map(name -> {
-															return CrudUtils.anyOf(SharedLibraryBean.class)
-																	.when(SharedLibraryBean::_id, name)
-																	.when(SharedLibraryBean::path_name, name);
-														})
-/*														.collect(Collector.of(
-																LinkedList::new,
-																LinkedList::add,
-																(left, right) -> { left.addAll(right); return left; }
-																)); */
-											.collect(Collectors.toList());
-
-											
-											MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(sharedLibsQuery);
-											IManagementCrudService<SharedLibraryBean> shareLibraryStore = managementDbService.getSharedLibraryStore();
-											try {
-																								
-												shareLibraryStore.getObjectsBySpec(spec).thenAccept(sharedLibraryCursor->{
-													List<SharedLibraryBean> sharedLibraries = StreamSupport.stream(sharedLibraryCursor.spliterator(), false).collect(Collectors.toList());
-													// run enrichment job  on bucket
-													beJobService.runEnhancementJob(dataBucketBean, ec, sharedLibraries, bucketReady, bucketTmp);
-													
-												});
-											} catch (Exception e) {
-												logger.error("Caught exception loading shared libraries for job:"+bucketFullName,e);
-
-											}								
-											
+											logger.info("starting batch enhancment job: "+bucketFullName+" for "+ec.name());
+											// run enhancement job
+											//beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());	
+											// TODO switch to BatchEnrichmentTool.runJob()
 										} // if enabled
 										else{
 											logger.info("Skipping Enrichment, no enrichment enabled:"+bucketFullName +" ec:"+ec.name());
@@ -195,7 +168,6 @@ public class BeBucketActor extends UntypedActor {
 				}
 			}else {
 				logger.info("Skipping,  ready folder does not exist: "+bucketReady );
-
 			}
 
 		} catch (Exception e) {

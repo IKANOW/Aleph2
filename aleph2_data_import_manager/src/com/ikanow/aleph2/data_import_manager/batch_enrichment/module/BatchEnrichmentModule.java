@@ -20,26 +20,22 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Scopes;
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.BeJobLauncher;
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
-import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.BeJobLoader;
 
-public class DataImportManagerModule extends AbstractModule { 
+public class BatchEnrichmentModule extends AbstractModule { 
 	@SuppressWarnings("unused")
 	private static Logger logger = LogManager.getLogger();	
 
 
 	@Override
 	protected void configure() {
-	    bind(DataImportActorContext.class).in(Scopes.SINGLETON);
 	    configureServices();
 	}
 	
-	protected void configureServices(){
-		//TODO [Error injecting constructor, java.lang.RuntimeException: Missing mandatory service: CoreManagementDbService]
-	    bind(DataImportManager.class).in(Scopes.SINGLETON);
-	    bind(IBeJobService.class).to(BeJobLauncher.class).in(Scopes.SINGLETON);
+	protected void configureServices(){		
+	    bind(BeJobLoader.class);
+	    bind(BeJobLauncher.class);
+//	    bind(IBeJobService.class).to(BeJobLauncher.class).in(Scopes.SINGLETON);		
 	}
 }

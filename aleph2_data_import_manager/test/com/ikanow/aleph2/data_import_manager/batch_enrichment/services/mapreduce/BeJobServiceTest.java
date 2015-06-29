@@ -21,8 +21,10 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 public class BeJobServiceTest extends DataBucketTest {
     private static final Logger logger = LogManager.getLogger(BeJobServiceTest.class);
 
-	protected MiniClusterBeJobLauncher beJobService;
+	protected IBeJobService beJobService;
 
+	protected static boolean useMiniCluster = false;
+	
 	@Before
 	public void setupDependencies() throws Exception {
 		super.setupDependencies();
@@ -31,12 +33,12 @@ public class BeJobServiceTest extends DataBucketTest {
 			@Override
 			protected void configureServices() {
 			    bind(DataImportManager.class).in(Scopes.SINGLETON);
-			    bind(IBeJobService.class).to(MiniClusterBeJobLauncher.class).in(Scopes.SINGLETON);
+			    bind(IBeJobService.class).to(useMiniCluster?MiniClusterBeJobLauncher.class:LocalBeJobLauncher.class).in(Scopes.SINGLETON);
 			}
 			
 		}), Optional.of(config));
 
-		this.beJobService = (MiniClusterBeJobLauncher)serverInjector.getInstance(IBeJobService.class);		
+		this.beJobService = serverInjector.getInstance(IBeJobService.class);		
 		
 	} // setup dependencies
 	
@@ -47,7 +49,9 @@ public class BeJobServiceTest extends DataBucketTest {
 			createEnhancementBeanInDb();
 			
 			BeBucketActor.launchReadyJobs(fileContext, buckeFullName1, bucketPath1, beJobService, _management_db, null);
-			//beJobService.stop();
+			if(beJobService instanceof MiniClusterBeJobLauncher){
+				((MiniClusterBeJobLauncher)beJobService).stop();
+			}
 		} catch (Exception e) {
 			logger.error("testBeJobService caught exception");
 			fail(e.getMessage());
