@@ -1,45 +1,53 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
 import java.io.File;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.BatchEnrichmentModule;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 
-public class BeJobLauncher implements IBeJobService{
+public class BeJobLauncher implements IBeJobService, Tool{
 
 	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 
 	protected Configuration configuration;
 	protected GlobalPropertiesBean _globals = null;
 
+	protected BeJobLoader beJobLoader;
+
+	protected String yarnConfigie = null;
+	
 	@Inject 
-	BeJobLauncher(GlobalPropertiesBean globals) {
+	BeJobLauncher(GlobalPropertiesBean globals, BeJobLoader beJobLoader) {
 		_globals = globals;	
+		this.beJobLoader = beJobLoader;
 	}
 	
 	/** 
 	 * Override this function with system specific configuration
 	 * @return
 	 */
-	protected Configuration getConfiguration(){
+	@Override
+	public Configuration getConf(){
 		if(configuration == null){
 			this.configuration = new Configuration(false);
 		
@@ -61,30 +69,36 @@ public class BeJobLauncher implements IBeJobService{
 	}
 
 
+
 	@Override
-	public boolean runEnhancementJob(DataBucketBean bucket,EnrichmentControlMetadataBean ec ,List<SharedLibraryBean> sharedLibraries,Path bucketInput,Path bucketOutput){
+	public boolean runEnhancementJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName){
 		
-		Configuration config = getConfiguration();
-		String jobName = bucket.full_name()+"_BatchEnrichment";
+		Configuration config = getConf();
 		boolean success = false;
 		try {
+			
+		BeJob beJob = beJobLoader.loadBeJob(bucketFullName, bucketPathStr, ecMetadataBeanName);
+		if(beJob!=null){
+			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){
+				String jobName = beJob.getDataBucketBean().full_name()+"_BatchEnrichment";
 				Job job = Job.getInstance( config ,jobName);
 			    job.setJarByClass(BatchEnrichmentJob.class);
 				
-			    job.setOutputKeyClass(Text.class);
-			    job.setOutputValueClass(IntWritable.class);
 	
 			    job.setMapperClass(BatchEnrichmentJob.BatchErichmentMapper.class);
-			    job.setReducerClass(BatchEnrichmentJob.BatchEnrichmentReducer.class);
-	
-			    job.setInputFormatClass(TextInputFormat.class);
-			    job.setOutputFormatClass(TextOutputFormat.class);
-	
+			    job.setNumReduceTasks(0);
+			  //  job.setReducerClass(BatchEnrichmentJob.BatchEnrichmentReducer.class);
+			    
 			    job.setInputFormatClass(BeFileInputFormat.class);
 
-			    FileInputFormat.setInputPaths(job, bucketInput);
-			    FileOutputFormat.setOutputPath(job, bucketOutput);		    
+			    //job.setOutputKeyClass(Text.class);
+			    //job.setOutputValueClass(IntWritable.class);
+			    //job.setOutputFormatClass(TextOutputFormat.class);
+	
+
+			    FileInputFormat.setInputPaths(job, beJob.getBucketInpuPath());
+			    FileOutputFormat.setOutputPath(job, beJob.getBucketOutPath());		    
 			    
 			    // add configuration into config
 			    String bucketJson = BeanTemplateUtils.toJson(bucket).toString();
@@ -95,14 +109,58 @@ public class BeJobLauncher implements IBeJobService{
 			     // Submit the job, then poll for progress until the job is complete
 			     success =  job.waitForCompletion(true);
 			}
+		}
 		} catch (Exception e) {
 			logger.error("Caught Exception",e);
 		} 
-		
 		return success;
 	     		
 	}
-	
+
+	@Override
+	public void setConf(Configuration conf) {
+		this.configuration = conf;
+	}
+
+
+	public static Injector createInjector(final String config_path) {
+		
+		Injector injector = null;
+		try {
+			Config config = (config_path == null) ? ConfigFactory.defaultApplication(): ConfigFactory.parseFile(new File(config_path));
+			injector = ModuleUtils.createInjector(Arrays.asList(new BatchEnrichmentModule()), Optional.of(config));
+		} catch (Exception e) {
+			logger.error("Error creating injector from BeJobLauncher:",e);	
+		}
+		return injector;
+	}
+
+	public static void main(String[] args) {		
+			// TODO maybe point to some default location?
+			String guicePath =  "test_data_import_manager.properties";
+			Injector serverInjector = createInjector(guicePath);		
+			BeJobLauncher beJobLauncher =  serverInjector.getInstance(BeJobLauncher.class);
+	        int res = 0;
+	        
+	        try {
+				ToolRunner.run(new Configuration(), beJobLauncher, args);
+				res = 1;
+			} catch (Exception e) {
+				logger.error("Caught Exception",e);
+			}
+	      	System.exit(res);	        
+    }
+
+	@Override
+	public int run(String[] args) throws Exception {
+		Configuration config = getConf();
+	     String bucketPathStr =  config.get(BatchEnrichmentJob.BUCKET_PATH_PARAM);
+		String bucketFullName = config.get(BatchEnrichmentJob.BUCKET_FULL_NAME_PARAM);
+		String ecMetadataName = config.get(BatchEnrichmentJob.EC_META_NAME_PARAM);
+		boolean success =  runEnhancementJob(bucketFullName, bucketPathStr, ecMetadataName);
+		
+		return success?0:1;
+	}
 
 }
 

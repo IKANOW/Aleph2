@@ -23,7 +23,10 @@ public class BatchEnrichmentJob{
 
 	public static String DATA_BUCKET_BEAN_PARAM = "dataBucketBean";
 	public static String BATCH_SIZE_PARAM = "batchSize";
-
+	public static String BUCKET_FULL_NAME_PARAM = "bucketFullName";
+	public static String BUCKET_PATH_PARAM = "bucketFullName";
+	public static String EC_META_NAME_PARAM = "ecMetaName";
+	
 	public class BatchErichmentMapper extends Mapper<LongWritable,Text, LongWritable,Text>
 	
 	{
@@ -60,7 +63,8 @@ public class BatchEnrichmentJob{
 	public class BatchEnrichmentReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
 
 		
-
 	} // reducer
+
+
 
 }
