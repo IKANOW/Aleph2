@@ -2,6 +2,7 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.hadoop.fs.Path;
@@ -39,5 +40,10 @@ public class BeFileInputFormat extends CombineFileInputFormat<String, Tuple3<Lon
 		return reader;
 	} // createRecordReader
 	
-	
+	@Override
+	public List<InputSplit> getSplits(org.apache.hadoop.mapreduce.JobContext context) throws IOException {
+		final List<InputSplit> tmp = super.getSplits(context);
+		logger.debug("BeFileInputFormat.getSplits: " + tmp.size());
+		return tmp;
+	}
 }
