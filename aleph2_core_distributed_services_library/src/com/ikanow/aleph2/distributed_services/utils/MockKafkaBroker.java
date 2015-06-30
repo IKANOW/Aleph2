@@ -40,13 +40,15 @@ public class MockKafkaBroker {
 	 * 
 	 * @param zookeeper_connection
 	 * @param broker_port
+	 * @throws IOException 
 	 */
-	public MockKafkaBroker(String zookeeper_connection, int broker_port) {
+	public MockKafkaBroker(String zookeeper_connection, int broker_port) throws IOException {
 		this.broker_port = broker_port;
 		Properties props = new Properties();
 		props.put("port", ""+broker_port);
 		props.put("broker.id", "1");
-		props.put("log.dir", System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp");
+		// System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp_" + System.currentTimeMillis());
+		props.put("log.dir", File.createTempFile("kafka_local_temp_", "").getAbsolutePath() + File.pathSeparator);
 		logger.debug("MockKafkaBroker log dir is: " + props.getProperty("log.dir"));
 		String zk = zookeeper_connection;
 		logger.debug("ZOOKEEPER: " + zk);

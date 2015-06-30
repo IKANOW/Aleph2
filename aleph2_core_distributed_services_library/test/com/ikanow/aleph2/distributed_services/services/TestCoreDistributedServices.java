@@ -25,6 +25,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import akka.serialization.Serialization;
@@ -42,10 +43,9 @@ import com.typesafe.config.ConfigFactory;
 
 public class TestCoreDistributedServices {
 	protected ICoreDistributedServices _core_distributed_services;
-	
 	@Before
 	public void setupCoreDistributedServices() throws Exception {
-		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
+		MockCoreDistributedServices temp = new MockCoreDistributedServices();	
 		String connect_string = temp._test_server.getConnectString();
 		String broker_list_string = "localhost:" + temp._kafka_broker.getBrokerPort();
 				
@@ -121,7 +121,7 @@ public class TestCoreDistributedServices {
 	public void testKafka() throws Exception {
 		//create a random topic so its new (has to call create function)
 		final String TOPIC_NAME = "TEST_CDS_" + System.currentTimeMillis();  
-		final int num_to_test = 50;
+		final int num_to_test = 10;
 		//throw items on the queue
 		
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
@@ -144,5 +144,33 @@ public class TestCoreDistributedServices {
 		
         assertEquals(message_count, num_to_test);
         assertTrue(original_message.equals(consumed_message));
+	}
+	
+	@Ignore
+	@Test
+	public void testKafkaForStormSpout() throws Exception {
+		//create a topic for a kafka spout, put 50 things in the spout
+		
+		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";  
+		final int num_to_test = 10;
+		//throw items on the queue
+		
+//		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+//		String original_message = jsonNode.toString();	
+		for ( int i = 0; i < num_to_test; i++ ) 
+			_core_distributed_services.produce(TOPIC_NAME, "a random message");	
+		
+		//grab the consumer
+//		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+//		String consumed_message = null;
+//		int message_count = 0;
+//		//read the item off the queue
+//		while ( consumer.hasNext() ) {
+//			consumed_message = consumer.next();
+//        	message_count++;
+//            System.out.println(consumed_message);
+//		}
+//		
+//		KafkaUtils.deleteTopic(TOPIC_NAME);
 	}
 }
