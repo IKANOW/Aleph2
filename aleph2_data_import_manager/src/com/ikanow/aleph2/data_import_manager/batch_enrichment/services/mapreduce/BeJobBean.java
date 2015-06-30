@@ -11,7 +11,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 /** This class contains data objects for one batrch entrichment bucket enhancem,ent job. 
 */
 
-public class BeJob {
+public class BeJobBean {
 	private String bucketPathStr;
 	private Path bucketInpuPath = null;
 	private Path bucketOutPath = null;
@@ -19,7 +19,7 @@ public class BeJob {
 	private List<SharedLibraryBean> sharedLibraries = null;
 
 	
-	public BeJob(DataBucketBean dataBucketBean, EnrichmentControlMetadataBean enrichmentControlMetadataBean, List<SharedLibraryBean> sharedLibraries, String bucketPathStr){
+	public BeJobBean(DataBucketBean dataBucketBean, EnrichmentControlMetadataBean enrichmentControlMetadataBean, List<SharedLibraryBean> sharedLibraries, String bucketPathStr){
 		this.dataBucketBean = dataBucketBean;
 		this.enrichmentControlMetadataBean =  enrichmentControlMetadataBean;
 		this.sharedLibraries =  sharedLibraries;

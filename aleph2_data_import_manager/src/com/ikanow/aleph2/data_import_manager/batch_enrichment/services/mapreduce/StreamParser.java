@@ -20,6 +20,8 @@ public class StreamParser implements IParser {
 
 	@Override
 	public Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> getNextRecord(long currentFileIndex,String fileName,  InputStream inStream) {
+		logger.debug("StreamParser.getNextRecord");
+
 		ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> t3 = null;
 		try {

@@ -67,7 +67,7 @@ public class BeJobLauncher implements IBeJobService{
 		boolean success = false;
 		try {
 			
-		BeJob beJob = beJobLoader.loadBeJob(bucketFullName, bucketPathStr, ecMetadataBeanName);
+		BeJobBean beJob = beJobLoader.loadBeJob(bucketFullName, bucketPathStr, ecMetadataBeanName);
 		if(beJob!=null){
 			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){

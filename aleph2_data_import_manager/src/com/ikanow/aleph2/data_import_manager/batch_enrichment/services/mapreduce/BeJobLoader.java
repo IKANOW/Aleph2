@@ -31,8 +31,8 @@ public class BeJobLoader {
 		this.managementDbService = serviceContext.getCoreManagementDbService();
 	}
 	
-	public BeJob loadBeJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName) {
-		BeJob beJob = null;
+	public BeJobBean loadBeJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName) {
+		BeJobBean beJob = null;
 		try {
 			IManagementCrudService<DataBucketBean> dataBucketStore = managementDbService.getDataBucketStore();
 			SingleQueryComponent<DataBucketBean> querydatBucketFullName = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
@@ -61,7 +61,7 @@ public class BeJobLoader {
 
 						List<SharedLibraryBean> sharedLibraries = StreamSupport.stream(
 								shareLibraryStore.getObjectsBySpec(spec).get().spliterator(), false).collect(Collectors.toList());
-						beJob = new BeJob(dataBucketBean, ec, sharedLibraries, bucketPathStr);
+						beJob = new BeJobBean(dataBucketBean, ec, sharedLibraries, bucketPathStr);
 					} // if name
 					else {
 						logger.info("Skipping Enrichment, no enrichment found for bean:" + bucketFullName + " and enrichmentName:"
