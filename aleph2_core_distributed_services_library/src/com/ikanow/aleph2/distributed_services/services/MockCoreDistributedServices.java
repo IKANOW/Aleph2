@@ -125,4 +125,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 			Optional<String> driver_options) {
 		return Optional.empty();
 	}
+	
+	public void kill() {
+		_kafka_broker.stop();
+	}
 }

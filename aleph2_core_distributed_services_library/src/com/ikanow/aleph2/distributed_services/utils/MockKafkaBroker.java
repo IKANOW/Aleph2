@@ -8,6 +8,8 @@ import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
+
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.Time;
@@ -46,7 +48,7 @@ public class MockKafkaBroker {
 		Properties props = new Properties();
 		props.put("port", ""+broker_port);
 		props.put("broker.id", "1");
-		props.put("log.dir", System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp");
+		props.put("log.dir", System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp_" + UuidUtils.get().getTimeBasedUuid());
 		logger.debug("MockKafkaBroker log dir is: " + props.getProperty("log.dir"));
 		String zk = zookeeper_connection;
 		logger.debug("ZOOKEEPER: " + zk);
