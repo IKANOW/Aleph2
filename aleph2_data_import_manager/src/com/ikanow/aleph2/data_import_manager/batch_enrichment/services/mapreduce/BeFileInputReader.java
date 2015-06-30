@@ -41,6 +41,12 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 		parsers.put("BIN", new StreamParser());
 	}
 	
+	
+	public BeFileInputReader(){
+		super();
+		logger.debug("BeFileInputReader.constructor");
+	}
+	
 	@Override
 	public void initialize(InputSplit inputSplit, TaskAttemptContext context) throws IOException, InterruptedException {
 		

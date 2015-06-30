@@ -13,7 +13,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public class BeJobBean {
 	private String bucketPathStr;
-	private Path bucketInpuPath = null;
+	private Path bucketInputPath = null;
 	private Path bucketOutPath = null;
 	private EnrichmentControlMetadataBean enrichmentControlMetadataBean = null;
 	private List<SharedLibraryBean> sharedLibraries = null;
@@ -24,7 +24,7 @@ public class BeJobBean {
 		this.enrichmentControlMetadataBean =  enrichmentControlMetadataBean;
 		this.sharedLibraries =  sharedLibraries;
 		this.bucketPathStr = bucketPathStr;
-		this.bucketInpuPath = new Path(bucketPathStr + "/managed_bucket/import/ready");
+		this.bucketInputPath = new Path(bucketPathStr + "/managed_bucket/import/ready");
 		this.bucketOutPath = new Path(bucketPathStr + "/managed_bucket/import/temp");
 	}
 	
@@ -55,11 +55,11 @@ public class BeJobBean {
 	public void setBucketPathStr(String bucketPathStr) {
 		this.bucketPathStr = bucketPathStr;
 	}
-	public Path getBucketInpuPath() {
-		return bucketInpuPath;
+	public Path getBucketInputPath() {
+		return bucketInputPath;
 	}
-	public void setBucketInpuPath(Path bucketInpuPath) {
-		this.bucketInpuPath = bucketInpuPath;
+	public void setBucketInputPath(Path bucketInputPath) {
+		this.bucketInputPath = bucketInputPath;
 	}
 	public Path getBucketOutPath() {
 		return bucketOutPath;

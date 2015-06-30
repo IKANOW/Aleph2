@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.CombineFileInputFormat;
@@ -22,8 +23,14 @@ public class BeFileInputFormat extends CombineFileInputFormat<String, Tuple3<Lon
 	
 	private static final Logger logger = LogManager.getLogger(BeFileInputFormat.class);
 
+	public BeFileInputFormat(){
+		super();
+		logger.debug("BeFileInputFormat.constructor");
+	}
+	
 	@Override
-	protected boolean isSplitable(org.apache.hadoop.mapreduce.JobContext context, Path file) {
+	protected boolean isSplitable(JobContext context, Path file) {
+		logger.debug("BeFileInputFormat.isSplitable");
 		return false;
 	}
 
@@ -41,9 +48,17 @@ public class BeFileInputFormat extends CombineFileInputFormat<String, Tuple3<Lon
 	} // createRecordReader
 	
 	@Override
-	public List<InputSplit> getSplits(org.apache.hadoop.mapreduce.JobContext context) throws IOException {
-		final List<InputSplit> tmp = super.getSplits(context);
-		logger.debug("BeFileInputFormat.getSplits: " + tmp.size());
+	public List<InputSplit> getSplits(JobContext context) throws IOException {
+		logger.debug("BeFileInputFormat.getSplits");
+		List<InputSplit> tmp = null;
+		try {
+			
+			tmp = super.getSplits(context);
+		} catch (Throwable t) {
+			logger.error(t);
+		}
+		
+		logger.debug("BeFileInputFormat.getSplits: " +((tmp!=null)? tmp.size():"null"));
 		return tmp;
 	}
 }
