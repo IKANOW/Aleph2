@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -25,8 +24,8 @@ public class BeJobLoader {
 	protected final IManagementDbService managementDbService;
 
 	@Inject
-	public BeJobLoader(IServiceContext serviceContext) {
-		this.managementDbService = serviceContext.getCoreManagementDbService();
+	public BeJobLoader(IManagementDbService managementDbService) {
+		this.managementDbService = managementDbService;
 	}
 
 	public BeJob loadBeJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName) {
