@@ -78,16 +78,16 @@ public class KafkaUtils {
 		//PRODUCER PROPERTIES		
 		String broker = parseMap.getString("metadata.broker.list");
 		logger.debug("BROKER: " + broker);		
-		//kafka_properties.put("metadata.broker.list", broker);
-		kafka_properties.put("metadata.broker.list", "api001.dev.ikanow.com:6667");		
+		kafka_properties.put("metadata.broker.list", broker);
+		//kafka_properties.put("metadata.broker.list", "api001.dev.ikanow.com:6667");		
 		kafka_properties.put("serializer.class", "kafka.serializer.StringEncoder");
 		kafka_properties.put("request.required.acks", "1");
         
         //CONSUMER PROPERTIES		
 		String zk = parseMap.getString("zookeeper.connect");
 		logger.debug("ZOOKEEPER: " + zk);
-		//kafka_properties.put("zookeeper.connect", zk);
-		kafka_properties.put("zookeeper.connect", "api001.dev.ikanow.com:2181");		
+		kafka_properties.put("zookeeper.connect", zk);
+		//kafka_properties.put("zookeeper.connect", "api001.dev.ikanow.com:2181");		
 		kafka_properties.put("group.id", "somegroup_1");
         kafka_properties.put("zookeeper.session.timeout.ms", "400");
         kafka_properties.put("zookeeper.sync.time.ms", "200");
