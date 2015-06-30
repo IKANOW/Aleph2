@@ -16,6 +16,7 @@ import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketAct
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.utils.DataBucketTest;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 
 public class BeJobServiceTest extends DataBucketTest {
@@ -27,6 +28,7 @@ public class BeJobServiceTest extends DataBucketTest {
 	
 	@Before
 	public void setupDependencies() throws Exception {
+		try{
 		super.setupDependencies();
 		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule(){
 
@@ -39,7 +41,11 @@ public class BeJobServiceTest extends DataBucketTest {
 		}), Optional.of(config));
 
 		this.beJobService = serverInjector.getInstance(IBeJobService.class);		
-		
+	}
+		catch (Throwable t) { 
+			System.out.println(ErrorUtils.getLongForm("{0}", t));
+			throw t; 
+			}
 	} // setup dependencies
 	
 	@Test

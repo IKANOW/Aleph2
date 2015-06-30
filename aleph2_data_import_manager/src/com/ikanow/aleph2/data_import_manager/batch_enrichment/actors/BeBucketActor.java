@@ -17,8 +17,6 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
@@ -40,9 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
-import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
-import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -148,8 +144,7 @@ public class BeBucketActor extends UntypedActor {
 										if (ec.enabled()) {											
 											logger.info("starting batch enhancment job: "+bucketFullName+" for "+ec.name());
 											// run enhancement job
-											//beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());	
-											// TODO switch to BatchEnrichmentTool.runJob()
+											beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());	
 										} // if enabled
 										else{
 											logger.info("Skipping Enrichment, no enrichment enabled:"+bucketFullName +" ec:"+ec.name());

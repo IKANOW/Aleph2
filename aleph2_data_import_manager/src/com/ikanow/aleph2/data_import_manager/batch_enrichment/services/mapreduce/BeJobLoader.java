@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -18,16 +19,18 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 
+
 public class BeJobLoader {
 	private static final Logger logger = LogManager.getLogger(BeJobLoader.class);
 
 	protected final IManagementDbService managementDbService;
-
+	
 	@Inject
-	public BeJobLoader(IManagementDbService managementDbService) {
-		this.managementDbService = managementDbService;
+	public BeJobLoader(IServiceContext serviceContext)
+	{
+		this.managementDbService = serviceContext.getCoreManagementDbService();
 	}
-
+	
 	public BeJob loadBeJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName) {
 		BeJob beJob = null;
 		try {
