@@ -84,7 +84,12 @@ public class VerySimpleLocalExample {
 		
 		hj.setJar("test");
 		
-		hj.submit();
+		try {
+			hj.submit();
+		}
+		catch (UnsatisfiedLinkError e) {
+			throw new RuntimeException("This is a windows/hadoop compatibility problem - adding the hadoop-commons in the misc_test_assets subdirectory to the top of the classpath should resolve it (and does in V1), though I haven't yet made that work with Aleph2", e);
+		}
 		//hj.getJobID().toString();
 		while (!hj.isComplete()) {
 			Thread.sleep(1000);
