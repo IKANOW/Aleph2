@@ -65,7 +65,7 @@ import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
 
 /** This actor is responsible for supervising the job of handling changes to data
- *  buckets on the "data import manager" end
+ *  buckets on the "data import manager" end - specifically vs harvest (see stream_enrichment.DataBucketChangeActor for streaming enrichment related control)
  * @author acp
  */
 public class DataBucketChangeActor extends AbstractActor {

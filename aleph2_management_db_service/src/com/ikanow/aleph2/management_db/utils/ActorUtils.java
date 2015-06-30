@@ -22,7 +22,11 @@ package com.ikanow.aleph2.management_db.utils;
 public class ActorUtils {
 	public final static String BUCKET_ACTION_ZOOKEEPER = "/app/aleph2/bucket_actions";
 	public final static String BATCH_ENRICHMENT_ZOOKEEPER = "/app/aleph2/batch_enrichment";
+	public final static String STREAMING_ENRICHMENT_ZOOKEEPER = "/app/aleph2/streaming_enrichment";
+	
 	public final static String BUCKET_ACTION_EVENT_BUS = BUCKET_ACTION_ZOOKEEPER;
+	public final static String STREAMING_ENRICHMENT_EVENT_BUS = STREAMING_ENRICHMENT_ZOOKEEPER;
+	
 	public final static String BUCKET_ACTION_SUPERVISOR = "bucket_actions_supervisor";
 	public final static String BUCKET_ACTION_HANDLER = "bucket_actions_handler";
 	
