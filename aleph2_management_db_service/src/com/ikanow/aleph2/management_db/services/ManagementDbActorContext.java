@@ -28,6 +28,7 @@ public class ManagementDbActorContext {
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_bucket_action_bus = _distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		_streaming_enrichment_bus = _distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
 		_singleton = this;
 	}
 
@@ -59,6 +60,28 @@ public class ManagementDbActorContext {
 		return _bucket_action_bus;
 	}
 	
+	/** Returns a static accessor to the streaming enrichment message bus
+	 * @return the streaming enrichment message bus
+	 */
+	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getStreamingEnrichmentMessageBus() {
+		return _streaming_enrichment_bus;
+	}
+	
+	/** Returns a static accessor to the designated message bus
+	 * @return the designated message bus
+	 */
+	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getMessageBus(final String bus_name) {
+		if (bus_name.equals(ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS)) {
+			return _streaming_enrichment_bus;
+		}
+		else if (bus_name.equals(ActorUtils.BUCKET_ACTION_EVENT_BUS)) {
+			return _bucket_action_bus;
+		}
+		else {
+			throw new RuntimeException(""); //TODO
+		}
+	}
+	
 	/** Returns the various distributed services present 
 	 * @return the distributed services
 	 */
@@ -78,5 +101,6 @@ public class ManagementDbActorContext {
 	protected static ManagementDbActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
 	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _bucket_action_bus;
+	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _streaming_enrichment_bus;
 	protected final IServiceContext _service_context;
 }

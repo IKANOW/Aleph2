@@ -79,8 +79,10 @@ public class BucketActionDistributionActor extends AbstractActor {
 	// Constructor
 	
 	/** Should only ever be called by the actor system, not by users
+	 * @param timeout - the timeout for the request
+	 * @param not_used - just for consistency with BucketActionChooseActor
 	 */
-	public BucketActionDistributionActor(final Optional<FiniteDuration> timeout) {
+	public BucketActionDistributionActor(final Optional<FiniteDuration> timeout, final String not_used) {
 		_timeout = timeout.orElse(BucketActionSupervisor.DEFAULT_TIMEOUT); // (Default timeout 5s) 
 		_system_context = ManagementDbActorContext.get();
 	}

@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -38,24 +39,15 @@ import akka.pattern.Patterns;
  */
 public class BucketActionSupervisor extends UntypedActor {
 
+	//TODO (ALEPH-10): First sends a message to streaming enrichment (if enabled), only send to buckets if that returns success
+	//TODO: only thing is that I don't want to add the streaming enrichment "id" to the others, right?
+	
 	//TODO (ALEPH-19): Need a scheduled thread that runs through the retries and checks each one
 	
 	//TODO (ALEPH-19): Need different timeouts to handle "found harvester it's taking its time" vs "waiting internally for harvesters"
 	// this is larger than it needs to be to handle that case
 	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(60, TimeUnit.SECONDS);
 	
-	/** Factory method for getting a distribution actor
-	 */
-	protected ActorRef getNewDistributionActor(final FiniteDuration timeout) {
-		return this.getContext().actorOf(Props.create(BucketActionDistributionActor.class, timeout));
-	}
-
-	/** Factory method for getting a "choose" actor (picks a destination randomly from a pool of replies)
-	 */
-	protected ActorRef getNewChooseActor(final FiniteDuration timeout) {
-		return this.getContext().actorOf(Props.create(BucketActionChooseActor.class, timeout));
-	}
-
 	/** Internal request message for forwarding from the supervisor to its children
 	 * @author acp
 	 */
@@ -94,7 +86,7 @@ public class BucketActionSupervisor extends UntypedActor {
 							));
 		}
 		RequestMessage m = new RequestMessage(BucketActionDistributionActor.class, message, timeout);
-		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
+		//(the 2* ensures that it is "always" normally the bucket that times out, which is more controlled)
 		return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 2*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
 	}
 	
@@ -117,7 +109,7 @@ public class BucketActionSupervisor extends UntypedActor {
 							));
 		}
 		RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, timeout);
-		//(the 2* ensures that it "always" normally the bucket that times out, which is more controlled)
+		//(the 5* ensures that it is "always" normally the bucket that times out, which is more controlled) (5* because there's an additional send-ack compared to choose actor)
 		return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 5*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
 			//(choose has longer timeout because of retries)
 	}
@@ -128,7 +120,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	public void onReceive(Object untyped_message) throws Exception {
 		if (untyped_message instanceof RequestMessage) {
 			RequestMessage message = (RequestMessage) untyped_message;
-			ActorRef new_child = this.context().actorOf(Props.create(message.actor_type, message.timeout));
+			ActorRef new_child = this.context().actorOf(Props.create(message.actor_type, message.timeout, ActorUtils.BUCKET_ACTION_ZOOKEEPER));
 
 			new_child.forward(message.message, this.context());
 		}

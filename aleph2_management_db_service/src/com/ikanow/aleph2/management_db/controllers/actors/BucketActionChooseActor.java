@@ -47,7 +47,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.Bucke
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
-import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -87,15 +86,19 @@ public class BucketActionChooseActor extends AbstractActor {
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
 	protected final ManagementDbActorContext _system_context;
-	protected static final int MAX_TRIES = 3; // (this is a pretty low probability event) 
+	protected static final int MAX_TRIES = 3; // (this is a pretty low probability event)
+	protected final String _zookeeper_path; // the zk path on which interested nodes are listening - currently ActorUtils .BUCKET_ACTION_ZOOKEEPER or .STREAMING_ENRICHMENT_ZOOKEEPER 
 	
 	///////////////////////////////////////////
 	
 	// Constructor
 	
 	/** Should only ever be called by the actor system, not by users
+	 * @param timeout - the timeout for the request
+	 * @param zookeeper_path - currently either BUCKET_ACTION_ZOOKEEPER (talk to harvester) or STREAMING_ENRICHMENT_ZOOKEEPER (talk to streaming (storm) enrichment)
 	 */
-	public BucketActionChooseActor(final Optional<FiniteDuration> timeout) {
+	public BucketActionChooseActor(final Optional<FiniteDuration> timeout, final String zookeeper_path) {
+		_zookeeper_path = zookeeper_path;
 		_timeout = timeout.orElse(BucketActionSupervisor.DEFAULT_TIMEOUT); // (Default timeout 5s) 
 		_system_context = ManagementDbActorContext.get();
 	}
@@ -225,12 +228,12 @@ public class BucketActionChooseActor extends AbstractActor {
 			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
 			try {
-				_state.data_import_manager_set.addAll(curator.getChildren().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER));
+				_state.data_import_manager_set.addAll(curator.getChildren().forPath(_zookeeper_path));
 				
 			}
 			catch (NoNodeException e) { 
 				// This is OK
-				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + _zookeeper_path);
 			}
 			
 			// Remove any blacklisted nodes:
@@ -247,7 +250,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			
 			if (!_state.data_import_manager_set.isEmpty()) {
 				
-				_system_context.getBucketActionMessageBus().publish(new BucketActionEventBusWrapper
+				_system_context.getMessageBus(_zookeeper_path).publish(new BucketActionEventBusWrapper
 						(this.self(), new BucketActionOfferMessage(message.bucket())));
 				
 				_state.current_timeout_id = UuidUtils.get().getRandomUuid();
@@ -263,6 +266,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			throw new RuntimeException();
 		}
 	}	
+	
 	protected void checkIfComplete() {
 		if (_state.data_import_manager_set.isEmpty()) {
 			this.pickAndSend();
