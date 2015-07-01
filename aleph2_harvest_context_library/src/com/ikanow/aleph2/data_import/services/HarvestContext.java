@@ -95,8 +95,7 @@ public class HarvestContext implements IHarvestContext {
 		_globals = service_context.getGlobalProperties();
 	}
 
-	/**
-	 * 
+	/** In-module constructor
 	 */
 	public HarvestContext() {
 		_state_name = State.IN_MODULE;
@@ -263,7 +262,7 @@ public class HarvestContext implements IHarvestContext {
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
-			ImmutableSet<Tuple2<Class<?>, Optional<String>>> complete_services_set = 
+			final ImmutableSet<Tuple2<Class<?>, Optional<String>>> complete_services_set = 
 					ImmutableSet.<Tuple2<Class<?>, Optional<String>>>builder()
 							.addAll(services.orElse(Collections.emptySet()))
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
@@ -292,7 +291,7 @@ public class HarvestContext implements IHarvestContext {
 				
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
-			Config last_call = config_subset_services
+			final Config last_call = config_subset_services
 								.withValue(__MY_ID, ConfigValueFactory
 										.fromAnyRef(bucket.orElseGet(() -> _mutable_state.bucket.get())._id(), "bucket id"));
 			

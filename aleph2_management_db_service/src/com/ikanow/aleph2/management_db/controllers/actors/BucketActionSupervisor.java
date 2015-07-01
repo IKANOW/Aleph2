@@ -16,20 +16,27 @@
 package com.ikanow.aleph2.management_db.controllers.actors;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+
+
+
 
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -145,8 +152,17 @@ public class BucketActionSupervisor extends UntypedActor {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
 				if (is_streaming) { // (streaming + ??)
 					final RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
-					return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 
-							getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
+					return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
+							getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
+								.thenApply(stream -> {
+									List<BasicMessageBean> replace = Optionals.ofNullable(stream.replies()).stream()
+																		.map(r -> BeanTemplateUtils.clone(r)
+																			.with(BasicMessageBean::command, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)
+																			.done())
+																		.collect(Collectors.toList());
+									
+									return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(replace, stream.timed_out());
+								});
 				}
 				else { // (harvest only)
 					return CompletableFuture.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>completedFuture(null);

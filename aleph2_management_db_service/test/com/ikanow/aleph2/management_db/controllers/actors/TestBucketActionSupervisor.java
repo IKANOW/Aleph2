@@ -313,6 +313,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(false, reply.replies().get(0).success());
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 
 	//1) "Needs to stream+harvest, and streaming fails - check never calls harvest"
@@ -434,6 +435,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(false, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 
 	// 3) Stream only, streaming succeeds
@@ -494,6 +496,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 	
 	// 4) "Stream+harvest, streaming+harvest succeed"
@@ -554,7 +557,9 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(2, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 		assertEquals(true, reply.replies().get(1).success());		
+		assertTrue("2nd reply from harvest not stream", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER != reply.replies().get(1).command());		
 	}
 	
 	// "5) Stream+harvest, streaming succeeds/harvest fails"
@@ -615,6 +620,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 	
 	// "5) Stream+harvest, streaming succeeds/harvest fails"
@@ -676,6 +682,8 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(2, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 		assertEquals(false, reply.replies().get(1).success());		
+		assertTrue("2nd reply from harvest not stream", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER != reply.replies().get(1).command());		
 	}
 }

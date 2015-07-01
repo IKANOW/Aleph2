@@ -160,9 +160,11 @@ public class MgmtCrudUtils {
 	 */
 	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final CompletableFuture<Collection<BasicMessageBean>> mgmt_results) {
 		return mgmt_results.thenApply(list -> {
-			//TODO: ignore messages from streaming enrichment engine? (or possibly want to do in DataBucketCrudService.requestNewBucket?)
-			
-			return list.stream().filter(msg -> msg.success()).map(msg -> msg.source()).collect(Collectors.toSet());
+			return list.stream()
+					.filter(msg -> msg.success())
+					.filter(msg -> !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
+					.map(msg -> msg.source())
+					.collect(Collectors.toSet());
 		});
 	}
 	
