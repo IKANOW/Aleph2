@@ -16,18 +16,21 @@
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Future;
 
+import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
-public interface IEnrichmentModuleContext {
+public interface IEnrichmentModuleContext extends IUnderlyingService {
 
 	////////////////////////////////////////////
 	
@@ -37,7 +40,7 @@ public interface IEnrichmentModuleContext {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return an opaque string that can be passed into ContextUtils.getEnrichmentContext
 	 */
-	String getEnrichmentContextSignature(final Optional<DataBucketBean> bucket);
+	String getEnrichmentContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 	
 	////////////////////////////////////////////
 	
@@ -81,32 +84,7 @@ public interface IEnrichmentModuleContext {
 	//   multiple changes (replace values, merge maps and sets, append collections; null value unsets)
 	// - the latter is always how annotations work 
 
-	/** The first stage of the nicer-looking but less efficient emit process - make the input node mutable so you can edit it
-	 * @param original - a JsonNode that will spawn a mutable object
-	 * @return the mutable copy or reference of the original
-	 */
-	ObjectNode convertToMutable(final JsonNode original);
-	
-	/** The second stage of the nicer-looking but less efficient emit process - emit the mutated object
-	 * @param id - the id received with the object from the EnrichmentBatchModule call
-	 * @param mutated_json - the mutated object to emit
-	 * @param annotation - a set of annotations to include in the emitted object
-	 */
-	void emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotation);
-	
-	/** The most efficient (slightly uglier) emit process - emit the original object with a list of applied mutations
-	 * @param id - the id received with the object from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call
-	 * @param original_json - the json doc received
-	 * @param mutations - a list of "mutations" that are applied to the original_json (replace values, merge maps and sets, append collections; null value unsets)
-	 * @param annotation - a set of annotations to include in the emitted object
-	 */
-	void emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations);
-	
-	/** Enables the batch process to store an object that failed for future analysis
-	 * @param id the id of the object received from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call
-	 * @param original_json
-	 */
-	void storeErroredObject(final long id, final JsonNode original_json);
+	// (See also under common object output)
 	
 	/** Returns the next unused id, enabling new objects to be added to the enrichment processing
 	 * @return the next id that safely creates a new object
@@ -121,14 +99,47 @@ public interface IEnrichmentModuleContext {
 	
 	////////////////////////////////////////////
 	
-	// Common:
+	// Common - Object Output
+	// These are normally only used for batch enrichment, but can be used for streaming topology also, to avoid an additional bolt
+	
+	/** The first stage of the nicer-looking but less efficient emit process - make the input node mutable so you can edit it
+	 * @param original - a JsonNode that will spawn a mutable object
+	 * @return the mutable copy or reference of the original
+	 */
+	ObjectNode convertToMutable(final JsonNode original);
+	
+	/** The second stage of the nicer-looking but less efficient emit process - emit the mutated object
+	 * @param id - the id received with the object from the EnrichmentBatchModule call (NOT USED IN STREAMING ENRICHMENT)
+	 * @param mutated_json - the mutated object to emit
+	 * @param annotation - a set of annotations to include in the emitted object
+	 */
+	void emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotation);
+	
+	/** The most efficient (slightly uglier) emit process - emit the original object with a list of applied mutations
+	 * @param id - the id received with the object from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
+	 * @param original_json - the json doc received
+	 * @param mutations - a list of "mutations" that are applied to the original_json (replace values, merge maps and sets, append collections; null value unsets)
+	 * @param annotation - a set of annotations to include in the emitted object
+	 */
+	void emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations);
+	
+	/** Enables the batch process to store an object that failed for future analysis
+	 * @param id the id of the object received from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
+	 * @param original_json
+	 */
+	void storeErroredObject(final long id, final JsonNode original_json);
+	
+	
+	////////////////////////////////////////////
+	
+	// Common - Management
 	
 	/** (All Enrichment Types) Returns a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
 	 * @param service_clazz - the class of the object desired; if specified, this overrides to a secondary service
 	 * @param service_name - optional - if ommitted, this is the default service of this type
 	 * @return the requested service (optionally)
 	 */
-	<I> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
+	<I extends IUnderlyingService> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
 	
 	/** (All Enrichment Types) Returns an object repository that the harvester/module can use to store arbitrary internal state
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
@@ -177,13 +188,4 @@ public interface IEnrichmentModuleContext {
 	 */
 	void initializeNewContext(final String signature);	
 
-	////////////////////////////////////////////
-	
-	/** USE WITH CARE: this returns the driver to the underlying technology
-	 *  shouldn't be used unless absolutely necessary!
-	 * @param driver_class the class of the driver
-	 * @param a string containing options in some technology-specific format
-	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
-	 */
-	<T> T getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 }
