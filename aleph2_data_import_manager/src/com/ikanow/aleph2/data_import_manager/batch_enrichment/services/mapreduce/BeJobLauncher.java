@@ -63,10 +63,10 @@ public class BeJobLauncher implements IBeJobService{
 
 
 	@Override
-	public boolean runEnhancementJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName){
+	public String runEnhancementJob(String bucketFullName, String bucketPathStr, String ecMetadataBeanName){
 		
 		Configuration config = getConf();
-		boolean success = false;
+		String jobName = null;
 		try {
 			
 		BeJobBean beJob = beJobLoader.loadBeJob(bucketFullName, bucketPathStr, ecMetadataBeanName);
@@ -76,8 +76,15 @@ public class BeJobLauncher implements IBeJobService{
 			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){
 
-				String jobName = beJob.getDataBucketBean().full_name()+"_BatchEnrichment";
-				Job job = Job.getInstance( config ,jobName);
+				jobName = beJob.getDataBucketBean().full_name()+"_BatchEnrichment";
+			    // add configuration into config
+				String beJobJson = BeanTemplateUtils.toJson(beJob).toString();
+			    config.set(BatchEnrichmentJob.BE_JOB_BEAN_PARAM, beJobJson);
+			    //String bucketJson = BeanTemplateUtils.toJson(bucket).toString();
+			    //config.set(BatchEnrichmentJob.DATA_BUCKET_BEAN_PARAM, bucketJson);
+
+			    // do not set anything into config past this line
+			    Job job = Job.getInstance( config ,jobName);
 			    job.setJarByClass(BatchEnrichmentJob.class);
 				
 	
@@ -91,11 +98,11 @@ public class BeJobLauncher implements IBeJobService{
 			    job.setOutputFormatClass(TextOutputFormat.class);
 	
 
-			    Path inPath = beJob.getBucketInputPath();
+			    Path inPath = new Path(beJob.getBucketInputPath());
 			    logger.debug("Bucket Input Path:"+inPath.toString());
 				FileInputFormat.addInputPath(job, inPath);
 				// delete output path if it exists
-				Path outPath = beJob.getBucketOutPath();
+				Path outPath = new Path(beJob.getBucketOutPath());
 
 				try {
 					FileContext.getLocalFSFileContext().delete(outPath, true);
@@ -103,22 +110,20 @@ public class BeJobLauncher implements IBeJobService{
 				catch (Exception e1) {} // (just doesn't exist yet)
 				FileOutputFormat.setOutputPath(job, outPath);    
 			    
-			    // add configuration into config
-			    String bucketJson = BeanTemplateUtils.toJson(bucket).toString();
-			    config.set(BatchEnrichmentJob.DATA_BUCKET_BEAN_PARAM, bucketJson);
 			    
 			    job.submit();
-			    // TODO don't wait
+			    //job.waitForCompletion(true);
+			    // TODO don't wait bit return job name instead and create utility function to check
 /*					while (!job.isComplete()) {
 						Thread.sleep(100);
 					}
-	*/
+*/
 			}
 		}
 		} catch (Exception e) {
 			logger.error("Caught Exception",e);
 		} 
-		return success;
+		return jobName;
 	     		
 	}
 

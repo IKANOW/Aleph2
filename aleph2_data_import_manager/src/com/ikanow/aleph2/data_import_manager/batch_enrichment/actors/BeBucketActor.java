@@ -15,8 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
@@ -26,9 +28,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.data.Stat;
 
+
 import akka.actor.ActorRef;
 import akka.actor.PoisonPill;
 import akka.actor.UntypedActor;
+
 
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -123,12 +127,13 @@ public class BeBucketActor extends UntypedActor {
 	}
 
 
-	public  static void launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IBeJobService beJobService,IManagementDbService managementDbService,ActorRef closingSelf) {
+	public  static List<String> launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IBeJobService beJobService,IManagementDbService managementDbService,ActorRef closingSelf) {
+		List<String> jobNames = new ArrayList<String>();
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
 			//Path bucketTmp = new Path(bucketPathStr + "/managed_bucket/import/temp");
 			if (fileContext.util().exists(bucketReady)) {
-				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);
+				FileStatus[] statuss = fileContext.util().listStatus(bucketReady);				
 				if (statuss.length > 0) {
 					logger.debug("Detected " + statuss.length + " ready files.");
 
@@ -144,7 +149,14 @@ public class BeBucketActor extends UntypedActor {
 										if (ec.enabled()) {											
 											logger.info("starting batch enhancment job: "+bucketFullName+" for "+ec.name());
 											// run enhancement job
-											beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());	
+											
+											String jobName = beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());
+											if(jobName!=null){
+												jobNames.add(jobName);
+												logger.info("Enrichment job for , no enrichment enabled:"+bucketFullName +" ec:"+ec.name() +" launched unsuccessfully, jobName = "+jobName);
+											}else{
+												logger.error("Enrichment job for , no enrichment enabled:"+bucketFullName +" ec:"+ec.name() +" launch was unsuccessful");
+											}
 										} // if enabled
 										else{
 											logger.info("Skipping Enrichment, no enrichment enabled:"+bucketFullName +" ec:"+ec.name());
@@ -168,7 +180,7 @@ public class BeBucketActor extends UntypedActor {
 		} catch (Exception e) {
 			logger.error("checkReady caught Exception:", e);
 		}
-
+		return jobNames;
 	}
 }
 

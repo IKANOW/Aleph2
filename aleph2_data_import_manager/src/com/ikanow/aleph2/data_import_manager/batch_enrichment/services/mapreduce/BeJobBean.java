@@ -1,46 +1,42 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
 import java.util.List;
-
-import org.apache.hadoop.fs.Path;
+import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
-/** This class contains data objects for one batrch entrichment bucket enhancem,ent job. 
+/** This class contains data objects for one batch entrichment bucket enhancement job. 
 */
 
 public class BeJobBean {
 	private String bucketPathStr;
-	private Path bucketInputPath = null;
-	private Path bucketOutPath = null;
-	private EnrichmentControlMetadataBean enrichmentControlMetadataBean = null;
+	private String bucketInputPath = null;
+	private String bucketOutPath = null;
 	private List<SharedLibraryBean> sharedLibraries = null;
-
+	private DataBucketBean dataBucketBean = null;
+	private String enrichmentControlMetadataName;
 	
-	public BeJobBean(DataBucketBean dataBucketBean, EnrichmentControlMetadataBean enrichmentControlMetadataBean, List<SharedLibraryBean> sharedLibraries, String bucketPathStr){
+	public BeJobBean(){
+		
+	}
+
+	public BeJobBean(DataBucketBean dataBucketBean, String enrichmentControlMetadataName, List<SharedLibraryBean> sharedLibraries, String bucketPathStr, String bucketInputPath, String bucketOutPath){
 		this.dataBucketBean = dataBucketBean;
-		this.enrichmentControlMetadataBean =  enrichmentControlMetadataBean;
+		this.enrichmentControlMetadataName = enrichmentControlMetadataName;
 		this.sharedLibraries =  sharedLibraries;
 		this.bucketPathStr = bucketPathStr;
-		this.bucketInputPath = new Path(bucketPathStr + "/managed_bucket/import/ready");
-		this.bucketOutPath = new Path(bucketPathStr + "/managed_bucket/import/temp");
+		this.bucketInputPath = bucketInputPath;
+		this.bucketOutPath = bucketOutPath;
 	}
 	
-	private DataBucketBean dataBucketBean = null;
 	
 	public DataBucketBean getDataBucketBean() {
 		return dataBucketBean;
 	}
 	public void setDataBucketBean(DataBucketBean dataBucketBean) {
 		this.dataBucketBean = dataBucketBean;
-	}
-	public EnrichmentControlMetadataBean getEnrichmentControlMetadataBean() {
-		return enrichmentControlMetadataBean;
-	}
-	public void setEnrichmentControlMetadataBean(EnrichmentControlMetadataBean enrichmentControlMetadataBean) {
-		this.enrichmentControlMetadataBean = enrichmentControlMetadataBean;
 	}
 	public List<SharedLibraryBean> getSharedLibraries() {
 		return sharedLibraries;
@@ -55,17 +51,42 @@ public class BeJobBean {
 	public void setBucketPathStr(String bucketPathStr) {
 		this.bucketPathStr = bucketPathStr;
 	}
-	public Path getBucketInputPath() {
+
+	
+	public String getEnrichmentControlMetadataName() {
+		return enrichmentControlMetadataName;
+	}
+
+
+	public void setEnrichmentControlMetadataName(String enrichmentControlMetadataName) {
+		this.enrichmentControlMetadataName = enrichmentControlMetadataName;
+	}
+
+
+	public String getBucketInputPath() {
 		return bucketInputPath;
 	}
-	public void setBucketInputPath(Path bucketInputPath) {
+
+	public void setBucketInputPath(String bucketInputPath) {
 		this.bucketInputPath = bucketInputPath;
 	}
-	public Path getBucketOutPath() {
+
+	public String getBucketOutPath() {
 		return bucketOutPath;
 	}
-	public void setBucketOutPath(Path bucketOutPath) {
+
+	public void setBucketOutPath(String bucketOutPath) {
 		this.bucketOutPath = bucketOutPath;
 	}
+
+	public static Optional<EnrichmentControlMetadataBean> extractEnrichmentControlMetadata(DataBucketBean dataBucketBean,String enrichmentControlMetadataName){
+		Optional<EnrichmentControlMetadataBean> oecm = dataBucketBean.batch_enrichment_configs().stream().filter(ec -> ec.name().equals(enrichmentControlMetadataName)).findFirst();
+		return oecm;
+		
+	}
 	
+	public static Optional<SharedLibraryBean> extractLibrary(List<SharedLibraryBean> sharedLibraries, SharedLibraryBean.LibraryType libType){
+		Optional<SharedLibraryBean> olib = sharedLibraries.stream().filter(l -> l.type() == libType).findFirst();
+		return olib;		
+	}
 }

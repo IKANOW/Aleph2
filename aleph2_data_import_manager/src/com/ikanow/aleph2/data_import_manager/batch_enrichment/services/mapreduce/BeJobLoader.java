@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -61,7 +62,7 @@ public class BeJobLoader {
 
 						List<SharedLibraryBean> sharedLibraries = StreamSupport.stream(
 								shareLibraryStore.getObjectsBySpec(spec).get().spliterator(), false).collect(Collectors.toList());
-						beJob = new BeJobBean(dataBucketBean, ec, sharedLibraries, bucketPathStr);
+						beJob = new BeJobBean(dataBucketBean, ecMetadataBeanName, sharedLibraries, bucketPathStr,bucketPathStr + "/managed_bucket/import/ready",bucketPathStr + "/managed_bucket/import/temp");
 					} // if name
 					else {
 						logger.info("Skipping Enrichment, no enrichment found for bean:" + bucketFullName + " and enrichmentName:"

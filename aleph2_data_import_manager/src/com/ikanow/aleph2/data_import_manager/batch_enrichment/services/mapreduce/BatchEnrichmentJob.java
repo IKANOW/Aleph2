@@ -19,19 +19,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
 public class BatchEnrichmentJob{
 
-	public static String DATA_BUCKET_BEAN_PARAM = "dataBucketBean";
 	public static String BATCH_SIZE_PARAM = "batchSize";
-	public static String BUCKET_FULL_NAME_PARAM = "bucketFullName";
-	public static String BUCKET_PATH_PARAM = "bucketFullName";
-	public static String EC_META_NAME_PARAM = "ecMetaName";
+	public static String BE_JOB_BEAN_PARAM = "beJobBean";
+
 	private static final Logger logger = LogManager.getLogger(BatchEnrichmentJob.class);
 	
 	public BatchEnrichmentJob(){
-		System.out.println("BatchEnrichmentJob constructor");
+		logger.debug("BatchEnrichmentJob constructor");
 		
 	}
 	
@@ -42,6 +42,10 @@ public class BatchEnrichmentJob{
 		IEnrichmentBatchModule module = null;			
 		IEnrichmentModuleContext enrichmentContext = null;
 		private int batchSize = 1;
+		private BeJobBean beJob = null;;
+		private EnrichmentControlMetadataBean ecMetadata = null;
+		private SharedLibraryBean beLibrary = null;
+			
 		
 		public BatchErichmentMapper(){
 			super();
@@ -51,16 +55,28 @@ public class BatchEnrichmentJob{
 		@Override
 		protected void setup(Mapper<LongWritable, Text, LongWritable, Text>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob setup");
-			System.out.println("BatchEnrichmentJob setup");
-			String dataBucketBeanJson = context.getConfiguration().get(DATA_BUCKET_BEAN_PARAM);
-			this.bucket = BeanTemplateUtils.from(dataBucketBeanJson, DataBucketBean.class).get();
+			try{
+			
+			String beJobBeanJson = context.getConfiguration().get(BE_JOB_BEAN_PARAM);
+			this.beJob  = BeanTemplateUtils.from(beJobBeanJson, BeJobBean.class).get();
+			this.bucket = beJob.getDataBucketBean();
+			
+			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket,beJob.getEnrichmentControlMetadataName()).get();			
 			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);
-			boolean final_stage = true;
-			// TODO initialize module
-			//this.module = // 
+			
+			this.beLibrary = BeJobBean.extractLibrary(beJob.getSharedLibraries(),SharedLibraryBean.LibraryType.enrichment_module).get();
+			this.module = (IEnrichmentBatchModule)Class.forName(beLibrary.batch_enrichment_entry_point()).newInstance();
+
 			// TODO initialize context
-			//this.enrichmentContext = // 
+			//this.enrichmentContext = e
+			
+			boolean final_stage = true;
 			module.onStageInitialize(enrichmentContext, bucket, final_stage);
+			}
+			catch(Exception e){
+				logger.error("Caught Exception",e);
+			}
+
 		} // setup
 
 		@Override

@@ -9,9 +9,9 @@ public class MockBeJobService implements IBeJobService {
 	private static final Logger logger = LogManager.getLogger(DataImportManager.class);
 
 	@Override
-	public boolean runEnhancementJob(String bucketFullName, String bucketPathStr, String enrichmentControlName) {
+	public String runEnhancementJob(String bucketFullName, String bucketPathStr, String enrichmentControlName) {
 		logger.debug("runEnhancementJob:"+bucketFullName+",bucketPathStr:"+bucketPathStr+",enrichmentControlName:"+enrichmentControlName);
-		return false;
+		return bucketFullName;
 	}
 
 }

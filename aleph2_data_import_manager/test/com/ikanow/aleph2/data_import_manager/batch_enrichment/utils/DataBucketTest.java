@@ -3,6 +3,7 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
@@ -99,6 +101,7 @@ public abstract class DataBucketTest {
 
 		IManagementCrudService<DataBucketBean> dataBucketStore = _management_db.getDataBucketStore();		
 		IManagementCrudService<DataBucketStatusBean> dataBucketStatusStore = _management_db.getDataBucketStatusStore();		
+		IManagementCrudService<SharedLibraryBean> libraryStore = _management_db.getSharedLibraryStore();	
 		SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", buckeFullName1);
 			Optional<DataBucketBean> oDataBucketBean = dataBucketStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
 			logger.debug(oDataBucketBean);
@@ -106,12 +109,12 @@ public abstract class DataBucketTest {
 				EnrichmentControlMetadataBean ecm1 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
 						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_1")
 						.with(EnrichmentControlMetadataBean::enabled, false)
-						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("dummylib1.jar"))
+						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("misc_enrichment1.jar"))
 						.done().get();
 				EnrichmentControlMetadataBean ecm2 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
 						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_2")
 						.with(EnrichmentControlMetadataBean::enabled, true)
-						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("dummylib2.jar"))
+						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("be_module1.jar"))
 						.done().get();				
 				HarvestControlMetadataBean hcm1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 						.with(HarvestControlMetadataBean::name,"bucketEnrichment1")
@@ -146,9 +149,23 @@ public abstract class DataBucketTest {
 				dataBucketStatusStore.storeObject(status).get();
 				dataBucketStore.storeObject(valid_bucket).get();
 
-				//	Optional<DataBucketBean> oDataBucketBean2 = dataBucketStore.getObjectById(buckeFullName1).get(1, TimeUnit.SECONDS);
-				//logger.debug(oDataBucketBean2);
+				final SharedLibraryBean lib_element1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::_id, "misc_enrichment1.jar")
+				.with(SharedLibraryBean::path_name, bucketPath1+"/library")
+				.with(SharedLibraryBean::type,SharedLibraryBean.LibraryType.enrichment_module)
+				.done().get();
 
+				final SharedLibraryBean lib_element2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+						.with(SharedLibraryBean::_id, "be_module1.jar")
+						.with(SharedLibraryBean::path_name, bucketPath1+"/library")
+						.with(SharedLibraryBean::batch_enrichment_entry_point, "com.ikanow.aleph2.data_import_manager.batch_enrichment.module.MockEnrichmentBatchModule")
+						.with(SharedLibraryBean::type,SharedLibraryBean.LibraryType.enrichment_module)
+						.done().get();
+
+
+
+				List<SharedLibraryBean> sharedLibs = Arrays.asList(lib_element1, lib_element2);
+				libraryStore.storeObjects(sharedLibs);
 			}
 			
 	}
