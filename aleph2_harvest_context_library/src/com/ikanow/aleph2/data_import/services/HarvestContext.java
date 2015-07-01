@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.utils.LiveInjector;
+import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -50,7 +51,6 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -133,7 +133,7 @@ public class HarvestContext implements IHarvestContext {
 			
 			Optional<DataBucketBean> retrieve_bucket = _core_management_db.getDataBucketStore().getObjectById(bucket_id).get();
 			if (!retrieve_bucket.isPresent()) {
-				throw new RuntimeException("Unable to locate bucket: " + bucket_id);
+				throw new RuntimeException(ErrorUtils.get(ErrorUtils.NO_BUCKET, bucket_id));
 			}
 			_mutable_state.bucket.set(retrieve_bucket.get());
 		}
@@ -161,7 +161,7 @@ public class HarvestContext implements IHarvestContext {
 	public void sendObjectToStreamingPipeline(
 			Optional<DataBucketBean> bucket, JsonNode object) {
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -171,7 +171,7 @@ public class HarvestContext implements IHarvestContext {
 	public <T> void sendObjectToStreamingPipeline(
 			Optional<DataBucketBean> bucket, T object) {
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -182,7 +182,7 @@ public class HarvestContext implements IHarvestContext {
 			Optional<DataBucketBean> bucket,
 			Map<String, Object> object) {
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -241,7 +241,7 @@ public class HarvestContext implements IHarvestContext {
 							.asList();
 		}
 		else {
-			throw new RuntimeException("Can only be called from technology, not module");
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);
 		}
 	}
 
@@ -298,7 +298,7 @@ public class HarvestContext implements IHarvestContext {
 			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 		}
 		else {
-			throw new RuntimeException("Can only be called from technology, not module");			
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);			
 		}
 	}
 
@@ -309,7 +309,7 @@ public class HarvestContext implements IHarvestContext {
 	public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket)
 	{
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -356,7 +356,7 @@ public class HarvestContext implements IHarvestContext {
 				});
 		}
 		else {
-			throw new RuntimeException("Can only be called from technology, not module");			
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);			
 		}
 	}
 
@@ -369,7 +369,7 @@ public class HarvestContext implements IHarvestContext {
 			Optional<String> sub_collection, boolean auto_apply_prefix)
 	{
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -394,7 +394,7 @@ public class HarvestContext implements IHarvestContext {
 			BasicMessageBean message, boolean roll_up_duplicates) 
 	{
 		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -431,7 +431,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -442,7 +442,7 @@ public class HarvestContext implements IHarvestContext {
 			Optional<DataBucketBean> bucket,
 			String quarantine_duration) {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
-		throw new RuntimeException("This operation is not currently supported");
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 }
