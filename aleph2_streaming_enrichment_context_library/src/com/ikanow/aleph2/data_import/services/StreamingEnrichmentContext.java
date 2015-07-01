@@ -15,7 +15,6 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.services;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -24,6 +23,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -84,6 +84,11 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected ICoreDistributedServices _distributed_services; 	
 	protected ISearchIndexService _index_service;
 	protected GlobalPropertiesBean _globals;
+
+	// For writing objects out
+	protected ICrudService<JsonNode> _crud_index_service;
+	protected Optional<ICrudService.IBatchSubservice<JsonNode>> _batch_index_service;
+	
 	
 	/**Guice injector
 	 * @param service_context
@@ -117,6 +122,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#initializeNewContext(java.lang.String)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public void initializeNewContext(final String signature) {
 		try {
@@ -139,6 +145,9 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			if (!retrieve_bucket.isPresent()) {
 				throw new RuntimeException("Unable to locate bucket: " + bucket_id);
 			}
+			_batch_index_service = (_crud_index_service = _index_service.getCrudService(JsonNode.class, retrieve_bucket.get()))
+											.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty())
+											.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
 			_mutable_state.bucket.set(retrieve_bucket.get());
 		}
 		catch (Exception e) {
@@ -222,14 +231,15 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			if (!_service_manifest_override.isSet()) {
 				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);				
 			}
-			_service_manifest_override.get().stream()
-				.map(t2 -> _service_context.getService(t2._1(), t2._2()))
-				.filter(service -> service.isPresent())
-				.collect(Collectors.toList());
-			
-			
-			//TODO: other stuff - do recursive as per usual
-			return Arrays.asList(this);
+			return Stream.concat(
+				Stream.of(this, _service_context)
+				,
+				_service_manifest_override.get().stream()
+					.map(t2 -> _service_context.getService(t2._1(), t2._2()))
+					.filter(service -> service.isPresent())
+					.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
+			)
+			.collect(Collectors.toList());
 		}
 		else {
 			throw new RuntimeException("Can only be called from technology, not module");			
@@ -270,9 +280,12 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		if (annotation.isPresent()) {
 			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
 		}
-		//TODO: output to index service (etc)
-		
-		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_STREAMING_ENRICHMENT);
+		if (_batch_index_service.isPresent()) {
+			_batch_index_service.get().storeObject(mutated_json, false);
+		}
+		else { // (super slow)
+			_crud_index_service.storeObject(mutated_json, false);
+		}
 	}
 
 	@Override
@@ -286,9 +299,12 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 									.reduce(original_json, (acc, kv) -> ((ObjectNode) acc).set(kv.getKey(), kv.getValue()), (acc1, acc2) -> acc1))
 									.orElse(original_json);
 		
-		//TODO: output to index service (etc)
-		
-		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_STREAMING_ENRICHMENT);
+		if (_batch_index_service.isPresent()) {
+			_batch_index_service.get().storeObject(to_emit, false);
+		}
+		else { // (super slow)
+			_crud_index_service.storeObject(to_emit, false);
+		}
 	}
 
 	@Override
