@@ -38,7 +38,7 @@ public class JsonUtils {
 	 * @return
 	 */
 	public static JsonNode foldTuple(final LinkedHashMap<String, Object> in, final ObjectMapper mapper, final Optional<String> json_field) {
-		return in.entrySet().stream().limit(in.size() - 1).reduce(
+		return in.entrySet().stream().reduce(
 				mapper.createObjectNode(), 
 				Lambdas.wrap_u((acc, kv) -> kv.getKey().equals(json_field.orElse(""))
 					? (ObjectNode) ((ObjectNode) mapper.readTree(kv.getValue().toString())).setAll(acc)
