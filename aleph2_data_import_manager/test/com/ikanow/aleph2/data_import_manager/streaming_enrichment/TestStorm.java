@@ -22,9 +22,9 @@ import backtype.storm.topology.TopologyBuilder;
 
 import com.ikanow.aleph2.data_import_manager.streaming_enrichment.storm_samples.SampleWebReaderSpout;
 import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
-import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
-import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaOutputFileBolt;
-import com.ikanow.aleph2.storm.samples.bolts.SampleWordParserBolt;
+//import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
+//import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaOutputFileBolt;
+//import com.ikanow.aleph2.storm.samples.bolts.SampleWordParserBolt;
 
 public class TestStorm {
 	private static IStormController storm_cluster;
