@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -40,17 +39,9 @@ public interface IEnrichmentStreamingTopology {
 	 */
 	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bean, final IEnrichmentModuleContext context);
 	
-	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - For every object submitted to the streaming topology, this function is applied to generate a simpler object more amenable to being passed around
-	 * It is recommended to make the final element inserted be the entire object in string format (see incoming_object_string)
-	 * @param incoming_object - the incoming "raw" object to decompose into simpler format
-	 * @param incoming_object_string - it will often be the case that one of the tuple elements should be the entire message. If the framework has the object in string form, it will pass it in here to avoid a spurious serialization. If it does not, the client will have to deserialize the object if he wants it in the stream object.
-	 * @return an object representing the simplified object (eg in Storm the keys will be used to declare the fields)
-	 */
-	LinkedHashMap<String, Object> decomposeIncomingObject(final JsonNode incoming_object, final Optional<String> incoming_object_string);
-	
-	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This does the opposite of decomposeIncomingObject - it generates the JsonNode that is the final output from the enrichment process
+	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This generates the JsonNode that is the final output from the enrichment process
 	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 
-	 * TODO (ALEPH-4): build a util that lets you fold all the fields into the last one (converted from String)
+	 * We have provided JsonUtils.foldTuple as a utility to enable easy use of this method
 	 * @param outgoing_object - the final object output via either the success or error endpoint
 	 * @return the final JsonNode to store
 	 */
