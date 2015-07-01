@@ -48,6 +48,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContex
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DataWarehouseSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GeospatialSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GraphSchemaBean;
@@ -204,6 +205,17 @@ public class TestDataBucketCrudService_Create {
 		}		
 	}	
 	
+	public String insertStreamingActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+		String uuid = UuidUtils.get().getRandomUuid();
+		ManagementDbActorContext.get().getDistributedServices()
+			.getCuratorFramework().create().creatingParentsIfNeeded()
+			.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+		
+		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
+		ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER);
+
+		return uuid;
+	}
 	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
@@ -1152,6 +1164,78 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(2, status_after.node_affinity().size());
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
+		assertEquals(false, status_after.suspended());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+	}
+
+	@Test
+	public void testSuccessfulBucketCreation_multiNode_streaming() throws Exception {
+		cleanDatabases();
+
+		// Setup: register an accepting actor to listen:
+		final String streaming_host = insertStreamingActor(TestActor_Accepter.class);
+		final String accepting_host1 = insertActor(TestActor_Accepter.class);
+		final String accepting_host2 = insertActor(TestActor_Accepter.class);
+		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
+		
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, true) 
+				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
+				.done().get();
+
+		//(delete the file path)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		
+		//(add the status object and try)
+		final DataBucketStatusBean status = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, valid_bucket._id())
+				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status).get();
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+
+		// Try again, assert - works this time
+		assertEquals(0L, (long)_bucket_crud.countObjects().get());
+		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
+		assertEquals(3, insert_future.getManagementResults().get().size());
+		final java.util.Iterator<BasicMessageBean> it = insert_future.getManagementResults().get().iterator();
+		final BasicMessageBean streaming_msg = it.next();
+		assertEquals(true, streaming_msg.success());
+		assertEquals(streaming_msg.source(), streaming_host);
+		assertEquals(streaming_msg.command(), ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER);
+		final BasicMessageBean err_msg1 = it.next();
+		assertEquals(true, err_msg1.success());
+		final BasicMessageBean err_msg2 = it.next();
+		assertEquals(true, err_msg2.success());
+		assertEquals(valid_bucket._id(), insert_future.get().get());
+		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+		assertEquals(2, status_after.node_affinity().size());
+		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
+		assertTrue("Check the node affinity is correct: ", !status_after.node_affinity().contains(streaming_host));
 		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
