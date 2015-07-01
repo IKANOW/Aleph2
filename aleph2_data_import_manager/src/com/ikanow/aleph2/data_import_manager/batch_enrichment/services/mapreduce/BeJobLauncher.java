@@ -3,10 +3,12 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -68,9 +70,12 @@ public class BeJobLauncher implements IBeJobService{
 		try {
 			
 		BeJobBean beJob = beJobLoader.loadBeJob(bucketFullName, bucketPathStr, ecMetadataBeanName);
+		
+
 		if(beJob!=null){
 			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){
+
 				String jobName = beJob.getDataBucketBean().full_name()+"_BatchEnrichment";
 				Job job = Job.getInstance( config ,jobName);
 			    job.setJarByClass(BatchEnrichmentJob.class);
@@ -82,22 +87,32 @@ public class BeJobLauncher implements IBeJobService{
 			    
 			    job.setInputFormatClass(BeFileInputFormat.class);
 
-			    //job.setOutputKeyClass(Text.class);
-			    //job.setOutputValueClass(IntWritable.class);
-			    //job.setOutputFormatClass(TextOutputFormat.class);
+				// Output format:
+			    job.setOutputFormatClass(TextOutputFormat.class);
 	
 
-			    FileInputFormat.setInputPaths(job, beJob.getBucketInpuPath());
-			    FileOutputFormat.setOutputPath(job, beJob.getBucketOutPath());		    
+			    Path inPath = beJob.getBucketInputPath();
+			    logger.debug("Bucket Input Path:"+inPath.toString());
+				FileInputFormat.addInputPath(job, inPath);
+				// delete output path if it exists
+				Path outPath = beJob.getBucketOutPath();
+
+				try {
+					FileContext.getLocalFSFileContext().delete(outPath, true);
+				}
+				catch (Exception e1) {} // (just doesn't exist yet)
+				FileOutputFormat.setOutputPath(job, outPath);    
 			    
 			    // add configuration into config
 			    String bucketJson = BeanTemplateUtils.toJson(bucket).toString();
 			    config.set(BatchEnrichmentJob.DATA_BUCKET_BEAN_PARAM, bucketJson);
 			    
-			    // TODO do we want asynchronous?
-			    //job.submit();	
-			     // Submit the job, then poll for progress until the job is complete
-			     success =  job.waitForCompletion(true);
+			    job.submit();
+			    // TODO don't wait
+/*					while (!job.isComplete()) {
+						Thread.sleep(100);
+					}
+	*/
 			}
 		}
 		} catch (Exception e) {

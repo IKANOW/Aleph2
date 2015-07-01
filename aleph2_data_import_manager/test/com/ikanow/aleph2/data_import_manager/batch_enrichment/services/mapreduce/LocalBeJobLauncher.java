@@ -23,6 +23,7 @@ public class LocalBeJobLauncher extends BeJobLauncher {
 		if (configuration == null) {
 
 			this.configuration = new Configuration(true);
+			configuration.setBoolean("mapred.used.genericoptionsparser", true); // (just stops an annoying warning from appearing)
 			configuration.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem");									
 			configuration.set("mapred.job.tracker", "local");
 			configuration.set("fs.defaultFS", "file:///");

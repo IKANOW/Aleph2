@@ -35,7 +35,7 @@ public class BatchEnrichmentJob{
 		
 	}
 	
-	public class BatchErichmentMapper extends Mapper<LongWritable,Text, LongWritable,Text>		
+	public static class BatchErichmentMapper extends Mapper<LongWritable,Text, LongWritable,Text>		
 	{
 
 		DataBucketBean bucket = null;
@@ -75,7 +75,7 @@ public class BatchEnrichmentJob{
 		
 	} //BatchErichmentMapper
 
-	public class BatchEnrichmentReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
+	public static class BatchEnrichmentReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
 
 		
 	} // reducer
