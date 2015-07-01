@@ -144,34 +144,22 @@ public class BucketActionSupervisor extends UntypedActor {
 		else {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
 				if (is_streaming) { // (streaming + ??)
-					/**/
-					System.out.println("here stream+?");
-					
 					final RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
 					return AkkaFutureUtils.efficientWrap(Patterns.ask(supervisor, m, 
 							getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher());
 				}
 				else { // (harvest only)
-					/**/
-					System.out.println("here harvest only");
-					
 					return CompletableFuture.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>completedFuture(null);
 				}				
 			})
 			.andThen(cf -> {
 				if (has_harvester) { // (streaming + harvest) 
-					/**/
-					System.out.println("here stream+harvest");
-					
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
 							// Check if the stream succeeded or failed, only call if the 
 							if ((null == stream) ||
 									(!stream.replies().isEmpty() && stream.replies().get(0).success()))
 							{
-								/**/
-								System.out.println("here stream+harvest: stream succeeds or doesn't occur");
-
 								return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>
 									efficientWrap(Patterns.ask(supervisor, m, 
 										getTimeoutMultipler(actor_type)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
@@ -194,17 +182,11 @@ public class BucketActionSupervisor extends UntypedActor {
 											});
 							}
 							else {
-								/**/
-								System.out.println("here stream+harvest: stream fails: " + new java.util.Date());
-
 								return CompletableFuture.completedFuture(stream);
 							}
 						} );
 				}
 				else { // (streaming only)					
-					/**/
-					System.out.println("here stream only");
-					
 					return cf;
 				}
 			})

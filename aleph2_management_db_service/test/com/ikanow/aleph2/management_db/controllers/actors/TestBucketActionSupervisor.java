@@ -226,7 +226,7 @@ public class TestBucketActionSupervisor {
 		}
 		
 		// Create bucket
-		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails", true, true);
+		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails_noReplies", true, true);
 		
 		// Do the test
 		
@@ -285,7 +285,7 @@ public class TestBucketActionSupervisor {
 		}
 		
 		// Create bucket
-		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails", true, true);
+		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails_error", true, true);
 		
 		// Do the test
 		
@@ -346,7 +346,7 @@ public class TestBucketActionSupervisor {
 		}
 		
 		// Create bucket
-		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails", true, true);
+		final DataBucketBean bucket = getBucket("test_needsStreaming_streamingFails_timeout", true, true);
 		
 		// Do the test
 		
@@ -376,5 +376,306 @@ public class TestBucketActionSupervisor {
 		assertEquals(0, reply.replies().size());
 	}
 	
-	//TODO: 2 and beyond
+	// 2) "Stream only, and streaming fails (errors) - check error"
+	@Test
+	public void test_streamingOnly_streamingFails_errors() throws Exception {
+		
+		// Create a failing stream actor and a succeeding harvest actor
+		
+		// Failing stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Error.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		final DataBucketBean bucket = getBucket("test_streamingOnly_streamingFails_errors", true, false);
+		
+		// Do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain an error
+		assertEquals(1, reply.replies().size());
+		assertEquals(false, reply.replies().get(0).success());		
+	}
+
+	// 3) Stream only, streaming succeeds
+	@Test
+	public void test_streamingOnly_streamingSucceeds() throws Exception {
+		
+		// Create a failing stream actor and a succeeding harvest actor
+		
+		// Failing stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		final DataBucketBean bucket = getBucket("test_streamingOnly_streamingSucceeds", true, false);
+		
+		// Do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain an error
+		assertEquals(1, reply.replies().size());
+		assertEquals(true, reply.replies().get(0).success());		
+	}
+	
+	// 4) "Stream+harvest, streaming+harvest succeed"
+	@Test
+	public void test_needsSteaming_everythingSucceeds() throws Exception {
+		
+		// Create a failing stream actor and a succeeding harvest actor
+		
+		// Failing stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		final DataBucketBean bucket = getBucket("test_needsSteaming_everythingSucceeds", true, true);
+		
+		// Do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain an error
+		assertEquals(2, reply.replies().size());
+		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(true, reply.replies().get(1).success());		
+	}
+	
+	// "5) Stream+harvest, streaming succeeds/harvest fails"
+	@Test
+	public void test_streaming_streamingSucceedsHarvestFails() throws Exception {
+		
+		// Create a failing stream actor and a succeeding harvest actor
+		
+		// Failing stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 2; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Timeouter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		final DataBucketBean bucket = getBucket("test_streaming_streamingSucceedsHarvestFails", true, true);
+		
+		// Do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Should have timed out in actor", time_elapsed > 3000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 15000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain an error
+		assertEquals(1, reply.replies().size());
+		assertEquals(true, reply.replies().get(0).success());		
+	}
+	
+	// "5) Stream+harvest, streaming succeeds/harvest fails"
+	// 5b) fails with error
+	@Test
+	public void test_streaming_streamingSucceedsHarvestErrors() throws Exception {
+		
+		// Create a failing stream actor and a succeeding harvest actor
+		
+		// Failing stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 2; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Error.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		final DataBucketBean bucket = getBucket("test_streaming_streamingSucceedsHarvestErrors", true, true);
+		
+		// Do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain an error
+		assertEquals(2, reply.replies().size());
+		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(false, reply.replies().get(1).success());		
+	}
 }

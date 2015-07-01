@@ -952,7 +952,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					return replies.replies(); 
 				});
 
-		//TODO: ignore messages from streaming enrichment engine? (or possibly want to do in MgmtCrudUtils.getSuccessfulNodes, see below?)		
+		//TODO: ignore messages from streaming enrichment engine? (or possibly want to do in MgmtCrudUtils.getSuccessfulNodes, see below?)	
+		
 		
 		// Apply the affinity to the bucket status (which must exist, by construction):
 		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
