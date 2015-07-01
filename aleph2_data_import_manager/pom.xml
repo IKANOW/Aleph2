@@ -225,12 +225,12 @@
 	<version>0.9.5</version>
 </dependency>
 
-  	<dependency>
-  		<groupId>aleph2_storm_samples</groupId>
-  		<artifactId>aleph2_storm_samples</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
-  		<scope>test</scope>
-  	</dependency>
+<!--   	<dependency> -->
+<!--   		<groupId>aleph2_storm_samples</groupId> -->
+<!--   		<artifactId>aleph2_storm_samples</artifactId> -->
+<!--   		<version>0.0.1-SNAPSHOT</version> -->
+<!--   		<scope>test</scope> -->
+<!--   	</dependency> -->
   </dependencies>
   
 </project>
