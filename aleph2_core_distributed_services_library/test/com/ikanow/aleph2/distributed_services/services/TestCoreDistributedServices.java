@@ -124,7 +124,7 @@ public class TestCoreDistributedServices {
 		final int num_to_test = 10;
 		//throw items on the queue
 		
-		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
 		String original_message = jsonNode.toString();	
 		for ( int i = 0; i < num_to_test; i++ ) 
 			_core_distributed_services.produce(TOPIC_NAME, original_message);	
@@ -145,8 +145,7 @@ public class TestCoreDistributedServices {
         assertEquals(message_count, num_to_test);
         assertTrue(original_message.equals(consumed_message));
 	}
-	
-	@Ignore
+		
 	@Test
 	public void testKafkaForStormSpout() throws Exception {
 		//create a topic for a kafka spout, put 50 things in the spout
@@ -155,10 +154,10 @@ public class TestCoreDistributedServices {
 		final int num_to_test = 10;
 		//throw items on the queue
 		
-//		JsonNode jsonNode = new ObjectMapper().readTree("{\"key\":\"val\"}");
-//		String original_message = jsonNode.toString();	
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
+		String original_message = jsonNode.toString();	
 		for ( int i = 0; i < num_to_test; i++ ) 
-			_core_distributed_services.produce(TOPIC_NAME, "a random message");	
+			_core_distributed_services.produce(TOPIC_NAME, original_message);	
 		
 		//grab the consumer
 //		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
