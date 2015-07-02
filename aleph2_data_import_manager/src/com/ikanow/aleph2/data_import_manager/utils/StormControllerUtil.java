@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import_manager.utils;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,8 +28,11 @@ import backtype.storm.generated.TopologyInfo;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.RemoteStormController;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 /**
  * Factory for returning a local or remote storm controller.
@@ -59,8 +63,18 @@ public class StormControllerUtil {
 	 * @param storm_thrift_transport_plugin
 	 * @return
 	 */
-	public static IStormController getRemoteStormController(String nimbus_host, int nimbus_thrift_port, String storm_thrift_transport_plugin) {
+	public static IStormController getRemoteStormController(String nimbus_host, int nimbus_thrift_port, String storm_thrift_transport_plugin) {		
 		return new RemoteStormController(nimbus_host, nimbus_thrift_port, storm_thrift_transport_plugin);
+	}
+	
+	/**
+	 * Returns an instance of a remote storm controller pointed at the given config
+	 * 
+	 * @param config
+	 * @return
+	 */
+	public static IStormController getRemoteStormController(Map<String, Object> config) {
+		return new RemoteStormController(config);
 	}
 	
 	/**
@@ -129,5 +143,26 @@ public class StormControllerUtil {
 			return null;
 		}	
 		
+	}
+	
+	protected static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) {
+		Config config = ConfigFactory.parseFile(new File(yarn_config_dir + File.separator + "storm.properties"));
+		IStormController storm = getRemoteStormController(config.root().unwrapped());
+		return storm;		
+	}
+
+	public static void startJob(DataBucketBean bucket, String yarn_config_dir) {
+		IStormController storm = getStormControllerFromYarnConfig(yarn_config_dir);
+		//storm.submitJob(job_name, input_jar_location, topology);
+	}
+
+	public static void stopJob(DataBucketBean bucket, String yarn_config_dir) {
+		IStormController storm = getStormControllerFromYarnConfig(yarn_config_dir);
+		//storm.stopJob(job_name);
+	}
+
+	public static void restartJob(DataBucketBean bucket, String yarn_config_dir) {
+		stopJob(bucket, yarn_config_dir);
+		startJob(bucket, yarn_config_dir);
 	}
 }

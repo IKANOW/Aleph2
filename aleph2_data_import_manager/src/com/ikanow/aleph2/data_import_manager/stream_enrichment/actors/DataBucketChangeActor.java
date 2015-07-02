@@ -25,8 +25,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 import scala.PartialFunction;
 import scala.Tuple2;
@@ -36,10 +40,13 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
 
+
+
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -62,6 +69,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
+
+
 
 import fj.data.Validation;
 
@@ -138,6 +147,9 @@ public class DataBucketChangeActor extends AbstractActor {
 		    					    			
 	    				final String hostname = _context.getInformationService().getHostname();
 	    				
+	    				//TODO more stuff
+	    				DataBucketChangeActor.talkToStream(m.bucket(), m, _globals.local_yarn_config_dir());
+	    				
 	    				//TODO: create future in which you attempt to launch STORM, eg ending
 	    				// thenAccept(reply -> {
 	    				//	closing_sender.tell(reply,  closing_self);
@@ -166,5 +178,33 @@ public class DataBucketChangeActor extends AbstractActor {
 	
 	// Functional code
 
-	//TODO:
+	//TODO:	
+	protected static void talkToStream(
+			final DataBucketBean bucket, 
+			final BucketActionMessage m, String yarn_config_dir
+			)
+	{
+		Patterns.match(m).andAct()
+			.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
+				
+			})
+			.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+				StormControllerUtil.stopJob( bucket, yarn_config_dir);
+			})
+			.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+				StormControllerUtil.startJob(bucket, yarn_config_dir);
+			})
+			.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+				StormControllerUtil.restartJob(bucket, yarn_config_dir);
+			})
+			.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
+				if ( msg.is_suspended() )
+					StormControllerUtil.stopJob(bucket, yarn_config_dir);
+				else
+					StormControllerUtil.startJob(bucket, yarn_config_dir);
+			})
+			.otherwise(msg -> {
+				
+			});
+	}
 }

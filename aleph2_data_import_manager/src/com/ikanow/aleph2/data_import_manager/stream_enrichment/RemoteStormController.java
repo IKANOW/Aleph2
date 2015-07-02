@@ -53,6 +53,27 @@ public class RemoteStormController implements IStormController  {
 	 * in there.  If this is put out on a server you have to deploy a version there (or get the
 	 * bundled storm-core/defaults.yaml on the classpath).
 	 * 
+	 * Need these params minimally:
+	 * nimbus.host
+	 * nimbus.thrift.port
+	 * storm.thrift.transport
+	 * storm.meta.serialization.delegate
+	 * 
+	 * @param config
+	 */
+	public RemoteStormController(Map<String, Object> config) {
+		remote_config = config;
+		logger.info("Connecting to remote storm: " + remote_config.toString() );
+		client = NimbusClient.getConfiguredClient(remote_config).getClient();
+	}
+	
+	/**
+	 * Initialize the remote client.  Need the nimbus host:port and the transport plugin.
+	 * Additionally, the nimbus client will attempt to find the storm.yaml or defaults.yaml
+	 * config file on the classpath.  If this is bundled with storm-core it'll use the defaults
+	 * in there.  If this is put out on a server you have to deploy a version there (or get the
+	 * bundled storm-core/defaults.yaml on the classpath).
+	 * 
 	 * @param nimbus_host
 	 * @param nimbus_thrift_port
 	 * @param storm_thrift_transport_plugin typically "backtype.storm.security.auth.SimpleTransportPlugin"
