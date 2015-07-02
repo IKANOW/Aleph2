@@ -47,7 +47,7 @@ public class PassthroughTopology implements IEnrichmentStreamingTopology {
 	 */
 	@Override
 	public Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bucket, final IEnrichmentModuleContext context) {		
-		TopologyBuilder builder = new TopologyBuilder();
+		final TopologyBuilder builder = new TopologyBuilder();
 		builder.setSpout("1", context.getTopologyEntryPoint(BaseRichSpout.class, Optional.of(bucket)));
 		builder.setBolt("2", context.getTopologyStorageEndpoint(BaseRichBolt.class, Optional.of(bucket))).localOrShuffleGrouping("1");
 		return Tuples._2T(builder.createTopology(), Collections.emptyMap());

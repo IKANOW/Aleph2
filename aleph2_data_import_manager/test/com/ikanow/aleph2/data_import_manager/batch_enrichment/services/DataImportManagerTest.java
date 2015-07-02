@@ -18,12 +18,15 @@ import akka.actor.Props;
 
 import com.google.inject.Injector;
 import com.google.inject.Scopes;
+import com.google.inject.util.Providers;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketActor;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BucketEnrichmentMessage;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.MockBeJobService;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.utils.DataBucketTest;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
@@ -42,6 +45,7 @@ public class DataImportManagerTest extends DataBucketTest{
 			protected void configureServices() {
 			    bind(DataImportManager.class).in(Scopes.SINGLETON);
 			    bind(IBeJobService.class).to(MockBeJobService.class).in(Scopes.SINGLETON);
+			    bind(IStormController.class).to(LocalStormController.class).in(Scopes.SINGLETON);
 			}
 			
 		}), Optional.of(config));

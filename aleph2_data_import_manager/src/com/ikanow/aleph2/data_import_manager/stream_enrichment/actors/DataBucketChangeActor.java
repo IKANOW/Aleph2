@@ -285,8 +285,10 @@ public class DataBucketChangeActor extends AbstractActor {
 					// Normal
 					libs -> {
 						final Tuple2<SharedLibraryBean, String> libbean_path = libs.values().stream()
-								.filter(t2 -> null != Optional.ofNullable(t2._1().streaming_enrichment_entry_point()).orElse(t2._1().misc_entry_point()))
-								.findFirst().get();
+								.filter(t2 -> (null != t2._1()) && 
+										(null != Optional.ofNullable(t2._1().streaming_enrichment_entry_point()).orElse(t2._1().misc_entry_point())))
+								.findFirst()
+								.orElse(null);
 						
 						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
 							return Validation.fail(
@@ -296,7 +298,7 @@ public class DataBucketChangeActor extends AbstractActor {
 						
 						final Validation<BasicMessageBean, IEnrichmentStreamingTopology> ret_val = 
 								ClassloaderUtils.getFromCustomClasspath(IEnrichmentStreamingTopology.class, 
-										libbean_path._1().misc_entry_point(), 
+										Optional.ofNullable(libbean_path._1().streaming_enrichment_entry_point()).orElse(libbean_path._1().misc_entry_point()), 
 										Optional.of(libbean_path._2()),
 										libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList()),
 										source, m);
