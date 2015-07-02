@@ -16,7 +16,9 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.math.BigDecimal;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,25 +36,37 @@ public class JsonUtils {
 	 *  TODO: needs testing + test code
 	 * @param in - the tuple
 	 * @param mapper - the Jackson object mapper
-	 * @param json_field - optional (assumed to be "" if left alone) fieldname of the string representation of the JSON
+	 * @param json_field - optional fieldname of the string representation of the JSON - if not present then the last field is used (set to eg "" if there is no base object)
 	 * @return
 	 */
 	public static JsonNode foldTuple(final LinkedHashMap<String, Object> in, final ObjectMapper mapper, final Optional<String> json_field) {
-		return in.entrySet().stream().reduce(
-				mapper.createObjectNode(), 
-				Lambdas.wrap_u((acc, kv) -> kv.getKey().equals(json_field.orElse(""))
-					? (ObjectNode) ((ObjectNode) mapper.readTree(kv.getValue().toString())).setAll(acc)
-					: Patterns.match(kv.getValue()).<ObjectNode>andReturn()
-						.when(String.class, s -> acc.put(kv.getKey(), s))
-						.when(Long.class, l -> acc.put(kv.getKey(), l))
-						.when(Integer.class, l -> acc.put(kv.getKey(), l))
-						.when(Boolean.class, b -> acc.put(kv.getKey(), b))
-						.when(Double.class, d -> acc.put(kv.getKey(), d))
-						.when(JsonNode.class, j -> (ObjectNode) acc.set(kv.getKey(), j))
-						.when(Float.class, f -> acc.put(kv.getKey(), f))
-						.when(BigDecimal.class, f -> acc.put(kv.getKey(), f))
-						.otherwise(x -> acc.putPOJO(kv.getKey(), x))),
-				(acc1, acc2) -> acc1);
+		try {
+			// (do this imperatively to handle the "last element can be the base object case"
+			final Iterator<Map.Entry<String,Object>> it = in.entrySet().iterator();
+			ObjectNode acc = mapper.createObjectNode();
+			while (it.hasNext()) {
+				final Map.Entry<String, Object> kv = it.next();
+				if ((json_field.isPresent() && kv.getKey().equals(json_field.get()))
+						|| !json_field.isPresent() && !it.hasNext()) {
+					acc = (ObjectNode) ((ObjectNode) mapper.readTree(kv.getValue().toString())).setAll(acc);
+				}
+				else {
+					final ObjectNode acc_tmp = acc;
+					Patterns.match(kv.getValue()).andAct()
+								.when(String.class, s -> acc_tmp.put(kv.getKey(), s))
+								.when(Long.class, l -> acc_tmp.put(kv.getKey(), l))
+								.when(Integer.class, l -> acc_tmp.put(kv.getKey(), l))
+								.when(Boolean.class, b -> acc_tmp.put(kv.getKey(), b))
+								.when(Double.class, d -> acc_tmp.put(kv.getKey(), d))
+								.when(JsonNode.class, j -> acc_tmp.set(kv.getKey(), j))
+								.when(Float.class, f -> acc_tmp.put(kv.getKey(), f))
+								.when(BigDecimal.class, f -> acc_tmp.put(kv.getKey(), f))
+								.otherwise(x -> acc_tmp.putPOJO(kv.getKey(), BeanTemplateUtils.toJson(x)));
+				}
+			}
+			return acc;
+		}
+		catch (Exception e) { throw new RuntimeException(e); } // (convert to unchecked exception)
 	}
 	
 	//TODO (ALEPH-3): need a NestedAccessHelper for nested access to objects that can include maps
