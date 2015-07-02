@@ -17,15 +17,16 @@ package com.ikanow.aleph2.data_import_manager.utils;
 
 import java.io.File;
 import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
-import com.ikanow.aleph2.data_import_manager.streaming_enrichment.IStormController;
-import com.ikanow.aleph2.data_import_manager.streaming_enrichment.LocalStormController;
-import com.ikanow.aleph2.data_import_manager.streaming_enrichment.RemoteStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.IStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.LocalStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.RemoteStormController;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 

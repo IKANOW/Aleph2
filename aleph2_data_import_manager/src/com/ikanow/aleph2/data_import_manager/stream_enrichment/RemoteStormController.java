@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.streaming_enrichment;
+package com.ikanow.aleph2.data_import_manager.stream_enrichment;
 
 import java.util.HashMap;
 import java.util.Iterator;

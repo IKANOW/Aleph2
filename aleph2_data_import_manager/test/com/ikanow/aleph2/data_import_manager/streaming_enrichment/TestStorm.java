@@ -20,6 +20,7 @@ import storm.kafka.ZkHosts;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.IStormController;
 import com.ikanow.aleph2.data_import_manager.streaming_enrichment.storm_samples.SampleWebReaderSpout;
 import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
