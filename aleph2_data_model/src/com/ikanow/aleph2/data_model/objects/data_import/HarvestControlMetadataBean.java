@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,8 @@ import java.util.Map;
 /** Bean controlling a harvester configuration - normally found embedded within a DataBucketBean
  * @author acp
  */
-public class HarvestControlMetadataBean {
-	
+public class HarvestControlMetadataBean implements Serializable {
+	private static final long serialVersionUID = 1850167505811531333L;
 	protected HarvestControlMetadataBean() {}
 	
 	public HarvestControlMetadataBean(final String name, final Boolean enabled, final List<String> library_ids_or_names,

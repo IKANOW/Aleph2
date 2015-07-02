@@ -15,13 +15,15 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
 /** Contains information about authorization rights on an object
  * @author acp
  */
-public class AuthorizationBean {
+public class AuthorizationBean implements Serializable {
+	private static final long serialVersionUID = 5344494019659648244L;
 	protected AuthorizationBean() {}
 	
 	/** User constructor

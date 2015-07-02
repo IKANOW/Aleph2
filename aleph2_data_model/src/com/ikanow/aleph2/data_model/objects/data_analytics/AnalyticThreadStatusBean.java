@@ -15,11 +15,11 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
 
 import scala.Tuple2;
 
@@ -30,7 +30,8 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** Represents generic analytic thread status
  * @author acp
  */
-public class AnalyticThreadStatusBean {
+public class AnalyticThreadStatusBean implements Serializable {
+	private static final long serialVersionUID = 5190374591694258070L;
 	protected AnalyticThreadStatusBean() {}
 	
 	/** User constructor

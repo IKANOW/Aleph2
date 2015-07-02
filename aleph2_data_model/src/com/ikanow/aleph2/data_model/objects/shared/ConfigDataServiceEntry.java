@@ -18,8 +18,10 @@ package com.ikanow.aleph2.data_model.objects.shared;
 import java.util.Optional;
 
 
-public class ConfigDataServiceEntry
-{
+/** Class that supports service configuration - note not a bean, kept here for convenience
+ * @author burch
+ */
+public class ConfigDataServiceEntry {
 	public final String annotationName;
 	public final Optional<String> interfaceName;
 	public final String serviceName;

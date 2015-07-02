@@ -15,11 +15,15 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
+
 /** Placeholder object for representing the differences in a bucket update, to help
  *  harvest/enrichment authors decide how best to handle them
  * @author acp
  *
  */
-public class BucketDiffBean {
+public class BucketDiffBean implements Serializable {
+	private static final long serialVersionUID = -5936448294402600187L;
+
 	protected BucketDiffBean() {}
 }

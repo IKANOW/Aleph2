@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
-import com.ikanow.aleph2.data_model.objects.shared.Identity;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
 
 public class SampleSecurityService implements ISecurityService {
 	

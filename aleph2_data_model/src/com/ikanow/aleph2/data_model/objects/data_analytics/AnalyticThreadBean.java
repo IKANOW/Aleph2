@@ -15,7 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
-public class AnalyticThreadBean {
+import java.io.Serializable;
+
+public class AnalyticThreadBean implements Serializable {
+	private static final long serialVersionUID = -1884220783549625389L;
 
 	//TODO (ALEPH-12): so the thread looks like
 	// analytic engine (MapReduce/Spark/Storm) -> module (eg sliding window aggregation) -> thread (set of modules within an engine + config)

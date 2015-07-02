@@ -15,9 +15,11 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
 
-public class GlobalPropertiesBean {
 
+public class GlobalPropertiesBean implements Serializable {
+	private static final long serialVersionUID = -7309577351960681658L;
 	public static final String PROPERTIES_ROOT = "globals"; 	
 	public static final String __DEFAULT_LOCAL_ROOT_DIR = "/opt/aleph2-home/"; 	
 	public static final String __DEFAULT_LOCAL_YARN_CONFIG_DIR = "/opt/aleph2-home/yarn-config/"; 	

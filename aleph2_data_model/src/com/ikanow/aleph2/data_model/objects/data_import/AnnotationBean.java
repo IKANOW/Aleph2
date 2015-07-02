@@ -15,7 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
-public class AnnotationBean {
+import java.io.Serializable;
+
+public class AnnotationBean implements Serializable {
+	private static final long serialVersionUID = 5347218352527147640L;
 
 	//TODO (ALEPH-13):
 	// tags

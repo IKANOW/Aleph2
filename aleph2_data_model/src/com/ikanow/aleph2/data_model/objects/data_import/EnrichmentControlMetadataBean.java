@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,8 +24,8 @@ import java.util.Map;
 /** Bean controlling an enrichment configuration
  * @author acp
  */
-public class EnrichmentControlMetadataBean {
-	
+public class EnrichmentControlMetadataBean implements Serializable {
+	private static final long serialVersionUID = 2550210707023662158L;
 	protected EnrichmentControlMetadataBean() {}
 	
 	/** User constructor

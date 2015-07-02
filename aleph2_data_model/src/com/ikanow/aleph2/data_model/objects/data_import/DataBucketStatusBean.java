@@ -15,19 +15,19 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** Represents generic harvest status
  * @author acp
  */
-public class DataBucketStatusBean {
-
+public class DataBucketStatusBean implements Serializable {
+	private static final long serialVersionUID = -8083153395703267121L;
 	public static final String HARVEST_LOG_PATH = "/logs/harvest/";
 	public static final String ENRICHMENT_LOG_PATH = "/logs/enrichment/";
 	public static final String STORAGE_LOG_PATH = "/logs/storage/";

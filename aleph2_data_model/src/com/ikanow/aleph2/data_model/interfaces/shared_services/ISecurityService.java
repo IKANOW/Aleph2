@@ -17,9 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Map;
 
-
-import com.ikanow.aleph2.data_model.objects.shared.Identity;
-
 /**
  * Handles permissions for the system.  All permissions are in reference to an Identity object so
  * all calls require an identity to be passed in with the requested resources/permissions being granted/revoked.

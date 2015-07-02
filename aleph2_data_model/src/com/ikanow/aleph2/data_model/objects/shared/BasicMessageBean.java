@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
@@ -23,8 +24,8 @@ import java.util.Map;
 /** Very simple status/log message format within Aleph2
  * @author acp
  */
-public class BasicMessageBean {
-
+public class BasicMessageBean implements Serializable {
+	private static final long serialVersionUID = 8123739644032642492L;
 	protected BasicMessageBean() {}
 	
 	/** User constructor

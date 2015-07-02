@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -27,7 +28,8 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
  * @author acp
  *
  */
-public class DataBucketBean {
+public class DataBucketBean implements Serializable {
+	private static final long serialVersionUID = -6307054278774897454L;
 
 	protected DataBucketBean() {}
 	

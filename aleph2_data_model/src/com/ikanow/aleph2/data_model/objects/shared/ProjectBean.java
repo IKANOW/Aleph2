@@ -15,9 +15,12 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
+
 /** Contains information about a project
  * @author acp
  */
-public class ProjectBean {
+public class ProjectBean implements Serializable {
+	private static final long serialVersionUID = 7206214834292945099L;
 	//TODO (ALEPH-21):
 }

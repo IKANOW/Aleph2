@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_layers;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -23,8 +24,8 @@ import java.util.Map;
  * @author acp
  *
  */
-public class DataLayerConfigurationBean {
-
+public class DataLayerConfigurationBean implements Serializable {
+	private static final long serialVersionUID = 6348107846594376703L;
 	protected DataLayerConfigurationBean() {}
 	
 	/** User constructor

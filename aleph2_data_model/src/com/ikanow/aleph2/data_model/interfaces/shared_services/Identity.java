@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package com.ikanow.aleph2.data_model.objects.shared;
+package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 /**
  * Represents the identity of a user or usergroup for basing permission rules on.

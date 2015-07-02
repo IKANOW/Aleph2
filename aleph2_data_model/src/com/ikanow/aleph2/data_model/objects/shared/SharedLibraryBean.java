@@ -15,13 +15,14 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 
 
-public class SharedLibraryBean {
-
+public class SharedLibraryBean implements Serializable {
+	private static final long serialVersionUID = 7679107180417790229L;
 	protected SharedLibraryBean() {}
 	
 	/** User constructor

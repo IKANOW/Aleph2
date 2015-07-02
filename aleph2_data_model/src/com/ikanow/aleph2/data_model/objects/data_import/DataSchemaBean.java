@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +25,8 @@ import java.util.Map;
  * @author acp
  *
  */
-public class DataSchemaBean {
+public class DataSchemaBean implements Serializable {
+	private static final long serialVersionUID = 4176875714094668591L;
 
 	protected DataSchemaBean() {}
 	
@@ -111,8 +113,8 @@ public class DataSchemaBean {
 	 * @author acp
 	 *
 	 */
-	public static class StorageSchemaBean {
-		
+	public static class StorageSchemaBean implements Serializable {
+		private static final long serialVersionUID = 6846462609660288814L;
 		protected StorageSchemaBean() {}
 		
 		/** User constructor
@@ -214,8 +216,8 @@ public class DataSchemaBean {
 	 * @author acp
 	 *
 	 */
-	public static class DocumentSchemaBean {
-		
+	public static class DocumentSchemaBean implements Serializable {
+		private static final long serialVersionUID = 6407137348665175660L;
 		protected DocumentSchemaBean() {}
 		
 		/** User constructor
@@ -280,8 +282,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Search Index Service
 	 * @author acp
 	 */
-	public static class SearchIndexSchemaBean {
-		
+	public static class SearchIndexSchemaBean implements Serializable {
+		private static final long serialVersionUID = -1023079126153099337L;
 		protected SearchIndexSchemaBean() {}
 		
 		/** User constructor
@@ -322,8 +324,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Columnar Service
 	 * @author acp
 	 */
-	public static class ColumnarSchemaBean {
-		
+	public static class ColumnarSchemaBean implements Serializable {
+		private static final long serialVersionUID = -6651815017077463900L;
 		protected ColumnarSchemaBean() {}
 		
 		/** User constructor
@@ -415,8 +417,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Temporal Service
 	 * @author acp
 	 */
-	public static class TemporalSchemaBean {
-
+	public static class TemporalSchemaBean implements Serializable {
+		private static final long serialVersionUID = -8025554290903106836L;
 		protected TemporalSchemaBean() {}
 		
 		/** User constructor
@@ -513,7 +515,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Geospatial Service
 	 * @author acp
 	 */
-	public static class GeospatialSchemaBean {
+	public static class GeospatialSchemaBean implements Serializable {
+		private static final long serialVersionUID = -3380350300379967374L;
 		//TODO (ALEPH-16): define an initial set of geo-spatial schema
 		//private Boolean enabled;
 		//private String service_name;
@@ -522,7 +525,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Graph DB Service
 	 * @author acp
 	 */
-	public static class GraphSchemaBean {
+	public static class GraphSchemaBean implements Serializable {
+		private static final long serialVersionUID = -824592579880124213L;
 		//TODO (ALEPH-15): define an initial set of graph schema 
 		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
 		//private Boolean enabled;
@@ -533,7 +537,8 @@ public class DataSchemaBean {
 	/** Per bucket schema for the Data Warehouse service 
 	 * @author acp
 	 */
-	public static class DataWarehouseSchemaBean {
+	public static class DataWarehouseSchemaBean implements Serializable {
+		private static final long serialVersionUID = -5234936234777519175L;
 		//TODO (ALEPH-17): "sql" (hive) view of the data
 		//config: map JSON to sql fields ie allow generation of serde
 		//also maps buckets to database/table format

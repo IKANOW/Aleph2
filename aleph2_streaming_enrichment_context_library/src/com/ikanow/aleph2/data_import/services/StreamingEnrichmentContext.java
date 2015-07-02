@@ -285,7 +285,8 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				throw new RuntimeException(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"));
 			}
 			if (!_mutable_state.signature_override.isSet()) {
-				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
+				// Assume the user is happy with defaults:
+				getEnrichmentContextSignature(bucket, Optional.empty());
 			}
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());

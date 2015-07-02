@@ -15,12 +15,14 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.shared;
 
+import java.io.Serializable;
+
 
 /** This bean encapsulates test-specific requests to the harvester
  * @author acp
  */
-public class ProcessingTestSpecBean {
-
+public class ProcessingTestSpecBean implements Serializable {
+	private static final long serialVersionUID = -461079824203542423L;
 	protected ProcessingTestSpecBean() {}
 	
 	/** User constructor
