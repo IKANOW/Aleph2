@@ -33,7 +33,6 @@ public class JsonUtils {
 	/** Takes a tuple expressed as LinkedHashMap<String, Object> (by convention the Objects are primitives, JsonNode, or POJO), and where one of the objects
 	 *  is a JSON representation of the original object and creates an object by folding them all together
 	 *  Note the other fields of the tuple take precedence over the JSON
-	 *  TODO: needs testing + test code
 	 * @param in - the tuple
 	 * @param mapper - the Jackson object mapper
 	 * @param json_field - optional fieldname of the string representation of the JSON - if not present then the last field is used (set to eg "" if there is no base object)
