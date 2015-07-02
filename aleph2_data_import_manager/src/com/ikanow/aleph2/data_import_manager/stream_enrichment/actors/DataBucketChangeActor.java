@@ -326,10 +326,13 @@ public class DataBucketChangeActor extends AbstractActor {
 	{
 		try {
 			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
-			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket);
-
+			final Optional<QueryComponent<SharedLibraryBean>> spec = getQuery(bucket);
+			if (!spec.isPresent()) {
+				return CompletableFuture.completedFuture(Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(Collections.emptyMap()));
+			}
+			
 			return management_db.getSharedLibraryStore().getObjectsBySpec(
-					spec, 
+					spec.get(), 
 					Arrays.asList(
 						helper.field(SharedLibraryBean::_id), 
 						helper.field(SharedLibraryBean::path_name), 
@@ -411,22 +414,22 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param cache_tech_jar_only
 	 * @return
 	 */
-	protected static QueryComponent<SharedLibraryBean> getQuery(
+	protected static Optional<QueryComponent<SharedLibraryBean>> getQuery(
 			final DataBucketBean bucket)
 	{
-		final SingleQueryComponent<SharedLibraryBean> tech_query = 
-				CrudUtils.anyOf(SharedLibraryBean.class)
-					.when(SharedLibraryBean::_id, bucket.harvest_technology_name_or_id())
-					.when(SharedLibraryBean::path_name, bucket.harvest_technology_name_or_id());
-		
 		final Stream<SingleQueryComponent<SharedLibraryBean>> libs =
-			Optionals.ofNullable(bucket.streaming_enrichment_topology().library_ids_or_names()).stream()
+			Optionals.ofNullable(
+					Optional.ofNullable(bucket.streaming_enrichment_topology())
+							.map(t -> t.library_ids_or_names())
+					.orElse(Collections.emptyList()))
+				.stream()
 				.map(name -> {
 					return CrudUtils.anyOf(SharedLibraryBean.class)
 							.when(SharedLibraryBean::_id, name)
 							.when(SharedLibraryBean::path_name, name);
 				});
 
-		return CrudUtils.<SharedLibraryBean>anyOf(libs);
+		final CrudUtils.MultiQueryComponent<SharedLibraryBean> mqc = CrudUtils.<SharedLibraryBean>anyOf(libs);
+		return mqc.getElements().isEmpty() ? Optional.empty() : Optional.of(mqc);
 	}
 }

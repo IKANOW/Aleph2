@@ -20,34 +20,53 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import scala.Tuple2;
 import scala.concurrent.duration.Duration;
 import akka.actor.ActorRef;
 import akka.actor.Inbox;
 import akka.actor.Props;
 import akka.pattern.Patterns;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
+import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -57,6 +76,8 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+
+import fj.data.Validation;
 
 public class TestDataBucketChangeActor {
 
@@ -116,7 +137,7 @@ public class TestDataBucketChangeActor {
 	// ACTOR TESTING	
 	
 	@Test
-	public void test_actor() throws UnsupportedFileSystemException, IllegalArgumentException, InterruptedException, ExecutionException, TimeoutException {		
+	public void test_actor() throws IllegalArgumentException, InterruptedException, ExecutionException, TimeoutException, IOException {		
 		
 		// Create a bucket
 		
@@ -145,8 +166,29 @@ public class TestDataBucketChangeActor {
 			}
 		}
 		
-		// 2) Send an offer
+		// 2a) Send an offer (ignored, no storm properties)
 		{
+			try {
+				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.properties").delete();
+			}
+			catch (Exception e) {
+				//(don't care if fails, probably just first time through)
+			}
+			
+			final BucketActionMessage.BucketActionOfferMessage broadcast =
+					new BucketActionMessage.BucketActionOfferMessage(bucket);
+			
+			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
+			
+			final Object msg = inbox.receive(Duration.create(5L, TimeUnit.SECONDS));
+		
+			assertEquals(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg.getClass());
+		}
+		
+		// 2b) Send an offer (accepted, create file)
+		{
+			new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.properties").createNewFile();
+			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
@@ -174,12 +216,245 @@ public class TestDataBucketChangeActor {
 		}		
 	}	
 
+	@Test
+	public void test_cacheJars() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
+		try {
+			// Preamble:
+			// 0) Insert 2 library beans into the management db
+			
+			final DataBucketBean bucket = createBucket("test_tech_id");		
+			
+			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
+			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
+			final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
+			final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
+			
+			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2, true);
+	
+			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
+			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
+			library_crud.storeObjects(lib_elements).get();
+			
+			assertEquals(3L, (long)library_crud.countObjects().get());
+			
+			// 0a) Check with no streaming, gets nothing
+			{			
+				CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
+						DataBucketChangeActor.cacheJars(bucket,  
+								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+								"test1_source", "test1_command"
+							);
+				
+				if (reply_structure.get().isFail()) {
+					fail("About to crash with: " + reply_structure.get().fail().message());
+				}		
+				assertTrue("cacheJars should return valid reply", reply_structure.get().isSuccess());
+			
+				final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().success();
+				
+				assertEquals(0L, reply_map.size()); // (both modules, 1x for _id and 1x for name) 
+			}
+			
+			// 0b) Create the more complex bucket
+			
+			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), Collections.emptyMap());
+			
+			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
+								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
+								.done();
+			
+			// 1) Normal operation
+			
+			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
+				DataBucketChangeActor.cacheJars(bucket2,  
+						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+						"test1_source", "test1_command"
+					);
+			
+			if (reply_structure.get().isFail()) {
+				fail("About to crash with: " + reply_structure.get().fail().message());
+			}		
+			assertTrue("cacheJars should return valid reply", reply_structure.get().isSuccess());
+		
+			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().success();
+			
+			assertEquals(4L, reply_map.size()); // (both modules, 1x for _id and 1x for name) 
+			
+			// 3) Couple of error cases:
+			
+			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id", "failtest"), Collections.emptyMap());
+			
+			final DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket)
+								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)
+								.done();
+			
+			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
+					DataBucketChangeActor.cacheJars(bucket3,  
+							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+							"test2_source", "test2_command"
+						);
+			
+			assertTrue("cacheJars should return error", reply_structure3.get().isFail());
+		}
+		catch (Exception e) {
+			System.out.println(ErrorUtils.getLongForm("guice? {0}", e));
+			throw e;
+		}
+	}
+	
+	@Ignore
+	@Test
+	public void test_getStreamingTopology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
+		final DataBucketBean bucket = createBucket("test_tech_id");		
+		
+		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
+		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
+		final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
+		
+		List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2, true);
+		
+		//////////////////////////////////////////////////////
+
+		// 1) Check - if called with an error, then just passes that error along
+		
+		final BasicMessageBean error = StreamErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+		
+		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test1 = DataBucketChangeActor.getStreamingTopology(bucket,  
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
+		
+		assertTrue("Got error back", test1.isFail());
+		assertEquals("test_source", test1.fail().source());
+		assertEquals("test_message", test1.fail().command());
+		assertEquals("test_error", test1.fail().message());
+		
+		//////////////////////////////////////////////////////
+
+		// 2) Check the error handling inside getHarvestTechnology
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test2_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id_2b", Tuples._2T(null, null))
+					.build();
+
+		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2a = DataBucketChangeActor.getStreamingTopology(
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2a").done(), 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
+				Validation.success(test2_input));
+
+		assertTrue("Got error back", test2a.isFail());
+		assertEquals("test_source2a", test2a.fail().source());
+		assertEquals("BucketActionOfferMessage", test2a.fail().command());
+		assertEquals(ErrorUtils.get(StreamErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
+						test2a.fail().message());
+		
+		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2b = DataBucketChangeActor.getStreamingTopology(
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2b").done(), 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
+				Validation.success(test2_input));
+
+		assertTrue("Got error back", test2b.isFail());
+		assertEquals("test_source2b", test2b.fail().source());
+		assertEquals("BucketActionOfferMessage", test2b.fail().command());
+		assertEquals(ErrorUtils.get(StreamErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
+						test2a.fail().message());
+		
+		//////////////////////////////////////////////////////
+
+		// 3) OK now it will actually do something 
+		
+		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id.cache.jar";
+		
+		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
+		
+		// Requires that the file has already been cached:
+		final Validation<BasicMessageBean, String> cached_file = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+				lib_elements.get(0), 
+				_service_context.getStorageService(),
+				"test3", "test3").get();
+		
+		if (cached_file.isFail()) {
+			fail("About to crash with: " + cached_file.fail().message());
+		}		
+		
+		assertTrue("The cached file exists: " + java_name, new File(java_name).exists());
+		
+		// OK the setup is done and validated now actually test the underlying call:
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id", Tuples._2T(
+							lib_elements.get(0),
+							cached_file.success()))
+					.build();		
+		
+		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3 = DataBucketChangeActor.getStreamingTopology(
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id").done(), 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
+				Validation.success(test3_input));
+
+		if (test3.isFail()) {
+			fail("About to crash with: " + test3.fail().message());
+		}		
+		assertTrue("getStreamingTopology call succeeded", test3.isSuccess());
+		assertTrue("topology created: ", test3.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3.success().getClass().getName());
+		
+		// Now check with the "not just the harvest tech" flag set
+		
+		final String java_name2 = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_module_id.cache.jar";
+		
+		System.out.println("Needed to delete locally cached file? " + java_name2 + ": " + new File(java_name2).delete());		
+		
+		// Requires that the file has already been cached:
+		final Validation<BasicMessageBean, String> cached_file2 = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+				lib_elements.get(1), 
+				_service_context.getStorageService(),
+				"test3b", "test3b").get();
+		
+		if (cached_file2.isFail()) {
+			fail("About to crash with: " + cached_file2.fail().message());
+		}		
+		
+		assertTrue("The cached file exists: " + java_name, new File(java_name2).exists());				
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3b_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id", Tuples._2T(
+							lib_elements.get(0),
+							cached_file.success()))
+					.put("test_module_id", Tuples._2T(
+							lib_elements.get(1),
+							cached_file.success()))
+					.build();		
+		
+		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
+				"test_tech_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), null
+				);
+		
+		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3b = DataBucketChangeActor.getStreamingTopology(
+				BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::streaming_enrichment_topology, Arrays.asList(enrichment_module))
+					.done(), 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
+				Validation.success(test3b_input));
+
+		if (test3b.isFail()) {
+			fail("About to crash with: " + test3b.fail().message());
+		}		
+		assertTrue("getStreamingTopology call succeeded", test3b.isSuccess());
+		assertTrue("topology created: ", test3b.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////
 	
 	// UTILS
 	
 	protected DataBucketBean createBucket(final String harvest_tech_id) {
-		//TODO: make this be something streaming instead
+		// (Add streaming logic outside this via clone() - see cacheJars)
 		return BeanTemplateUtils.build(DataBucketBean.class)
 							.with(DataBucketBean::_id, "test1")
 							.with(DataBucketBean::full_name, "/test/path/")
@@ -187,4 +462,28 @@ public class TestDataBucketChangeActor {
 							.done().get();
 	}
 	
+	protected List<SharedLibraryBean> createSharedLibraryBeans(Path path1, Path path2, boolean create_failing_lib) {
+		final SharedLibraryBean lib_element = BeanTemplateUtils.build(SharedLibraryBean.class)
+			.with(SharedLibraryBean::_id, "test_tech_id")
+			.with(SharedLibraryBean::path_name, path1.toString())
+			.with(SharedLibraryBean::misc_entry_point, "com.ikanow.aleph2.test.example.ExampleStreamTopology")
+			.done().get();
+
+		final SharedLibraryBean lib_element2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+			.with(SharedLibraryBean::_id, "test_module_id")
+			.with(SharedLibraryBean::path_name, path2.toString())
+			.done().get();
+
+		if (create_failing_lib) {
+			final SharedLibraryBean lib_element3 = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::_id, "failtest")
+				.with(SharedLibraryBean::path_name, "/not_exist/here.fghgjhgjhg")
+				.done().get();
+	
+			return Arrays.asList(lib_element, lib_element2, lib_element3);
+		}
+		else {
+			return Arrays.asList(lib_element, lib_element2);
+		}
+	}
 }
