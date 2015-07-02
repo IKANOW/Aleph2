@@ -18,11 +18,12 @@ package com.ikanow.aleph2.data_import.context.stream_enrichment.utils;
 /** Error messages for streaming enrichment context
  * @author Alex
  */
-public class ErrorUtils {
+public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 
 	final public static String NOT_YET_IMPLEMENTED = "Functionality is not yet implemented";
 	final public static String NOT_SUPPORTED_IN_STREAMING_ENRICHMENT = "Functionality does not apply to streaming enrichment context - this is for batch enrichment";
 	final public static String SERVICE_RESTRICTIONS = "Can't call getEnrichmentContextSignature with different 'services' parameter; can't call getUnderlyingArtefacts without having called getEnrichmentContextSignature.";
 	final public static String TECHNOLOGY_NOT_MODULE = "Can only be called from technology, not module";
 	final public static String MODULE_NOT_TECHNOLOGY = "Can only be called from module, not technology";
+	final public static String USER_TOPOLOGY_NOT_SET = "This method {0} cannot be called until the framework has set the user entry point";
 }

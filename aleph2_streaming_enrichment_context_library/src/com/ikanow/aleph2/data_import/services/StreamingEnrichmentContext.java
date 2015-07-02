@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
+import com.ikanow.aleph2.data_import.stream_enrichment.storm.OutputBolt;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -71,13 +72,13 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		//TODO (ALEPH-10) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
 		SetOnce<String> user_topology_entry_point = new SetOnce<String>();
+		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
+		final SetOnce<String> signature_override = new SetOnce<>();		
 	};	
 	protected final MutableState _mutable_state = new MutableState(); 
 	
 	public enum State { IN_TECHNOLOGY, IN_MODULE };
 	protected final State _state_name;	
-	
-	final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> _service_manifest_override = new SetOnce<>();
 	
 	// (stick this injection in and then call injectMembers in IN_MODULE case)
 	@Inject protected IServiceContext _service_context;	
@@ -191,13 +192,13 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
 							.build();
 			
-			if (_service_manifest_override.isSet()) {
-				if (!complete_services_set.equals(_service_manifest_override.get())) {
+			if (_mutable_state.service_manifest_override.isSet()) {
+				if (!complete_services_set.equals(_mutable_state.service_manifest_override.get())) {
 					throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
 				}
 			}
 			else {
-				_service_manifest_override.set(complete_services_set);
+				_mutable_state.service_manifest_override.set(complete_services_set);
 			}
 			
 			final Config config_no_services = full_config.withoutPath("service");
@@ -224,7 +225,10 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 								.withValue(__MY_ID, ConfigValueFactory
 										.fromAnyRef(bucket.orElseGet(() -> _mutable_state.bucket.get())._id(), "bucket id"));
 			
-			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
+			final String ret = this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
+			_mutable_state.signature_override.set(ret);
+
+			return ret;
 		}
 		else {
 			throw new RuntimeException("Can only be called from technology, not module");			
@@ -237,13 +241,13 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		if (_state_name == State.IN_TECHNOLOGY) {
-			if (!_service_manifest_override.isSet()) {
+			if (!_mutable_state.service_manifest_override.isSet()) {
 				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);				
 			}
 			return Stream.concat(
 				Stream.of(this, _service_context)
 				,
-				_service_manifest_override.get().stream()
+				_mutable_state.service_manifest_override.get().stream()
 					.map(t2 -> _service_context.getService(t2._1(), t2._2()))
 					.filter(service -> service.isPresent())
 					.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
@@ -270,21 +274,30 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getTopologyStorageEndpoint(java.lang.Class, java.util.Optional)
+	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyStorageEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
 		if (_state_name == State.IN_MODULE) {
 			if (!_mutable_state.user_topology_entry_point.isSet()) {
-				// TODO Auto-generated method stub error				
+				throw new RuntimeException(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"));
 			}
-			//TODO: dup code from bucket
-			// TODO Auto-generated method stub
-			return null;			
+			if (!_mutable_state.signature_override.isSet()) {
+				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
+			}
+			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());
 		}
 		else {
 			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getTopologyErrorEndpoint(java.lang.Class, java.util.Optional)
+	 */
 	@Override
 	public <T> T getTopologyErrorEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
 		if (_state_name == State.IN_MODULE) {
