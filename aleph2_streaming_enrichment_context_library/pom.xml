@@ -111,6 +111,12 @@
 			<version>${aleph2.version}</version>
 			<scope>${aleph2.scope}</scope>
 		</dependency>
+	  	<dependency>
+	  		<groupId>com.ikanow.aleph2</groupId>
+	  		<artifactId>aleph2_management_db_service</artifactId>
+	  		<version>${aleph2.version}</version>
+			<scope>${aleph2.scope}</scope>
+	  	</dependency>
 		<dependency>
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-kafka</artifactId>
@@ -122,6 +128,24 @@
 			<version>0.9.3</version>
 			<scope>provided</scope>
 		</dependency>
+	   	<dependency>
+	  		<groupId>com.ikanow.aleph2</groupId>
+	  		<artifactId>aleph2_storage_service_hdfs</artifactId>
+	  		<version>${aleph2.version}</version>
+		    <scope>test</scope>
+	  	</dependency>  	
+	  	<dependency>
+	  		<groupId>com.ikanow.aleph2</groupId>
+	  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
+	  		<version>${aleph2.version}</version>
+		    <scope>test</scope>
+	  	</dependency>
+	   	<dependency>
+	  		<groupId>com.ikanow.aleph2</groupId>
+	  		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
+	  		<version>${aleph2.version}</version>
+			<scope>test</scope>
+	  	</dependency>  	
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>

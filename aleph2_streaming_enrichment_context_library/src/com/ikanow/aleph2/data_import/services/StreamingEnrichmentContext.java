@@ -45,6 +45,7 @@ import com.ikanow.aleph2.data_import.stream_enrichment.storm.OutputBolt;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -196,6 +197,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 							.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
+							.add(Tuples._2T(IStorageService.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
 							.build();
 			
