@@ -212,7 +212,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			//handle getting the user libs
 			List<String> user_lib_paths = new LinkedList<String>(err_or_map.success().values().stream().map(tuple -> tuple._2).collect(Collectors.toList()));
 						
-			return err_or_user_topology.validation(
+			return err_or_user_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
 					//ERROR getting enrichment topology
 					error -> {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
