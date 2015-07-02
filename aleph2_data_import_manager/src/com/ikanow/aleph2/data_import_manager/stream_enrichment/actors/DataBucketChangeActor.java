@@ -30,8 +30,14 @@ import java.util.stream.StreamSupport;
 
 
 
+
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
+
 
 
 
@@ -45,8 +51,13 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
+
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
+import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
@@ -76,17 +87,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 
-
-
-
-
-
-
-
-
-
-
-
+import fj.data.Either;
 import fj.data.Validation;
 
 /** This actor is responsible for supervising the job of handling changes to data
@@ -107,6 +108,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected final ActorSystem _actor_system;
 	protected final GlobalPropertiesBean _globals;
 	protected final IStorageService _fs;
+	protected final IStormController _storm_controller;
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -117,6 +119,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		_management_db = _context.getServiceContext().getCoreManagementDbService();
 		_globals = _context.getGlobalProperties();
 		_fs = _context.getServiceContext().getStorageService();
+		_storm_controller = _context.getStormController();
 	}
 	
 	///////////////////////////////////////////
@@ -171,7 +174,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_tech_module = 
 										getStreamingTopology(m.bucket(), m, hostname, err_or_map);
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(m.bucket(), m, err_or_tech_module, hostname, e_context, _globals.local_yarn_config_dir(), err_or_map);
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, hostname, e_context, _globals.local_yarn_config_dir(), err_or_map);
 								return ret;
 								
 	    					})
@@ -197,6 +200,7 @@ public class DataBucketChangeActor extends AbstractActor {
 
 	//TODO:	
 	protected static CompletableFuture<BucketActionReplyMessage> talkToStream(
+			IStormController storm_controller, 
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_user_topology,
@@ -211,8 +215,15 @@ public class DataBucketChangeActor extends AbstractActor {
 		try {
 			//handle getting the user libs
 			List<String> user_lib_paths = new LinkedList<String>(err_or_map.success().values().stream().map(tuple -> tuple._2).collect(Collectors.toList()));
-						
-			return err_or_user_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
+			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> error_or_topology;	
+			
+			//if there are no user libs specified, switch to using passthrough topology
+			if ( user_lib_paths.isEmpty() )
+				error_or_topology = Validation.success(new PassthroughTopology());
+			else
+				error_or_topology = err_or_user_topology;
+			
+			return error_or_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
 					//ERROR getting enrichment topology
 					error -> {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
@@ -221,19 +232,19 @@ public class DataBucketChangeActor extends AbstractActor {
 					enrichment_toplogy -> {						
 						return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 								.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-									return StormControllerUtil.stopJob( bucket, yarn_config_dir);
+									return StormControllerUtil.stopJob( storm_controller, bucket);
 								})
 								.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-									return StormControllerUtil.startJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+									return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
 								})
 								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-									return StormControllerUtil.restartJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+									return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
 								})
 								.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
 									if ( msg.is_suspended() )
-										return StormControllerUtil.stopJob(bucket, yarn_config_dir);
+										return StormControllerUtil.stopJob(storm_controller, bucket);
 									else
-										return StormControllerUtil.startJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
 								})
 								.otherwise(msg -> {
 									return CompletableFuture.completedFuture(

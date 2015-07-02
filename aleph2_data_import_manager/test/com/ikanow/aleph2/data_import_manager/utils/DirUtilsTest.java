@@ -53,7 +53,7 @@ public class DirUtilsTest {
 		
 		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
-		actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
+		actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null); //TODO storm controller
 		app_injector.injectMembers(actor_context);
 
 		// create folder structure if it does not exist for testing.

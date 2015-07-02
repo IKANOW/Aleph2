@@ -13,7 +13,11 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.stream_enrichment;
+package com.ikanow.aleph2.data_import_manager.stream_enrichment.services;
+
+import java.util.concurrent.CompletableFuture;
+
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
@@ -34,14 +38,14 @@ public interface IStormController {
 	 * @param topology
 	 * @throws Exception
 	 */
-	void submitJob(String job_name, String input_jar_location, StormTopology topology) throws Exception;
+	CompletableFuture<BasicMessageBean> submitJob(String job_name, String input_jar_location, StormTopology topology);
 	/**
 	 * Should stop a job on the storm cluster given the job_name
 	 * 
 	 * @param job_name
 	 * @throws Exception
 	 */
-	void stopJob(String job_name) throws Exception;
+	CompletableFuture<BasicMessageBean> stopJob(String job_name);
 	/**
 	 * Should return the job statistics for a job running on the storm cluster with the given job_name
 	 * 

@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -32,6 +33,11 @@ import akka.actor.ActorSystem;
  * @author acp
  */
 public class DataImportActorContext {
+	protected static DataImportActorContext _singleton = null;
+	protected final ICoreDistributedServices _distributed_services;
+	protected final IServiceContext _service_context;
+	protected final GeneralInformationService _information_service;
+	protected final IStormController _storm_controller;
 	
 	@Inject 
 	protected Injector _injector; // (used to generate harvest contexts)
@@ -39,12 +45,13 @@ public class DataImportActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service)
+	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service, final IStormController storm_controller)
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
 		_information_service = information_service;
+		_storm_controller = storm_controller;
 	}
 
 	/** Returns the global properties bean
@@ -96,6 +103,14 @@ public class DataImportActorContext {
 		return _distributed_services;
 	}
 	
+	/**
+	 * Returns the storm controller
+	 * @return the storm controller
+	 */
+	public IStormController getStormController() {
+		return _storm_controller;
+	}
+	
 	/** Gets the actor context
 	 * @return the actor context
 	 */
@@ -103,9 +118,4 @@ public class DataImportActorContext {
 		// (This will only not be set if guice injection has failed, in which case there are deeper problems...)
 		return _singleton;		
 	}
-	
-	protected static DataImportActorContext _singleton = null;
-	protected final ICoreDistributedServices _distributed_services;
-	protected final IServiceContext _service_context;
-	protected final GeneralInformationService _information_service;
 }

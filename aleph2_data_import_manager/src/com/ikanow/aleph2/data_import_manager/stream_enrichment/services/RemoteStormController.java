@@ -13,18 +13,22 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.stream_enrichment;
+package com.ikanow.aleph2.data_import_manager.stream_enrichment.services;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.thrift7.TException;
 import org.json.simple.JSONValue;
 
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.FutureUtils;
 
 import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
@@ -89,25 +93,39 @@ public class RemoteStormController implements IStormController  {
 	}
 
 	@Override
-	public void submitJob(String job_name, String input_jar_location,
-			StormTopology topology) throws Exception {
+	public CompletableFuture<BasicMessageBean> submitJob(String job_name, String input_jar_location,
+			StormTopology topology)  {
+		CompletableFuture<BasicMessageBean> future = new CompletableFuture<BasicMessageBean>();
 		logger.info("Submitting job: " + job_name + " jar: " + input_jar_location);
-		logger.info("submitting jar");
+		logger.info("submitting jar");		
 		String remote_jar_location = StormSubmitter.submitJar(remote_config, input_jar_location);
 		String json_conf = JSONValue.toJSONString(remote_config);
 		logger.info("submitting topology");
-		client.submitTopology(job_name, remote_jar_location, json_conf, topology);
+		try {
+			client.submitTopology(job_name, remote_jar_location, json_conf, topology);
+		} catch (Exception ex ) {
+			logger.info( ErrorUtils.getLongForm("Error submitting job: " + job_name + ": {0}", ex));
+			return FutureUtils.returnError(ex);
+		}
+		
+		future.complete(new BasicMessageBean(new Date(), true, null, "submit job", 0, "Submitted job successfully", null));
+		return future;
 	}
 
 	@Override
-	public void stopJob(String job_name) {
+	public CompletableFuture<BasicMessageBean> stopJob(String job_name) {
 		logger.info("Stopping job: " + job_name);
+		CompletableFuture<BasicMessageBean> future = new CompletableFuture<BasicMessageBean>();
 		try {
 			client.killTopology(getJobTopologySummaryFromJobPrefix(job_name).get_name());
 		} catch (Exception ex) {
 			//let die for now, usually happens when top doesn't exist
 			logger.info( ErrorUtils.getLongForm("Error stopping job: " + job_name + "  this is typical with storm becuase the job may not exist that we try to kill anyways {0}", ex));
+			return FutureUtils.returnError(ex);
 		}
+		
+		future.complete(new BasicMessageBean(new Date(), true, null, "stop job", 0, "Stopped job successfully", null));
+		return future;
 	}
 
 	@Override
