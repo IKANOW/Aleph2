@@ -62,6 +62,13 @@ public class KafkaUtils {
 		return consumer;
 	}
 	
+	/** Returns the configured Zookeeper connection string, needed by some Kafka modules
+	 * @return the ZK connection string
+	 */
+	public static String getZookeperConnectionString() {
+		return (String) kafka_properties.get("zookeeper.connect");
+	}
+	
 	/**
 	 * Changes out this classes configured properties pointing at
 	 * a kafka instance.  Also resets the current producer so a

@@ -28,6 +28,12 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import scala.Tuple2;
+import storm.kafka.BrokerHosts;
+import storm.kafka.KafkaSpout;
+import storm.kafka.SpoutConfig;
+import storm.kafka.StringScheme;
+import storm.kafka.ZkHosts;
+import backtype.storm.spout.SchemeAsMultiScheme;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -52,6 +58,7 @@ import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -263,14 +270,21 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	
 	// OVERRIDES
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_MODULE) {
-			// TODO Auto-generated method stub
-			return null;			
+		if (_state_name == State.IN_TECHNOLOGY) {
+			
+			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
+			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
+			final SpoutConfig spout_config = new SpoutConfig(hosts, my_bucket.full_name(), full_path, my_bucket._id()); 
+			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
+			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
+			return (T) kafka_spout;			
 		}
 		else {
-			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
 		}
 	}
 
@@ -280,7 +294,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyStorageEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_MODULE) {
+		if (_state_name == State.IN_TECHNOLOGY) {
 			if (!_mutable_state.user_topology_entry_point.isSet()) {
 				throw new RuntimeException(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"));
 			}
@@ -292,7 +306,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());
 		}
 		else {
-			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
 		}
 	}
 
@@ -301,11 +315,11 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	 */
 	@Override
 	public <T> T getTopologyErrorEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_MODULE) {
+		if (_state_name == State.IN_TECHNOLOGY) {
 			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 		}
 		else {
-			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
 		}
 	}
 
