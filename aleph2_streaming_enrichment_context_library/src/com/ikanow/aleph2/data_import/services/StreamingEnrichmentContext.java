@@ -70,6 +70,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected static class MutableState {
 		//TODO (ALEPH-10) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
+		SetOnce<String> user_topology_entry_point = new SetOnce<String>();
 	};	
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -112,11 +113,19 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	}	
 	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the bucket for this harvest context instance
-	 * @param this_bucket - the bucket to associated
+	 * @param this_bucket - the bucket to associate
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
 	public boolean setBucket(DataBucketBean this_bucket) {
 		return _mutable_state.bucket.set(this_bucket);
+	}
+	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the user topology entry point for this harvest context instance
+	 * @param this_bucket - the user entry point to associate
+	 * @returns whether the user entry point has been updated (ie fails if it's already been set)
+	 */
+	public boolean setUserTopologyEntryPoint(final String entry_point) {
+		return _mutable_state.user_topology_entry_point.set(entry_point);
 	}
 	
 	/* (non-Javadoc)
@@ -242,7 +251,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			.collect(Collectors.toList());
 		}
 		else {
-			throw new RuntimeException("Can only be called from technology, not module");			
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);			
 		}
 	}
 
@@ -252,19 +261,38 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	
 	@Override
 	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		// TODO Auto-generated method stub
-		return null;
+		if (_state_name == State.IN_MODULE) {
+			// TODO Auto-generated method stub
+			return null;			
+		}
+		else {
+			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+		}
 	}
 
 	@Override
 	public <T> T getTopologyStorageEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		// TODO Auto-generated method stub
-		return null;
+		if (_state_name == State.IN_MODULE) {
+			if (!_mutable_state.user_topology_entry_point.isSet()) {
+				// TODO Auto-generated method stub error				
+			}
+			//TODO: dup code from bucket
+			// TODO Auto-generated method stub
+			return null;			
+		}
+		else {
+			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+		}
 	}
 
 	@Override
 	public <T> T getTopologyErrorEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		if (_state_name == State.IN_MODULE) {
+			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		}
+		else {
+			throw new RuntimeException(ErrorUtils.MODULE_NOT_TECHNOLOGY);						
+		}
 	}
 
 	/* (non-Javadoc)

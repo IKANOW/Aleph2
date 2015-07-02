@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import com.ikanow.aleph2.data_model.interfaces.data_access.IAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 
 /**
@@ -43,6 +44,24 @@ public class ContextUtils {
 		@SuppressWarnings("unchecked")
 		Class<IAccessContext> access_clazz = (Class<IAccessContext>) Class.forName(clazz_and_config[0]);
 		IAccessContext context = access_clazz.newInstance();
+		if (clazz_and_config.length > 1) {
+			context.initializeNewContext(clazz_and_config[1]);
+		}
+		return context;
+	}
+	
+	/** Returns the configured context object, for use in modules not part of the Aleph2 dependency injection
+	 * @param signature can either be the fully qualified class name, or "<FQ class name>:arbitrary_config_string", which is then passed to the context via IHarvestContext.initializeNewContext 
+	 * @return
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static IEnrichmentModuleContext getEnrichmentContext(final String signature) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		String[] clazz_and_config = signature.split(":", 2);
+		@SuppressWarnings("unchecked")
+		Class<IEnrichmentModuleContext> enrichment_clazz = (Class<IEnrichmentModuleContext>) Class.forName(clazz_and_config[0]);
+		IEnrichmentModuleContext context = enrichment_clazz.newInstance();
 		if (clazz_and_config.length > 1) {
 			context.initializeNewContext(clazz_and_config[1]);
 		}
