@@ -15,8 +15,11 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.stream_enrichment.actors;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,8 +28,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 import scala.PartialFunction;
 import scala.Tuple2;
@@ -35,6 +42,8 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
+
 
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -66,6 +75,11 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
+
+
+
+
+
 
 
 
@@ -130,7 +144,7 @@ public class DataBucketChangeActor extends AbstractActor {
 						// (this isn't async so doesn't require any futures)
 						
 	    				//TODO (ALEPH-10): check if STORM is available here (in practice shouldn't register vs message bus if not, but doesn't hurt to ask)
-						final boolean accept_or_ignore = true;
+						final boolean accept_or_ignore = new File(_globals.local_yarn_config_dir() + File.separator + "storm.properties").exists();
 						
 						final BucketActionReplyMessage reply = 						
 							accept_or_ignore
@@ -157,7 +171,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_tech_module = 
 										getStreamingTopology(m.bucket(), m, hostname, err_or_map);
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(m.bucket(), m, err_or_tech_module, e_context, _globals.local_yarn_config_dir());
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(m.bucket(), m, err_or_tech_module, hostname, e_context, _globals.local_yarn_config_dir(), err_or_map);
 								return ret;
 								
 	    					})
@@ -186,36 +200,50 @@ public class DataBucketChangeActor extends AbstractActor {
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_user_topology,
+			String source, 
 			final StreamingEnrichmentContext context,
-			final String yarn_config_dir
+			final String yarn_config_dir, 
+			Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_map
 			)
 	{
 		//TODO: set context bucket and entry point
 		
-		Patterns.match(m).andAct()
-			.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-				
-			})
-			.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-				StormControllerUtil.stopJob( bucket, yarn_config_dir);
-			})
-			.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-				StormControllerUtil.startJob(bucket, yarn_config_dir);
-			})
-			.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-				StormControllerUtil.restartJob(bucket, yarn_config_dir);
-			})
-			.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
-				if ( msg.is_suspended() )
-					StormControllerUtil.stopJob(bucket, yarn_config_dir);
-				else
-					StormControllerUtil.startJob(bucket, yarn_config_dir);
-			})
-			.otherwise(msg -> {
-				
-			});
-		//TODO: success/error etc
-		return null; // (return error or success)
+		try {
+			//handle getting the user libs
+			List<String> user_lib_paths = new LinkedList<String>(err_or_map.success().values().stream().map(tuple -> tuple._2).collect(Collectors.toList()));
+						
+			return err_or_user_topology.validation(
+					//ERROR getting enrichment topology
+					error -> {
+						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
+					},		
+					//NORMAL grab enrichment topology
+					enrichment_toplogy -> {						
+						return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
+								.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+									return StormControllerUtil.stopJob( bucket, yarn_config_dir);
+								})
+								.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+									return StormControllerUtil.startJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+								})
+								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+									return StormControllerUtil.restartJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+								})
+								.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
+									if ( msg.is_suspended() )
+										return StormControllerUtil.stopJob(bucket, yarn_config_dir);
+									else
+										return StormControllerUtil.startJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
+								})
+								.otherwise(msg -> {
+									return CompletableFuture.completedFuture(
+											new BucketActionHandlerMessage(source, new BasicMessageBean(new Date(), false, null, "Unknown message", 0, "Unknown message", null)));
+								});
+					});
+		} catch (Throwable e) { // (trying to use Validation to avoid this, but just in case...)
+			return CompletableFuture.completedFuture(
+					new BucketActionHandlerMessage(source, new BasicMessageBean(new Date(), false, null, ErrorUtils.getLongForm("Error loading streaming class: {0}", e), 0, ErrorUtils.getLongForm("Error loading streaming class: {0}", e), null)));
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////

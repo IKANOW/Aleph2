@@ -16,8 +16,16 @@
 package com.ikanow.aleph2.data_import_manager.utils;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,12 +33,17 @@ import org.apache.logging.log4j.Logger;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
+import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.LiveInjector;
+import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.RemoteStormController;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -141,28 +154,107 @@ public class StormControllerUtil {
 		} catch (Exception e) {
 			logger.error(ErrorUtils.getLongForm("Error building storm jar {0}", e));
 			return null;
-		}	
-		
+		}			
 	}
 	
+	/**
+	 * Returns a remote storm controller given a yarn config directory.  Will look for
+	 * the storm config at yarn_config_dir/storm.properties
+	 * 
+	 * @param yarn_config_dir
+	 * @return
+	 */
 	protected static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) {
 		Config config = ConfigFactory.parseFile(new File(yarn_config_dir + File.separator + "storm.properties"));
 		IStormController storm = getRemoteStormController(config.root().unwrapped());
 		return storm;		
-	}
+	}	
 
-	public static void startJob(DataBucketBean bucket, String yarn_config_dir) {
+	/**
+	 * Starts up a storm job.
+	 * 
+	 * 1. gets the storm instance from the yarn config
+	 * 2. Makes a mega jar consisting of:
+	 * 	A. Underlying artefacts (system libs)
+	 *  B. User supplied libraries
+	 * 3. Submit megajar to storm with jobname of the bucket id
+	 * 
+	 * @param bucket
+	 * @param context
+	 * @param yarn_config_dir
+	 * @param user_lib_paths
+	 * @param enrichment_toplogy
+	 * @return
+	 */
+	public static CompletableFuture<BucketActionReplyMessage> startJob(DataBucketBean bucket, StreamingEnrichmentContext context, String yarn_config_dir, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy) {
+		CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
 		IStormController storm = getStormControllerFromYarnConfig(yarn_config_dir);
-		//storm.submitJob(job_name, input_jar_location, topology);
+
+		List<String> jars_to_merge = new LinkedList<String>(); 
+		//add in all the underlying artefacts file paths
+		Collection<Object> underlying_artefacts = context.getUnderlyingArtefacts();
+		jars_to_merge.addAll( underlying_artefacts.stream().map( artefact -> LiveInjector.findPathJar(artefact.getClass(), "")).collect(Collectors.toList()));
+		
+		//add in the user libs
+		jars_to_merge.addAll(user_lib_paths);
+		
+		//create jar
+		String jar_file_location = buildStormTopologyJar(jars_to_merge);
+		
+		//Get topology from user
+		StormTopology topology = (StormTopology) enrichment_toplogy.getTopologyAndConfiguration(bucket, context)._1;
+		
+		//submit to storm
+		try {
+			storm.submitJob(bucket._id(), jar_file_location, topology);
+		} catch (Exception ex) {
+			start_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error starting storm job: {0}", ex)));
+			return start_future;
+		}
+		
+		//made it here, must have submitted just fine
+		start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("Started storm job successfully", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
+		return start_future;
 	}
 
-	public static void stopJob(DataBucketBean bucket, String yarn_config_dir) {
+	/**
+	 * Stops a storm job, uses the bucket.id to try and find the job to stop
+	 * 
+	 * @param bucket
+	 * @param yarn_config_dir
+	 * @return
+	 */
+	public static CompletableFuture<BucketActionReplyMessage> stopJob(DataBucketBean bucket, String yarn_config_dir) {
+		CompletableFuture<BucketActionReplyMessage> stop_future = new CompletableFuture<BucketActionReplyMessage>();
 		IStormController storm = getStormControllerFromYarnConfig(yarn_config_dir);
-		//storm.stopJob(job_name);
+		try {
+			storm.stopJob(bucket._id());
+		} catch (Exception ex) {
+			stop_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", ex)));
+			return stop_future;
+		}
+		stop_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("Stopped storm job successfully", new BasicMessageBean(new Date(), true, null, "stopStormJob", 0, "Stopped storm job succesfully", null)));
+		return stop_future;
 	}
 
-	public static void restartJob(DataBucketBean bucket, String yarn_config_dir) {
-		stopJob(bucket, yarn_config_dir);
-		startJob(bucket, yarn_config_dir);
+	/**
+	 * Restarts a storm job by first calling stop, then calling start
+	 * 
+	 * @param bucket
+	 * @param context
+	 * @param yarn_config_dir
+	 * @param user_lib_paths
+	 * @param enrichment_toplogy
+	 * @return
+	 */
+	public static CompletableFuture<BucketActionReplyMessage> restartJob(DataBucketBean bucket, StreamingEnrichmentContext context, String yarn_config_dir, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy) {
+		CompletableFuture<BucketActionReplyMessage> stop_future = stopJob(bucket, yarn_config_dir);
+		try {
+			stop_future.get(5, TimeUnit.SECONDS);
+		} catch (InterruptedException | ExecutionException | TimeoutException e) {
+			CompletableFuture<BucketActionReplyMessage> error_future = new CompletableFuture<BucketActionReplyMessage>();
+			error_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", e)));
+		}
+		return startJob(bucket, context, yarn_config_dir, user_lib_paths, enrichment_toplogy);
 	}
 }
