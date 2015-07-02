@@ -155,6 +155,12 @@
   		<version>${aleph2.version}</version>
 		<scope>test</scope>
   	</dependency>  	
+   	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
+  		<version>${aleph2.version}</version>
+		<scope>test</scope>
+  	</dependency>  	
 	<dependency>
 	    <groupId>jdk.tools</groupId>
 	    <artifactId>jdk.tools</artifactId>
