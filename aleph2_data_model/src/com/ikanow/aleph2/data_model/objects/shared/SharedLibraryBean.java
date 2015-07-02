@@ -39,7 +39,7 @@ public class SharedLibraryBean {
 		this.owner_id = owner_id;
 		this.tags = tags;
 		this.access_rights = access_rights;
-		this.batch_streaming_entry_point = batch_streaming_entry_point;
+		this.streaming_enrichment_entry_point = batch_streaming_entry_point;
 		this.batch_enrichment_entry_point = batch_enrichment_entry_point;
 		this.misc_entry_point = misc_entry_point;
 	}
@@ -120,8 +120,8 @@ public class SharedLibraryBean {
 	/** For JARs, the default entry point (type specific - eg will point to the implementation of IAccessTechnology, or IEnrichmentBatchModule, etc)
 	 * @return the fully qualified classpath of the primary/default entry point
 	 */
-	public String batch_streaming_entry_point() {
-		return batch_streaming_entry_point;
+	public String streaming_enrichment_entry_point() {
+		return streaming_enrichment_entry_point;
 	}
 
 	/** For JARs, the default entry point (type specific - eg will point to the implementation of IAccessTechnology, or IEnrichmentBatchModule, etc)
@@ -150,6 +150,6 @@ public class SharedLibraryBean {
 	private Set<String> tags;
 	private AuthorizationBean access_rights;
 	private String batch_enrichment_entry_point; // (for batch module only)
-	private String batch_streaming_entry_point; // (for batch module only)
+	private String streaming_enrichment_entry_point; // (for batch module only)
 	private String misc_entry_point;
 }

@@ -17,10 +17,10 @@ package com.ikanow.aleph2.data_import_manager.services;
 
 import java.util.Optional;
 
-
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
+import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -52,6 +52,13 @@ public class DataImportActorContext {
 	 */
 	public GlobalPropertiesBean getGlobalProperties() {
 		return _service_context.getGlobalProperties();
+	}
+	
+	/** Returns a new (non singleton) instance of a streaming enrichment context
+	 * @return the new harvest context
+	 */
+	public StreamingEnrichmentContext getNewStreamingEnrichmentContext() {
+		return _injector.getInstance(StreamingEnrichmentContext.class);
 	}
 	
 	/** Returns a new (non singleton) instance of a harvest context

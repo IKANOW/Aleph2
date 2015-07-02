@@ -23,6 +23,14 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 public class StreamErrorUtils {
 
 	public static final String STREAM_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";
+
+	public static final String NO_TECHNOLOGY_NAME_OR_ID = "No harvest technology name or id in bucket {0}";
+	public static final String TOPOLOGY_NAME_NOT_FOUND = "No valid topology {0} found for bucket {1}";
+	public static final String SHARED_LIBRARY_NAME_NOT_FOUND = "Shared library {1} not found: {0}";
+	public static final String ERROR_LOADING_CLASS = "Error loading class {1}: {0}";
+	public static final String ERROR_CLASS_NOT_SUPERCLASS = "Error: class {0} is not an implementation of {1}: this may be because you have included eg aleph2_data_model in your class - you should not include any core/contrib JARs in there.";
+	public static final String ERROR_CACHING_SHARED_LIBS = "Misc error caching shared libs for bucket {1}: {0}";
+	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";
 	
 	///////////////////////////////////////////////////////////////////////////
 	
