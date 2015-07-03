@@ -37,7 +37,7 @@ public interface IEnrichmentStreamingTopology {
 	 * @param context The enrichment context passed in by the core
 	 * @return the topology and configuration for this streaming enrichment process
 	 */
-	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bean, final IEnrichmentModuleContext context);
+	Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bucket, final IEnrichmentModuleContext context);
 	
 	/** For streaming technologies that don't inherently support JsonNode (eg Storm) - This generates the JsonNode that is the final output from the enrichment process
 	 * Normally the final element will be a string representation of the entire object, which you'll convert, amend with mutations from the other fields, and then output 

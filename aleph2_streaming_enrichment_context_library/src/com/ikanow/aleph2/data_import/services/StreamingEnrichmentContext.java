@@ -96,7 +96,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected GlobalPropertiesBean _globals;
 
 	// For writing objects out
-	protected ICrudService<JsonNode> _crud_index_service;
+	protected Optional<ICrudService<JsonNode>> _crud_index_service;
 	protected Optional<ICrudService.IBatchSubservice<JsonNode>> _batch_index_service;
 	
 	
@@ -164,7 +164,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				throw new RuntimeException("Unable to locate bucket: " + bucket_id);
 			}
 			_batch_index_service = (_crud_index_service = _index_service.getCrudService(JsonNode.class, retrieve_bucket.get()))
-											.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty())
+											.flatMap(cs -> cs.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty()))
 											.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
 			_mutable_state.bucket.set(retrieve_bucket.get());
 		}
@@ -341,9 +341,10 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		if (_batch_index_service.isPresent()) {
 			_batch_index_service.get().storeObject(mutated_json, false);
 		}
-		else { // (super slow)
-			_crud_index_service.storeObject(mutated_json, false);
+		else if (_crud_index_service.isPresent()){ // (super slow)
+			_crud_index_service.get().storeObject(mutated_json, false);
 		}
+		//(else nothing to do)
 	}
 
 	@Override
@@ -357,12 +358,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 									.reduce(original_json, (acc, kv) -> ((ObjectNode) acc).set(kv.getKey(), kv.getValue()), (acc1, acc2) -> acc1))
 									.orElse(original_json);
 		
-		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(to_emit, false);
-		}
-		else { // (super slow)
-			_crud_index_service.storeObject(to_emit, false);
-		}
+		emitMutableObject(0L, (ObjectNode)to_emit, annotations);
 	}
 
 	@Override

@@ -29,13 +29,13 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 public class SampleSearchIndexService implements ISearchIndexService {
 
 	@Override
-	public <O> ICrudService<O> getCrudService(Class<O> clazz,
+	public <O> Optional<ICrudService<O>> getCrudService(Class<O> clazz,
 			DataBucketBean bucket) {
 		return null;
 	}
 
 	@Override
-	public <O> ICrudService<O> getCrudService(Class<O> clazz,
+	public <O> Optional<ICrudService<O>> getCrudService(Class<O> clazz,
 			Collection<String> buckets) {
 		return null;
 	}
