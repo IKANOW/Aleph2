@@ -21,13 +21,11 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -40,8 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
-import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
@@ -102,15 +99,18 @@ public class TestStreamingEnrichmentContext {
 		}
 	}
 	
-	//Getting an issue constructing the search index code - to fix
-	@Ignore
 	@Test
 	public void testExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 	
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).
-													with(DataBucketBean::_id, "test")
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+													.with(DataBucketBean::_id, "test")
+													.with(DataBucketBean::modified, new Date())
+													.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+															.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+																	.done().get())
+															.done().get())
 													.done().get();
 			
 			// Empty service set:
