@@ -240,7 +240,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			return ret;
 		}
 		else {
-			throw new RuntimeException("Can only be called from technology, not module");			
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);			
 		}
 	}
 

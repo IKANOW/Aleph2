@@ -32,8 +32,10 @@ import scala.Tuple2;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -41,7 +43,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.typesafe.config.Config;
@@ -83,6 +84,8 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("StreamingEnrichmentContext dependencies", test_context._globals != null);
 			assertTrue("StreamingEnrichmentContext dependencies", test_context._service_context != null);
 			
+			assertTrue("Find service", test_context.getService(ISearchIndexService.class, Optional.empty()).isPresent());
+			
 			// Check if started in "technology" (internal mode)
 			assertEquals(test_context._state_name, StreamingEnrichmentContext.State.IN_TECHNOLOGY);
 			
@@ -92,10 +95,12 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("StreamingEnrichmentContexts different", test_context2 != test_context);
 			assertEquals(test_context._service_context, test_context2._service_context);
 			
+			
+			//TODO: test set bucket and set config (before and after) 			
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
-			fail("Threw exception");
+			throw e;
 		}
 	}
 	
@@ -207,6 +212,43 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IManagementDbService.class, Optional.of("test")));
 			
+			//Check some "won't work in module" calls:
+			try {
+				test_external2b.getEnrichmentContextSignature(null, null);
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			try {
+				test_external2b.getUnderlyingArtefacts();
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			try {
+				test_external2b.getTopologyEntryPoint(null, null);
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			try {
+				test_external2b.getTopologyStorageEndpoint(null, null);
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			try {
+				test_external2b.getTopologyErrorEndpoint(null, null);
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -214,74 +256,87 @@ public class TestStreamingEnrichmentContext {
 		}
 	}
 	
-	//TODO
-//	@Test
-//	public void testFileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
-//		try {
-//			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-//
-//			final List<String> lib_paths = test_context.getHarvestContextLibraries(Optional.empty());
-//
-//			//(this doesn't work very well when run in test mode because it's all being found from file)
-//			assertTrue("Finds some libraries", !lib_paths.isEmpty());
-//			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
-//			
-//			// Now get the various shared libs
-//
-//			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-//															.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name2"))
-//															.done().get();
-//			
-//			final HarvestControlMetadataBean harvest_module2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-//					.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
-//															.done().get();
-//												
-//			
-//			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-//					.with(DataBucketBean::_id, "test")
-//					.with(DataBucketBean::harvest_technology_name_or_id, "test_harvest_tech_id")
-//					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module1, harvest_module2))
-//					.done().get();
-//
-//			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
-//												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
-//												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
-//												.done().get();
-//			
-//			final SharedLibraryBean htmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
-//					.with(SharedLibraryBean::_id, "id1")
-//					.with(SharedLibraryBean::path_name, "name1")
-//					.done().get();
-//			
-//			final SharedLibraryBean htmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
-//					.with(SharedLibraryBean::_id, "id2")
-//					.with(SharedLibraryBean::path_name, "name2")
-//					.done().get();
-//			
-//			final SharedLibraryBean htmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
-//					.with(SharedLibraryBean::_id, "id3")
-//					.with(SharedLibraryBean::path_name, "name3")
-//					.done().get();
-//			
-//			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
-//								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
-//			
-//			Map<String, String> mods = test_context.getHarvestLibraries(Optional.of(test_bucket)).get();
-//			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
-//			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
-//			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
-//			assertTrue("test_harvest_tech_name", mods.containsKey("test_harvest_tech_name") && mods.get("test_harvest_tech_name").endsWith("test_harvest_tech_id.cache.jar"));
-//		}
-//		catch (Exception e) {
-//			try {
-//				e.printStackTrace();
-//			}
-//			catch (Exception ee) {
-//				System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
-//			}
-//			fail("Threw exception");
-//		}
-//		
-//	}
-//	
+	//TODO: check that get underlying artefacts works
+	
+	//TODO: check that context.emit functions work
+	
+	@Test
+	public void test_misc() {
+		
+		assertTrue("Injector created", _app_injector != null);
+		
+		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));
+		
+		try {
+			test_context.emergencyQuarantineBucket(null, null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.emergencyDisableBucket(null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.logStatusForBucketOwner(null, null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.logStatusForBucketOwner(null, null, false);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getBucketStatus(null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getBucketObjectStore(null, null, null, false);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getBucketStatus(null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getNextUnusedId();
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_SUPPORTED_IN_STREAMING_ENRICHMENT, e.getMessage());
+		}
+		try {
+			test_context.storeErroredObject(0L, null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getTopologyErrorEndpoint(null, null);
+			fail("Should have errored");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+	}
 }
