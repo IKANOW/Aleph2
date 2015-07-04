@@ -21,9 +21,11 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -206,8 +208,9 @@ public class TestStreamingEnrichmentContext {
 			@SuppressWarnings("unchecked")
 			final ICrudService<DataBucketBean> raw_mock_db =
 					test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-			raw_mock_db.storeObject(test_bucket).get();
-			
+			raw_mock_db.deleteDatastore().get();
+			assertEquals(0L, (long)raw_mock_db.countObjects().get());
+			raw_mock_db.storeObject(test_bucket).get();			
 			assertEquals(1L, (long)raw_mock_db.countObjects().get());
 			
 			final IEnrichmentModuleContext test_external1a = ContextUtils.getEnrichmentContext(signature);		
@@ -290,10 +293,38 @@ public class TestStreamingEnrichmentContext {
 			fail("Threw exception");
 		}
 	}
+
+	@Test
+	public void test_getUnderlyingArtefacts() {
+		
+		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		
+		// (interlude: check errors if called before getSignature
+		try {
+			test_context.getUnderlyingArtefacts();
+			fail("Should have errored");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.SERVICE_RESTRICTIONS, e.getMessage());
+		}
+		
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+												.with(DataBucketBean::_id, "test")
+												.with(DataBucketBean::modified, new Date())
+												.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+														.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+																.done().get())
+														.done().get())
+												.done().get();
+		
+		// Empty service set:
+		test_context.getEnrichmentContextSignature(Optional.of(test_bucket), Optional.empty());		
+		final Collection<Object> res1 = test_context.getUnderlyingArtefacts();
+		final String exp1 = "class com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService:class com.ikanow.aleph2.shared.crud.elasticsearch.services.MockElasticsearchCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory";
+		assertEquals(exp1, res1.stream().map(o -> o.getClass().toString()).collect(Collectors.joining(":")));
+	}
 	
 	//TODO: check that get underlying artefacts works
-	
-	//TODO: check that context.emit functions work
 	
 	@Test
 	public void test_misc() {
@@ -395,8 +426,9 @@ public class TestStreamingEnrichmentContext {
 		@SuppressWarnings("unchecked")
 		final ICrudService<DataBucketBean> raw_mock_db =
 				test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-		raw_mock_db.storeObject(test_bucket).get();
-		
+		raw_mock_db.deleteDatastore().get();
+		assertEquals(0L, (long)raw_mock_db.countObjects().get());
+		raw_mock_db.storeObject(test_bucket).get();		
 		assertEquals(1L, (long)raw_mock_db.countObjects().get());
 		
 		final IEnrichmentModuleContext test_external1a = ContextUtils.getEnrichmentContext(signature);		

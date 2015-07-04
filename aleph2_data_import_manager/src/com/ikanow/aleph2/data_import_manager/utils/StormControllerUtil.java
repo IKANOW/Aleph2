@@ -33,7 +33,6 @@ import org.apache.logging.log4j.Logger;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
-import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.LiveInjector;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
