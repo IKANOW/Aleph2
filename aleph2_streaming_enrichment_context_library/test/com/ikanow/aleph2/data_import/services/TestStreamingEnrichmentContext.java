@@ -30,6 +30,9 @@ import org.junit.Test;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
@@ -39,10 +42,12 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
+import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.typesafe.config.Config;
@@ -50,6 +55,7 @@ import com.typesafe.config.ConfigFactory;
 
 public class TestStreamingEnrichmentContext {
 
+	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
 	
 	@Before
@@ -95,8 +101,37 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("StreamingEnrichmentContexts different", test_context2 != test_context);
 			assertEquals(test_context._service_context, test_context2._service_context);
 			
-			
-			//TODO: test set bucket and set config (before and after) 			
+			// Check calls that require that bucket/endpoint be set
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+									.done().get())
+							.done().get())
+					.done().get();
+			try {
+				test_context.getTopologyStorageEndpoint(null, null);
+				fail("Should have errored");
+			}
+			catch(Exception e) {
+				assertEquals(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"), e.getMessage());
+			}
+			test_context.setUserTopologyEntryPoint("test");
+			test_context.setBucket(test_bucket);
+			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.empty()));
+			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.of(test_bucket)));
+			//Other topology call
+			try {
+				test_context2.getTopologyEntryPoint(Object.class, Optional.empty());
+				fail("Should have errored");
+			}
+			catch(Exception e) {
+			}
+			test_context2.setUserTopologyEntryPoint("test");
+			test_context2.setBucket(test_bucket);
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.empty()));
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.of(test_bucket)));
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -338,5 +373,85 @@ public class TestStreamingEnrichmentContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 		}
+	}
+	
+	@Test
+	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+
+		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test_objectemitting")
+				.with(DataBucketBean::modified, new Date())
+				.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+						.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+								.done().get())
+						.done().get())
+				.done().get();
+
+		// Empty service set:
+		final String signature = test_context.getEnrichmentContextSignature(Optional.of(test_bucket), Optional.empty());
+
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> raw_mock_db =
+				test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		raw_mock_db.storeObject(test_bucket).get();
+		
+		assertEquals(1L, (long)raw_mock_db.countObjects().get());
+		
+		final IEnrichmentModuleContext test_external1a = ContextUtils.getEnrichmentContext(signature);		
+
+		//(internal)
+//		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		//(external)
+		final ISearchIndexService check_index = test_external1a.getService(ISearchIndexService.class, Optional.empty()).get();
+		
+		final ICrudService<JsonNode> crud_check_index = check_index.getCrudService(JsonNode.class, test_bucket).get();
+		crud_check_index.deleteDatastore();
+		Thread.sleep(2000L); // (wait for datastore deletion to flush)
+		assertEquals(0, crud_check_index.countObjects().get().intValue());
+		
+		
+		final JsonNode jn1 = _mapper.createObjectNode().put("test", "test1");
+		final JsonNode jn2 = _mapper.createObjectNode().put("test", "test2");
+		
+		//(try some errors)
+		try {
+			test_external1a.emitMutableObject(0, test_external1a.convertToMutable(jn1), Optional.of(BeanTemplateUtils.build(AnnotationBean.class).done().get()));
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_external1a.emitImmutableObject(0, jn2, Optional.empty(), Optional.of(BeanTemplateUtils.build(AnnotationBean.class).done().get()));
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		
+		test_external1a.emitMutableObject(0, test_external1a.convertToMutable(jn1), Optional.empty());
+		test_external1a.emitImmutableObject(0, jn2, Optional.empty(), Optional.empty());		
+		test_external1a.emitImmutableObject(0, jn2, 
+				Optional.of(_mapper.createObjectNode().put("extra", "test3_extra").put("test", "test3")), 
+				Optional.empty());
+		
+		for (int i = 0; i < 10; ++i) {
+			Thread.sleep(1000L);
+			if (crud_check_index.countObjects().get().intValue() >= 2) {
+				System.out.println("(Found objects after " + i + " seconds)");
+				break;
+			}
+		}
+		
+		//DEBUG
+		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().indexContext().getReadableIndexList(Optional.empty()));
+		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().typeContext().getReadableTypeList());
+		
+		assertEquals(3, crud_check_index.countObjects().get().intValue());
+		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
+				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
+		
 	}
 }

@@ -275,8 +275,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_TECHNOLOGY) {
-			
+		if (_state_name == State.IN_TECHNOLOGY) {			
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
 			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
@@ -355,7 +354,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		}
 		final JsonNode to_emit = 
 				mutations.map(o -> StreamSupport.<Map.Entry<String, JsonNode>>stream(Spliterators.spliteratorUnknownSize(o.fields(), Spliterator.ORDERED), false)
-									.reduce(original_json, (acc, kv) -> ((ObjectNode) acc).set(kv.getKey(), kv.getValue()), (acc1, acc2) -> acc1))
+									.reduce(original_json, (acc, kv) -> ((ObjectNode) acc).set(kv.getKey(), kv.getValue()), (val1, val2) -> val2))
 									.orElse(original_json);
 		
 		emitMutableObject(0L, (ObjectNode)to_emit, annotations);

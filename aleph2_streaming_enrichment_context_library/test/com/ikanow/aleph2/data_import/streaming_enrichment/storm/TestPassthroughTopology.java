@@ -15,6 +15,43 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.streaming_enrichment.storm;
 
+import org.junit.Before;
+import org.junit.Test;
+
+import backtype.storm.Config;
+import backtype.storm.LocalCluster;
+import backtype.storm.generated.StormTopology;
+
 public class TestPassthroughTopology {
 
+	LocalCluster local_cluster;
+	
+	//TODO
+	//@Before
+	public void testSetup() {
+		local_cluster = new LocalCluster();
+		
+		//TODO: also set up a service context with the usual suspects
+	}
+
+	//TODO
+	//@Test
+	public void test_passthroughTopology() {
+		
+		final StormTopology topology = null; //TODO
+		
+		final Config config = new Config();
+		config.setDebug(true);
+		local_cluster.submitTopology("test_passthroughTopology", config, topology);
+		
+		//TODO wait until complete?
+		
+		//TODO write some JsonNode objects into the kafka q
+		
+		//TODO wait
+		
+		//TODO check they appear in the appropriate CRUD service
+		
+	}
+	
 }
