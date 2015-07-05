@@ -15,18 +15,24 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.streaming_enrichment.storm;
 
+import static org.junit.Assert.*;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -64,7 +70,7 @@ public class TestPassthroughTopology {
 	}
 	
 	@Test
-	public void test_passthroughTopology() throws InterruptedException {
+	public void test_passthroughTopology() throws InterruptedException, ExecutionException {
 		// PHASE 1: GET AN IN-TECHNOLOGY CONTEXT
 		// Bucket
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -94,13 +100,20 @@ public class TestPassthroughTopology {
 		_local_cluster.submitTopology("test_passthroughTopology", config, topology);		
 		Thread.sleep(5000L);
 		
-		//PHASE3 : WRITE TO KAFKA
+		//PHASE 3: CHECK INDEX
+		final ISearchIndexService index_service = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, test_bucket).get();
+		crud_service.deleteDatastore().get();
+		Thread.sleep(2000L);
+		assertEquals(0L, crud_service.countObjects().get().intValue());
+		
+		//PHASE4 : WRITE TO KAFKA
 		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
+		Thread.sleep(9000L);
 		
-		//TODO wait
-		
-		//TODO check they appear in the appropriate CRUD service
-		
+		//TODO not working, get 0, look into why
+		/**/
+		//assertEquals(1L, crud_service.countObjects().get().intValue());		
 	}
 	
 }
