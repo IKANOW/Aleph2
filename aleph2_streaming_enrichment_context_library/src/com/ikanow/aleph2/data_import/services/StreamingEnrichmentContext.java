@@ -304,6 +304,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				getEnrichmentContextSignature(bucket, Optional.empty());
 			}
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+			KafkaUtils.createTopic(KafkaUtils.bucketPathToTopicName(my_bucket.full_name()));	
 			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());
 		}
 		else {

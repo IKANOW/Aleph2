@@ -106,6 +106,7 @@ public class TestStreamingEnrichmentContext {
 			// Check calls that require that bucket/endpoint be set
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
 					.with(DataBucketBean::modified, new Date())
 					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
 							.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)

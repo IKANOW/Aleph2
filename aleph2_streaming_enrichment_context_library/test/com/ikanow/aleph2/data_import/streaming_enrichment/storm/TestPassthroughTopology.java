@@ -85,7 +85,6 @@ public class TestPassthroughTopology {
 		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
 		final ICoreDistributedServices cds = test_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		KafkaUtils.createTopic(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()));
 		final StormTopology topology = (StormTopology) new PassthroughTopology()
 											.getTopologyAndConfiguration(test_bucket, test_context)
 											._1();
