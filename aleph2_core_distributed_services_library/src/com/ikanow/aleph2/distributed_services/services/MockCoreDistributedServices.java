@@ -18,10 +18,13 @@ package com.ikanow.aleph2.distributed_services.services;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
+
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -34,12 +37,14 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.event.japi.LookupEventBus;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.MockKafkaBroker;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
+import com.typesafe.config.ConfigFactory;
 
 /** Implementation class for standalone Curator instance
  * @author acp
@@ -66,6 +71,19 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		
 		_akka_system = ActorSystem.create("default");
 		_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
+		
+		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				.put("metadata.broker.list", "127.0.0.1:" + _kafka_broker.getBrokerPort())
+				.put("serializer.class", "kafka.serializer.StringEncoder")
+				.put("request.required.acks", "1")
+				.put("zookeeper.connect", _test_server.getConnectString())
+				.put("group.id", "somegroup")
+				.put("zookeeper.session.timeout.ms", "400")
+				.put("zookeeper.sync.time.ms", "200")
+		        .put("auto.commit.interval.ms", "1000")			
+				.build();	
+		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
+		
 	}	
 	 
 	/** Returns a connection to the Curator server

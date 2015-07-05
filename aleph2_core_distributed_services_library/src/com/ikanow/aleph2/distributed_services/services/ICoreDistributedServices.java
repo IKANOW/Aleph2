@@ -20,16 +20,11 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Iterator;
 
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.message.MessageAndMetadata;
-
 import org.apache.curator.framework.CuratorFramework;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
-import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;

@@ -25,7 +25,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import akka.serialization.Serialization;

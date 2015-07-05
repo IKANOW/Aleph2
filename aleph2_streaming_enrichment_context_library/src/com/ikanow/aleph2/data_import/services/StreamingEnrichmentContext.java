@@ -108,7 +108,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		_state_name = State.IN_TECHNOLOGY;
 		_service_context = service_context;
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
-		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();		
 		_index_service = service_context.getService(ISearchIndexService.class, Optional.empty()).get();
 		_globals = service_context.getGlobalProperties();
 	}
@@ -279,7 +279,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
 			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
-			final SpoutConfig spout_config = new SpoutConfig(hosts, my_bucket.full_name(), full_path, my_bucket._id()); 
+			final SpoutConfig spout_config = new SpoutConfig(hosts, KafkaUtils.bucketPathToTopicName(my_bucket.full_name()), full_path, my_bucket._id()); 
 			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
 			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
 			return (T) kafka_spout;			

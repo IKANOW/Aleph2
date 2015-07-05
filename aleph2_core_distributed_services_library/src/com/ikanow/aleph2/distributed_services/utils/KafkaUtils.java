@@ -69,6 +69,14 @@ public class KafkaUtils {
 		return (String) kafka_properties.get("zookeeper.connect");
 	}
 	
+	/** Converts from a bucket path to a Kafka topic
+	 * @param bucket_path
+	 * @return
+	 */
+	public static String bucketPathToTopicName(final String bucket_path) {
+		return bucket_path.replaceFirst("^/", "").replace("/", "-").replaceAll("[^a-zA-Z\\d._-]", "_");
+	}
+	
 	/**
 	 * Changes out this classes configured properties pointing at
 	 * a kafka instance.  Also resets the current producer so a

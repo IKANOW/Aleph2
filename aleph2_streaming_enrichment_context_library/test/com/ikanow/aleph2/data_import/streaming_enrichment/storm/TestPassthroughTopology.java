@@ -15,38 +15,88 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.streaming_enrichment.storm;
 
+import java.io.File;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Optional;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import backtype.storm.Config;
+import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
+import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
+import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 import backtype.storm.LocalCluster;
 import backtype.storm.generated.StormTopology;
 
 public class TestPassthroughTopology {
 
-	LocalCluster local_cluster;
+	LocalCluster _local_cluster;
 	
-	//TODO
-	//@Before
-	public void testSetup() {
-		local_cluster = new LocalCluster();
+	protected Injector _app_injector;
+	
+	@Before
+	public void injectModules() throws Exception {
+		final Config config = ConfigFactory.parseFile(new File("./example_config_files/context_local_test.properties"));
 		
-		//TODO: also set up a service context with the usual suspects
+		try {
+			_app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));
+		}
+		catch (Exception e) {
+			try {
+				e.printStackTrace();
+			}
+			catch (Exception ee) {
+				System.out.println(ErrorUtils.getLongForm("{0}", e));
+			}
+		}
+		_local_cluster = new LocalCluster();
 	}
-
-	//TODO
-	//@Test
-	public void test_passthroughTopology() {
+	
+	@Test
+	public void test_passthroughTopology() throws InterruptedException {
+		// PHASE 1: GET AN IN-TECHNOLOGY CONTEXT
+		// Bucket
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test_passthroughtopology")
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::full_name, "/test/passthrough")
+				.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+						.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+								.done().get())
+						.done().get())
+				.done().get();
 		
-		final StormTopology topology = null; //TODO
+		// Context		
+		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		test_context.setBucket(test_bucket);
+		test_context.setUserTopologyEntryPoint("com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology");
+		test_context.getEnrichmentContextSignature(Optional.empty(), Optional.empty());
 		
-		final Config config = new Config();
+		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
+		final ICoreDistributedServices cds = test_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		KafkaUtils.createTopic(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()));
+		final StormTopology topology = (StormTopology) new PassthroughTopology()
+											.getTopologyAndConfiguration(test_bucket, test_context)
+											._1();
+		
+		final backtype.storm.Config config = new backtype.storm.Config();
 		config.setDebug(true);
-		local_cluster.submitTopology("test_passthroughTopology", config, topology);
+		_local_cluster.submitTopology("test_passthroughTopology", config, topology);		
+		Thread.sleep(5000L);
 		
-		//TODO wait until complete?
-		
-		//TODO write some JsonNode objects into the kafka q
+		//PHASE3 : WRITE TO KAFKA
+		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
 		
 		//TODO wait
 		
