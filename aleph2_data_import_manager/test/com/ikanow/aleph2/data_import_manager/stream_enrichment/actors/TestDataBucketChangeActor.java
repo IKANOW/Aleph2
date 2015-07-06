@@ -199,7 +199,6 @@ public class TestDataBucketChangeActor {
 		}
 		
 		// 3) Send a message
-		//TODO
 		{
 			final BucketActionMessage.UpdateBucketStateActionMessage suspend =
 					new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
@@ -207,13 +206,9 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, suspend, 5000L), _db_actor_context.getActorSystem().dispatcher());
 			final BucketActionReplyMessage msg4 = reply4.get();
 		
-			//TODO: not sure how this will fail so just chasing what happens for now
 			assertEquals(BucketActionReplyMessage.BucketActionTimeoutMessage.class, msg4.getClass());
 			@SuppressWarnings("unused")
 			final BucketActionReplyMessage.BucketActionTimeoutMessage msg4b =  (BucketActionReplyMessage.BucketActionTimeoutMessage) msg4;
-//			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, msg4.getClass());
-//			final BucketActionReplyMessage.BucketActionHandlerMessage msg4b =  (BucketActionReplyMessage.BucketActionHandlerMessage) msg4;
-//			assertEquals(false, msg4b.reply().success());
 		}		
 	}	
 
@@ -232,11 +227,13 @@ public class TestDataBucketChangeActor {
 			
 			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
 	
-			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
+			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();			
 			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
+			library_crud.deleteDatastore();
+			assertEquals("Cleansed library store", 0L, (long)library_crud.countObjects().get());
 			library_crud.storeObjects(lib_elements).get();
 			
-			assertEquals(4L, (long)library_crud.countObjects().get());
+			assertEquals("Should have 4 library beans", 4L, (long)library_crud.countObjects().get());
 			
 			// 0a) Check with no streaming, gets nothing
 			{			
@@ -280,7 +277,7 @@ public class TestDataBucketChangeActor {
 		
 			final Map<String, Tuple2<SharedLibraryBean, String>> reply_map = reply_structure.get().success();
 			
-			assertEquals(4L, reply_map.size()); // (both modules, 1x for _id and 1x for name) 
+			assertEquals("Should have 4 beans: " + reply_map.toString(), 4L, reply_map.size()); // (both modules, 1x for _id and 1x for name) 
 			
 			// 3) Couple of error cases:
 			
