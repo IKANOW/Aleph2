@@ -23,6 +23,8 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,6 +49,7 @@ import backtype.storm.LocalCluster;
 import backtype.storm.generated.StormTopology;
 
 public class TestPassthroughTopology {
+	static final Logger _logger = LogManager.getLogger(); 
 
 	LocalCluster _local_cluster;
 	
@@ -99,21 +102,30 @@ public class TestPassthroughTopology {
 		
 		final backtype.storm.Config config = new backtype.storm.Config();
 		config.setDebug(true);
-		_local_cluster.submitTopology("test_passthroughTopology", config, topology);		
+		_local_cluster.submitTopology("test_passthroughTopology", config, topology);
+		_logger.info("******** Submitted storm cluster");
 		Thread.sleep(5000L);
 		
 		//PHASE 3: CHECK INDEX
 		final ISearchIndexService index_service = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
 		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, test_bucket).get();
 		crud_service.deleteDatastore().get();
+		_logger.info("******** Cleansed existing datastore");
 		Thread.sleep(2000L);
 		assertEquals(0L, crud_service.countObjects().get().intValue());
 		
 		//PHASE4 : WRITE TO KAFKA
 		
 		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
-		Thread.sleep(9000L);
+		_logger.info("******** Written to CDS");
 		
+		for (int i = 0; i < 60; ++i) {
+			Thread.sleep(1000L);
+			if (crud_service.countObjects().get() > 0) { 
+				_logger.info("******** Waited for ES object to populate: " + i);
+				break;
+			}
+		}		
 		assertEquals("Should be 1 object in the repo", 1L, crud_service.countObjects().get().intValue());		
 		assertEquals("Object should be test:test1", 1L, crud_service.countObjectsBySpec(CrudUtils.allOf().when("test", "test1")).get().intValue());		
 	}

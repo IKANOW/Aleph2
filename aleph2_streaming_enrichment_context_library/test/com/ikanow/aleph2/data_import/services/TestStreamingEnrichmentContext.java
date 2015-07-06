@@ -463,7 +463,7 @@ public class TestStreamingEnrichmentContext {
 				Optional.of(_mapper.createObjectNode().put("extra", "test3_extra").put("test", "test3")), 
 				Optional.empty());
 		
-		for (int i = 0; i < 10; ++i) {
+		for (int i = 0; i < 60; ++i) {
 			Thread.sleep(1000L);
 			if (crud_check_index.countObjects().get().intValue() >= 2) {
 				System.out.println("(Found objects after " + i + " seconds)");
