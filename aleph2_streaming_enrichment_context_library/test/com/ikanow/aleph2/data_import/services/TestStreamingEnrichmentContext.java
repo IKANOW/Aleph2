@@ -27,6 +27,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,6 +58,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class TestStreamingEnrichmentContext {
+	static final Logger _logger = LogManager.getLogger(); 
 
 	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
@@ -466,7 +469,7 @@ public class TestStreamingEnrichmentContext {
 		for (int i = 0; i < 60; ++i) {
 			Thread.sleep(1000L);
 			if (crud_check_index.countObjects().get().intValue() >= 2) {
-				System.out.println("(Found objects after " + i + " seconds)");
+				_logger.info("(Found objects after " + i + " seconds)");
 				break;
 			}
 		}
