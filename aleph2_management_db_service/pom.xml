@@ -47,9 +47,11 @@
 		<groupId>org.jacoco</groupId>
 		<artifactId>jacoco-maven-plugin</artifactId>
 		<version>0.7.2.201409121644</version>
-	    <configuration>
-	        <exclude>**/data_model/**</exclude>
-	    </configuration>
+		<configuration>
+			<excludes>
+				<exclude>**backtype.storm**</exclude>
+			</excludes>
+		</configuration>
 		<executions>
 			<execution>
 				<id>prepare-agent</id>
