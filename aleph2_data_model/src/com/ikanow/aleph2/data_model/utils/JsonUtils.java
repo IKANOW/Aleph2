@@ -60,7 +60,7 @@ public class JsonUtils {
 								.when(JsonNode.class, j -> acc_tmp.set(kv.getKey(), j))
 								.when(Float.class, f -> acc_tmp.put(kv.getKey(), f))
 								.when(BigDecimal.class, f -> acc_tmp.put(kv.getKey(), f))
-								.otherwise(x -> acc_tmp.putPOJO(kv.getKey(), BeanTemplateUtils.toJson(x)));
+								.otherwise(x -> acc_tmp.set(kv.getKey(), BeanTemplateUtils.toJson(x)));
 				}
 			}
 			return acc;
