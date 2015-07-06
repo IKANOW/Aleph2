@@ -82,12 +82,13 @@ public class TestPassthroughTopology {
 								.done().get())
 						.done().get())
 				.done().get();
-		
+
 		// Context		
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		test_context.setBucket(test_bucket);
 		test_context.setUserTopologyEntryPoint("com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology");
 		test_context.getEnrichmentContextSignature(Optional.empty(), Optional.empty());
+		test_context.overrideSavedContext(); // (THIS IS NEEDED WHEN TESTING THE KAFKA SPOUT)
 		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
 		final ICoreDistributedServices cds = test_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
@@ -108,12 +109,11 @@ public class TestPassthroughTopology {
 		assertEquals(0L, crud_service.countObjects().get().intValue());
 		
 		//PHASE4 : WRITE TO KAFKA
+		
 		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
 		Thread.sleep(9000L);
 		
-		//TODO not working, get 0, look into why
-		/**/
-		//assertEquals(1L, crud_service.countObjects().get().intValue());		
+		assertEquals(1L, crud_service.countObjects().get().intValue());		
 	}
 	
 }

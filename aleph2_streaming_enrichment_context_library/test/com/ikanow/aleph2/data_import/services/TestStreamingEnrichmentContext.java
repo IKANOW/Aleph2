@@ -149,7 +149,7 @@ public class TestStreamingEnrichmentContext {
 	
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 													.with(DataBucketBean::_id, "test")
-													.with(DataBucketBean::modified, new Date())
+													.with(DataBucketBean::modified, new Date(1436194933000L))
 													.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
 															.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
 																	.done().get())
@@ -158,8 +158,8 @@ public class TestStreamingEnrichmentContext {
 			
 			// Empty service set:
 			final String signature = test_context.getEnrichmentContextSignature(Optional.of(test_bucket), Optional.empty());
-			
-			final String expected_sig = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}";			
+						
+			final String expected_sig = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}";			
 			assertEquals(expected_sig, signature);
 
 			// Check can't call multiple times
@@ -190,29 +190,8 @@ public class TestStreamingEnrichmentContext {
 					);
 			
 			
-			final String expected_sig2 = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
+			final String expected_sig2 = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
 			assertEquals(expected_sig2, signature2);
-			
-			// First fail because bucket not present
-			
-			try {
-				@SuppressWarnings("unused")
-				IEnrichmentModuleContext test_external1 = ContextUtils.getEnrichmentContext(signature);
-				fail("Should have thrown exception");
-			}
-			catch (Exception e) {
-				assertEquals("java.lang.RuntimeException: Unable to locate bucket: test", e.getMessage());
-			}
-			
-			// Then insert bucket and hence succeed
-	
-			@SuppressWarnings("unchecked")
-			final ICrudService<DataBucketBean> raw_mock_db =
-					test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-			raw_mock_db.deleteDatastore().get();
-			assertEquals(0L, (long)raw_mock_db.countObjects().get());
-			raw_mock_db.storeObject(test_bucket).get();			
-			assertEquals(1L, (long)raw_mock_db.countObjects().get());
 			
 			final IEnrichmentModuleContext test_external1a = ContextUtils.getEnrichmentContext(signature);		
 			

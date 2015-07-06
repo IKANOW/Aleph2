@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -101,6 +102,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected Optional<ICrudService<JsonNode>> _crud_index_service;
 	protected Optional<ICrudService.IBatchSubservice<JsonNode>> _batch_index_service;
 	
+	private static ConcurrentHashMap<String, StreamingEnrichmentContext> static_instances = new ConcurrentHashMap<>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -139,6 +141,12 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		return _mutable_state.user_topology_entry_point.set(entry_point);
 	}
 	
+	/** FOR DEBUGGING AND TESTING ONLY, inserts a copy of the current context into the saved "in module" versions
+	 */
+	public void overrideSavedContext() {
+		static_instances.put(_mutable_state.signature_override.get().split(":", 2)[1], this);
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#initializeNewContext(java.lang.String)
 	 */
@@ -147,16 +155,25 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	public void initializeNewContext(final String signature) {
 		try {
 			// Inject dependencies
-			
 			final Config parsed_config = ConfigFactory.parseString(signature);
+			final StreamingEnrichmentContext to_clone = static_instances.get(signature);
 			
-			final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
-			injector.injectMembers(this);			
-			_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
-			_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-			_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
-			_globals = _service_context.getGlobalProperties();
-			
+			if (null != to_clone) { //copy the fields				
+				_service_context = to_clone._service_context;
+				_core_management_db = to_clone._core_management_db;
+				_distributed_services = to_clone._distributed_services;	
+				_index_service = to_clone._index_service;
+				_globals = to_clone._globals;
+				// (apart from bucket, which is handled below, rest of mutable state is not needed)
+			}
+			else {				
+				final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
+				injector.injectMembers(this);			
+				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
+				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
+				_globals = _service_context.getGlobalProperties();
+			}			
 			// Get bucket 
 
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_ID), DataBucketBean.class);
@@ -164,6 +181,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 											.flatMap(cs -> cs.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty()))
 											.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
 			_mutable_state.bucket.set(retrieve_bucket.get());
+			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
 			//DEBUG
