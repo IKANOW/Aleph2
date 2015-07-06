@@ -50,6 +50,8 @@
 		<configuration>
 			<excludes>
 				<exclude>**backtype.storm**</exclude>
+				<exclude>**com.ikanow.aleph2.data_import_manager.harvest.modules**</exclude>
+				<exclude>**com.ikanow.aleph2.data_import_manager.batch_enrichment.module**</exclude>
 			</excludes>
 		</configuration>
 		<executions>

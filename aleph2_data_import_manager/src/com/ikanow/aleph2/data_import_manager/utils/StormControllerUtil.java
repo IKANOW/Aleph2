@@ -163,15 +163,11 @@ public class StormControllerUtil {
 	 * @param yarn_config_dir
 	 * @return
 	 */
-	protected static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) {
+	public static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) {
 		Config config = ConfigFactory.parseFile(new File(yarn_config_dir + File.separator + "storm.properties"));
 		IStormController storm = getRemoteStormController(config.root().unwrapped());
 		return storm;		
 	}	
-
-	
-	
-	
 	
 	/**
 	 * Starts up a storm job.

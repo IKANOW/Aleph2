@@ -25,17 +25,26 @@ import org.apache.logging.log4j.Logger;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketChangeActor;
+import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
+import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.shared.crud.mongodb.data_model.MongoDbConfigurationBean;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -45,6 +54,8 @@ import com.typesafe.config.ConfigFactory;
 public class IkanowV1SynchronizationModule {
 	private static final Logger _logger = LogManager.getLogger();	
 
+	protected final DataImportConfigurationBean _service_config;
+	
 	protected final IServiceContext _context;
 	protected final IManagementDbService _core_management_db;
 	protected final IManagementDbService _underlying_management_db;
@@ -56,7 +67,7 @@ public class IkanowV1SynchronizationModule {
 	 * @param context
 	 */
 	@Inject
-	public IkanowV1SynchronizationModule(IServiceContext context, DataImportActorContext local_actor_context) {
+	public IkanowV1SynchronizationModule(IServiceContext context, DataImportActorContext local_actor_context, DataImportConfigurationBean service_config) {
 		_context = context;
 		_core_management_db = context.getCoreManagementDbService();
 		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
@@ -64,30 +75,56 @@ public class IkanowV1SynchronizationModule {
 		_db_actor_context = new ManagementDbActorContext(_context);
 		
 		_local_actor_context = local_actor_context;
+		
+		_service_config = service_config;
 	}
 	
 	public void start() {		
 		final String hostname = _local_actor_context.getInformationService().getHostname();
 		
-		// Create a bucket change actor and register it vs the local message bus
-		final ActorRef handler = _local_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), 
-				hostname);
-		
-		_logger.info(ErrorUtils.get("Attaching DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ACTION_EVENT_BUS));
-		
-		_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-
-		_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ACTION_ZOOKEEPER, hostname));
-		
-		try {
-			_core_distributed_services.getCuratorFramework().create()
-				.creatingParentsIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+		if (_service_config.v1_sync_service_enabled()) {
+			// Create a bucket change actor and register it vs the local message bus
+			final ActorRef handler = _local_actor_context.getActorSystem().actorOf(
+					Props.create(com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketChangeActor.class), 
+					hostname + ".harvest.actors.DataBucketChangeActor");
+			
+			_logger.info(ErrorUtils.get("Attaching harvest DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ACTION_EVENT_BUS));
+			
+			_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+	
+			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ACTION_ZOOKEEPER, hostname));
+			
+			try {
+				_core_distributed_services.getCuratorFramework().create()
+					.creatingParentsIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+			}
+			catch (Exception e) {
+				_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
+			}
+			_logger.info("Starting IkanowV1SynchronizationModule subservice=v1_sync_service");
 		}
-		catch (Exception e) {
-			_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
-		}		
+		if (_service_config.streaming_enrichment_enabled()) {
+			// Create a bucket change actor and register it vs the local message bus
+			final ActorRef handler = _local_actor_context.getActorSystem().actorOf(
+					Props.create(com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor.class), 
+					hostname + ".stream_enrichment.actors.DataBucketChangeActor");
+			
+			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS));
+			
+			_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+	
+			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, hostname));
+			
+			try {
+				_core_distributed_services.getCuratorFramework().create()
+					.creatingParentsIfNeeded().forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+			}
+			catch (Exception e) {
+				_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
+			}
+			_logger.info("Starting IkanowV1SynchronizationModule subservice=stream_enrichment");
+		}
 		
-		_logger.info("Starting IkanowV1SynchronizationModule");
 		
 		for (;;) {
 			try { Thread.sleep(10000); } catch (Exception e) {}
@@ -105,11 +142,11 @@ public class IkanowV1SynchronizationModule {
 				System.exit(-1);
 			}
 			System.out.println("Running with command line: " + Arrays.toString(args));
-			Config config = ConfigFactory.parseFile(new File(args[0]));
+			final Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));
+			final Injector app_injector = ModuleUtils.createInjector(Arrays.asList(new Module()), Optional.of(config));
 			
-			IkanowV1SynchronizationModule app = app_injector.getInstance(IkanowV1SynchronizationModule.class);
+			final IkanowV1SynchronizationModule app = app_injector.getInstance(IkanowV1SynchronizationModule.class);
 			app.start();
 		}
 		catch (Exception e) {
@@ -120,6 +157,41 @@ public class IkanowV1SynchronizationModule {
 			catch (Exception e2) { // the exception failed!
 				System.out.println(ErrorUtils.getLongForm("Got all the way to main: {0}", e));
 			}
+		}
+	}
+
+	/** Subclass for setting up module
+	 * @author Alex
+	 *
+	 */
+	public static class Module extends AbstractModule {
+		public Module() {		
+		}
+		
+		@Override
+		protected void configure() {
+			final Config config = ModuleUtils.getStaticConfig();
+			try {
+				// Need globals config annoyingly, hasn't been injected yet:
+				final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
+				final GlobalPropertiesBean globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
+				
+				DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
+				this.bind(DataImportConfigurationBean.class).toInstance(bean);
+				
+				if (bean.storm_debug_mode()) {
+					this.bind(IStormController.class).toInstance(new LocalStormController());
+				}
+				else {
+					this.bind(IStormController.class).toInstance(StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir()));					
+				}
+			} 
+			catch (Exception e) {
+				throw new RuntimeException(ErrorUtils.get(ErrorUtils.INVALID_CONFIG_ERROR,
+						MongoDbConfigurationBean.class.toString(),
+						config.getConfig(MongoDbManagementDbConfigBean.PROPERTIES_ROOT)
+						), e);
+			}			
 		}
 	}
 }
