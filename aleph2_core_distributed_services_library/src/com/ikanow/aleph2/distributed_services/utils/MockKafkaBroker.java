@@ -30,8 +30,16 @@ public class MockKafkaBroker {
 	 * @param zookeeper_connection
 	 * @throws IOException
 	 */
-	public MockKafkaBroker(String zookeeper_connection) throws IOException {				
-		this(zookeeper_connection, getAvailablePort());
+	public MockKafkaBroker(String zookeeper_connection) throws IOException {
+		for (int i = 0; i < 5; ++i) {
+			try {
+				setupServer(zookeeper_connection, getAvailablePort());
+				break;
+			}
+			catch (Exception e) { // Possibly a race condition, sleep and try again
+				try { Thread.sleep((long)(Math.random() * 1000)); } catch (Exception ee) {}
+			}			
+		}
 	}
 	
 	/**
@@ -43,8 +51,19 @@ public class MockKafkaBroker {
 	 * @throws IOException 
 	 */
 	public MockKafkaBroker(String zookeeper_connection, int broker_port) throws IOException {
-		this.broker_port = broker_port;
+		setupServer(zookeeper_connection, broker_port);
+	}
+	/**
+	 * Creates an instance of kafka on the given broker_port using the supplied
+	 * zookeeper.
+	 * 
+	 * @param zookeeper_connection
+	 * @param broker_port
+	 * @throws IOException 
+	 */
+	protected void setupServer(final String zookeeper_connection, final int broker_port) throws IOException {
 		Properties props = new Properties();
+		this.broker_port = broker_port;
 		props.put("port", ""+broker_port);
 		props.put("broker.id", "1");
 		// System.getProperty("java.io.tmpdir") + File.pathSeparator + "kafka_local_temp_" + System.currentTimeMillis());
@@ -81,6 +100,7 @@ public class MockKafkaBroker {
 		kafka_server.startup();
 		logger.debug("local kafka is a go");
 	}
+	
 	
 	/**
 	 * Shuts down the local kafka instance
