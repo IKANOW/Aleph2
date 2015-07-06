@@ -41,10 +41,8 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-import com.ikanow.aleph2.shared.crud.mongodb.data_model.MongoDbConfigurationBean;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -188,8 +186,8 @@ public class IkanowV1SynchronizationModule {
 			} 
 			catch (Exception e) {
 				throw new RuntimeException(ErrorUtils.get(ErrorUtils.INVALID_CONFIG_ERROR,
-						MongoDbConfigurationBean.class.toString(),
-						config.getConfig(MongoDbManagementDbConfigBean.PROPERTIES_ROOT)
+						DataImportConfigurationBean.class.toString(),
+						config.getConfig(DataImportConfigurationBean.PROPERTIES_ROOT)
 						), e);
 			}			
 		}
