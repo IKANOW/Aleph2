@@ -114,8 +114,8 @@ public class TestPassthroughTopology {
 		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
 		Thread.sleep(9000L);
 		
-		assertEquals(1L, crud_service.countObjects().get().intValue());		
-		assertEquals(1L, crud_service.countObjectsBySpec(CrudUtils.allOf().when("test", "test1")).get().intValue());		
+		assertEquals("Should be 1 object in the repo", 1L, crud_service.countObjects().get().intValue());		
+		assertEquals("Object should be test:test1", 1L, crud_service.countObjectsBySpec(CrudUtils.allOf().when("test", "test1")).get().intValue());		
 	}
 	
 }
