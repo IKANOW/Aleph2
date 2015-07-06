@@ -296,7 +296,9 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
 			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
-			final SpoutConfig spout_config = new SpoutConfig(hosts, KafkaUtils.bucketPathToTopicName(my_bucket.full_name()), full_path, my_bucket._id()); 
+			final String topic_name = KafkaUtils.bucketPathToTopicName(my_bucket.full_name());
+			KafkaUtils.createTopic(topic_name);	
+			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, my_bucket._id()); 
 			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
 			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
 			return (T) kafka_spout;			
@@ -321,7 +323,6 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				getEnrichmentContextSignature(bucket, Optional.empty());
 			}
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-			KafkaUtils.createTopic(KafkaUtils.bucketPathToTopicName(my_bucket.full_name()));	
 			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());
 		}
 		else {
