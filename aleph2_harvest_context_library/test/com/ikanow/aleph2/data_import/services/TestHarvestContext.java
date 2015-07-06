@@ -18,7 +18,9 @@ package com.ikanow.aleph2.data_import.services;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -26,17 +28,18 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -111,7 +114,7 @@ public class TestHarvestContext {
 			// Empty service set:
 			final String signature = test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());
 			
-			final String expected_sig = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}"; 
+			final String expected_sig = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"{\\\"_id\\\":\\\"test\\\"}\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}"; 
 			assertEquals(expected_sig, signature);
 			
 			// Additionals service set:
@@ -125,29 +128,11 @@ public class TestHarvestContext {
 														)
 												);
 			
-			final String expected_sig2 = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"test\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
+			final String expected_sig2 = "com.ikanow.aleph2.data_import.services.HarvestContext:{\"030e2b82-0285-11e5-a322-1697f925ec7b\":\"{\\\"_id\\\":\\\"test\\\"}\",\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
 			assertEquals(expected_sig2, signature2);
 			
 			// First fail because bucket not present
-			
-			try {
-				@SuppressWarnings("unused")
-				IHarvestContext test_external1 = ContextUtils.getHarvestContext(signature);
-				fail("Should have thrown exception");
-			}
-			catch (Exception e) {					
-				assertEquals("java.lang.RuntimeException: Unable to locate bucket: test", e.getMessage());
-			}
-			
-			// Then insert bucket and hence succeed
-	
-			@SuppressWarnings("unchecked")
-			final ICrudService<DataBucketBean> raw_mock_db =
-					test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-			raw_mock_db.storeObject(test_bucket).get();
-			
-			assertEquals(1L, (long)raw_mock_db.countObjects().get());
-			
+						
 			final IHarvestContext test_external1a = ContextUtils.getHarvestContext(signature);		
 			
 			assertTrue("external context non null", test_external1a != null);
@@ -162,6 +147,18 @@ public class TestHarvestContext {
 			assertTrue("Harvest Context dependencies", test_external1b._service_context != null);
 			
 			assertEquals("test", test_external1b._mutable_state.bucket.get()._id());
+			
+			// Check that it gets cloned
+			
+			final IHarvestContext test_external1a_1 = ContextUtils.getHarvestContext(signature);		
+			
+			assertTrue("external context non null", test_external1a_1 != null);
+			
+			assertTrue("external context of correct type", test_external1a_1 instanceof HarvestContext);
+			
+			final HarvestContext test_external1b_1 = (HarvestContext)test_external1a_1;
+			
+			assertEquals(test_external1b_1._distributed_services, test_external1b._distributed_services);
 			
 			// Finally, check I can see my extended services: 
 			
@@ -182,7 +179,8 @@ public class TestHarvestContext {
 			
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IManagementDbService.class, Optional.of("test")));
-			
+		
+			assertTrue("New set of services", test_external2b._distributed_services != test_external1b._distributed_services);
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -259,22 +257,41 @@ public class TestHarvestContext {
 		
 	}
 	
-	@Ignore
 	@Test
-	public void testProduceConsume() {
-		//TODO in the future test something, mock CDS does nothing for these 2 functions
+	public void testProduceConsume() throws JsonProcessingException, IOException {
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
+		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-		String message = "{\"key\":\"val\"}";
+		String message1 = "{\"key\":\"val\"}";
+		String message2 = "{\"key\":\"val2\"}";
+		String message3 = "{\"key\":\"val3\"}";
+		String message4 = "{\"key\":\"val4\"}";
+		Map<String, Object> msg3 = ImmutableMap.<String, Object>builder().put("key", "val3").build();
+		Map<String, Object> msg4 = ImmutableMap.<String, Object>builder().put("key", "val4").build();
 		//currently mock cds produce does nothing
-		test_context._distributed_services.produce("TEST_HARVEST_CONTEXT", message);
+		try {
+			test_context.sendObjectToStreamingPipeline(Optional.empty(), mapper.readTree(message1));
+			fail("Should fail, bucket not set and not specified");
+		}
+		catch (Exception e) {}
+		test_context.setBucket(bucket);
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), mapper.readTree(message1));
+		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), mapper.readTree(message2));
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), msg3);
+		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), msg4);
+		
+		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
 		Iterator<String> iter = test_context._distributed_services.consume("TEST_HARVEST_CONTEXT");
 		long count = 0;
 		while ( iter.hasNext() ) {
+			String msg = iter.next();
+			assertTrue("Sent this message: " + msg, mutable_set.remove(msg));
 			count++;
 		}
-		assertEquals(count,0);
+		assertEquals(4,count);
 	}
 		
 }

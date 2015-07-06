@@ -36,6 +36,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
@@ -114,6 +115,7 @@ public class TestPassthroughTopology {
 		Thread.sleep(9000L);
 		
 		assertEquals(1L, crud_service.countObjects().get().intValue());		
+		assertEquals(1L, crud_service.countObjectsBySpec(CrudUtils.allOf().when("test", "test1")).get().intValue());		
 	}
 	
 }

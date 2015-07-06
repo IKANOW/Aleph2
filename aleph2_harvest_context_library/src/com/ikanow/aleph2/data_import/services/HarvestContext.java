@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
@@ -32,6 +33,7 @@ import java.util.stream.StreamSupport;
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -49,8 +51,10 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -58,6 +62,7 @@ import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -82,6 +87,10 @@ public class HarvestContext implements IHarvestContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected GlobalPropertiesBean _globals;
+	
+	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+	
+	private static ConcurrentHashMap<String, HarvestContext> static_instances = new ConcurrentHashMap<>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -120,22 +129,28 @@ public class HarvestContext implements IHarvestContext {
 			// Inject dependencies
 			
 			final Config parsed_config = ConfigFactory.parseString(signature);
-			
-			final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
-			injector.injectMembers(this);			
-			_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
-			_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-			_globals = _service_context.getGlobalProperties();
-			
+			final HarvestContext to_clone = static_instances.get(signature);			
+			if (null != to_clone) { //copy the fields				
+				_service_context = to_clone._service_context;
+				_core_management_db = to_clone._core_management_db;
+				_distributed_services = to_clone._distributed_services;	
+				_globals = to_clone._globals;
+				// (apart from bucket, which is handled below, rest of mutable state is not needed)
+			}
+			else {							
+				final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
+				injector.injectMembers(this);			
+				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
+				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+				_globals = _service_context.getGlobalProperties();
+			}			
 			// Get bucket 
 			
 			String bucket_id = parsed_config.getString(__MY_ID);
 			
-			Optional<DataBucketBean> retrieve_bucket = _core_management_db.getDataBucketStore().getObjectById(bucket_id).get();
-			if (!retrieve_bucket.isPresent()) {
-				throw new RuntimeException(ErrorUtils.get(ErrorUtils.NO_BUCKET, bucket_id));
-			}
+			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
+			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
 			//DEBUG
@@ -159,32 +174,19 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void sendObjectToStreamingPipeline(
-			Optional<DataBucketBean> bucket, JsonNode object) {
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#sendObjectToStreamingPipeline(java.util.Optional, java.lang.Object)
-	 */
-	@Override
-	public <T> void sendObjectToStreamingPipeline(
-			Optional<DataBucketBean> bucket, T object) {
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+			Optional<DataBucketBean> bucket, JsonNode object) {		
+		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), object.toString());
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#sendObjectToStreamingPipeline(java.util.Optional, java.util.Map)
 	 */
 	@Override
-	public void sendObjectToStreamingPipeline(
-			Optional<DataBucketBean> bucket,
+	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
 			Map<String, Object> object) {
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		sendObjectToStreamingPipeline(bucket, _mapper.convertValue(object, JsonNode.class));
 	}
-
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
@@ -292,8 +294,10 @@ public class HarvestContext implements IHarvestContext {
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
 			final Config last_call = config_subset_services
-								.withValue(__MY_ID, ConfigValueFactory
-										.fromAnyRef(bucket.orElseGet(() -> _mutable_state.bucket.get())._id(), "bucket id"));
+										.withValue(__MY_ID, 
+												ConfigValueFactory
+													.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
+													);
 			
 			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 		}
@@ -444,5 +448,4 @@ public class HarvestContext implements IHarvestContext {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
-
 }

@@ -209,6 +209,18 @@ public class TestStreamingEnrichmentContext {
 			
 			assertEquals("test", test_external1b._mutable_state.bucket.get()._id());
 			
+			// Check that it gets cloned
+			
+			final IEnrichmentModuleContext test_external1a_1 = ContextUtils.getEnrichmentContext(signature);		
+			
+			assertTrue("external context non null", test_external1a_1 != null);
+			
+			assertTrue("external context of correct type", test_external1a_1 instanceof StreamingEnrichmentContext);
+			
+			final StreamingEnrichmentContext test_external1b_1 = (StreamingEnrichmentContext)test_external1a_1;
+			
+			assertEquals(test_external1b_1._distributed_services, test_external1b._distributed_services);
+			
 			// Finally, check I can see my extended services: 
 			
 			final IEnrichmentModuleContext test_external2a = ContextUtils.getEnrichmentContext(signature2);		
@@ -229,6 +241,8 @@ public class TestStreamingEnrichmentContext {
 			
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IManagementDbService.class, Optional.of("test")));
+						
+			assertTrue("New set of services", test_external2b._distributed_services != test_external1b._distributed_services);
 			
 			//Check some "won't work in module" calls:
 			try {

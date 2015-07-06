@@ -212,12 +212,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <T> void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, T object) {
-			
-		}
-
-		@Override
 		public void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket,
 				Map<String, Object> object) {

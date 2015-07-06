@@ -58,13 +58,6 @@ public interface IHarvestContext {
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit in "pojo" format
-	 */
-	<T> void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final T object);
-	
-	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
-	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param object the object to emit in (possibly nested) Map<String, Object> format
 	 */
 	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Map<String, Object> object);
