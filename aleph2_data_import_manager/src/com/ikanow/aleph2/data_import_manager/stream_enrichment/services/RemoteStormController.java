@@ -92,6 +92,11 @@ public class RemoteStormController implements IStormController  {
 		client = NimbusClient.getConfiguredClient(remote_config).getClient();
 	}
 
+	/**
+	 * Submits a job to the remote storm cluster.  Sends the input jar to the server and then
+	 * submits the supplied topology w/ the given job_name.
+	 * 
+	 */
 	@Override
 	public CompletableFuture<BasicMessageBean> submitJob(String job_name, String input_jar_location,
 			StormTopology topology)  {
@@ -112,6 +117,10 @@ public class RemoteStormController implements IStormController  {
 		return future;
 	}
 
+	/**
+	 * Attempts to stop the given job_name, if the job is not found it will throw an exception.
+	 * 
+	 */
 	@Override
 	public CompletableFuture<BasicMessageBean> stopJob(String job_name) {
 		logger.info("Stopping job: " + job_name);
@@ -128,6 +137,11 @@ public class RemoteStormController implements IStormController  {
 		return future;
 	}
 
+	/**
+	 * Grabs the topology info for the given job name.  First needs to get the
+	 * job id from the job_name, then lookup the stats.
+	 * 
+	 */
 	@Override
 	public TopologyInfo getJobStats(String job_name) throws Exception {
 		logger.info("Looking for stats for job: " + job_name);		

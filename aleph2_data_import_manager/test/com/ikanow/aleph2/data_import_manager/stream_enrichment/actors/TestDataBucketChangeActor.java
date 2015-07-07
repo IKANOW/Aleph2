@@ -168,7 +168,7 @@ public class TestDataBucketChangeActor {
 		// 2a) Send an offer (ignored, no storm properties)
 		{
 			try {
-				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.properties").delete();
+				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.yaml").delete();
 			}
 			catch (Exception e) {
 				//(don't care if fails, probably just first time through)
@@ -186,7 +186,7 @@ public class TestDataBucketChangeActor {
 		
 		// 2b) Send an offer (accepted, create file)
 		{
-			new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.properties").createNewFile();
+			new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + "storm.yaml").createNewFile();
 			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);

@@ -147,7 +147,7 @@ public class DataBucketChangeActor extends AbstractActor {
 						// (this isn't async so doesn't require any futures)
 						
 	    				//TODO (ALEPH-10): check if STORM is available here (in practice shouldn't register vs message bus if not, but doesn't hurt to ask)
-						final boolean accept_or_ignore = new File(_globals.local_yarn_config_dir() + File.separator + "storm.properties").exists();
+						final boolean accept_or_ignore = new File(_globals.local_yarn_config_dir() + File.separator + "storm.yaml").exists();
 						
 						final BucketActionReplyMessage reply = 						
 							accept_or_ignore

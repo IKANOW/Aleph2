@@ -53,6 +53,11 @@ public class LocalStormController implements IStormController {
 		local_cluster = new LocalCluster();
 	}
 
+	/**
+	 * Submits a job to the local storm cluster, ignores the input_jar_location variable (just send null).
+	 * Uses current classpath to get files for the topology.
+	 * 
+	 */
 	@Override
 	public CompletableFuture<BasicMessageBean> submitJob(String job_name, String input_jar_location,
 			StormTopology topology) {
@@ -66,6 +71,10 @@ public class LocalStormController implements IStormController {
 		return future;
 	}
 
+	/**
+	 * Attempts to stop a local job, will fail if it can't find the job_name.
+	 * 
+	 */
 	@Override
 	public CompletableFuture<BasicMessageBean> stopJob(String job_name) {
 		CompletableFuture<BasicMessageBean> future = new CompletableFuture<BasicMessageBean>();
@@ -83,6 +92,11 @@ public class LocalStormController implements IStormController {
 		return future;
 	}
 
+	/**
+	 * Tries to get the stats for a job_name, will lookup the id first then
+	 * use that to find the topology info.
+	 * 
+	 */
 	@Override
 	public TopologyInfo getJobStats(String job_name) throws Exception {
 		logger.info("Looking for stats for job: " + job_name);		
@@ -93,6 +107,13 @@ public class LocalStormController implements IStormController {
 		return null;
 	}
 	
+	/**
+	 * Tries to find a job by its job_name.
+	 * 
+	 * @param job_prefix
+	 * @return
+	 * @throws TException
+	 */
 	private TopologySummary getJobTopologySummaryFromJobPrefix(String job_prefix) throws TException {
 		ClusterSummary cluster_summary = local_cluster.getClusterInfo();
 		Iterator<TopologySummary> iter = cluster_summary.get_topologies_iterator();
