@@ -80,7 +80,7 @@ public class IkanowV1SynchronizationModule {
 	public void start() {		
 		final String hostname = _local_actor_context.getInformationService().getHostname();
 		
-		if (_service_config.v1_sync_service_enabled()) {
+		if (_service_config.harvest_enabled()) {
 			// Create a bucket change actor and register it vs the local message bus
 			final ActorRef handler = _local_actor_context.getActorSystem().actorOf(
 					Props.create(com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketChangeActor.class), 
