@@ -18,6 +18,7 @@ package com.ikanow.aleph2.distributed_services.utils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.logging.log4j.LogManager;
@@ -49,6 +50,7 @@ public class KafkaUtils {
 	private static Producer<String, String> producer;	
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
+	private final static Map<String, Boolean> known_topics = new ConcurrentHashMap<String, Boolean>();
 	
 	/**
 	 * Returns a producer pointed at the currently configured Kafka instance.
@@ -147,29 +149,32 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public static void createTopic(String topic) {
-		logger.debug("CREATE TOPIC");
-		//if you don't use the ZKStringSerializer creating topics will fail
-		//http://stackoverflow.com/questions/27036923/how-to-create-a-topic-in-kafka-through-java
-		ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);				
-		logger.debug("DOES TOPIC EXIST: " + AdminUtils.topicExists(zk_client, topic));
-		if ( !AdminUtils.topicExists(zk_client, topic) ) {		
-			AdminUtils.createTopic(zk_client, topic, 1, 1, new Properties());			
-			boolean leader_elected = waitUntilLeaderElected(zk_client, topic, 1000);
-			logger.debug("LEADER WAS ELECTED: " + leader_elected);
-			
-			//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-			WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic), topic);
-			iter.hasNext();
-			
-			//debug info
-			logger.debug("DONE CREATING TOPIC");	
-			logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
-			TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
-			logger.debug("META: " + meta);
-			iter.close();
-		}		
-		zk_client.close();
+	public static void createTopic(String topic) {		
+		if ( !known_topics.containsKey(topic) ) {
+			logger.debug("CREATE TOPIC");
+			ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);				
+			logger.debug("DOES TOPIC EXIST: " + AdminUtils.topicExists(zk_client, topic));
+			if ( !AdminUtils.topicExists(zk_client, topic) ) {		
+				AdminUtils.createTopic(zk_client, topic, 1, 1, new Properties());			
+				boolean leader_elected = waitUntilLeaderElected(zk_client, topic, 1000);
+				logger.debug("LEADER WAS ELECTED: " + leader_elected);
+				
+				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
+				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic), topic);
+				iter.hasNext();
+				
+				//debug info
+				logger.debug("DONE CREATING TOPIC");	
+				logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
+				TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
+				logger.debug("META: " + meta);
+				iter.close();				
+			}	
+			known_topics.put(topic, true); //topic either already existed or was created
+			zk_client.close();
+		} else {
+			logger.debug("topic was in cache");
+		}
 	}
 
 	/**

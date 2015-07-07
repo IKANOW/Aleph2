@@ -147,10 +147,9 @@ public class TestCoreDistributedServices {
 		
 	@Test
 	public void testKafkaForStormSpout() throws Exception {
-		//create a topic for a kafka spout, put 50 things in the spout
-		
+		//create a topic for a kafka spout, put some things in the spout		
 		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";  
-		final int num_to_test = 10;
+		final int num_to_test = 100; //set this high enough to hit the concurrent connection limit just incase we messed something up
 		//throw items on the queue
 		
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
@@ -159,16 +158,18 @@ public class TestCoreDistributedServices {
 			_core_distributed_services.produce(TOPIC_NAME, original_message);	
 		
 		//grab the consumer
-//		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
-//		String consumed_message = null;
-//		int message_count = 0;
-//		//read the item off the queue
-//		while ( consumer.hasNext() ) {
-//			consumed_message = consumer.next();
-//        	message_count++;
-//            System.out.println(consumed_message);
-//		}
-//		
-//		KafkaUtils.deleteTopic(TOPIC_NAME);
+		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+		String consumed_message = null;
+		int message_count = 0;
+		//read the item off the queue
+		while ( consumer.hasNext() ) {
+			consumed_message = consumer.next();
+        	message_count++;
+            System.out.println(consumed_message);
+		}
+		
+		KafkaUtils.deleteTopic(TOPIC_NAME);
+		
+		assertEquals(num_to_test, message_count); 
 	}
 }
