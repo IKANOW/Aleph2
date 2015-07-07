@@ -1,3 +1,18 @@
+/*******************************************************************************
+* Copyright 2015, The IKANOW Open Source Project.
+* 
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+* 
+* You should have received a copy of the GNU Affero General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
 import java.io.Closeable;
@@ -5,25 +20,35 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.MessageAndMetadata;
 
+/**
+ * Wrapper around a kafka consumer iterator for ease of use, returns Strings
+ * on a next() call.  This can be converted to return JsonNode if we need to instead.
+ * 
+ * @author Burch
+ *
+ */
 public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 
 	final protected ConsumerConnector consumer;
 	final protected String topic;	
 	final protected Iterator<MessageAndMetadata<byte[], byte[]>> iterator;
-	final protected ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+	final private static Logger logger = LogManager.getLogger();
 	
+	/**
+	 * Takes a consumer and the topic name, retrieves the stream of results and
+	 * creates an iterator for it, can use calling hasNext() and next() then.
+	 * 
+	 * @param consumer
+	 * @param topic
+	 */
 	public WrappedConsumerIterator(ConsumerConnector consumer, String topic) {
 		this.consumer = consumer;
 		this.topic = topic;
@@ -35,50 +60,47 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
         this.iterator = stream.iterator();       
 	}
 	
+	/**
+	 * Returns the next string in the queue, should call hasNext() before this everytime.
+	 * 
+	 */
 	@Override
 	public String next() {
-		Future<String> future = executor.submit(new Callable<String>() {
-			@Override
-			public String call() throws Exception {
-				MessageAndMetadata<byte[], byte[]> next_message = iterator.next();
-				if ( next_message != null )
-					return new String(next_message.message());
-				return null;
-			}			
-		});
 		try {
-			return future.get(1, TimeUnit.SECONDS);
-		} catch (InterruptedException | ExecutionException | TimeoutException e) {
-			//DEBUG
-			//System.out.println("next timed out, closing");
+			MessageAndMetadata<byte[], byte[]> next_message = iterator.next();
+			if ( next_message != null )
+				return new String(next_message.message());
+			return null;
+		} catch (Exception e) {
 			close();
 			return null;
 		}
 	}
 	
+	/**
+	 * Checks if there is an item available in the queue, if consumer.timeout.ms has
+	 * been set (we do it in KafkaUtils currently) then this will throw an exception after
+	 * that timeout and return false, otherwise it will block forever until a new item is found,
+	 * it never returns false from the internal iterator, we do on an exception (timeout)
+	 * 
+	 */
 	@Override
 	public boolean hasNext() {
-		Future<Boolean> future = executor.submit(new Callable<Boolean>() {
-			@Override
-			public Boolean call() throws Exception {
-				//DEBUG
-				//System.out.println("trying to get hasNext");
-				return iterator.hasNext();
-			}			
-		});
 		try {
-			return future.get(1, TimeUnit.SECONDS);
-		} catch (InterruptedException | ExecutionException | TimeoutException e) {
-			//DEBUG
-			//System.out.println("hasNext timed out, closing");
+			return iterator.hasNext();
+		} catch (Exception e) {
+			logger.info("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms");
 			close();
 			return false;
-		}
+		}		
 	}
 	
+	/**
+	 * Shuts down the consumer as a cleanup step.
+	 * 
+	 */
 	@Override
 	public void close() {
-		executor.shutdown();
 		if ( consumer != null )
 			consumer.shutdown();
 	}
