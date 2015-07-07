@@ -230,7 +230,7 @@ public class DataBucketBean implements Serializable {
 	private EnrichmentControlMetadataBean streaming_enrichment_topology;
 	private EnrichmentControlMetadataBean batch_enrichment_topology;
 	
-	public enum MasterEnrichmentType { streaming, batch, streaming_and_batch }
+	public enum MasterEnrichmentType { none, streaming, batch, streaming_and_batch }
 	private MasterEnrichmentType master_enrichment_type;
 	
 	////////////////////////////////////////
