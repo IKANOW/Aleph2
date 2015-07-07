@@ -35,7 +35,6 @@ import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalSto
 import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -170,10 +169,6 @@ public class IkanowV1SynchronizationModule {
 		protected void configure() {
 			final Config config = ModuleUtils.getStaticConfig();
 			try {
-				// Need globals config annoyingly, hasn't been injected yet:
-				final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
-				final GlobalPropertiesBean globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
-				
 				DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
 				this.bind(DataImportConfigurationBean.class).toInstance(bean);
 				
@@ -182,7 +177,9 @@ public class IkanowV1SynchronizationModule {
 						this.bind(IStormController.class).toInstance(new LocalStormController());
 					}
 					else {
-						this.bind(IStormController.class).toInstance(StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir()));					
+						this.bind(IStormController.class).toInstance(
+								StormControllerUtil.getStormControllerFromYarnConfig(
+										ModuleUtils.getGlobalProperties().local_yarn_config_dir()));					
 					}
 				}
 			} 

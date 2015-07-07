@@ -70,6 +70,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Inject
 	public CoreDistributedServices(DistributedServicesPropertyBean config_bean) throws Exception {
+		
 		final String connection_string = Optional.ofNullable(config_bean.zookeeper_connection())
 											.orElse(DistributedServicesPropertyBean.__DEFAULT_ZOOKEEPER_CONNECTION);
 		

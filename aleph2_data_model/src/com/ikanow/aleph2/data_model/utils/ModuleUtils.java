@@ -91,6 +91,12 @@ public class ModuleUtils {
 	public static Config getStaticConfig() {
 		return Optional.ofNullable(saved_config).orElse(ConfigFactory.load());
 	}
+	/** Returns the global configuration bean associated with the last configuration generated
+	 * @return
+	 */
+	public static GlobalPropertiesBean getGlobalProperties() {
+		return globals;
+	}
 	
 	/**
 	 * Loads up all the services it can find in the given config file.  Typically

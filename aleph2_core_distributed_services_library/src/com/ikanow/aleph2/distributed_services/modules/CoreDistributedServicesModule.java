@@ -15,14 +15,21 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.modules;
 
+import java.io.File;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
+import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigSyntax;
 
 public class CoreDistributedServicesModule extends AbstractModule {
 
@@ -39,10 +46,28 @@ public class CoreDistributedServicesModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		
-		Config config = ModuleUtils.getStaticConfig();				
-		DistributedServicesPropertyBean bean;
+		final Config config = ModuleUtils.getStaticConfig();				
+		
 		try {
-			bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DistributedServicesPropertyBean.PROPERTIES_ROOT).orElse(null), DistributedServicesPropertyBean.class);
+			final DistributedServicesPropertyBean bean = Lambdas.wrap_u(() -> { 
+					
+				final DistributedServicesPropertyBean tmp_bean = BeanTemplateUtils.from(
+						PropertiesUtils.getSubConfig(config, DistributedServicesPropertyBean.PROPERTIES_ROOT).orElse(null), 
+						DistributedServicesPropertyBean.class);
+			
+				if (null == tmp_bean.zookeeper_connection()) { //try getting it from zoo.cfg)
+					final File f = new File(ModuleUtils.getGlobalProperties() + File.separator + "zoo.cfg");
+					if (f.exists() && f.canRead()) {
+						return BeanTemplateUtils.clone(tmp_bean).with(DistributedServicesPropertyBean::zookeeper_connection, 
+								ZookeeperUtils.buildConnectionString(
+										ConfigFactory.parseFile(f, ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES)))).done();
+					}
+					else return tmp_bean;
+				}
+				else return tmp_bean;
+			}).get();
+			
+			this.bind(DistributedServicesPropertyBean.class).toInstance(bean);
 		} 
 		catch (Exception e) {
 			throw new RuntimeException(ErrorUtils.get(ErrorUtils.INVALID_CONFIG_ERROR,
@@ -50,7 +75,6 @@ public class CoreDistributedServicesModule extends AbstractModule {
 					config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT)
 					), e);
 		}
-		this.bind(DistributedServicesPropertyBean.class).toInstance(bean);
 	}
 
 }
