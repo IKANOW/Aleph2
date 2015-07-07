@@ -76,7 +76,6 @@
 						</goals>
 						<configuration>
 							<shadedArtifactAttached>true</shadedArtifactAttached>
-							<shadedClassifierName>allinone</shadedClassifierName>
 							<artifactSet>
 								<includes>
 									<include>*:*</include>
