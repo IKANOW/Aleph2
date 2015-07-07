@@ -1,3 +1,18 @@
+/*******************************************************************************
+* Copyright 2015, The IKANOW Open Source Project.
+* 
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+* 
+* You should have received a copy of the GNU Affero General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
 import java.util.HashMap;
@@ -23,6 +38,13 @@ import kafka.producer.ProducerConfig;
 import kafka.utils.ZkUtils;
 import kafka.utils.ZKStringSerializer$;
 
+/**
+ * Houses some static util functions for getting a kafka producer/consumer and
+ * converting bucket names to kafka topic names.
+ * 
+ * @author Burch
+ *
+ */
 public class KafkaUtils {
 	private static final Integer NUM_THREADS = 1;
 	private static Producer<String, String> producer;	
@@ -107,6 +129,7 @@ public class KafkaUtils {
         kafka_properties.put("zookeeper.session.timeout.ms", "400");
         kafka_properties.put("zookeeper.sync.time.ms", "200");
         kafka_properties.put("auto.commit.interval.ms", "1000");
+        kafka_properties.put("consumer.timeout.ms", "3000"); //throw an exception if no item found for 3s
         
         //reset producer so a new one will be created
         if ( producer != null )
