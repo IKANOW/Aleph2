@@ -177,11 +177,13 @@ public class IkanowV1SynchronizationModule {
 				DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
 				this.bind(DataImportConfigurationBean.class).toInstance(bean);
 				
-				if (bean.storm_debug_mode()) {
-					this.bind(IStormController.class).toInstance(new LocalStormController());
-				}
-				else {
-					this.bind(IStormController.class).toInstance(StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir()));					
+				if (bean.streaming_enrichment_enabled()) {
+					if (bean.storm_debug_mode()) {
+						this.bind(IStormController.class).toInstance(new LocalStormController());
+					}
+					else {
+						this.bind(IStormController.class).toInstance(StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir()));					
+					}
 				}
 			} 
 			catch (Exception e) {

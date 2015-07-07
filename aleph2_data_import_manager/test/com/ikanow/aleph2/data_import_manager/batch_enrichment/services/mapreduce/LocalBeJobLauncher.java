@@ -8,7 +8,8 @@ import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
 public class LocalBeJobLauncher extends BeJobLauncher {
-    private static final Logger logger = LogManager.getLogger(LocalBeJobLauncher.class);
+    @SuppressWarnings("unused")
+	private static final Logger logger = LogManager.getLogger(LocalBeJobLauncher.class);
 
 
     

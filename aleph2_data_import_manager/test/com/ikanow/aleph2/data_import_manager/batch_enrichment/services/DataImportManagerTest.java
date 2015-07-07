@@ -18,7 +18,6 @@ import akka.actor.Props;
 
 import com.google.inject.Injector;
 import com.google.inject.Scopes;
-import com.google.inject.util.Providers;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketActor;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BucketEnrichmentMessage;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;

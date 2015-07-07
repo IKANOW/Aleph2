@@ -35,6 +35,7 @@ public class BatchEnrichmentJob{
 		
 	}
 	
+	@SuppressWarnings("unused")
 	public static class BatchErichmentMapper extends Mapper<LongWritable,Text, LongWritable,Text>		
 	{
 
