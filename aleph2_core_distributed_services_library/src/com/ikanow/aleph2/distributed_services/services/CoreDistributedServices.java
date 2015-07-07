@@ -92,25 +92,13 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		_akka_system = ActorSystem.create("default", ConfigFactory.parseMap(config_map));
 		ZookeeperClusterSeed.get(_akka_system).join();
 		
-		//TODO where can we get the config from?!
-		//set up a config for kafka overrides
-		//TODO add override variables in DSPbean
-		//zookeeper
-		//"api001.dev.ikanow.com:2181"
-		//broker
-		//"api001.dev.ikanow.com:6667"
 		final String broker_list_string = Optional.ofNullable(config_bean.broker_list())
 				.orElse(DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				//.put("metadata.broker.list", broker_list_string)
-				//
-				//.put("metadata.broker.list", "127.0.01:" + MockKafkaBroker.getBrokerPort())
 				.put("metadata.broker.list", broker_list_string)
-				//.put("metadata.broker.list", "api001.dev.ikanow.com:6667")
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
 				.put("zookeeper.connect", connection_string)
-				//.put("zookeeper.connect", "api001.dev.ikanow.com:2181")				
 				.put("group.id", "somegroup")
 				.put("zookeeper.session.timeout.ms", "400")
 				.put("zookeeper.sync.time.ms", "200")
