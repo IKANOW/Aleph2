@@ -240,6 +240,12 @@
 	<artifactId>storm-kafka</artifactId>
 	<version>0.9.5</version>
 </dependency>
+<dependency>
+	<groupId>org.yaml</groupId>
+	<artifactId>snakeyaml</artifactId>
+	<version>1.15</version>
+</dependency>
+
 
 <!--   	<dependency> -->
 <!--   		<groupId>aleph2_storm_samples</groupId> -->

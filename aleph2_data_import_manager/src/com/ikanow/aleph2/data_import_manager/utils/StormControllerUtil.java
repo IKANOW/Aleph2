@@ -16,6 +16,9 @@
 package com.ikanow.aleph2.data_import_manager.utils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
@@ -29,6 +32,7 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.yaml.snakeyaml.Yaml;
 
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
@@ -162,11 +166,15 @@ public class StormControllerUtil {
 	 * 
 	 * @param yarn_config_dir
 	 * @return
+	 * @throws FileNotFoundException 
 	 */
-	public static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) {
-		Config config = ConfigFactory.parseFile(new File(yarn_config_dir + File.separator + "storm.yaml"));
-		IStormController storm = getRemoteStormController(config.root().unwrapped());
-		return storm;		
+	public static IStormController getStormControllerFromYarnConfig(String yarn_config_dir) throws FileNotFoundException {
+		Yaml yaml = new Yaml();
+		InputStream input = new FileInputStream(new File(yarn_config_dir + File.separator + "storm.yaml"));		
+		@SuppressWarnings("unchecked")
+		Map<String, Object> object = (Map<String, Object>) yaml.load(input);
+		IStormController storm = getRemoteStormController(object);
+		return storm;	
 	}	
 	
 	/**
