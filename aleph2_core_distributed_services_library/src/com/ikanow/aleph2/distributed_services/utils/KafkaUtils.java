@@ -170,6 +170,7 @@ public class KafkaUtils {
 			TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
 			logger.debug("META: " + meta);
 		}		
+		zk_client.close();
 	}
 
 	/**
