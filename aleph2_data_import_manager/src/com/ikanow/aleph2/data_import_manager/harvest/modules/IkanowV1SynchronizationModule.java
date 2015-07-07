@@ -172,15 +172,13 @@ public class IkanowV1SynchronizationModule {
 				DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
 				this.bind(DataImportConfigurationBean.class).toInstance(bean);
 				
-				if (bean.streaming_enrichment_enabled()) {
-					if (bean.storm_debug_mode()) {
-						this.bind(IStormController.class).toInstance(new LocalStormController());
-					}
-					else {
-						this.bind(IStormController.class).toInstance(
-								StormControllerUtil.getStormControllerFromYarnConfig(
-										ModuleUtils.getGlobalProperties().local_yarn_config_dir()));					
-					}
+				if (bean.streaming_enrichment_enabled() && !bean.storm_debug_mode()) {
+					this.bind(IStormController.class).toInstance(
+							StormControllerUtil.getStormControllerFromYarnConfig(
+									ModuleUtils.getGlobalProperties().local_yarn_config_dir()));					
+				}
+				else { // guice still needs an implementation, making it null is problematic, so we'll just bind a local controller
+					this.bind(IStormController.class).toInstance(new LocalStormController());					
 				}
 			} 
 			catch (Exception e) {
