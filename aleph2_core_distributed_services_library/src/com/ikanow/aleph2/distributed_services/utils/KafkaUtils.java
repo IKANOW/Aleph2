@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.distributed_services.utils;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 
@@ -160,8 +159,7 @@ public class KafkaUtils {
 			logger.debug("LEADER WAS ELECTED: " + leader_elected);
 			
 			//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-			@SuppressWarnings("resource")
-			Iterator<String> iter = new WrappedConsumerIterator(getKafkaConsumer(topic), topic);
+			WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic), topic);
 			iter.hasNext();
 			
 			//debug info
@@ -169,6 +167,7 @@ public class KafkaUtils {
 			logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
 			TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
 			logger.debug("META: " + meta);
+			iter.close();
 		}		
 		zk_client.close();
 	}
