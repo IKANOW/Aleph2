@@ -56,7 +56,7 @@ public class CoreDistributedServicesModule extends AbstractModule {
 						DistributedServicesPropertyBean.class);
 			
 				if (null == tmp_bean.zookeeper_connection()) { //try getting it from zoo.cfg)
-					final File f = new File(ModuleUtils.getGlobalProperties() + File.separator + "zoo.cfg");
+					final File f = new File(ModuleUtils.getGlobalProperties().local_yarn_config_dir() + File.separator + "zoo.cfg");
 					if (f.exists() && f.canRead()) {
 						return BeanTemplateUtils.clone(tmp_bean).with(DistributedServicesPropertyBean::zookeeper_connection, 
 								ZookeeperUtils.buildConnectionString(

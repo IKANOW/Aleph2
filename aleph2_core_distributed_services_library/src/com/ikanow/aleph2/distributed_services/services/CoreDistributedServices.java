@@ -74,6 +74,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		final String connection_string = Optional.ofNullable(config_bean.zookeeper_connection())
 											.orElse(DistributedServicesPropertyBean.__DEFAULT_ZOOKEEPER_CONNECTION);
 		
+		logger.info("Zookeeper connection_string=" + connection_string);
+		
 		final RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
 		_curator_framework = CuratorFrameworkFactory.newClient(connection_string, retry_policy);
 		_curator_framework.start();		
