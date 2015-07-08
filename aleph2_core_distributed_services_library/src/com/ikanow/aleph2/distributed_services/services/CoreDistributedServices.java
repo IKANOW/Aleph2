@@ -126,15 +126,6 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			return;
 		}
 		if (!_has_joined_akka_cluster) {
-			/**/
-			try {
-				throw new RuntimeException("XXX");
-			}
-			catch (Exception e) {
-				logger.error(ErrorUtils.getLongForm("{0}", e));
-			}
-			
-			
 			_has_joined_akka_cluster = true;
 			
 			// WORKAROUND FOR BUG IN akka-cluster/akka-zookeeper-seed: if it grabs the old ephemeral connection info of master then bad things can happen
