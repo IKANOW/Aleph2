@@ -146,7 +146,6 @@ public class DataBucketChangeActor extends AbstractActor {
 		    			
 						// (this isn't async so doesn't require any futures)
 						
-	    				//TODO (ALEPH-10): check if STORM is available here (in practice shouldn't register vs message bus if not, but doesn't hurt to ask)
 						final boolean accept_or_ignore = new File(_globals.local_yarn_config_dir() + File.separator + "storm.yaml").exists();
 						
 						final BucketActionReplyMessage reply = 						
@@ -174,7 +173,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_tech_module = 
 										getStreamingTopology(m.bucket(), m, hostname, err_or_map);
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, hostname, e_context, _globals.local_yarn_config_dir(), err_or_map);
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, err_or_map, hostname, e_context, _globals.local_yarn_config_dir());
 								return ret;
 								
 	    					})
@@ -198,30 +197,36 @@ public class DataBucketChangeActor extends AbstractActor {
 	
 	// Functional code - control logic
 
-	//TODO:	
 	protected static CompletableFuture<BucketActionReplyMessage> talkToStream(
-			IStormController storm_controller, 
+			final IStormController storm_controller, 
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_user_topology,
-			String source, 
+			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_map,
+			final String source, 
 			final StreamingEnrichmentContext context,
-			final String yarn_config_dir, 
-			Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_map
+			final String yarn_config_dir
 			)
 	{
-		//TODO: set context bucket and entry point
-		
 		try {
 			//handle getting the user libs
-			List<String> user_lib_paths = new LinkedList<String>(err_or_map.success().values().stream().map(tuple -> tuple._2).collect(Collectors.toList()));
-			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> error_or_topology;	
+			final List<String> user_lib_paths = err_or_map.<List<String>>validation(
+					fail -> Collections.emptyList() // (going to die soon anyway)
+					,
+					success -> success.values().stream().map(tuple -> tuple._2).collect(Collectors.toList())
+					);
 			
-			//if there are no user libs specified, switch to using passthrough topology
-			if ( user_lib_paths.isEmpty() )
-				error_or_topology = Validation.success(new PassthroughTopology());
-			else
-				error_or_topology = err_or_user_topology;
+			// Get user topology if necessary
+			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> error_or_topology
+				= err_or_user_topology.<Validation<BasicMessageBean, IEnrichmentStreamingTopology>>validation(
+						fail -> err_or_user_topology
+						,
+						success -> {
+							return user_lib_paths.isEmpty()
+								? Validation.success(new PassthroughTopology())
+								: err_or_user_topology;
+						}
+						);
 			
 			return error_or_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
 					//ERROR getting enrichment topology
@@ -229,7 +234,10 @@ public class DataBucketChangeActor extends AbstractActor {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
 					},		
 					//NORMAL grab enrichment topology
-					enrichment_toplogy -> {						
+					enrichment_toplogy -> {					
+						context.setBucket(bucket);
+						context.setUserTopologyEntryPoint(err_or_user_topology.success().getClass().getName());
+						
 						return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 								.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
 									return StormControllerUtil.stopJob( storm_controller, bucket);

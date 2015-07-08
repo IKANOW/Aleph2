@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +46,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingT
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 
@@ -192,25 +194,36 @@ public class StormControllerUtil {
 	 * @return
 	 */
 	public static CompletableFuture<BucketActionReplyMessage> startJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy) {
-		CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
-		//IStormController storm = getStormControllerFromYarnConfig(yarn_config_dir);
+		final CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
 
-		List<String> jars_to_merge = new LinkedList<String>(); 
+		//Get topology from user
+		final StormTopology topology = (StormTopology) enrichment_toplogy.getTopologyAndConfiguration(bucket, context)._1;
+		
+		final List<String> jars_to_merge = new LinkedList<String>();
+		
 		//add in all the underlying artefacts file paths
-		Collection<Object> underlying_artefacts = context.getUnderlyingArtefacts();
+		final Collection<Object> underlying_artefacts = Lambdas.get(() -> {
+			// Check if the user has overridden the context, and set to the defaults if not
+			try {
+				return context.getUnderlyingArtefacts();
+			}
+			catch (Exception e) {
+				// This is OK, it just means that the top. developer hasn't overridden the services, so we just use the default ones:
+				context.getEnrichmentContextSignature(Optional.of(bucket), Optional.empty());
+				return context.getUnderlyingArtefacts();
+			}			
+		});
+				
 		jars_to_merge.addAll( underlying_artefacts.stream().map( artefact -> LiveInjector.findPathJar(artefact.getClass(), "")).collect(Collectors.toList()));
 		
 		//add in the user libs
 		jars_to_merge.addAll(user_lib_paths);
 		
 		//create jar
-		String jar_file_location = buildStormTopologyJar(jars_to_merge);
-		
-		//Get topology from user
-		StormTopology topology = (StormTopology) enrichment_toplogy.getTopologyAndConfiguration(bucket, context)._1;
+		final String jar_file_location = buildStormTopologyJar(jars_to_merge);
 		
 		//submit to storm		
-		CompletableFuture<BasicMessageBean> submit_future =	storm_controller.submitJob(bucket._id(), jar_file_location, topology);
+		final CompletableFuture<BasicMessageBean> submit_future =	storm_controller.submitJob(bucket._id(), jar_file_location, topology);
 		try { 
 			if ( submit_future.get().success() ) {
 				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("Started storm job successfully", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
