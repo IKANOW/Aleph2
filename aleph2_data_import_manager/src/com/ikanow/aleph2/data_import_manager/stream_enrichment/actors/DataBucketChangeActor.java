@@ -215,20 +215,8 @@ public class DataBucketChangeActor extends AbstractActor {
 					,
 					success -> success.values().stream().map(tuple -> tuple._2).collect(Collectors.toList())
 					);
-			
-			// Get user topology if necessary
-			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> error_or_topology
-				= err_or_user_topology.<Validation<BasicMessageBean, IEnrichmentStreamingTopology>>validation(
-						fail -> err_or_user_topology
-						,
-						success -> {
-							return user_lib_paths.isEmpty()
-								? Validation.success(new PassthroughTopology())
-								: err_or_user_topology;
-						}
-						);
-			
-			return error_or_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
+
+			return err_or_user_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
 					//ERROR getting enrichment topology
 					error -> {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
@@ -292,6 +280,11 @@ public class DataBucketChangeActor extends AbstractActor {
 					,
 					// Normal
 					libs -> {
+						// Easy case, if libs is empty then use the default streaming topology
+						if (libs.isEmpty()) {
+							return Validation.success(new PassthroughTopology());
+						}
+						
 						final Tuple2<SharedLibraryBean, String> libbean_path = libs.values().stream()
 								.filter(t2 -> (null != t2._1()) && 
 										(null != Optional.ofNullable(t2._1().streaming_enrichment_entry_point()).orElse(t2._1().misc_entry_point())))
