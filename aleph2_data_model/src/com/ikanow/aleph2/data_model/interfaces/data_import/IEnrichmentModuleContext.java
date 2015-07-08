@@ -150,6 +150,11 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	<S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> sub_collection, final boolean auto_apply_prefix);
 	
 	/** (All Enrichment Types) Returns the status bean for the specified bucket
+	 * @return The bucket that this job is running for, or Optional.empty() if that is ambiguous
+	 */
+	Optional<DataBucketBean> getBucket();
+	
+	/** (All Enrichment Types) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a bean containing the harvests state and status
 	 */

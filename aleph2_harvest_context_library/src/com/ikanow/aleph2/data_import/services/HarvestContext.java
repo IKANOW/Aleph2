@@ -264,7 +264,9 @@ public class HarvestContext implements IHarvestContext {
 			// - the bucket bean ID
 			
 			final Config full_config = ModuleUtils.getStaticConfig()
-										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME);
+										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME)
+										.withoutPath("MongoDbManagementDbService.v1_enabled") // (special workaround for V1 sync service)
+										;
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
@@ -381,6 +383,15 @@ public class HarvestContext implements IHarvestContext {
 	}
 
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucket()
+	 */
+	@Override
+	public Optional<DataBucketBean> getBucket() {
+		return _mutable_state.bucket.isSet() ? Optional.of(_mutable_state.bucket.get()) : Optional.empty();
+	}
+	
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucketStatus(java.util.Optional)
 	 */
 	@Override
@@ -453,4 +464,5 @@ public class HarvestContext implements IHarvestContext {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
+
 }

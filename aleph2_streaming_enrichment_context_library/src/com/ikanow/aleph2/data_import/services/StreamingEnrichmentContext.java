@@ -22,8 +22,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -204,7 +204,9 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			// - the bucket bean ID
 			
 			final Config full_config = ModuleUtils.getStaticConfig()
-										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME);
+										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME)
+										.withoutPath("MongoDbManagementDbService.v1_enabled") // (special workaround for V1 sync service)
+										;
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
@@ -404,9 +406,27 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucket()
+	 */
 	@Override
-	public Future<DataBucketStatusBean> getBucketStatus(final Optional<DataBucketBean> bucket) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	public Optional<DataBucketBean> getBucket() {
+		return _mutable_state.bucket.isSet() ? Optional.of(_mutable_state.bucket.get()) : Optional.empty();
+	}
+	
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucketStatus(java.util.Optional)
+	 */
+	@Override
+	public CompletableFuture<DataBucketStatusBean> getBucketStatus(
+			final Optional<DataBucketBean> bucket) {
+		return this._core_management_db
+				.readOnlyVersion()
+				.getDataBucketStatusStore()
+				.getObjectById(bucket.orElseGet(() -> _mutable_state.bucket.get())._id())
+				.thenApply(opt_status -> opt_status.get());		
+		// (ie will exception if not present)
 	}
 
 	@Override

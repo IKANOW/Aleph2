@@ -135,5 +135,11 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 		
 	}
 
+	@Override
+	public Optional<DataBucketBean> getBucket() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

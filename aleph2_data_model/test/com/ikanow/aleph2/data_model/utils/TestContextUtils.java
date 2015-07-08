@@ -223,6 +223,11 @@ public class TestContextUtils {
 				Optional<DataBucketBean> bucket, Optional<String> sub_collection, boolean auto_prepend_prefix) {
 			return null;
 		}
+
+		@Override
+		public Optional<DataBucketBean> getBucket() {
+			return null;
+		}
 		
 	}
 	public static class MockAnalyticsContext implements IAnalyticsContext {
@@ -442,6 +447,11 @@ public class TestContextUtils {
 		@Override
 		public void initializeNewContext(String signature) {
 			dummySignature = signature;			
+		}
+
+		@Override
+		public Optional<DataBucketBean> getBucket() {
+			return null;
 		}
 		
 	}

@@ -125,6 +125,7 @@ public class TestStreamingEnrichmentContext {
 			}
 			test_context.setUserTopologyEntryPoint("test");
 			test_context.setBucket(test_bucket);
+			assertEquals(test_bucket, test_context.getBucket().get());
 			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.empty()));
 			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.of(test_bucket)));
 			//Other topology call
@@ -149,6 +150,7 @@ public class TestStreamingEnrichmentContext {
 	public void testExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
+			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
 			
 			final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 	
@@ -332,6 +334,7 @@ public class TestStreamingEnrichmentContext {
 		
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));
+		assertEquals(Optional.empty(), test_context.getBucket());
 		
 		try {
 			test_context.emergencyQuarantineBucket(null, null);
@@ -361,22 +364,16 @@ public class TestStreamingEnrichmentContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 		}
-		try {
-			test_context.getBucketStatus(null);
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-		}
+		// (This has now been implemented, though not ready to test yet)
+//		try {
+//			test_context.getBucketStatus(null);
+//			fail("Should have thrown exception");
+//		}
+//		catch (Exception e) {
+//			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+//		}
 		try {
 			test_context.getBucketObjectStore(null, null, null, false);
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-		}
-		try {
-			test_context.getBucketStatus(null);
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {

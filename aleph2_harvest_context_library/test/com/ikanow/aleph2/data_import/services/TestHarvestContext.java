@@ -106,6 +106,7 @@ public class TestHarvestContext {
 	public void testExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
+			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
 			
 			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 	
@@ -268,6 +269,7 @@ public class TestHarvestContext {
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		assertEquals(Optional.empty(), test_context.getBucket());
 		String message1 = "{\"key\":\"val\"}";
 		String message2 = "{\"key\":\"val2\"}";
 		String message3 = "{\"key\":\"val3\"}";
@@ -281,6 +283,7 @@ public class TestHarvestContext {
 		}
 		catch (Exception e) {}
 		test_context.setBucket(bucket);
+		assertEquals(bucket, test_context.getBucket().get());
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), mapper.readTree(message1));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), mapper.readTree(message2));
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), msg3);
