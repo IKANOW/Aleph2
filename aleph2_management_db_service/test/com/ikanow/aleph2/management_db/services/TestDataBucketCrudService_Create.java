@@ -58,6 +58,7 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
@@ -1301,5 +1302,24 @@ public class TestDataBucketCrudService_Create {
 		//(just quickly check node affinity didn't change)
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
 		assertEquals(2, status_after.node_affinity().size());
+		
+		// Check that will set the affinity if it's null though:
+		
+		// (manually remove)
+		assertTrue("Updated", _underlying_bucket_status_crud.updateObjectById("id1", CrudUtils.update(DataBucketStatusBean.class).set("node_affinity", Arrays.asList())).get());		
+		final DataBucketStatusBean status_after2 = _bucket_status_crud.getObjectById("id1").get().get();
+		assertEquals("Really updated!", 0, status_after2.node_affinity().size());
+		
+		final ManagementFuture<Supplier<Object>> update_future4 = _bucket_crud.storeObject(mod_bucket3, true);
+		
+		assertEquals("id1", update_future4.get().get());
+
+		final DataBucketBean bucket4 = _bucket_crud.getObjectById("id1").get().get();
+		assertEquals("Something else", bucket4.display_name());
+		
+		//(Check that node affinity was set)
+		update_future4.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+		final DataBucketStatusBean status_after3 = _bucket_status_crud.getObjectById("id1").get().get();
+		assertEquals(2, status_after3.node_affinity().size());
 	}
 }

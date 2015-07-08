@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -70,6 +71,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
@@ -234,7 +236,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
 			final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
-					? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _bucket_action_retry_store)
+					? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db, _bucket_action_retry_store)
 					: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
 				
 			// If we got no responses then leave the object but suspend it
@@ -672,31 +674,32 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		}
 
 		// (7)
-		Consumer<Tuple2<String, EnrichmentControlMetadataBean>> enrichment_test = emeta -> {
+		BiConsumer<Tuple2<String, EnrichmentControlMetadataBean>, Boolean> enrichment_test = (emeta, allowed_empty_list) -> {
 			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
-				if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
-					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
-				}
+				if (!allowed_empty_list)
+					if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+					}
 			}
 			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
 			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
 		};		
 		if (null != bucket.batch_enrichment_topology()) {
-			enrichment_test.accept(Tuples._2T("batch_enrichment_topology", bucket.batch_enrichment_topology()));
+			enrichment_test.accept(Tuples._2T("batch_enrichment_topology", bucket.batch_enrichment_topology()), true);
 		}
 		if (null != bucket.batch_enrichment_configs()) {
 			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta));
+				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta), false);
 			}
 		}
 		if (null != bucket.streaming_enrichment_topology()) {
-			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()));
+			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()), true);
 		}
 		if (null != bucket.streaming_enrichment_configs()) {
 			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta));
+				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta), false);
 			}
 		}
 		
@@ -974,6 +977,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final DataBucketBean old_version,
 			final DataBucketStatusBean status,
 			final ManagementDbActorContext actor_context,
+			final ICrudService<DataBucketStatusBean> status_store,
 			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
@@ -982,9 +986,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						new HashSet<String>(
 								null == status.node_affinity() ? Collections.emptySet() : status.node_affinity()));
 		
-		return MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
+		final CompletableFuture<Collection<BasicMessageBean>> management_results =
+			MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
 				source -> new BucketActionMessage.UpdateBucketActionMessage
 							(new_object, !status.suspended(), old_version, new HashSet<String>(Arrays.asList(source))));
+		
+		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
+		if (Optionals.ofNullable(status.node_affinity()).isEmpty()) {
+			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
+			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
+		}
+		else {
+			return management_results;
+		}
 	}	
 	
 	public static final String DELETE_TOUCH_FILE = ".DELETED";
