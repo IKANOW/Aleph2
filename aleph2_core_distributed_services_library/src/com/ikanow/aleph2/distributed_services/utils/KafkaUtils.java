@@ -172,8 +172,6 @@ public class KafkaUtils {
 			}	
 			known_topics.put(topic, true); //topic either already existed or was created
 			zk_client.close();
-		} else {
-			logger.debug("topic was in cache");
 		}
 	}
 
