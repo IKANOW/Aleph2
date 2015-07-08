@@ -25,30 +25,42 @@ public class DistributedServicesPropertyBean {
 	// Constants for "raw" access
 	public static final String PROPERTIES_ROOT = "CoreDistributedServices"; 
 	public static final String ZOOKEEPER_CONNECTION = "CoreDistributedServices.zookeeper_connection"; 
-	public static final String BROKER_LIST = "CoreDistributedServices.broker_list"; 
+	public static final String BROKER_LIST = "CoreDistributedServices.broker_list";
+	public static final String APPLICATION_NAME = "CoreDistributedServices.application_name";
 	public static final String __DEFAULT_ZOOKEEPER_CONNECTION = "localhost:2181";
 	public static final String __DEFAULT_BROKER_LIST = "localhost:6667";	 
+	
+	public static final String ZOOKEEPER_APPLICATION_LOCK = "/app/aleph2/locks/zookeeper";
 	
 	/** User c'tor
 	 * @param zookeeper_connection
 	 */
-	protected DistributedServicesPropertyBean(final String zookeeper_connection, final String broker_list) {
+	protected DistributedServicesPropertyBean(final String zookeeper_connection, final String broker_list, final String application_name) {
 		this.zookeeper_connection = zookeeper_connection;
 		this.broker_list = broker_list;
+		this.application_name = application_name;
 	}
 
 	/** Serializer c'tor
 	 */
 	public DistributedServicesPropertyBean() {}
 	
-	/** The connection string for Zookeeper
-	 * @return
+	/** The connection string for zookeeper - taken either from config, or from <YARN_CONFIG_PATH>/zoo.cfg, or defaulting to localhost:2181
 	 */
 	public String zookeeper_connection() { return zookeeper_connection; }	
 	
 	private String zookeeper_connection;
 
+	/** The broker list for Kafka - taken from zookeeper if possible, else from this config param. or defaulting to localhost:6667
+	 */
 	public String broker_list() { return broker_list; }
 	
 	private String broker_list;
+
+	/** The name of this application in the cluster - that plus the hostname are required to be unique per node
+	 * @return
+	 */
+	public String application_name() { return application_name; }
+	
+	private String application_name;
 }

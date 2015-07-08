@@ -33,6 +33,7 @@ import org.apache.curator.test.TestingServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.event.japi.LookupEventBus;
@@ -146,5 +147,10 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	
 	public void kill() {
 		_kafka_broker.stop();
+	}
+
+	@Override
+	public boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
+		return true;
 	}
 }

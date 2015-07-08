@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.net.InetAddress;
 import java.util.stream.Collectors;
 
 import com.typesafe.config.Config;
@@ -33,4 +34,21 @@ public class ZookeeperUtils {
 		final Config servers = zookeeper_config.getConfig("server");
 		return servers.root().entrySet().stream().map(kv -> kv.getValue().unwrapped().toString().split(":")[0] + ":" + port).collect(Collectors.joining(","));
 	}
+	
+	/** Returns the hostname
+	 * @return
+	 */
+	public static String getHostname() {
+		// (just get the hostname once)
+		if (null == _hostname) {
+			try {
+				_hostname = InetAddress.getLocalHost().getHostName();
+			} catch (Exception e) {
+				_hostname = "UNKNOWN";
+			}
+		}		
+		return _hostname;
+	}//TESTED		
+	private static String _hostname;
+	
 }

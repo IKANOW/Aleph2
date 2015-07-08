@@ -18,10 +18,13 @@ package com.ikanow.aleph2.data_import_manager.harvest.modules;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 
+import scala.concurrent.duration.Duration;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 
@@ -37,6 +40,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -78,6 +82,12 @@ public class IkanowV1SynchronizationModule {
 	
 	public void start() {		
 		final String hostname = _local_actor_context.getInformationService().getHostname();
+		final int MAX_ZK_ATTEMPTS = 6;
+		
+		if (!_core_distributed_services.waitForAkkaJoin(Optional.of(Duration.create(60L, TimeUnit.SECONDS)))) {
+			_core_distributed_services.getAkkaSystem().terminate(); // (last ditch attempt to recover)
+			throw new RuntimeException("Problem with CDS/Akka, try to terminate");
+		}
 		
 		if (_service_config.harvest_enabled()) {
 			// Create a bucket change actor and register it vs the local message bus
@@ -90,14 +100,22 @@ public class IkanowV1SynchronizationModule {
 			_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 	
 			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ACTION_ZOOKEEPER, hostname));
-			
-			try {
-				_core_distributed_services.getCuratorFramework().create()
-					.creatingParentsIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+						
+			for (int i = 0; i <= MAX_ZK_ATTEMPTS; ++i) {
+				try {
+					_core_distributed_services.getCuratorFramework().create()
+						.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+					break;
+				}
+				catch (Exception e) {
+					_logger.warn(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}, retrying={1}", e, i < MAX_ZK_ATTEMPTS));
+					try { Thread.sleep(10000L); } catch (Exception __) {}
+				}
 			}
-			catch (Exception e) {
-				_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
-			}
+			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
+				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=v1_sync_service");
+				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
+			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=v1_sync_service");
 		}
 		if (_service_config.streaming_enrichment_enabled()) {
@@ -112,17 +130,23 @@ public class IkanowV1SynchronizationModule {
 	
 			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, hostname));
 			
-			try {
-				_core_distributed_services.getCuratorFramework().create()
-					.creatingParentsIfNeeded().forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+			for (int i = 0; i <= MAX_ZK_ATTEMPTS; ++i) {
+				try {
+					_core_distributed_services.getCuratorFramework().create()
+						.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+					break;
+				}
+				catch (Exception e) {
+					_logger.warn(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}, retrying={1}", e, i < MAX_ZK_ATTEMPTS));
+					try { Thread.sleep(10000L); } catch (Exception __) {}
+				}
 			}
-			catch (Exception e) {
-				_logger.error(ErrorUtils.getLongForm("Failed to register with Zookeeper: {0}", e));
-			}
+			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
+				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=stream_enrichment");
+				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=stream_enrichment");
 		}
-		
-		
 		for (;;) {
 			try { Thread.sleep(10000); } catch (Exception e) {}
 		}
@@ -146,7 +170,8 @@ public class IkanowV1SynchronizationModule {
 			final IkanowV1SynchronizationModule app = app_injector.getInstance(IkanowV1SynchronizationModule.class);
 			app.start();
 		}
-		catch (Exception e) {
+		catch (Throwable e) {
+			_logger.error(ErrorUtils.get("Exception reached main(): {0}", e));
 			try {
 				System.out.println("Got all the way to main");
 				e.printStackTrace();
@@ -154,6 +179,7 @@ public class IkanowV1SynchronizationModule {
 			catch (Exception e2) { // the exception failed!
 				System.out.println(ErrorUtils.getLongForm("Got all the way to main: {0}", e));
 			}
+			System.exit(-1);
 		}
 	}
 

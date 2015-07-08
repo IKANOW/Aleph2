@@ -76,6 +76,7 @@ import com.mongodb.MongoException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 
 //TODO test bucket validation
 
@@ -208,7 +209,7 @@ public class TestDataBucketCrudService_Create {
 	public String insertStreamingActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
-			.getCuratorFramework().create().creatingParentsIfNeeded()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
 			.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
@@ -219,7 +220,7 @@ public class TestDataBucketCrudService_Create {
 	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
-			.getCuratorFramework().create().creatingParentsIfNeeded()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
 			.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);

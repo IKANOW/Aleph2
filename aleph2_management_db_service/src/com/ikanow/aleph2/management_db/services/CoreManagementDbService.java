@@ -113,7 +113,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
-	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {		
+	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		return _shared_library_service;
 	}
 
@@ -122,6 +123,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
 			SharedLibraryBean library, Optional<String> sub_collection) {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -130,6 +132,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStore()
 	 */
 	public IManagementCrudService<DataBucketBean> getDataBucketStore() {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		return _data_bucket_service;
 	}
 
@@ -137,6 +140,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStatusStore()
 	 */
 	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		return _data_bucket_status_service;
 	}
 
@@ -145,6 +149,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerBucketState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -153,6 +158,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAnalyticThreadStore()
 	 */
 	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -162,6 +168,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerAnalyticThreadState(Class<T> clazz,
 			AnalyticThreadBean analytic_thread, Optional<String> sub_collection) {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -195,6 +202,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
+		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		return _underlying_management_db.getRetryStore(retry_message_clazz);
 	}
 

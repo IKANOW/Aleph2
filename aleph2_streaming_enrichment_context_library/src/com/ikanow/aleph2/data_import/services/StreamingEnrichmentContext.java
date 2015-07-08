@@ -61,6 +61,7 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
@@ -202,7 +203,8 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			// - all the rest of the configuration
 			// - the bucket bean ID
 			
-			final Config full_config = ModuleUtils.getStaticConfig();
+			final Config full_config = ModuleUtils.getStaticConfig()
+										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME);
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			

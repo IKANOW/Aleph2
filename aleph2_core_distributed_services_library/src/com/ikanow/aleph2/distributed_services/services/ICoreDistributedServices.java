@@ -19,8 +19,11 @@ package com.ikanow.aleph2.distributed_services.services;
 //import kafka.javaapi.producer.Producer;
 
 import java.util.Iterator;
+import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
+
+import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
@@ -40,6 +43,12 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 */
 	CuratorFramework getCuratorFramework();
 		
+	/** Waits for the node to become part of the Akka cluster - until then, no management db operations should be performed
+	 * @param timeout - optional timeout, if left blank, will generate exception after 60s 
+	 * @return true if joined, false otherwise
+	 */
+	boolean waitForAkkaJoin(final Optional<FiniteDuration> timeout);
+	
 	/** Returns a connector to the Akka infrastructure
 	 * @return
 	 */
@@ -52,19 +61,16 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 */
 	<U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
 	
-	//TODO (ALEPH-19): need to decide on Kafka API
-	//TODO hide these interfaces so we aren't exposing kafka things, just take what we need to produce and do it internally
-	/** Returns a Kafka producer, you can then call producer.send()
-	 * @return
+	/** Writes a JSON string to the designated message queue
+	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
+	 * @param message - a string, in most cases will represent a JSON object
 	 */
-//	<T1, T2> Producer<T1, T2> getKafkaProducer();
-//	
-//	/** Returns a Kafka consumer of messages
-//	 * @return
-//	 */
-//	ConsumerConnector getKafkaConsumer();
-
 	void produce(String topic, String message);
+	
+	/** Returns an iterator from which messages can be read
+	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
+	 * @return an iterator of Strings, typically representing JSON stringd
+	 */
 	Iterator<String> consume(String topic);
 	
 }

@@ -60,6 +60,7 @@ import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 
 public class TestDataBucketCrudService_Delete {
 
@@ -166,7 +167,7 @@ public class TestDataBucketCrudService_Delete {
 	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
-			.getCuratorFramework().create().creatingParentsIfNeeded()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
 			.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
