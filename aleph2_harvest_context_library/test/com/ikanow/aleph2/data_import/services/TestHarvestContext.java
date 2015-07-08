@@ -201,6 +201,9 @@ public class TestHarvestContext {
 			assertTrue("Finds some libraries", !lib_paths.isEmpty());
 			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
 			
+			assertTrue("Can find harvest context", lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_harvest_context")));
+			assertTrue("Can find data model", lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_data_model")));
+			
 			// Now get the various shared libs
 
 			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)

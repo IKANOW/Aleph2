@@ -227,6 +227,7 @@ public class HarvestContext implements IHarvestContext {
 			final Set<String> mandatory_service_class_files =
 						Arrays.asList(
 								_distributed_services.getUnderlyingArtefacts(),
+								_service_context.getStorageService().getUnderlyingArtefacts(),
 								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
 								)
 							.stream()
@@ -238,6 +239,7 @@ public class HarvestContext implements IHarvestContext {
 			// Combine them together
 			return ImmutableSet.<String>builder()
 							.add(this_jar)
+							.add(data_model_jar)
 							.addAll(user_service_class_files)
 							.addAll(mandatory_service_class_files)
 							.build()
