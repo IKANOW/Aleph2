@@ -24,6 +24,12 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
+	// BUSES
+	
+	public static final String NO_SUCH_MESSAGE_BUS = "No such message bus: {0}";
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
 	// BUCKET CREATION/UPDATES
 	
 	public static final String BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS = "Bucket {0} does not have a corresponding bucket status - this should be created first";	

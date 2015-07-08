@@ -4,11 +4,14 @@ import java.util.Optional;
 
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -27,8 +30,6 @@ public class ManagementDbActorContext {
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		_bucket_action_bus = _distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ACTION_EVENT_BUS);
-		_streaming_enrichment_bus = _distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
 		_singleton = this;
 	}
 
@@ -56,15 +57,21 @@ public class ManagementDbActorContext {
 	/** Returns a static accessor to the bucket action message bus
 	 * @return the bucket action message bus
 	 */
-	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getBucketActionMessageBus() {
-		return _bucket_action_bus;
+	public synchronized LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getBucketActionMessageBus() {
+		if (!_bucket_action_bus.isSet()) {
+			_bucket_action_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ACTION_EVENT_BUS));
+		}
+		return _bucket_action_bus.get();
 	}
 	
 	/** Returns a static accessor to the streaming enrichment message bus
 	 * @return the streaming enrichment message bus
 	 */
-	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getStreamingEnrichmentMessageBus() {
-		return _streaming_enrichment_bus;
+	public synchronized LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getStreamingEnrichmentMessageBus() {
+		if (!_streaming_enrichment_bus.isSet()) {
+			_streaming_enrichment_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS));
+		}
+		return _streaming_enrichment_bus.get();
 	}
 	
 	/** Returns a static accessor to the designated message bus
@@ -72,13 +79,13 @@ public class ManagementDbActorContext {
 	 */
 	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getMessageBus(final String bus_name) {
 		if (bus_name.equals(ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS)) {
-			return _streaming_enrichment_bus;
+			return getStreamingEnrichmentMessageBus();
 		}
 		else if (bus_name.equals(ActorUtils.BUCKET_ACTION_EVENT_BUS)) {
-			return _bucket_action_bus;
+			return getBucketActionMessageBus();
 		}
 		else {
-			throw new RuntimeException(""); //TODO
+			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.NO_SUCH_MESSAGE_BUS, bus_name));
 		}
 	}
 	
@@ -100,7 +107,7 @@ public class ManagementDbActorContext {
 	protected static ActorRef _bucket_action_supervisor;
 	protected static ManagementDbActorContext _singleton = null;
 	protected final ICoreDistributedServices _distributed_services;
-	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _bucket_action_bus;
-	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _streaming_enrichment_bus;
+	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus = new SetOnce<>();
+	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _streaming_enrichment_bus = new SetOnce<>();
 	protected final IServiceContext _service_context;
 }
