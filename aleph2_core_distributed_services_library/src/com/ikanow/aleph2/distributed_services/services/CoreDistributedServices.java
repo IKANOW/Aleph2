@@ -50,8 +50,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
@@ -67,13 +69,18 @@ import com.typesafe.config.ConfigFactory;
  *
  */
 public class CoreDistributedServices implements ICoreDistributedServices, IExtraDependencyLoader {
-
-	protected CompletableFuture<Boolean> _joined_akka_cluster = new CompletableFuture<>();
-	protected final CuratorFramework _curator_framework;
-	protected final ActorSystem _akka_system;
 	private final static Logger logger = LogManager.getLogger();
+	
 	protected final DistributedServicesPropertyBean _config_bean;
-	protected final Runnable _shutdown_hook;
+
+	// Curator, instantiated lazily
+	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>();
+
+	// Akka, instantiated laziy
+	protected final SetOnce<ActorSystem> _akka_system = new SetOnce<>();
+	protected CompletableFuture<Boolean> _joined_akka_cluster = new CompletableFuture<>();
+	protected boolean _has_joined_akka_cluster = false; 
+	protected final SetOnce<Runnable> _shutdown_hook = new SetOnce<>();
 	
 	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>> _buses = 
 			new ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>>();
@@ -83,82 +90,18 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Inject
 	public CoreDistributedServices(DistributedServicesPropertyBean config_bean) throws Exception {
-		_config_bean = config_bean;
 		
 		final String connection_string = Optional.ofNullable(config_bean.zookeeper_connection())
 											.orElse(DistributedServicesPropertyBean.__DEFAULT_ZOOKEEPER_CONNECTION);
+
+		_config_bean = BeanTemplateUtils.clone(config_bean).with(DistributedServicesPropertyBean::zookeeper_connection, connection_string).done();		
 		
-		logger.info("Zookeeper connection_string=" + connection_string);
-		
-		final RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
-		_curator_framework = CuratorFrameworkFactory.newClient(connection_string, retry_policy);
-		_curator_framework.start();		
-		
-		// Set up a config for Akka overrides
-		final Map<String, Object> config_map = ImmutableMap.<String, Object>builder()
-											//.put("akka.loglevel", "DEBUG") // (just in case it's quickly needed during unit testing)
-											.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
-											.put("akka.extensions", Arrays.asList("akka.cluster.pubsub.DistributedPubSub"))
-											.put("akka.remote.netty.tcp.port", "0")
-											.put("akka.cluster.seed.zookeeper.url", connection_string)
-											.put("akka.cluster.auto-down-unreachable-after", "120s")
-											.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
-											.put("akka.actor.serialization-bindings.\"com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable\"", "jackson")
-											.build();		
-	
-		// WORKAROUND FOR BUG IN akka-cluster/akka-zookeeper-seed: if it grabs the old ephemeral connection info of master then bad things can happen
-		// so wait until a ZK node that I create for this purpose is removed (so the others also should have been)
-		final String application_name = config_bean.application_name();
-		final String hostname_application = DistributedServicesPropertyBean.ZOOKEEPER_APPLICATION_LOCK + "/" + ZookeeperUtils.getHostname() + ":" + application_name;
-		if (null == application_name) {
-			logger.info("(This is a transient application, cannot be the master)");
+		logger.info("Zookeeper connection_string=" + _config_bean.zookeeper_connection());
+				
+		// Else join akka cluster lazily, because often it's not required at all
+		if (null != config_bean.application_name()) {
+			joinAkkaCluster();			
 		}
-		else {
-			logger.info("Checking for old ZK artefacts from old instance of this application path=" + hostname_application);
-			final int MAX_ZK_ATTEMPTS = 6;
-			int i = 0;
-			for (i = 0; i <= MAX_ZK_ATTEMPTS; ++i) {
-				try {
-					this.getCuratorFramework().create()
-						.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(hostname_application);
-					
-					Thread.sleep(2000L); // (Wait a little longer)
-					break;
-				}
-				catch (Exception e) {
-					logger.warn(ErrorUtils.getLongForm("Waiting for old instance to be cleared out (err={0}), retrying={1}", e, i < MAX_ZK_ATTEMPTS));
-					try { Thread.sleep(10000L); } catch (Exception __) {}
-				}
-			}
-			if (i > MAX_ZK_ATTEMPTS) {
-				throw new RuntimeException("Failed to clear out lock, not clear why - try removing by hand: " + (DistributedServicesPropertyBean.ZOOKEEPER_APPLICATION_LOCK + "/" + hostname_application));
-			}			
-		}
-		
-		_akka_system = ActorSystem.create("default", ConfigFactory.parseMap(config_map));
-		ZookeeperClusterSeed.get(_akka_system).join();
-		
-		_shutdown_hook = Lambdas.wrap_runnable_u(() -> {
-			_joined_akka_cluster = new CompletableFuture<>(); //(mainly just for testing)
-			Cluster.get(_akka_system).leave(ZookeeperClusterSeed.get(_akka_system).address());
-			// If it's an application, not transient, then handle synchronization
-			if (null != application_name) {
-				logger.info("Shutting down in 5s");
-				// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
-				//this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
-				Thread.sleep(5000L);
-			}
-			else {
-				logger.info("Shutting down now");					
-			}
-		});
-		Cluster.get(_akka_system).registerOnMemberUp(() -> {
-			logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system).address() +", adding shutdown hook");
-			_joined_akka_cluster.complete(true);
-			
-			// Now register a shutdown hook
-			Runtime.getRuntime().addShutdownHook(new Thread(_shutdown_hook));
-		});
 		
 		final String broker_list_string = Optional.ofNullable(config_bean.broker_list())
 				.orElse(DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);
@@ -166,7 +109,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				.put("metadata.broker.list", broker_list_string)
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
-				.put("zookeeper.connect", connection_string)
+				.put("zookeeper.connect", _config_bean.zookeeper_connection())
 				.put("group.id", "somegroup")
 				.put("zookeeper.session.timeout.ms", "400")
 				.put("zookeeper.sync.time.ms", "200")
@@ -175,32 +118,136 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
 	}
 	
+	/** Joins the Akka cluster
+	 */
+	protected void joinAkkaCluster() {
+		if (!_akka_system.isSet()) {
+			this.getAkkaSystem(); // (this will also join the cluster)
+			return;
+		}
+		if (!_has_joined_akka_cluster) {
+			_has_joined_akka_cluster = true;
+			
+			// WORKAROUND FOR BUG IN akka-cluster/akka-zookeeper-seed: if it grabs the old ephemeral connection info of master then bad things can happen
+			// so wait until a ZK node that I create for this purpose is removed (so the others also should have been)
+			final String application_name = _config_bean.application_name();
+			final String hostname_application = DistributedServicesPropertyBean.ZOOKEEPER_APPLICATION_LOCK + "/" + ZookeeperUtils.getHostname() + ":" + application_name;
+			if (null == application_name) {
+				logger.info("(This is a transient application, cannot be the master)");
+			}
+			else {
+				logger.info("Checking for old ZK artefacts from old instance of this application path=" + hostname_application);
+				final int MAX_ZK_ATTEMPTS = 6;
+				int i = 0;
+				for (i = 0; i <= MAX_ZK_ATTEMPTS; ++i) {
+					try {
+						this.getCuratorFramework().create()
+							.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(hostname_application);
+						
+						Thread.sleep(2000L); // (Wait a little longer)
+						break;
+					}
+					catch (Exception e) {
+						logger.warn(ErrorUtils.getLongForm("Waiting for old instance to be cleared out (err={0}), retrying={1}", e, i < MAX_ZK_ATTEMPTS));
+						try { Thread.sleep(10000L); } catch (Exception __) {}
+					}
+				}
+				if (i > MAX_ZK_ATTEMPTS) {
+					throw new RuntimeException("Failed to clear out lock, not clear why - try removing by hand: " + (DistributedServicesPropertyBean.ZOOKEEPER_APPLICATION_LOCK + "/" + hostname_application));
+				}			
+			}
+			
+			ZookeeperClusterSeed.get(_akka_system.get()).join();
+			
+			_shutdown_hook.set(Lambdas.wrap_runnable_u(() -> {
+				_joined_akka_cluster = new CompletableFuture<>(); //(mainly just for testing)
+				Cluster.get(_akka_system.get()).leave(ZookeeperClusterSeed.get(_akka_system.get()).address());
+				// If it's an application, not transient, then handle synchronization
+				if (null != application_name) {
+					logger.info("Shutting down in 5s");
+					// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
+					//this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
+					Thread.sleep(5000L);
+				}
+				else {
+					logger.info("Shutting down now");					
+				}
+			}));
+			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
+				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");
+				_joined_akka_cluster.complete(true);
+				
+				// Now register a shutdown hook
+				Runtime.getRuntime().addShutdownHook(new Thread(_shutdown_hook.get()));
+			});
+		}
+	}
+	
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
-	public CuratorFramework getCuratorFramework() {
-		return _curator_framework;
+	public synchronized CuratorFramework getCuratorFramework() {
+		if (!_curator_framework.isSet()) {
+			final RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
+			_curator_framework.set(CuratorFrameworkFactory.newClient(_config_bean.zookeeper_connection(), retry_policy));
+			_curator_framework.get().start();					
+		}
+		return _curator_framework.get();
 	}
 
-	/** Pass the local bindings module to the parent
-	 * @return
+	private FiniteDuration _default_akka_join_timeout = Duration.create(60, TimeUnit.SECONDS);
+	
+	/** Really just for testing
+	 * @param new_timeout
 	 */
-	public static List<AbstractModule> getExtraDependencyModules() {
-		return Arrays.asList(new CoreDistributedServicesModule());
+	protected void setAkkaJoinTimeout(FiniteDuration new_timeout) {
+		_default_akka_join_timeout = new_timeout;
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#waitForAkkaJoin(java.util.Optional)
+	 */
 	@Override
-	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
-		// done!
-		
+	public synchronized boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
+		joinAkkaCluster(); // (does nothing if already joined)
+		try {
+			if (_joined_akka_cluster.isDone()) {
+				return true;
+			}
+			else {
+				logger.info("Waiting for cluster to start up");
+				_joined_akka_cluster.get(timeout.orElse(_default_akka_join_timeout).toMillis(), TimeUnit.MILLISECONDS);
+			}
+			return true;
+		} catch (Exception e) {
+			logger.info("Cluster timed out: " + timeout.orElse(_default_akka_join_timeout) + ", throw_error=" + !timeout.isPresent());
+			if (!timeout.isPresent()) {
+				throw new RuntimeException("waitForAkkaJoin timeout");
+			}
+			return false;
+		}
 	}
-
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
 	 */
 	@Override
-	public ActorSystem getAkkaSystem() {
-		return _akka_system;
+	public synchronized ActorSystem getAkkaSystem() {
+		if (!_akka_system.isSet()) {
+			// Set up a config for Akka overrides
+			final Map<String, Object> config_map = ImmutableMap.<String, Object>builder()
+												//.put("akka.loglevel", "DEBUG") // (just in case it's quickly needed during unit testing)
+												.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
+												.put("akka.extensions", Arrays.asList("akka.cluster.pubsub.DistributedPubSub"))
+												.put("akka.remote.netty.tcp.port", "0")
+												.put("akka.cluster.seed.zookeeper.url", _config_bean.zookeeper_connection())
+												.put("akka.cluster.auto-down-unreachable-after", "120s")
+												.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
+												.put("akka.actor.serialization-bindings.\"com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable\"", "jackson")
+												.build();		
+			_akka_system.set(ActorSystem.create("default", ConfigFactory.parseMap(config_map)));
+			this.joinAkkaCluster();
+		}
+		return _akka_system.get();
 	}
 
 	/* (non-Javadoc)
@@ -209,6 +256,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	@Override
 	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
 		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic) {
+		this.waitForAkkaJoin(Optional.empty());
 		
 		final Tuple3<String, String, String> key = Tuples._3T(wrapper_clazz.getName(), base_message_clazz.getName(), topic);
 		
@@ -216,7 +264,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		RemoteBroadcastMessageBus<M> ret_val = (RemoteBroadcastMessageBus<M>) _buses.get(key);
 		
 		if (null == ret_val) {
-			_buses.put(key, (ret_val = new RemoteBroadcastMessageBus<M>(_akka_system, topic)));
+			_buses.put(key, (ret_val = new RemoteBroadcastMessageBus<M>(this.getAkkaSystem(), topic)));
 		}
 		return ret_val;
 	}
@@ -262,35 +310,20 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		return Optional.empty();
 	}
 
-	private FiniteDuration _default_akka_join_timeout = Duration.create(60, TimeUnit.SECONDS);
-	
-	/** Really just for testing
-	 * @param new_timeout
+	/** Pass the local bindings module to the parent
+	 * @return
 	 */
-	protected void setAkkaJoinTimeout(FiniteDuration new_timeout) {
-		_default_akka_join_timeout = new_timeout;
+	public static List<AbstractModule> getExtraDependencyModules() {
+		return Arrays.asList(new CoreDistributedServicesModule());
 	}
 	
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#waitForAkkaJoin(java.util.Optional)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader#youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules()
 	 */
 	@Override
-	public boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
-		try {
-			if (_joined_akka_cluster.isDone()) {
-				return true;
-			}
-			else {
-				logger.info("Waiting for cluster to start up");
-				_joined_akka_cluster.get(timeout.orElse(_default_akka_join_timeout).toMillis(), TimeUnit.MILLISECONDS);
-			}
-			return true;
-		} catch (Exception e) {
-			logger.info("Cluster timed out: " + timeout.orElse(_default_akka_join_timeout) + ", throw_error=" + !timeout.isPresent());
-			if (!timeout.isPresent()) {
-				throw new RuntimeException("waitForAkkaJoin timeout");
-			}
-			return false;
-		}
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
+		// done!
+		
 	}
+
 }

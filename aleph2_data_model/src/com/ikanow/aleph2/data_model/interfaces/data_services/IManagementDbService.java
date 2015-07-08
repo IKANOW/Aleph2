@@ -32,6 +32,12 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
  */
 public interface IManagementDbService extends IUnderlyingService {
 
+	/** Returns a version of the DB that (if supported) cannot be written to. This enables the underlying infrastructure
+	 *  to be more lightweight in terms of the infrastructure set up, so is desirable to use whenever possible
+	 * @return A possibly read only version of the DB (guaranteed read only for the core management service)
+	 */
+	IManagementDbService readOnlyVersion();
+	
 	////////////////////////////////////
 	
 	// 1] Access

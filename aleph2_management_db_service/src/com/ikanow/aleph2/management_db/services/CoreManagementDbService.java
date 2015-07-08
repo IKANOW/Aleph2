@@ -55,6 +55,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
 	
+	protected final boolean _read_only;
+	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
 	 * @param data_bucket_service
@@ -74,6 +76,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_auth = Optional.empty();
 		_project = Optional.empty();
 		
+		_read_only = false;
+		
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
@@ -89,7 +93,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public CoreManagementDbService(final IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
 			final SharedLibraryCrudService shared_library_service,		
-			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project) {
+			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project, boolean read_only) {
 		_underlying_management_db = underlying_management_db;
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
@@ -97,6 +101,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		
 		_auth = auth;
 		_project = project;		
+		
+		_read_only = read_only;
 	}
 	
 	
@@ -107,15 +113,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	{
 		return new CoreManagementDbService(_underlying_management_db, 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
-				client_auth, project_auth);
+				client_auth, project_auth, _read_only);
 	}
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
 	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _shared_library_service;
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
+		return _shared_library_service.readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -123,8 +130,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
 			SharedLibraryBean library, Optional<String> sub_collection) {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
 
@@ -132,16 +137,18 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStore()
 	 */
 	public IManagementCrudService<DataBucketBean> getDataBucketStore() {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _data_bucket_service;
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
+		return _data_bucket_service.readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStatusStore()
 	 */
 	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _data_bucket_status_service;
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
+		return _data_bucket_status_service.readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -149,7 +156,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerBucketState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -158,7 +164,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAnalyticThreadStore()
 	 */
 	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -168,7 +173,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerAnalyticThreadState(Class<T> clazz,
 			AnalyticThreadBean analytic_thread, Optional<String> sub_collection) {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		// TODO (ALEPH-19) add this
 		throw new RuntimeException("Method not yet supported");
 	}
@@ -202,8 +206,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
-		ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _underlying_management_db.getRetryStore(retry_message_clazz);
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
+		return _underlying_management_db.getRetryStore(retry_message_clazz).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -215,5 +220,15 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		ll.add(this);
 		ll.addAll(_underlying_management_db.getUnderlyingArtefacts());
 		return ll;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#readOnlyVersion()
+	 */
+	@Override
+	public IManagementDbService readOnlyVersion() {
+		return new CoreManagementDbService(_underlying_management_db, 
+				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
+				_auth, _project, true);
 	}
 }

@@ -115,4 +115,10 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 		return null;
 	}
 
+	@Override
+	public IManagementDbService readOnlyVersion() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

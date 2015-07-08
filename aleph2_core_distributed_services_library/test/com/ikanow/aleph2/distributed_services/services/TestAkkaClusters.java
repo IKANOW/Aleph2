@@ -103,7 +103,7 @@ public class TestAkkaClusters {
 		long now2 = new Date().getTime();
 		assertTrue("Didn't take too long to join: " + (now2 - now), now2 - now < 30000L);
 		
-		_core_distributed_services._shutdown_hook.run();
+		_core_distributed_services._shutdown_hook.get().run();
 		
 		for (int i = 0; i < 10; ++i) {			
 			Thread.sleep(1000L);
@@ -153,7 +153,7 @@ public class TestAkkaClusters {
 		long now2 = new Date().getTime();
 		assertTrue("Didn't take too long to join: " + (now2 - now), now2 - now < 30000L);
 
-		_core_distributed_services._shutdown_hook.run();
+		_core_distributed_services._shutdown_hook.get().run();
 		
 		for (int i = 0; i < 10; ++i) {			
 			Thread.sleep(1000L);

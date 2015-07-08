@@ -16,12 +16,15 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.concurrent.CompletableFuture;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.IReadOnlyCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.IReadOnlyManagementCrudService;
 
 public class ManagementDbUtils {
 
@@ -34,27 +37,65 @@ public class ManagementDbUtils {
 	@SuppressWarnings("unchecked")
 	public static <T> IManagementCrudService<T> wrap(ICrudService<T> delegate) {
 		
-		//public class MyInvocationHandler implements InvocationHandler {
 		InvocationHandler handler = new InvocationHandler() {
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-				
-				Method m = delegate.getClass().getMethod(method.getName(), method.getParameterTypes());
-				Object o = m.invoke(delegate, args);
-				
-				if (o instanceof CompletableFuture) {
-					return FutureUtils.createManagementFuture((CompletableFuture<T>) o);
-				}
-				else if (o instanceof ICrudService) {
-					return wrap((ICrudService<?>)o);
-				}
-				else { // (for get underlying driver)
-					return o;
-				}
+				return lowLevelWrapper(delegate, proxy, method, args);
 			}
 		};
 
 		return (IManagementCrudService<T>)Proxy.newProxyInstance(IManagementCrudService.class.getClassLoader(),
 																new Class[] { IManagementCrudService.class }, handler);
+	}
+		
+	/** Converts a normal CRUD service to a trivial management CRUD service (side channel always empty) (read only version)
+	 * @param delegate
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> IReadOnlyManagementCrudService<T> wrap(IReadOnlyCrudService<T> delegate) {
+		
+		InvocationHandler handler = new InvocationHandler() {
+			@Override
+			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+				return lowLevelWrapper(delegate, proxy, method, args);
+			}
+		};
+
+		return (IReadOnlyManagementCrudService<T>)Proxy.newProxyInstance(IReadOnlyManagementCrudService.class.getClassLoader(),
+																new Class[] { IReadOnlyManagementCrudService.class }, handler);
+	}
+	
+	/** Utility function for wrap
+	 * @param delegate
+	 * @param proxy
+	 * @param method
+	 * @param args
+	 * @return
+	 * @throws Throwable
+	 */
+	@SuppressWarnings("unchecked")
+	private static <T> Object lowLevelWrapper(ICrudService<T> delegate, Object proxy, Method method, Object[] args) throws Throwable {
+		
+		Method m = delegate.getClass().getMethod(method.getName(), method.getParameterTypes());
+		try {
+			Object o = m.invoke(delegate, args);
+		
+			if (o instanceof CompletableFuture) {
+				return FutureUtils.createManagementFuture((CompletableFuture<T>) o);
+			}
+			else if (o instanceof IReadOnlyCrudService) { // don't need to wrap 
+				return wrap((IReadOnlyCrudService<?>)o);
+			}
+			else if (o instanceof ICrudService) {
+				return wrap((ICrudService<?>)o);
+			}
+			else { // (for get underlying driver)
+				return o;
+			}
+		}
+		catch (InvocationTargetException e) {
+			throw e.getCause();
+		}
 	}
 }

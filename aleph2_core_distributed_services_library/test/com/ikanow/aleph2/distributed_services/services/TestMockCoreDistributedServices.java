@@ -17,6 +17,8 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import static org.junit.Assert.*;
 
+import java.util.Optional;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -38,5 +40,7 @@ public class TestMockCoreDistributedServices {
 		final CuratorFramework curator = _core_distributed_services.getCuratorFramework();		
         String path = curator.getZookeeperClient().getZooKeeper().create("/test", new byte[]{1,2,3}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         assertEquals(path, "/test");
+        
+        assertTrue(_core_distributed_services.waitForAkkaJoin(Optional.empty()));
 	}
 }

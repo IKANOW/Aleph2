@@ -19,12 +19,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
+import com.ikanow.aleph2.data_model.utils.CrudServiceUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
@@ -35,7 +35,8 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
  * @param <T>
  */
 public interface IManagementCrudService<O> extends ICrudService<O> {
-
+	public static interface IReadOnlyManagementCrudService<O> extends IManagementCrudService<O>, IReadOnlyCrudService<O> {}
+	
 	//////////////////////////////////////////////////////
 
 	// Authorization and project filtering:
@@ -48,6 +49,25 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 	 */
 	@Override
 	IManagementCrudService<O> getFilteredRepo(final String authorization_fieldname, final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
+	
+	/** Returns a possibly read only version of the CRUD service. The interface is the same, but writable calls will exception.
+	 * @param is_read_only - whether to return the read only version or not
+	 * @return the possibly read only version of the CRUD service
+	 */
+	default IManagementCrudService<O> readOnlyVersion(boolean is_read_only) {
+		return is_read_only ? new CrudServiceUtils.ReadOnlyManagementCrudService<>(this) : this;
+	}
+	/** Returns a definitely read only version of the CRUD service. The interface is the same, but writable calls will exception.
+	 * @return the definitely read only version of the CRUD service
+	 */
+	default IReadOnlyManagementCrudService<O> readOnlyVersion() {
+		if (IReadOnlyManagementCrudService.class.isAssignableFrom(this.getClass())) {
+			return (IReadOnlyManagementCrudService<O>) this;
+		}
+		else {
+			return (IReadOnlyManagementCrudService<O>) readOnlyVersion(true);
+		}
+	}	
 	
 	//////////////////////////////////////////////////////
 	

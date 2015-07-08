@@ -88,7 +88,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		_context = DataImportActorContext.get(); 
 		_core_distributed_services = _context.getDistributedServices();
 		_actor_system = _core_distributed_services.getAkkaSystem();
-		_management_db = _context.getServiceContext().getCoreManagementDbService();
+		_management_db = _context.getServiceContext().getCoreManagementDbService().readOnlyVersion();
 		_globals = _context.getGlobalProperties();
 		_fs = _context.getServiceContext().getStorageService();
 	}

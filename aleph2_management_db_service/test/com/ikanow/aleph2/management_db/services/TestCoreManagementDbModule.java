@@ -23,23 +23,32 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
+import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
 public class TestCoreManagementDbModule {
 
@@ -47,13 +56,16 @@ public class TestCoreManagementDbModule {
 	private MockMongoDbManagementDbService _underlying_db_service;
 	private CoreManagementDbService _core_db_service;
 	private MockServiceContext _mock_service_context;
+	private MockHdfsStorageService _mock_storage_service;
 	private MockMongoDbCrudServiceFactory _crud_factory;
 	private DataBucketCrudService _bucket_crud;
 	private DataBucketStatusCrudService _bucket_status_crud;
 	private SharedLibraryCrudService _shared_library_crud;
+	private MockCoreDistributedServices _cds;
+	private ManagementDbActorContext _actor_context;
 	
-	@Test
-	public void testRetryDataStore() throws Exception {
+	@Before
+	public void testSetup() throws Exception {
 		
 		// A bunch of DI related setup:
 		// Here's the setup that Guice normally gives you....
@@ -61,10 +73,24 @@ public class TestCoreManagementDbModule {
 		_crud_factory = new MockMongoDbCrudServiceFactory();
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null, null);
 		_mock_service_context.addGlobals(new GlobalPropertiesBean(null, null, null, null));
-		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);		
-		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
-		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
+		_mock_storage_service = new MockHdfsStorageService(_mock_service_context.getGlobalProperties());
+		_mock_service_context.addService(IStorageService.class, Optional.empty(), _mock_storage_service);		
+		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
+		_cds = new MockCoreDistributedServices();
+		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _cds);
+		_actor_context = new ManagementDbActorContext(_mock_service_context);
+		_bucket_crud = new DataBucketCrudService(_mock_service_context, _actor_context);
+		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _actor_context); 
+		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);		
 		
+		_core_db_service = new CoreManagementDbService(_mock_service_context, 
+				_bucket_crud, _bucket_status_crud, _shared_library_crud);
+		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
+	}
+	
+	@Test
+	public void testRetryDataStore() throws Exception {
+				
 		ICrudService<BucketActionRetryMessage> retry_service = _core_db_service.getRetryStore(BucketActionRetryMessage.class);
 		
 		assertTrue("Retry service non null", retry_service != null);
@@ -110,5 +136,56 @@ public class TestCoreManagementDbModule {
 		final BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.get().message(), Class.forName(retry.get().message_clazz())).get();
 		assertEquals("id1", to_retry.bucket()._id());
 		assertEquals(new HashSet<String>(Arrays.asList("test1")), to_retry.handling_clients());
+	}
+	
+	@Test
+	public void test_readOnly() {
+		
+		final IManagementDbService read_only_management_db_service = _core_db_service.readOnlyVersion();
+		
+		// Bucket
+		ICrudService<DataBucketBean> bucket_service = read_only_management_db_service.getDataBucketStore();
+		assertTrue("Is read only", IManagementCrudService.IReadOnlyManagementCrudService.class.isAssignableFrom(bucket_service.getClass()));
+		try {
+			bucket_service.deleteDatastore();
+			fail("Should have thrown error");
+		}
+		catch (Exception e) {
+			assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+		}
+		bucket_service.countObjects(); // (just check doesn't thrown)
+		// Bucket status
+		ICrudService<DataBucketStatusBean> bucket_status_service = read_only_management_db_service.getDataBucketStatusStore();
+		assertTrue("Is read only", IManagementCrudService.IReadOnlyManagementCrudService.class.isAssignableFrom(bucket_status_service.getClass()));
+		try {
+			bucket_status_service.deleteDatastore();
+			fail("Should have thrown error");
+		}
+		catch (Exception e) {
+			assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+		}
+		bucket_status_service.countObjects(); // (just check doesn't thrown)
+		// Shared Library Store
+		ICrudService<SharedLibraryBean> shared_lib_service = read_only_management_db_service.getSharedLibraryStore();
+		assertTrue("Is read only", IManagementCrudService.IReadOnlyManagementCrudService.class.isAssignableFrom(shared_lib_service.getClass()));
+		try {
+			shared_lib_service.deleteDatastore();
+			fail("Should have thrown error");
+		}
+		catch (Exception e) {
+			assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+		}
+		shared_lib_service.countObjects(); // (just check doesn't thrown)
+		// Retry Store
+		ICrudService<BucketActionRetryMessage> retry_service = read_only_management_db_service.getRetryStore(BucketActionRetryMessage.class);
+		assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(retry_service.getClass()));
+		try {
+			retry_service.deleteDatastore();
+			fail("Should have thrown error");
+		}
+		catch (Exception e) {
+			assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+		}
+		retry_service.countObjects(); // (just check doesn't thrown)
 	}
 }

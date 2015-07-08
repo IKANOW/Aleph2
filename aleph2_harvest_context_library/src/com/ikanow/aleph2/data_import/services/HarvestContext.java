@@ -355,7 +355,7 @@ public class HarvestContext implements IHarvestContext {
 			
 			// Get the names or ids, get the shared libraries, get the cached ids (must be present)
 			
-			return this._core_management_db.getSharedLibraryStore().getObjectsBySpec(spec, Arrays.asList("_id", "path_name"), true)
+			return this._core_management_db.readOnlyVersion().getSharedLibraryStore().getObjectsBySpec(spec, Arrays.asList("_id", "path_name"), true)
 				.thenApply(cursor -> {
 					return StreamSupport.stream(cursor.spliterator(), false)
 						.collect(Collectors.<SharedLibraryBean, String, String>toMap(
@@ -387,6 +387,7 @@ public class HarvestContext implements IHarvestContext {
 	public CompletableFuture<DataBucketStatusBean> getBucketStatus(
 			final Optional<DataBucketBean> bucket) {
 		return this._core_management_db
+				.readOnlyVersion()
 				.getDataBucketStatusStore()
 				.getObjectById(bucket.orElseGet(() -> _mutable_state.bucket.get())._id())
 				.thenApply(opt_status -> opt_status.get());		

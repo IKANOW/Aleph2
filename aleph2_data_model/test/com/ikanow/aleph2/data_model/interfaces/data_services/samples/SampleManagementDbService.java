@@ -96,4 +96,9 @@ public class SampleManagementDbService implements IManagementDbService {
 		return null;
 	}
 
+	@Override
+	public IManagementDbService readOnlyVersion() {
+		return null;
+	}
+
 }
