@@ -39,6 +39,8 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
  * @author Alex
  */
 public class PassthroughTopology implements IEnrichmentStreamingTopology {
+	private static final String SPOUT_NAME = "aleph2_default_kafka_spout";
+	private static final String BOLT_NAME = "aleph2_default_output_bolt";
 
 	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
@@ -48,8 +50,8 @@ public class PassthroughTopology implements IEnrichmentStreamingTopology {
 	@Override
 	public Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bucket, final IEnrichmentModuleContext context) {		
 		final TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("1", context.getTopologyEntryPoint(BaseRichSpout.class, Optional.of(bucket)));
-		builder.setBolt("2", context.getTopologyStorageEndpoint(BaseRichBolt.class, Optional.of(bucket))).localOrShuffleGrouping("1");
+		builder.setSpout(SPOUT_NAME, context.getTopologyEntryPoint(BaseRichSpout.class, Optional.of(bucket)));
+		builder.setBolt(BOLT_NAME, context.getTopologyStorageEndpoint(BaseRichBolt.class, Optional.of(bucket))).localOrShuffleGrouping(SPOUT_NAME);
 		return Tuples._2T(builder.createTopology(), Collections.emptyMap());
 	}
 
