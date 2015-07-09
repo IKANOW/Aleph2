@@ -19,20 +19,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
-
 
 import akka.actor.ActorRef;
 import akka.actor.PoisonPill;
 import akka.actor.UntypedActor;
-
 
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -110,7 +108,7 @@ public class BeBucketActor extends UntypedActor {
 			if (bucketExists == null) {
 				// bucket is not registered yet, grab it and do the processing
 				// on this node
-				_curator.create().creatingParentsIfNeeded().forPath(bucketZkPath);
+				_curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(bucketZkPath);
 				launchReadyJobs(fileContext,bem.getBuckeFullName(), bem.getBucketPathStr(),beJobService,_management_db,this.self());
 
 				// stop actor after all the processing
