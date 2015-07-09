@@ -27,6 +27,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
 import com.ikanow.aleph2.data_model.utils.TestBeanTemplateUtils.NestedTestBean.NestedNestedTestBean;
@@ -158,6 +164,10 @@ public class TestBeanTemplateUtils {
 		
 	}
 	
+	public static class TestDeserializeBean {
+		Map<String, Object> testMap;
+	}
+	
 	@Test
 	public void testBeanCloner() {
 		
@@ -272,6 +282,45 @@ public class TestBeanTemplateUtils {
 		exception.expect(UnsupportedOperationException.class);
 		
 		test.test6Fields.put("INF", 0);
+	}
+	
+	@Test
+	public void testNumberDeserializer() {
+		TestDeserializeBean bean1 = BeanTemplateUtils
+				.from("{\"testMap\":{\"test\":1.0}}", TestDeserializeBean.class).get();
+		JsonNode jn1 = BeanTemplateUtils.toJson(bean1);
+		
+		assertEquals("{\"testMap\":{\"test\":1}}", jn1.toString());
+		
+		
+		TestDeserializeBean bean2 = BeanTemplateUtils
+				.from("{\"testMap\":{\"test\":10000000000000,\"test1\":10000000000000.1,\"test2\":\"some string\"}}", TestDeserializeBean.class).get();
+		JsonNode jn2 = BeanTemplateUtils.toJson(bean2);
+		
+		assertEquals("{\"testMap\":{\"test\":10000000000000,\"test1\":1.00000000000001E13,\"test2\":\"some string\"}}", jn2.toString());
+		
+		TestDeserializeBean bean3 = BeanTemplateUtils
+				.from("{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7}}", TestDeserializeBean.class).get();
+		JsonNode jn3 = BeanTemplateUtils.toJson(bean3);
+		
+		assertEquals("{\"testMap\":{\"test\":10000000,\"test2\":1.0E7}}", jn3.toString());
+		
+		//Mapper without the Number deserializer to make sure the double values are staying the same
+		ObjectMapper plainMapper = new ObjectMapper();
+		plainMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+		plainMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
+		plainMapper.setSerializationInclusion(Include.NON_NULL);
+		
+		
+		//Checking that the deserializer doesn't break existing double values
+		TestDeserializeBean bean4 = BeanTemplateUtils
+				.from("{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7,\"test3\":1.1,\"test4\":10000000000000.1 }}", TestDeserializeBean.class).get();
+		JsonNode number_deserialized = BeanTemplateUtils.toJson(bean4);
+		JsonNode plain = plainMapper.valueToTree(bean4);
+		
+		assertEquals(plain.toString(), number_deserialized.toString());
+		
+		
 	}
 
 	// Ended up not immutabilizing all these because you can lose too much information

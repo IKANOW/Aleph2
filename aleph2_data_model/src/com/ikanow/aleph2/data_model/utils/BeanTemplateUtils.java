@@ -21,6 +21,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Function;
@@ -31,10 +32,16 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigRenderOptions;
 
@@ -449,6 +456,59 @@ public class BeanTemplateUtils {
 		mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
 		mapper.setSerializationInclusion(Include.NON_NULL);
+		
+		SimpleModule module = new SimpleModule();
+		module.addDeserializer(Number.class, new NumberDeserializer());
+		mapper.registerModule(module);
+		
 		return mapper;
+	}
+	
+	
+	/**
+	 * Converts Number values to their original type. 
+	 * MongoDB converts integers to double representation. This method reverses this.
+	 */
+	public static class NumberDeserializer extends JsonDeserializer<Number> {
+
+		@Override
+		public Number deserialize(JsonParser jp, DeserializationContext ctxt)
+				throws IOException, JsonProcessingException {
+			
+			JsonToken currentToken = jp.getCurrentToken();
+			
+			if (currentToken.equals(JsonToken.VALUE_NUMBER_FLOAT) || currentToken.equals(JsonToken.VALUE_NUMBER_INT)) {
+				String s = jp.getText();
+				if (s.indexOf('.') > 0 && s.indexOf('e') < 0 && s.indexOf('E') < 0) {
+					while (s.endsWith("0")) {
+						s = s.substring(0, s.length() - 1);
+					}
+					if (s.endsWith(".")) {
+						s = s.substring(0, s.length() - 1);
+					}
+				}
+				else if (s.indexOf('e') >= 0 || s.indexOf('E') >= 0)
+				{
+					//converts scientific notation to number in the case that it can be parsed and
+					//displayed without scientific notation (which is probably how the user entered it)
+					s = new BigDecimal(s).toPlainString();
+				}
+				
+				try {
+					return Integer.parseInt(s);
+				} catch (NumberFormatException e) {
+					try {
+						return Long.parseLong(s);
+					} catch (NumberFormatException e1) {
+						try {
+							return Double.parseDouble(s);
+						} catch (NumberFormatException e2) {
+							
+						}
+					}		
+				}
+			}
+			return jp.getNumberValue();
+		}
 	}
 }
