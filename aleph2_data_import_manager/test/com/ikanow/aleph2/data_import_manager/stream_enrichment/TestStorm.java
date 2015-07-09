@@ -113,30 +113,30 @@ public class TestStorm {
 	
 
 	
-	@Test
-	public void testKafkaSpout() throws JsonParseException, JsonMappingException, IOException {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("globals.local_yarn_config_dir", "C:/Users/Burch/Desktop/yarn_config/");
-		Config config = ConfigFactory.parseMap(map);
-		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
-		final GlobalPropertiesBean globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
-		System.out.println(globals.local_yarn_config_dir());
-		
-		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";
-		
-		//1. create local kafka
-		//This is handled when MockCDS starts, should be fine
-		
-		//2. create local storm
-		IStormController storm_controller = StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir());// new LocalStormController();
-		
-		//3. create kafka queue
-		
-		//4. create storm topology using kafka spout
-		
-		//5. produce to kafka queue
-		
-		//6. observe storm output receiving produced stuff
-	}
+//	@Test
+//	public void testKafkaSpout() throws JsonParseException, JsonMappingException, IOException {
+//		Map<String, Object> map = new HashMap<String, Object>();
+//		map.put("globals.local_yarn_config_dir", "C:/Users/Burch/Desktop/yarn_config/");
+//		Config config = ConfigFactory.parseMap(map);
+//		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
+//		final GlobalPropertiesBean globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
+//		System.out.println(globals.local_yarn_config_dir());
+//		
+//		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";
+//		
+//		//1. create local kafka
+//		//This is handled when MockCDS starts, should be fine
+//		
+//		//2. create local storm
+//		IStormController storm_controller = StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir());// new LocalStormController();
+//		
+//		//3. create kafka queue
+//		
+//		//4. create storm topology using kafka spout
+//		
+//		//5. produce to kafka queue
+//		
+//		//6. observe storm output receiving produced stuff
+//	}
 
 }
