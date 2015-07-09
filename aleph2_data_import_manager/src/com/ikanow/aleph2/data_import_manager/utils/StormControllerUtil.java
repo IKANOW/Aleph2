@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +40,7 @@ import scala.Tuple2;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
+import com.google.common.collect.Sets;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
@@ -62,6 +64,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
  */
 public class StormControllerUtil {
 	private static final Logger logger = LogManager.getLogger();
+	private final static Set<String> dirs_to_ignore = Sets.newHashSet("org/slf4j", "org/apache/log4j");
 	
 	/**
 	 * Returns an instance of a local storm controller.
@@ -154,7 +157,7 @@ public class StormControllerUtil {
 		try {				
 			logger.debug("creating jar to submit");
 			final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + UuidUtils.get().getTimeBasedUuid() + ".jar";
-			JarBuilderUtil.mergeJars(jars_to_merge, input_jar_location);
+			JarBuilderUtil.mergeJars(jars_to_merge, input_jar_location, dirs_to_ignore);
 			return input_jar_location;
 		} catch (Exception e) {
 			logger.error(ErrorUtils.getLongForm("Error building storm jar {0}", e));
