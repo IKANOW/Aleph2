@@ -293,9 +293,9 @@ public class StormControllerUtil {
 	}
 	
 	/**
-	 * Converts a buckets path to a useable topology name
-	 * Topology name cannot contain any of the following: #{"." "/" ":" "\\\\"})
-	 * . / : \\
+	 * Converts a buckets path to a use-able topology name
+	 * Topology name cannot contain any of the following: #{"." "/" ":" "\\"})
+	 * . / : \
 	 * 
 	 * I picked a random different character to convert to for each substitution.
 	 * 
