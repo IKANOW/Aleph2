@@ -2,8 +2,11 @@ package com.ikanow.aleph2.data_import_manager.stream_enrichment;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -20,12 +23,24 @@ import storm.kafka.ZkHosts;
 import backtype.storm.spout.SchemeAsMultiScheme;
 import backtype.storm.topology.TopologyBuilder;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.streaming_enrichment.storm_samples.SampleWebReaderSpout;
 import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaOutputFileBolt;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleWordParserBolt;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
+import com.ikanow.aleph2.distributed_services.services.CoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 @SuppressWarnings("unused")
 public class TestStorm {
@@ -34,6 +49,12 @@ public class TestStorm {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		storm_cluster = StormControllerUtil.getLocalStormController();
+	}
+	
+	protected ICoreDistributedServices _core_distributed_services;
+	@Before
+	public void setupCoreDistributedServices() throws Exception {
+		
 	}
 
 	@AfterClass
@@ -89,5 +110,33 @@ public class TestStorm {
 //		//TODO should merge in data_model
 //		StormControllerUtil.submitJob(storm, "test_kafka_spout", StormControllerUtil.buildStormTopologyJar(jars_to_merge), builder.createTopology());
 //	}
+	
+
+	
+	@Test
+	public void testKafkaSpout() throws JsonParseException, JsonMappingException, IOException {
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("globals.local_yarn_config_dir", "C:/Users/Burch/Desktop/yarn_config/");
+		Config config = ConfigFactory.parseMap(map);
+		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
+		final GlobalPropertiesBean globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
+		System.out.println(globals.local_yarn_config_dir());
+		
+		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";
+		
+		//1. create local kafka
+		//This is handled when MockCDS starts, should be fine
+		
+		//2. create local storm
+		IStormController storm_controller = StormControllerUtil.getStormControllerFromYarnConfig(globals.local_yarn_config_dir());// new LocalStormController();
+		
+		//3. create kafka queue
+		
+		//4. create storm topology using kafka spout
+		
+		//5. produce to kafka queue
+		
+		//6. observe storm output receiving produced stuff
+	}
 
 }

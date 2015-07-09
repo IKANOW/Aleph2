@@ -236,7 +236,7 @@ public class StormControllerUtil {
 		final String jar_file_location = buildStormTopologyJar(jars_to_merge);
 		
 		//submit to storm		
-		final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucket._id(), jar_file_location, topology);
+		final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
 		try { 
 			if ( submit_future.get().success() ) {
 				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
@@ -262,7 +262,7 @@ public class StormControllerUtil {
 	public static CompletableFuture<BucketActionReplyMessage> stopJob(IStormController storm_controller, DataBucketBean bucket) {
 		CompletableFuture<BucketActionReplyMessage> stop_future = new CompletableFuture<BucketActionReplyMessage>();
 		try {
-			storm_controller.stopJob(bucket._id());
+			storm_controller.stopJob(bucketPathToTopologyName(bucket.full_name()));
 		} catch (Exception ex) {
 			stop_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", ex)));
 			return stop_future;
@@ -290,5 +290,23 @@ public class StormControllerUtil {
 			error_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", e)));
 		}
 		return startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+	}
+	
+	/**
+	 * Converts a buckets path to a useable topology name
+	 * Topology name cannot contain any of the following: #{"." "/" ":" "\\\\"})
+	 * . / : \\
+	 * 
+	 * I picked a random different character to convert to for each substitution.
+	 * 
+	 * @param bucket_path
+	 * @return
+	 */
+	public static String bucketPathToTopologyName(final String bucket_path ) {
+		return bucket_path
+				.replaceAll("\\.", "_")
+				.replaceAll("/", "-")
+				.replaceAll(":", "=")
+				.replaceAll("\\\\", "+");
 	}
 }
