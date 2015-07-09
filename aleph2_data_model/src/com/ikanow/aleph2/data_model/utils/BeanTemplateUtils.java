@@ -457,7 +457,7 @@ public class BeanTemplateUtils {
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
 		mapper.setSerializationInclusion(Include.NON_NULL);
 		
-		SimpleModule module = new SimpleModule();
+		final SimpleModule module = new SimpleModule();
 		module.addDeserializer(Number.class, new NumberDeserializer());
 		mapper.registerModule(module);
 		
@@ -472,10 +472,10 @@ public class BeanTemplateUtils {
 	public static class NumberDeserializer extends JsonDeserializer<Number> {
 
 		@Override
-		public Number deserialize(JsonParser jp, DeserializationContext ctxt)
+		public Number deserialize(final JsonParser jp, final DeserializationContext ctxt)
 				throws IOException, JsonProcessingException {
 			
-			JsonToken currentToken = jp.getCurrentToken();
+			final JsonToken currentToken = jp.getCurrentToken();
 			
 			if (currentToken.equals(JsonToken.VALUE_NUMBER_FLOAT) || currentToken.equals(JsonToken.VALUE_NUMBER_INT)) {
 				String s = jp.getText();
