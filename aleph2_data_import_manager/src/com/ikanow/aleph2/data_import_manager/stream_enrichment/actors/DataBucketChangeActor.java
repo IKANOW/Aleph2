@@ -234,7 +234,10 @@ public class DataBucketChangeActor extends AbstractActor {
 									return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
 								})
 								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-									return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+									if ( msg.is_enabled() )
+										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+									else
+										return StormControllerUtil.stopJob(storm_controller, bucket);
 								})
 								.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
 									if ( msg.is_suspended() )
