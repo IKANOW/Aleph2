@@ -166,7 +166,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				
 	    				// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
 	    				cacheJars(m.bucket(), _management_db, _globals, _fs, hostname, m)
-	    					.thenCompose(err_or_map -> {
+	    					.thenComposeAsync(err_or_map -> {
 	    						
 								final StreamingEnrichmentContext e_context = _context.getNewStreamingEnrichmentContext();								
 								
