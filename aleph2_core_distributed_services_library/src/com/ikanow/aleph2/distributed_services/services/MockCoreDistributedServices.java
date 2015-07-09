@@ -56,7 +56,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	protected final TestingServer _test_server;
 	protected final CuratorFramework _curator_framework;
 	protected final ActorSystem _akka_system;
-	protected final MockKafkaBroker _kafka_broker;
+	private final MockKafkaBroker _kafka_broker;
 	private final static Logger logger = LogManager.getLogger();
 	
 	/** Guice-invoked constructor
@@ -74,7 +74,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
 		
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				.put("metadata.broker.list", "127.0.0.1:" + _kafka_broker.getBrokerPort())
+				.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
 				.put("zookeeper.connect", _test_server.getConnectString())
@@ -146,11 +146,15 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	}
 	
 	public void kill() {
-		_kafka_broker.stop();
+		getKafkaBroker().stop();
 	}
 
 	@Override
 	public boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
 		return true;
+	}
+
+	public MockKafkaBroker getKafkaBroker() {
+		return _kafka_broker;
 	}
 }

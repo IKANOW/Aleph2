@@ -25,9 +25,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -36,6 +38,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
+
 
 import scala.Tuple3;
 import scala.concurrent.duration.Duration;
@@ -46,6 +49,8 @@ import akka.cluster.Cluster;
 import akka.cluster.seed.ZookeeperClusterSeed;
 import akka.event.japi.LookupEventBus;
 
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -71,9 +76,10 @@ import com.typesafe.config.ConfigFactory;
 public class CoreDistributedServices implements ICoreDistributedServices, IExtraDependencyLoader {
 	private final static Logger logger = LogManager.getLogger();
 	
+	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected final DistributedServicesPropertyBean _config_bean;
 
-	// Curator, instantiated lazily
+	// Curator, instantiated lazily (in practice immediately because we need it for Kafka)
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>();
 
 	// Akka, instantiated laziy
@@ -81,6 +87,10 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	protected CompletableFuture<Boolean> _joined_akka_cluster = new CompletableFuture<>();
 	protected boolean _has_joined_akka_cluster = false; 
 	protected final SetOnce<Runnable> _shutdown_hook = new SetOnce<>();
+	
+	// Kafka, initialize in the background
+	boolean _initializing_kafka = true;
+	protected final CompletableFuture<Void> _initialized_kafka;
 	
 	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>> _buses = 
 			new ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>>();
@@ -101,21 +111,29 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		// Else join akka cluster lazily, because often it's not required at all
 		if (null != config_bean.application_name()) {
 			joinAkkaCluster();			
-		}
+		}		
 		
-		final String broker_list_string = Optional.ofNullable(config_bean.broker_list())
-				.orElse(DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);
-		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				.put("metadata.broker.list", broker_list_string)
-				.put("serializer.class", "kafka.serializer.StringEncoder")
-				.put("request.required.acks", "1")
-				.put("zookeeper.connect", _config_bean.zookeeper_connection())
-				.put("group.id", "somegroup")
-				.put("zookeeper.session.timeout.ms", "400")
-				.put("zookeeper.sync.time.ms", "200")
-		        .put("auto.commit.interval.ms", "1000")			
-				.build();	
-		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
+		if (null != config_bean.broker_list()) {
+			final String broker_list_string = config_bean.broker_list();
+			KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list_string);			
+			_initialized_kafka = new CompletableFuture<>();
+			_initialized_kafka.complete(null);
+			_initializing_kafka = false;
+		}
+		else { // Launch an async process to intialize kafka
+			logger.info("Fetching Kafka broker_list from Zookeeper");
+			_initialized_kafka = CompletableFuture.runAsync(() -> {
+				try {
+					final String broker_list = KafkaUtils.getBrokerListFromZookeeper(this.getCuratorFramework(), Optional.empty(), _mapper);
+					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list);										
+					logger.info("Kafka broker_list=" + broker_list);
+				}
+				catch (Exception e) { // just use the default and hope:
+					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);										
+				}
+				_initializing_kafka = false;
+			});
+		}
 	}
 	
 	/** Joins the Akka cluster
@@ -274,10 +292,12 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public void produce(String topic, String message) {
-		KafkaUtils.createTopic(topic);
-		
+		if (_initializing_kafka) { //(wait for async to complete)
+			_initialized_kafka.join();
+		}		
+		KafkaUtils.createTopic(topic);		
 		logger.debug("PRODUCING");
-		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
+		final Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
 		logger.debug("SENDING");
 		producer.send(new KeyedMessage<String, String>(topic, message));
 		logger.debug("DONE SENDING");
@@ -288,8 +308,11 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public Iterator<String> consume(String topic) {
+		if (_initializing_kafka) { //(wait for async to complete)
+			_initialized_kafka.join();
+		}		
 		logger.debug("CONSUMING");
-		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
+		final ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 

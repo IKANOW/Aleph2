@@ -16,17 +16,25 @@
 package com.ikanow.aleph2.distributed_services.utils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.Option;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import kafka.admin.AdminUtils;
 import kafka.api.TopicMetadata;
@@ -138,6 +146,40 @@ public class KafkaUtils {
         producer = null;
 	}
 
+	/** Generates a connection string by reading ZooKeeper
+	 * @param curator
+	 * @param path_override
+	 * @return
+	 * @throws Exception 
+	 */
+	public static String getBrokerListFromZookeeper(final CuratorFramework curator, Optional<String> path_override, final ObjectMapper mapper) throws Exception {
+		final String path = path_override.orElse("/brokers/ids");
+		final List<String> brokers = curator.getChildren().forPath(path);
+		return brokers.stream()
+			.map(Lambdas.wrap_u(broker_node -> new String(curator.getData().forPath(path + "/" + broker_node))))
+			.flatMap(Lambdas.flatWrap_i(broker_str -> mapper.readTree(broker_str))) // (just discard any badly formatted nodes)
+			.flatMap(Lambdas.flatWrap_i(json -> json.get("host").asText() + ":" + json.get("port").asText()))
+			.collect(Collectors.joining(","));
+	}
+	
+	/** A simpler set of Kafka properties, just requiring the ZK/broker list (note you can get the broker list from ZK using getBrokerListFromZookeeper)
+	 * @param zk_connection
+	 * @param broker_list
+	 */
+	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list) {
+		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				.put("metadata.broker.list", broker_list)
+				.put("serializer.class", "kafka.serializer.StringEncoder")
+				.put("request.required.acks", "1")
+				.put("zookeeper.connect", zk_connection)
+				.put("group.id", "somegroup")
+				.put("zookeeper.session.timeout.ms", "400")
+				.put("zookeeper.sync.time.ms", "200")
+		        .put("auto.commit.interval.ms", "1000")			
+				.build();	
+		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));		
+	}
+	
 	/**
 	 * Checks if a topic exists, if not creates a new kafka queue for it.
 	 * 

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -26,6 +27,9 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import akka.serialization.Serialization;
 import akka.serialization.SerializationExtension;
@@ -40,17 +44,32 @@ import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+@RunWith(value = Parameterized.class)
 public class TestCoreDistributedServices {
+	
+	@Parameters(name = "{index}: auto config = {0}")
+	public static Iterable<Boolean> data1() {
+		return Arrays.asList(true, false);
+	}
+	
+	final boolean auto_configure;
+	public TestCoreDistributedServices(Boolean auto_configure) {
+		this.auto_configure = auto_configure;
+	}
+	
 	protected ICoreDistributedServices _core_distributed_services;
 	@Before
 	public void setupCoreDistributedServices() throws Exception {
+		System.out.println("TEST WITH AUTO_CONFIG = " + auto_configure);
+		
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();	
 		String connect_string = temp._test_server.getConnectString();
-		String broker_list_string = "localhost:" + temp._kafka_broker.getBrokerPort();
+		String broker_list_string = "localhost:" + temp.getKafkaBroker().getBrokerPort();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, connect_string);
-		config_map.put(DistributedServicesPropertyBean.BROKER_LIST, broker_list_string);
+		if (!auto_configure)
+			config_map.put(DistributedServicesPropertyBean.BROKER_LIST, broker_list_string);
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
@@ -148,7 +167,7 @@ public class TestCoreDistributedServices {
 	@Test
 	public void testKafkaForStormSpout() throws Exception {
 		//create a topic for a kafka spout, put some things in the spout		
-		final String TOPIC_NAME = "TEST_KAFKA_SPOUT";  
+		final String TOPIC_NAME = "TEST_KAFKA_SPOUT_" + System.currentTimeMillis();  
 		final int num_to_test = 100; //set this high enough to hit the concurrent connection limit just incase we messed something up
 		//throw items on the queue
 		
