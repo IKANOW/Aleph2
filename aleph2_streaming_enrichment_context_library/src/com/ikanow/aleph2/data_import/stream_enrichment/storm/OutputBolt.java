@@ -50,6 +50,8 @@ public class OutputBolt extends BaseRichBolt {
 	protected IEnrichmentModuleContext _context;
 	protected IEnrichmentStreamingTopology _user_topology;
 	
+	protected OutputCollector _collector;
+	
 	/** User constructor
 	 * @param bucket
 	 * @param context_signature
@@ -65,6 +67,7 @@ public class OutputBolt extends BaseRichBolt {
 		try {
 			_context = ContextUtils.getEnrichmentContext(_context_signature);
 			_user_topology = (IEnrichmentStreamingTopology )Class.forName(_user_topology_entry_point).newInstance();
+			_collector = arg2;
 		}
 		catch (Exception e) { // nothing to be done here?
 			_logger.error("Failed to get context", e);
@@ -84,8 +87,9 @@ public class OutputBolt extends BaseRichBolt {
 	 * @see backtype.storm.task.IBolt#execute(backtype.storm.tuple.Tuple)
 	 */
 	@Override
-	public void execute(final Tuple arg0) {
+	public void execute(final Tuple arg0) {		
 		_context.emitMutableObject(0L, (ObjectNode) _user_topology.rebuildObject(arg0, OutputBolt::tupleToLinkedHashMap), Optional.empty());
+		_collector.ack(arg0);
 	}
 
 	/* (non-Javadoc)

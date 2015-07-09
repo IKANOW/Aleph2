@@ -17,6 +17,7 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
-
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
@@ -39,7 +38,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 
-
 import scala.Tuple3;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -48,7 +46,6 @@ import akka.actor.ActorSystem;
 import akka.cluster.Cluster;
 import akka.cluster.seed.ZookeeperClusterSeed;
 import akka.event.japi.LookupEventBus;
-
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -115,7 +112,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		
 		if (null != config_bean.broker_list()) {
 			final String broker_list_string = config_bean.broker_list();
-			KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list_string);			
+			KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list_string, 
+					Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
 			_initialized_kafka = new CompletableFuture<>();
 			_initialized_kafka.complete(null);
 			_initializing_kafka = false;
@@ -125,11 +123,13 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			_initialized_kafka = CompletableFuture.runAsync(() -> {
 				try {
 					final String broker_list = KafkaUtils.getBrokerListFromZookeeper(this.getCuratorFramework(), Optional.empty(), _mapper);
-					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list);										
+					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list,										
+							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
 					logger.info("Kafka broker_list=" + broker_list);
 				}
 				catch (Exception e) { // just use the default and hope:
-					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST);										
+					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST,
+							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
 				}
 				_initializing_kafka = false;
 			});
@@ -251,18 +251,29 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	@Override
 	public synchronized ActorSystem getAkkaSystem() {
 		if (!_akka_system.isSet()) {
+			
+			// Get port or use 0 as alternative
+			Integer port = Optional.ofNullable(_config_bean.application_port()).orElse(Collections.emptyMap())
+										.getOrDefault(_config_bean.application_name(), 0);
+			
+			logger.info(ErrorUtils.get("Using port {0} for application {1}",
+					0 != port ? port.toString() : "(transient)",
+					Optional.ofNullable(_config_bean.application_name()).orElse("(transient)")
+					));
+			
 			// Set up a config for Akka overrides
 			final Map<String, Object> config_map = ImmutableMap.<String, Object>builder()
 												//.put("akka.loglevel", "DEBUG") // (just in case it's quickly needed during unit testing)
 												.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
 												.put("akka.extensions", Arrays.asList("akka.cluster.pubsub.DistributedPubSub"))
-												.put("akka.remote.netty.tcp.port", "0")
+												.put("akka.remote.netty.tcp.port", port.toString())
 												.put("akka.cluster.seed.zookeeper.url", _config_bean.zookeeper_connection())
 												.put("akka.cluster.auto-down-unreachable-after", "120s")
 												.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
 												.put("akka.actor.serialization-bindings.\"com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable\"", "jackson")
 												.build();		
-			_akka_system.set(ActorSystem.create("default", ConfigFactory.parseMap(config_map)));
+			_akka_system.set(ActorSystem.create(Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME), 
+								ConfigFactory.parseMap(config_map)));
 			this.joinAkkaCluster();
 		}
 		return _akka_system.get();

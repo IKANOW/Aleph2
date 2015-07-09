@@ -27,7 +27,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
-import com.ikanow.aleph2.data_import_manager.streaming_enrichment.storm_samples.SampleWebReaderSpout;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.storm_samples.SampleWebReaderSpout;
 import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;

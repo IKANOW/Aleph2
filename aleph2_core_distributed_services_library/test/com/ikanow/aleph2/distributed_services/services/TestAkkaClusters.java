@@ -64,7 +64,7 @@ public class TestAkkaClusters {
 		_mock_core_distributed_services = temp;
 	}
 	
-	public void setup(final String application_name) throws Exception {
+	public void setup(final String application_name, final String test_name) throws Exception {
 		_connect_string = _mock_core_distributed_services._test_server.getConnectString();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
@@ -73,7 +73,10 @@ public class TestAkkaClusters {
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
-				BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class);
+				BeanTemplateUtils.clone(
+						BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class))
+				.with("cluster_name", test_name)
+				.done();
 		
 		assertEquals(_connect_string, bean.zookeeper_connection());
 		
@@ -93,7 +96,7 @@ public class TestAkkaClusters {
 	
 	@Test
 	public void test_setupComplete() throws Exception {
-		setup("test_application");
+		setup("test_application", "doesLockNodeExist");
 		
 		assertTrue("lock node built", doesLockNodeExist());				
 
@@ -132,7 +135,7 @@ public class TestAkkaClusters {
 				.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(hostname_application);		
 		
 		try {
-			setup(app_name);
+			setup(app_name, "test_application");
 			fail("Should have thrown");
 		}
 		catch (Exception e) {}		
@@ -140,7 +143,7 @@ public class TestAkkaClusters {
 	
 	@Test
 	public void test_waitForAkkaJoin() throws Exception {
-		setup(null);
+		setup(null, "test_waitForAkkaJoin");
 		
 		// While I'm here, quickly check that no ZK node has been generated
 		assertFalse("No lock node", doesLockNodeExist());				
