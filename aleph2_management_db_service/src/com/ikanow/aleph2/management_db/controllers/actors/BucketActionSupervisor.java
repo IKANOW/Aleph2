@@ -56,7 +56,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	//TODO (ALEPH-19): Need different timeouts to handle "found harvester it's taking its time" vs "waiting internally for harvesters"
 	// this is larger than it needs to be to handle that case
-	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(60, TimeUnit.SECONDS);
+	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(120, TimeUnit.SECONDS);
 	
 	/** Internal request message for forwarding from the supervisor to its children
 	 * @author acp

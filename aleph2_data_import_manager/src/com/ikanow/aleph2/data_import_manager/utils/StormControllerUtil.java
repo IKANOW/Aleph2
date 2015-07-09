@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
+import scala.Tuple2;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
@@ -42,6 +43,7 @@ import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.RemoteStormController;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -197,7 +199,18 @@ public class StormControllerUtil {
 		final CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
 
 		//Get topology from user
-		final StormTopology topology = (StormTopology) enrichment_toplogy.getTopologyAndConfiguration(bucket, context)._1;
+		final Tuple2<Object, Map<String, String>> top_ret_val = enrichment_toplogy.getTopologyAndConfiguration(bucket, context);
+		final StormTopology topology = (StormTopology) top_ret_val._1;
+		if (null == topology) {
+			start_future.complete(
+					new BucketActionReplyMessage.BucketActionHandlerMessage("start",
+							StreamErrorUtils.buildErrorMessage
+								("startJob", "IStormController.startJob", StreamErrorUtils.TOPOLOGY_NULL_ERROR, enrichment_toplogy.getClass().getName(), bucket.full_name()))
+					 );
+			return start_future;
+		}
+		
+		logger.info("Retrieved user Storm config topology: spouts=" + topology.get_spouts_size() + " bolts=" + topology.get_bolts_size() + " configs=" + top_ret_val._2().toString());
 		
 		final List<String> jars_to_merge = new LinkedList<String>();
 		
@@ -223,15 +236,18 @@ public class StormControllerUtil {
 		final String jar_file_location = buildStormTopologyJar(jars_to_merge);
 		
 		//submit to storm		
-		final CompletableFuture<BasicMessageBean> submit_future =	storm_controller.submitJob(bucket._id(), jar_file_location, topology);
+		final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucket._id(), jar_file_location, topology);
 		try { 
 			if ( submit_future.get().success() ) {
-				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("Started storm job successfully", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
+				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
 			} else {
-				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("Failure to submit: " + submit_future.get().message(), submit_future.get()));				
+				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", submit_future.get()));				
 			}						
 		} catch (Exception ex ) {
-			start_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error starting storm job: {0}", ex)));		
+			start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob",
+							StreamErrorUtils.buildErrorMessage
+								("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
+					 ));
 		}
 		
 		return start_future;

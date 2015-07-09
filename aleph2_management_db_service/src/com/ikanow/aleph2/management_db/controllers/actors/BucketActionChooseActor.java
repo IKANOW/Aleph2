@@ -175,7 +175,7 @@ public class BucketActionChooseActor extends AbstractActor {
 				);
 		
 		if (allow_retries && (++_state.tries < MAX_TRIES)) {
-			_state.blacklist.add(_state.targeted_source._1()); //TODO blacklist
+			_state.blacklist.add(_state.targeted_source._1());
 			_state.reset();
 			
 			this.broadcastAction(_state.original_message.get());
