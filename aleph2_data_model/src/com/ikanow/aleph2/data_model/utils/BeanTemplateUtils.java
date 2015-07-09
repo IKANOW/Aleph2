@@ -476,15 +476,18 @@ public class BeanTemplateUtils {
 				throws IOException, JsonProcessingException {
 			
 			final JsonToken currentToken = jp.getCurrentToken();
+			boolean valueChanged = false;
 			
 			if (currentToken.equals(JsonToken.VALUE_NUMBER_FLOAT) || currentToken.equals(JsonToken.VALUE_NUMBER_INT)) {
 				String s = jp.getText();
 				if (s.indexOf('.') > 0 && s.indexOf('e') < 0 && s.indexOf('E') < 0) {
 					while (s.endsWith("0")) {
 						s = s.substring(0, s.length() - 1);
+						valueChanged = true;
 					}
 					if (s.endsWith(".")) {
 						s = s.substring(0, s.length() - 1);
+						valueChanged = true;
 					}
 				}
 				else if (s.indexOf('e') >= 0 || s.indexOf('E') >= 0)
@@ -492,21 +495,22 @@ public class BeanTemplateUtils {
 					//converts scientific notation to number in the case that it can be parsed and
 					//displayed without scientific notation (which is probably how the user entered it)
 					s = new BigDecimal(s).toPlainString();
+					valueChanged = true;
 				}
 				
-				try {
-					return Integer.parseInt(s);
-				} catch (NumberFormatException e) {
+				
+				if (valueChanged)
+				{
 					try {
-						return Long.parseLong(s);
-					} catch (NumberFormatException e1) {
+						return Integer.parseInt(s);
+					} catch (NumberFormatException e) {
 						try {
-							return Double.parseDouble(s);
-						} catch (NumberFormatException e2) {
-							
-						}
-					}		
+							return Long.parseLong(s);
+						} catch (NumberFormatException e1) {
+						}		
+					}
 				}
+				
 			}
 			return jp.getNumberValue();
 		}

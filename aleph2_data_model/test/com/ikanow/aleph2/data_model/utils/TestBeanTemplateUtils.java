@@ -300,10 +300,10 @@ public class TestBeanTemplateUtils {
 		assertEquals("{\"testMap\":{\"test\":10000000000000,\"test1\":1.00000000000001E13,\"test2\":\"some string\"}}", jn2.toString());
 		
 		TestDeserializeBean bean3 = BeanTemplateUtils
-				.from("{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7}}", TestDeserializeBean.class).get();
+				.from("{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7,\"test3\":1E19}}", TestDeserializeBean.class).get();
 		JsonNode jn3 = BeanTemplateUtils.toJson(bean3);
 		
-		assertEquals("{\"testMap\":{\"test\":10000000,\"test2\":1.0E7}}", jn3.toString());
+		assertEquals("{\"testMap\":{\"test\":10000000,\"test2\":1.0E7,\"test3\":1.0E19}}", jn3.toString());
 		
 		//Mapper without the Number deserializer to make sure the double values are staying the same
 		ObjectMapper plainMapper = new ObjectMapper();
@@ -314,7 +314,9 @@ public class TestBeanTemplateUtils {
 		
 		//Checking that the deserializer doesn't break existing double values
 		TestDeserializeBean bean4 = BeanTemplateUtils
-				.from("{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7,\"test3\":1.1,\"test4\":10000000000000.1 }}", TestDeserializeBean.class).get();
+				.from(
+						"{\"testMap\":{\"test\":1e7, \"test2\":1.0000000000000E7,\"test3\":1.1,\"test4\":10000000000000.1,\"test4\":6e9,\"test5\":6e300,\"test5\":1E7 }}",
+						TestDeserializeBean.class).get();
 		JsonNode number_deserialized = BeanTemplateUtils.toJson(bean4);
 		JsonNode plain = plainMapper.valueToTree(bean4);
 		
