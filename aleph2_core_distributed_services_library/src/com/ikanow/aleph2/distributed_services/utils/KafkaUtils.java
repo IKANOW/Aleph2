@@ -166,13 +166,13 @@ public class KafkaUtils {
 	 * @param zk_connection
 	 * @param broker_list
 	 */
-	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list) {
+	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name) {
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				.put("metadata.broker.list", broker_list)
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
 				.put("zookeeper.connect", zk_connection)
-				.put("group.id", "somegroup")
+				.put("group.id", cluster_name)
 				.put("zookeeper.session.timeout.ms", "400")
 				.put("zookeeper.sync.time.ms", "200")
 		        .put("auto.commit.interval.ms", "1000")			

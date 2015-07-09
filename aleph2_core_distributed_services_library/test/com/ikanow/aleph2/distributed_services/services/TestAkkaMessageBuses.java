@@ -121,7 +121,10 @@ public class TestAkkaMessageBuses {
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
-				BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class);
+				BeanTemplateUtils.clone(
+						BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class))
+				.with("cluster_name", "testRemoteBroadcast")
+				.done();
 		
 		assertEquals(_connect_string, bean.zookeeper_connection());
 		
@@ -141,6 +144,7 @@ public class TestAkkaMessageBuses {
 		
 	@Test
 	public void testRemoteBroadcast() throws IOException {
+		_logger.info("Start testRemoteBroadcast");
 		
 		// Launch a thread to send me messages
 		
@@ -157,12 +161,14 @@ public class TestAkkaMessageBuses {
 		
 		// Wait for the process to send its messages
 		
+		_logger.info("Started process, waiting for completion");
 		int waiting = 0;
 		final int MAX_WAIT = 20;
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
 			try { Thread.sleep(1000); } catch (Exception e) {}
 		}
 		if (px.isAlive()) {
+			_logger.info("Process still alive, destry and fall through to fail");
 			px.destroyForcibly();			
 		}
 		if (waiting >= MAX_WAIT) {
@@ -185,8 +191,10 @@ public class TestAkkaMessageBuses {
 	
 	public static void main(String args[]) throws Exception {
 		if (1 != args.length) {
+			_logger.error("Process command line mismatchL " + args);
 			System.exit(-3);			
 		}
+		_logger.info("Started remote process");
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, args[0]);
 		
@@ -199,19 +207,23 @@ public class TestAkkaMessageBuses {
 		ICoreDistributedServices core_distributed_services = new CoreDistributedServices(bean);
 
 		Cluster.get(core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
+			_logger.info("Remote process joined cluster");
 			core_distributed_services.getAkkaSystem().actorOf(Props.create(Subscriber.class), "subscriber2");
 
 			// Wait for the cluster to become synchronized
 			try { Thread.sleep(5000L); } catch (Exception e) {};
+			_logger.info("Cluster synchronized");
 			
 			ActorRef publisher = core_distributed_services.getAkkaSystem().actorOf(Props.create(Publisher.class), "publisher");
 			// after a while the subscriptions are replicated
 			for (int i = 0; i < MESSAGES_TO_SEND; ++i) {
 				publisher.tell("hello", null);
 			}
+			_logger.info("Finished sending messages");
 		});
 		
 		try { Thread.sleep(10000); } catch (Exception e) {}
+		_logger.info("Remote process about to exit");
 		
 		System.exit(0);			
 	}

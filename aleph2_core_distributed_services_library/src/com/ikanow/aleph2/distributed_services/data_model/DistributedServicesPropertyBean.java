@@ -15,6 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.data_model;
 
+import java.util.Collections;
+import java.util.Map;
+
 
 /** Holds configuration information relating to the Core Distrubuted Services
  * @author acp
@@ -29,16 +32,18 @@ public class DistributedServicesPropertyBean {
 	public static final String APPLICATION_NAME = "CoreDistributedServices.application_name";
 	public static final String __DEFAULT_ZOOKEEPER_CONNECTION = "localhost:2181";
 	public static final String __DEFAULT_BROKER_LIST = "localhost:6667";	 
+	public static final String __DEFAULT_CLUSTER_NAME = "aleph2";	 
 	
 	public static final String ZOOKEEPER_APPLICATION_LOCK = "/app/aleph2/locks/zookeeper";
 	
 	/** User c'tor
 	 * @param zookeeper_connection
 	 */
-	protected DistributedServicesPropertyBean(final String zookeeper_connection, final String broker_list, final String application_name) {
+	protected DistributedServicesPropertyBean(final String zookeeper_connection, final String broker_list, final String application_name, final Map<String, Integer> application_port) {
 		this.zookeeper_connection = zookeeper_connection;
 		this.broker_list = broker_list;
 		this.application_name = application_name;
+		this.application_port = application_port;
 	}
 
 	/** Serializer c'tor
@@ -63,4 +68,17 @@ public class DistributedServicesPropertyBean {
 	public String application_name() { return application_name; }
 	
 	private String application_name;
+	
+	/** A map of application names vs fixed ports for the akka cluster
+	 * @return immutable copy of map
+	 */
+	public Map<String, Integer> application_port() { return null != application_port ? Collections.unmodifiableMap(application_port) : null; }
+	
+	public Map<String, Integer> application_port;
+	
+	/** Allows users to overwrite the default cluster name from "aleph2" (note not all services - eg ZK) have the concept of a cluster
+	 * @return
+	 */
+	public String cluster_name() { return cluster_name; }
+	private String cluster_name;
 }
