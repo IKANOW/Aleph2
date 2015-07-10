@@ -310,6 +310,8 @@ public class StormControllerUtil {
 				.replaceAll("\\.", "_")
 				.replaceAll("/", "-")
 				.replaceAll(":", "=")
-				.replaceAll("\\\\", "+");
-	}
+				.replaceAll("\\\\", "+")
+				.replaceAll("__+", "_")
+				.replace(";", "__");
+	}	
 }
