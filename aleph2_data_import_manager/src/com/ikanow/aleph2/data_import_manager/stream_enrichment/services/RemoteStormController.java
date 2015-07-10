@@ -125,8 +125,11 @@ public class RemoteStormController implements IStormController  {
 	public CompletableFuture<BasicMessageBean> stopJob(String job_name) {
 		logger.info("Stopping job: " + job_name);
 		CompletableFuture<BasicMessageBean> future = new CompletableFuture<BasicMessageBean>();
+		
 		try {
-			client.killTopology(getJobTopologySummaryFromJobPrefix(job_name).get_name());
+			String actual_job_name = getJobTopologySummaryFromJobPrefix(job_name).get_name();
+			if ( actual_job_name != null ) 
+				client.killTopology(actual_job_name);				
 		} catch (Exception ex) {
 			//let die for now, usually happens when top doesn't exist
 			logger.info( ErrorUtils.getLongForm("Error stopping job: " + job_name + "  this is typical with storm becuase the job may not exist that we try to kill anyways {0}", ex));
@@ -166,9 +169,12 @@ public class RemoteStormController implements IStormController  {
 			 TopologySummary summary = iter.next();
 			 //WARNING: this just matches on prefix (because we don't know the unique jobid attached to the end of the job_name anymore)
 			 //this means you can false positive if you have 2 jobs one a prefix of the other e.g. job_a and job_a_1
-			 if ( summary.get_name().startsWith(job_prefix));
-			 	return summary;
+			 if ( summary.get_name().startsWith(job_prefix)) {
+				 logger.info("found a matching job with name: " + summary);
+				 return summary;
+			 }
 		 }	
+		 logger.info("did not find existing job with prefix");
 		 return null;
 	}
 }
