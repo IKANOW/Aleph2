@@ -108,7 +108,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender()), m.bucket().full_name());
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
