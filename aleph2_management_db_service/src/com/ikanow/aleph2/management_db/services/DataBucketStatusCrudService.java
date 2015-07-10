@@ -590,8 +590,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 												new HashSet<String>(Arrays.asList(source)));	
 									});
 							
-						return MgmtCrudUtils.handlePossibleEmptyNodeAffinity(
-								bucket.get(), suspended_predicate.test(status_bean), management_results, underlying_data_bucket_status_db);
+						return MgmtCrudUtils.handleUpdatingStatus(
+								bucket.get(), status_bean, suspended_predicate.test(status_bean), management_results, underlying_data_bucket_status_db);
 					}
 				});
 	}
