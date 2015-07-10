@@ -82,6 +82,7 @@ public class MgmtCrudUtils {
 			)
 	{		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				//TODO: needs to use choose actor if (multi-node==false AND) node affinity == null or empty, even though it's an update
 				BucketActionSupervisor.askDistributionActor(
 						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)mgmt_operation, 

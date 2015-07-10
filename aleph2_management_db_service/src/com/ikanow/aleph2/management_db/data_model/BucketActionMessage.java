@@ -28,23 +28,23 @@ import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapp
  * @author acp
  */
 public class BucketActionMessage implements IJsonSerializable {
+	protected BucketActionMessage() {} // (for bean template utils)
 	private BucketActionMessage(final DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
 	private BucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) { 
 		this.bucket = bucket; 		
 		this.handling_clients = handling_clients;
 	}
 	public Set<String> handling_clients() { return handling_clients; }
-	private final Set<String> handling_clients;
+	private Set<String> handling_clients;
 	public DataBucketBean bucket() { return bucket; };
-	private final DataBucketBean bucket;
+	private DataBucketBean bucket;
 	
 	
 	/** An internal class used to wrap event bus publications
 	 * @author acp
 	 */
 	public static class BucketActionEventBusWrapper implements IBroadcastEventBusWrapper<BucketActionMessage> {
-		@SuppressWarnings("unused")
-		private BucketActionEventBusWrapper() { }
+		protected BucketActionEventBusWrapper() { }
 		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
 		 * @param sender - the sender of the message
 		 * @param message - the message to be wrapped
@@ -66,7 +66,7 @@ public class BucketActionMessage implements IJsonSerializable {
 	 * @author acp
 	 */
 	public static class BucketActionOfferMessage extends BucketActionMessage {
-		private BucketActionOfferMessage() { super(null, null); }
+		protected BucketActionOfferMessage() { super(null, null); }
 		/** User c'tor for creating a message to see which nodes can handle the given bucket
 		 * @param bucket - the bucket with an outstanding operation to apply
 		 */
@@ -79,7 +79,7 @@ public class BucketActionMessage implements IJsonSerializable {
 	 * @author acp
 	 */
 	public static class NewBucketActionMessage extends BucketActionMessage {
-		private NewBucketActionMessage() { super(null, null); }
+		protected NewBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to create a bucket
 		 * @param bucket - the bucket to create
 		 * @param is_suspended - whether the initial state is suspended
@@ -96,7 +96,7 @@ public class BucketActionMessage implements IJsonSerializable {
 	 * @author acp
 	 */
 	public static class UpdateBucketActionMessage extends BucketActionMessage {
-		private UpdateBucketActionMessage() { super(null, null); }
+		protected UpdateBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to update a bucket
 		 * @param new_bucket - the updated bucket
 		 * @param old_bucket - the old bucket
@@ -120,7 +120,7 @@ public class BucketActionMessage implements IJsonSerializable {
 	 * @author acp
 	 */
 	public static class UpdateBucketStateActionMessage extends BucketActionMessage {
-		private UpdateBucketStateActionMessage() { super(null, null); }
+		protected UpdateBucketStateActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to update a bucket's state
 		 * @param bucket - the bucket whose state is being changed
 		 * @param is_suspended - the suspension state
@@ -140,7 +140,7 @@ public class BucketActionMessage implements IJsonSerializable {
 	 * @author acp
 	 */
 	public static class DeleteBucketActionMessage extends BucketActionMessage {
-		private DeleteBucketActionMessage() { super(null, null); }
+		protected DeleteBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to delete a bucket
 		 * @param bucket - the bucket to delete
 		 * @param handling_clients - the nodes handling this bucket

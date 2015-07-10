@@ -151,7 +151,11 @@ public class BucketActionSupervisor extends UntypedActor {
 		else {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
 				if (is_streaming) { // (streaming + ??)
-					final RequestMessage m = new RequestMessage(BucketActionChooseActor.class, message, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
+					final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
+													BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
+													ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
+						// (note that I'm stripping the node_affinity for stream enrichment messages, they always get distributed across available nodes)
+					
 					return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
 							getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
 								.thenApply(stream -> {

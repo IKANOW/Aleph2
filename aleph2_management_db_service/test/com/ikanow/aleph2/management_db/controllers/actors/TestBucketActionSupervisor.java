@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,6 +37,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
+import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
@@ -45,6 +47,7 @@ import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.UpdateBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
@@ -88,20 +91,29 @@ public class TestBucketActionSupervisor {
 				_logger.info("Accept OFFER from: " + uuid);
 				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
 			}
+			else if (arg0 instanceof BucketActionMessage) {
+				final BucketActionMessage m = (BucketActionMessage) arg0;
+				if (null == m.handling_clients() || m.handling_clients().isEmpty() || m.handling_clients().contains(uuid)) {
+					_logger.info("Accept MESSAGE from: " + uuid);
+					this.sender().tell(
+							new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+									new BasicMessageBean(
+											new Date(),
+											true,
+											uuid + "replaceme", // (this gets replaced by the bucket)
+											arg0.getClass().getSimpleName(),
+											null,
+											"handled",
+											null									
+											)),
+							this.self());
+				}
+				else {
+					_logger.warn("Ignored message for someone else: " + uuid + " vs " + m.handling_clients().stream().collect(Collectors.joining()));
+				}
+			}
 			else {
-				_logger.info("Accept MESSAGE from: " + uuid);
-				this.sender().tell(
-						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
-								new BasicMessageBean(
-										new Date(),
-										true,
-										uuid + "replaceme", // (this gets replaced by the bucket)
-										arg0.getClass().getSimpleName(),
-										null,
-										"handled",
-										null									
-										)),
-						this.self());
+				_logger.error("Unrecognized message: " + arg0.getClass().toString());
 			}
 		}		
 	}
@@ -472,7 +484,12 @@ public class TestBucketActionSupervisor {
 		
 		// Do the test
 		
-		NewBucketActionMessage test_message = new NewBucketActionMessage(bucket, false);
+		// THIS WILL ALSO CHECK THAT THE NODE AFFINITY IS STRIPPED
+		
+		UpdateBucketActionMessage test_message = new UpdateBucketActionMessage(
+				bucket, false, bucket, ImmutableSet.<String>builder().add(UuidUtils.get().getRandomUuid()).build());
+		// (if the stream handler didn't strip the node affinity then it wouldn't get sent anywhere)		
+
 		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
 		
 		final long before_time = new Date().getTime();
