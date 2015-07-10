@@ -30,7 +30,7 @@ public class TestDataBucketStatusBean {
 		assertNotNull(bean.quarantined_until());
 		assertEquals(bean.node_affinity(), Arrays.asList("host"));
 		assertEquals(true, bean.confirmed_suspended());
-		assertEquals(true, bean.confirmed_multi_node_enabled());
+		assertEquals(false, bean.confirmed_multi_node_enabled());
 		assertEquals(MasterEnrichmentType.batch, bean.confirmed_master_enrichment_type());
 		assertTrue(bean.num_objects().equals(0L));
 		assertEquals(bean.last_harvest_status_messages().get("a").command(), ImmutableMap.<String, BasicMessageBean>builder().put("a", BeanTemplateUtils.build(BasicMessageBean.class).done().get()).put("b", BeanTemplateUtils.build(BasicMessageBean.class).done().get()).build().get("a").command());
