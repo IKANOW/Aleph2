@@ -1043,6 +1043,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, false) 
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
@@ -1082,6 +1083,11 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+		
+		// Check the "Confirmed" bucket fields match the bucket now
+		assertEquals(false, status_after.confirmed_suspended());
+		assertEquals(false, status_after.confirmed_multi_node_enabled());
+		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());
 		
 		// Since it worked, let's quickly try adding again with same full name but different id and check it fails...
 		
@@ -1131,6 +1137,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
 				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -1169,6 +1176,11 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+		
+		// Check the "Confirmed" bucket fields match the bucket now
+		assertEquals(false, status_after.confirmed_suspended());
+		assertEquals(true, status_after.confirmed_multi_node_enabled());
+		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());		
 	}
 
 	@Test
@@ -1271,6 +1283,7 @@ public class TestDataBucketCrudService_Create {
 				fail("Should have thrown exception");
 			}
 			catch (Exception e) {
+				//TODO: need to check this is a dup key error and not something else...
 				assertTrue("Dup key error", e.getCause() instanceof MongoException);
 			}
 		
@@ -1289,20 +1302,58 @@ public class TestDataBucketCrudService_Create {
 		
 		// Third attempt, succeed with different update
 		final DataBucketBean mod_bucket3 = BeanTemplateUtils.clone(bucket)
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 				.with(DataBucketBean::display_name, "Something else")
 				.done();
-			
+
+		// Actually first time, fail because changing enrichment type and bucket active
 		{
+			final ManagementFuture<Supplier<Object>> update_future2 = _bucket_crud.storeObject(mod_bucket3, true);
+			
+			try {
+				assertEquals("Should get 1 error: " + update_future2.getManagementResults().get().stream().map(m -> m.message()).collect(Collectors.joining()), 
+						1, update_future2.getManagementResults().get().size()); // (1 error)
+				update_future2.get();
+				fail("Should have thrown exception");
+			}
+			catch (Exception e) {
+				assertTrue("Validation error", e.getCause() instanceof RuntimeException);
+				assertTrue("compains about master_enrichment_type: " + e.getMessage(), 
+						update_future2.getManagementResults().get().iterator().next().message().contains("master_enrichment_type"));
+			}			
+		}
+		
+		// THen suspend and succeed
+		{
+			assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+					CrudUtils.update(DataBucketStatusBean.class).set("suspended", true)
+																.set("confirmed_suspended", true)
+					).get());
+			
 			final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
 			
-			assertEquals("id1", update_future3.get().get());
-	
-			final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
-			assertEquals("Something else", bucket3.display_name());
-			
-			//(just quickly check node affinity didn't change)
-			final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
-			assertEquals(2, status_after.node_affinity().size());
+			try {
+				assertEquals("id1", update_future3.get().get());
+		
+				final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
+				assertEquals("Something else", bucket3.display_name());
+				
+				//(wait for completion)
+				update_future3.getManagementResults().get();
+				
+				//(just quickly check node affinity didn't change)
+				final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
+				assertEquals(2, status_after.node_affinity().size());
+				
+				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
+				assertEquals(true, status_after.confirmed_suspended());
+				assertEquals(true, status_after.confirmed_multi_node_enabled());
+				assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());		
+			}
+			catch (Exception e) {
+				update_future3.getManagementResults().get().stream().map(msg -> msg.command()).collect(Collectors.joining());
+				throw e; // erorr out
+			}
 		}		
 		// Check that will set the affinity if it's null though:
 		{
@@ -1318,30 +1369,78 @@ public class TestDataBucketCrudService_Create {
 			final DataBucketBean bucket4 = _bucket_crud.getObjectById("id1").get().get();
 			assertEquals("Something else", bucket4.display_name());
 			
+			//(wait for completion)
+			update_future4.getManagementResults().get();			
+			
 			//(Check that node affinity was set)
 			update_future4.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 			final DataBucketStatusBean status_after3 = _bucket_status_crud.getObjectById("id1").get().get();
 			assertEquals(2, status_after3.node_affinity().size());
+			
+			// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
+			assertEquals(true, status_after3.confirmed_suspended());
+			assertEquals(true, status_after3.confirmed_multi_node_enabled());
+			assertEquals(MasterEnrichmentType.none, status_after3.confirmed_master_enrichment_type());					
 		}		
+		
 		// OK check that if moving to single node then it resets the affinity
 		{
 			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
 					.with(DataBucketBean::display_name, "Something else")
+					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 					.with(DataBucketBean::multi_node_enabled, false)
 					.done();
 			
-			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
-			
-			assertEquals("id1", update_future5.get().get());
-	
-			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
-			assertEquals("Something else", bucket5.display_name());
-			
-			//(Check that node affinity was set to 1)
-			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
-			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
-			assertEquals(1, status_after4.node_affinity().size());
-		}		
+			//ACTIVE: FAIL
+			{
+				assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+						CrudUtils.update(DataBucketStatusBean.class).set("suspended", false)
+																	.set("confirmed_suspended", false)
+						).get());
+				
+				final ManagementFuture<Supplier<Object>> update_future2 = _bucket_crud.storeObject(mod_bucket4, true);
+				
+				try {
+					assertEquals("Should get 1 error: " + update_future2.getManagementResults().get().stream().map(m -> m.message()).collect(Collectors.joining()), 
+							1, update_future2.getManagementResults().get().size()); // (1 error)
+					update_future2.get();
+					fail("Should have thrown exception");
+				}
+				catch (Exception e) {
+					assertTrue("Validation error", e.getCause() instanceof RuntimeException);
+					assertTrue("compains about multi_node_enabled: " + e.getMessage(), 
+							update_future2.getManagementResults().get().iterator().next().message().contains("multi_node_enabled"));
+				}			
+			}
+			//SUSPENDED: SUCCESS
+			{
+				assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+						CrudUtils.update(DataBucketStatusBean.class).set("suspended", true)
+																	.set("confirmed_suspended", true)
+						).get());
+				
+				final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
+				
+				assertEquals("id1", update_future5.get().get());
+		
+				final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+				assertEquals("Something else", bucket5.display_name());
+				
+				//(wait for completion)
+				update_future5.getManagementResults().get();			
+								
+				//(Check that node affinity was set to 1)
+				update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+				final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+				assertEquals(1, status_after4.node_affinity().size());
+				
+				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
+				assertEquals(true, status_after4.confirmed_suspended());
+				assertEquals(false, status_after4.confirmed_multi_node_enabled());
+				assertEquals(MasterEnrichmentType.none, status_after4.confirmed_master_enrichment_type());					
+				
+			}		
+		}
 		// And check that moves back to 2 when set back to multi node
 		{
 			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)

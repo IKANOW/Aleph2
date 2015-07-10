@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -120,7 +121,9 @@ public class MgmtCrudUtils {
 	 * @param status_store
 	 * @return
 	 */
-	static public CompletableFuture<Collection<BasicMessageBean>> handlePossibleEmptyNodeAffinity(final DataBucketBean bucket,
+	static public CompletableFuture<Collection<BasicMessageBean>> handleUpdatingStatus(
+			final DataBucketBean bucket,
+			final DataBucketStatusBean status,
 			final boolean is_suspended,
 			final CompletableFuture<Collection<BasicMessageBean>> return_from_handlers,
 			final ICrudService<DataBucketStatusBean> status_store
@@ -131,7 +134,9 @@ public class MgmtCrudUtils {
 				if (!is_suspended) { // suspend it
 					try {
 						status_store.updateObjectById(bucket._id(),
-								CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::suspended, true)
+								CrudUtils.update(DataBucketStatusBean.class)
+									.set(DataBucketStatusBean::suspended, true)
+									.set(DataBucketStatusBean::confirmed_suspended, true)
 								).get();
 					}
 					catch (Exception e) {
@@ -145,8 +150,44 @@ public class MgmtCrudUtils {
 						ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, bucket.full_name()))
 						);
 			}
-			else {
+			else if (results.stream().allMatch(m -> m.success())) { // A couple of other checks when no errors occur:
+				Optional.of(Tuples._2T(false, CrudUtils.update(DataBucketStatusBean.class)))
+						// If we weren't confirmed suspended before, then change that
+						.map(change_update -> {
+							return (Boolean.valueOf(is_suspended) != status.confirmed_suspended()) 
+									? Tuples._2T(true, change_update._2().set(DataBucketStatusBean::confirmed_suspended, is_suspended))
+									: Tuples._2T(change_update._1(), change_update._2());
+						})
+						// If we weren't confirmed multi-node before, then change that
+						.map(change_update -> {
+							return (bucket.multi_node_enabled() != status.confirmed_multi_node_enabled()) 
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, bucket.multi_node_enabled()))
+									: Tuples._2T(change_update._1(), change_update._2());
+						})
+						// Confirm master enrichment type, if changed
+						.map(change_update -> {
+							return (bucket.master_enrichment_type() != status.confirmed_master_enrichment_type()) 
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_master_enrichment_type, bucket.master_enrichment_type()))
+									: Tuples._2T(change_update._1(), change_update._2());
+						})
+						.ifPresent(change_update -> {
+							if (change_update._1()) {
+								try {
+									status_store.updateObjectById(bucket._id(), change_update._2()).get();
+								}
+								catch (Exception e) {
+									LinkedList<BasicMessageBean> new_results = new LinkedList<>();
+									new_results.addAll(results);
+									new_results.add(createValidationError(ErrorUtils.getLongForm("{1}: {0}", e, bucket.full_name())));
+								} 
+								// (wait until complete)								
+							}
+						})
+						;
 				return results;
+			}
+			else {
+				return results;				
 			}
 		});
 	}
@@ -174,7 +215,7 @@ public class MgmtCrudUtils {
 		return mgmt_results.thenApply(list -> {
 			return list.stream()
 					.filter(msg -> msg.success())
-					.filter(msg -> !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
+					.filter(msg -> (null == msg.command()) || !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
 					.map(msg -> msg.source())
 					.collect(Collectors.toSet());
 		});

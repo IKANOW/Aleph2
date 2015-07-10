@@ -207,6 +207,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
 							Arrays.asList(helper.field(DataBucketStatusBean::_id), 
 											helper.field(DataBucketStatusBean::node_affinity), 
+											helper.field(DataBucketStatusBean::confirmed_master_enrichment_type), 
+											helper.field(DataBucketStatusBean::confirmed_suspended), 
+											helper.field(DataBucketStatusBean::confirmed_multi_node_enabled), 											
 											helper.field(DataBucketStatusBean::suspended), 
 											helper.field(DataBucketStatusBean::quarantined_until)), true);					
 					
@@ -216,6 +219,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 								ErrorUtils.get(ManagementDbErrorUtils.BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS, new_object.full_name()))),
 						CompletableFuture.completedFuture(Collections.emptyList())
 						);				
+			}
+			
+			// Some fields like multi-node, you can only change if the bucket status is set to suspended, to make
+			// the control logic easy
+			old_bucket.ifPresent(ob -> {
+				validation_info.addAll(checkForInactiveOnlyUpdates(new_object, ob, corresponding_status.join().get()));
+				// (corresponding_status present and completed because of above check) 
+			});
+			if (!validation_info.isEmpty() && validation_info.stream().anyMatch(m -> !m.success())) {
+				return FutureUtils.createManagementFuture(
+						FutureUtils.returnError(new RuntimeException("Bucket not valid, see management channels")),
+						CompletableFuture.completedFuture(validation_info)
+						);
 			}
 			
 			// Create the directories
@@ -242,7 +258,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// If we got no responses then leave the object but suspend it
 					
 			return FutureUtils.createManagementFuture(ret_val,
-					MgmtCrudUtils.handlePossibleEmptyNodeAffinity(new_object, is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
+					MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
 										.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
 		}
 		catch (Exception e) {
@@ -763,6 +779,36 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		return errors;
 	}
 	
+	/** Checks active buckets for changes that will cause problems unless the bucket is suspended first (currently: only multi_node_enabled)
+	 * @param new_bucket - the proposed new bucket
+	 * @param old_bucket - the existing bucket (note in that V1/V2 sync scenarios, may not reflect changes)
+	 * @param corresponding_status - the existing status (note that in V1/V2 sync scenarios may have been changed at the same time as the bucket)
+	 * @return a collection of errors and warnings
+	 */
+	protected static Collection<BasicMessageBean> checkForInactiveOnlyUpdates(
+			final DataBucketBean new_bucket,
+			final DataBucketBean old_bucket,
+			final DataBucketStatusBean corresponding_status)
+	{
+		final LinkedList<BasicMessageBean> errors = new LinkedList<>();		
+		if (!Optional.ofNullable(corresponding_status.confirmed_suspended())
+						.orElse(Optional.ofNullable(corresponding_status.suspended())
+						.orElse(false)))
+		{
+			if (new_bucket.multi_node_enabled() != corresponding_status.confirmed_multi_node_enabled()) {
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
+								new_bucket.full_name(), "multi_node_enabled")));				
+			}
+			if (new_bucket.master_enrichment_type() != corresponding_status.confirmed_master_enrichment_type()) {
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
+								new_bucket.full_name(), "master_enrichment_type")));				
+			}
+		}
+		return errors;
+	}
+
 	/** Validates that all enabled schema point to existing services and are well formed
 	 * @param bucket
 	 * @param service_context

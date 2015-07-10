@@ -43,6 +43,9 @@ public class DataBucketStatusBean implements Serializable {
 			final Date quarantined_until,
 			final Long num_objects,
 			final List<String> node_affinity,
+			final Boolean confirmed_suspended,
+			final Boolean confirmed_multi_node_enabled,
+			final DataBucketBean.MasterEnrichmentType confirmed_master_enrichment_type,
 			final Map<String, BasicMessageBean> last_harvest_status_messages,
 			final Map<String, BasicMessageBean> last_enrichment_status_messages,
 			final Map<String, BasicMessageBean> last_storage_status_messages) {
@@ -53,6 +56,9 @@ public class DataBucketStatusBean implements Serializable {
 		this.quarantined_until = quarantined_until;
 		this.num_objects = num_objects;
 		this.node_affinity = node_affinity;
+		this.confirmed_suspended = confirmed_suspended;
+		this.confirmed_multi_node_enabled = confirmed_multi_node_enabled;
+		this.confirmed_master_enrichment_type = confirmed_master_enrichment_type;
 		this.last_harvest_status_messages = last_harvest_status_messages;
 		this.last_enrichment_status_messages = last_enrichment_status_messages;
 		this.last_storage_status_messages = last_storage_status_messages;
@@ -100,6 +106,21 @@ public class DataBucketStatusBean implements Serializable {
 		return node_affinity == null ? null : Collections.unmodifiableList(node_affinity);
 	}
 	
+	/** This field is guaranteed to not exist or reflect the actual status of the bucket (V1/V2 sync workaround)
+	 * @return whether the bucket is known to be suspended
+	 */
+	public Boolean confirmed_suspended() { return confirmed_suspended; }
+	
+	/** This field is guaranteed to not exist or reflect the actual status of the bucket (V1/V2 sync workaround)
+	 * @return the known current value of the bucket's multi_node_enabled field
+	 */
+	public Boolean confirmed_multi_node_enabled() { return confirmed_multi_node_enabled; }
+		
+	/** This field is guaranteed to not exist or reflect the actual status of the bucket (V1/V2 sync workaround)
+	 * @return the known current value of the bucket's master_enrichment_type
+	 */
+	public DataBucketBean.MasterEnrichmentType confirmed_master_enrichment_type() { return confirmed_master_enrichment_type; }	
+	
 	/** Each time a host performs a harvest activity (either -internal- technology or -external- module) it can update this date/status 
 	 * @return a map of hosts vs the last time they harvested for this bucket 
 	 */
@@ -125,8 +146,12 @@ public class DataBucketStatusBean implements Serializable {
 	private Date quarantined_until;
 	
 	private Long num_objects;
-	
+
+	// Store some state relating to the bucket (apart from node affinity, mainly to handle V1/V2 sync service) 
 	private List<String> node_affinity;
+	private Boolean confirmed_suspended;
+	private Boolean confirmed_multi_node_enabled;
+	private DataBucketBean.MasterEnrichmentType confirmed_master_enrichment_type;
 	
 	private Map<String, BasicMessageBean> last_harvest_status_messages;
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;
