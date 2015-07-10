@@ -17,6 +17,7 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import java.util.Optional;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
@@ -30,7 +31,10 @@ public class JsonSerializerService extends JSerializer {
 	protected final ObjectMapper _mapper;
 	
 	public JsonSerializerService() {
-		_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+		
+		// Akka appears to append additional fields somehow, so tell it to allow to forget them
+		_mapper = BeanTemplateUtils.configureMapper(Optional.empty())
+					.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 	}
 	
 	@Override

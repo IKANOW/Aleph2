@@ -157,7 +157,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    			})
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2}", this.self(), m.getClass().getSimpleName(), this.sender()));
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket={3}", this.self(), m.getClass().getSimpleName(), this.sender()), m.bucket().full_name());
 		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -178,9 +178,18 @@ public class DataBucketChangeActor extends AbstractActor {
 								
 	    					})
 	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
+	    						// Some information logging:
+	    						Patterns.match(reply).andAct()
+	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+	    									m.getClass(), msg.reply().success())))
+	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={1}", m.getClass(), m.bucket().full_name(), msg.getClass())));
+	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
 	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
+	    						// Some information logging:
+	    						_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
+	    						
 			    				final BasicMessageBean error_bean = 
 			    						StreamErrorUtils.buildErrorMessage(hostname, m,
 			    								ErrorUtils.getLongForm(StreamErrorUtils.STREAM_UNKNOWN_ERROR, e, m.bucket().full_name())
@@ -222,20 +231,22 @@ public class DataBucketChangeActor extends AbstractActor {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
 					},		
 					//NORMAL grab enrichment topology
-					enrichment_toplogy -> {					
+					enrichment_topology -> {					
 						context.setBucket(bucket);
-						context.setUserTopologyEntryPoint(err_or_user_topology.success().getClass().getName());
+						context.setUserTopologyEntryPoint(enrichment_topology.getClass().getName());
+
+						_logger.info("Set active class=" + enrichment_topology.getClass() + " message=" + m.getClass() + " bucket=" + bucket.full_name());						
 						
 						return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 								.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
 									return StormControllerUtil.stopJob( storm_controller, bucket);
 								})
 								.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-									return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+									return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
 								})
 								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
 									if ( msg.is_enabled() )
-										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
 									else
 										return StormControllerUtil.stopJob(storm_controller, bucket);
 								})
@@ -243,7 +254,7 @@ public class DataBucketChangeActor extends AbstractActor {
 									if ( msg.is_suspended() )
 										return StormControllerUtil.stopJob(storm_controller, bucket);
 									else
-										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
 								})
 								.otherwise(msg -> {
 									return CompletableFuture.completedFuture(

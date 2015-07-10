@@ -170,7 +170,8 @@ public class BucketActionChooseActor extends AbstractActor {
 	
 	protected void abortAndRetry(boolean allow_retries) {
 		
-		_logger.info("actor_id=" + this.self().toString()
+		_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+				+ "; actor_id=" + this.self().toString()
 				+ "; abort_tries=" + _state.tries + "; allow_retries=" + allow_retries 
 				);
 		
@@ -195,7 +196,8 @@ public class BucketActionChooseActor extends AbstractActor {
 			final Random r = new Random();
 			_state.targeted_source = _state.reply_list.get(r.nextInt(_state.reply_list.size()));
 			
-			_logger.info("actor_id=" + this.self().toString()
+			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+					+ "; actor_id=" + this.self().toString()
 					+ "; picking_actor=" + _state.targeted_source._2() 
 					+ "; picking_source=" + _state.targeted_source._1() 
 					);
@@ -233,14 +235,16 @@ public class BucketActionChooseActor extends AbstractActor {
 			}
 			catch (NoNodeException e) { 
 				// This is OK
-				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + _zookeeper_path);
+				_logger.info("bucket=" + _state.original_message.get().bucket().full_name() 
+						+ " ;actor_id=" + this.self().toString() + "; zk_path_not_found=" + _zookeeper_path);
 			}
 			
 			// Remove any blacklisted nodes:
 			_state.data_import_manager_set.removeAll(_state.blacklist);
 			
 			//(log)
-			_logger.info("message_id=" + message
+			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+					+ "; message_id=" + message
 					+ "; actor_id=" + this.self().toString()
 					+ "; candidates_found=" + _state.data_import_manager_set.size()
 					+ "; blacklisted=" + _state.blacklist.size()

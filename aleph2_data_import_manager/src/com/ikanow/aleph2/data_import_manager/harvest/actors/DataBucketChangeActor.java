@@ -108,7 +108,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2}", this.self(), m.getClass().getSimpleName(), this.sender()));
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender()), m.bucket().full_name());
 		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -129,10 +129,19 @@ public class DataBucketChangeActor extends AbstractActor {
 								return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
 								
 	    					})
-	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
+	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
+	    						// Some information logging:
+	    						Patterns.match(reply).andAct()
+	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+	    									m.getClass(), msg.reply().success())))
+	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={1}", m.getClass(), m.bucket().full_name(), msg.getClass())));
+	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
 	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
+	    						// Some information logging:
+	    						_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
+	    						
 			    				final BasicMessageBean error_bean = 
 			    						HarvestErrorUtils.buildErrorMessage(hostname, m,
 			    								ErrorUtils.getLongForm(HarvestErrorUtils.HARVEST_UNKNOWN_ERROR, e, m.bucket().full_name())
@@ -227,7 +236,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				,
 				// Normal
 				tech_module -> {
-					_logger.info("Set active classloader to: " + tech_module.getClass().getClassLoader());					
+					_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass() + " bucket=" + bucket.full_name());					
 					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
 					
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()

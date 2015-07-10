@@ -151,7 +151,8 @@ public class BucketActionDistributionActor extends AbstractActor {
 			}
 			catch (NoNodeException e) { 
 				// This is OK
-				_logger.info("actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
+				_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+						+ "; actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
 			}			
 			if (!message.handling_clients().isEmpty()) { // Intersection of: targeted clients and available clients
 				_state.data_import_manager_set.retainAll(message.handling_clients());
@@ -168,7 +169,8 @@ public class BucketActionDistributionActor extends AbstractActor {
 			}
 			
 			//(log)
-			_logger.info("message_id=" + message
+			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+					+ "; message_id=" + message
 					+ "; actor_id=" + this.self().toString()
 					+ "; candidates_found=" + _state.data_import_manager_set.size());
 			
@@ -201,7 +203,8 @@ public class BucketActionDistributionActor extends AbstractActor {
 	}
 	protected void sendReplyAndClose() {
 		//(log)
-		_logger.info("actor_id=" + this.self().toString()
+		_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+				+ "; actor_id=" + this.self().toString()
 				+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size() + "; down=" + _state.down_targeted_clients.size());
 
 		// (can mutate this since we're about to delete the entire object)
