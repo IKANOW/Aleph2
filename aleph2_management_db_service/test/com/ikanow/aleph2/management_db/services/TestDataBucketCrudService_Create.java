@@ -1263,63 +1263,103 @@ public class TestDataBucketCrudService_Create {
 											.done();
 		
 		// First attempt: will fail because not trying to overwrite:
-		
-		final ManagementFuture<Supplier<Object>> update_future = _bucket_crud.storeObject(mod_bucket1);
-		
-		try {
-			update_future.get();
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertTrue("Dup key error", e.getCause() instanceof MongoException);
-		}
+		{
+			final ManagementFuture<Supplier<Object>> update_future = _bucket_crud.storeObject(mod_bucket1);
+			
+			try {
+				update_future.get();
+				fail("Should have thrown exception");
+			}
+			catch (Exception e) {
+				assertTrue("Dup key error", e.getCause() instanceof MongoException);
+			}
 		
 		// Second attempt: fail on validation
-		final ManagementFuture<Supplier<Object>> update_future2 = _bucket_crud.storeObject(mod_bucket1, true);
-		
-		try {
-			assertEquals(2, update_future2.getManagementResults().get().size()); // (2 errors)
-			update_future.get();
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertTrue("Validation error", e.getCause() instanceof RuntimeException);
+			final ManagementFuture<Supplier<Object>> update_future2 = _bucket_crud.storeObject(mod_bucket1, true);
+			
+			try {
+				assertEquals(2, update_future2.getManagementResults().get().size()); // (2 errors)
+				update_future.get();
+				fail("Should have thrown exception");
+			}
+			catch (Exception e) {
+				assertTrue("Validation error", e.getCause() instanceof RuntimeException);
+			}
 		}
 		
 		// Third attempt, succeed with different update
-
 		final DataBucketBean mod_bucket3 = BeanTemplateUtils.clone(bucket)
 				.with(DataBucketBean::display_name, "Something else")
 				.done();
-		
-		final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
-		
-		assertEquals("id1", update_future3.get().get());
-
-		final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
-		assertEquals("Something else", bucket3.display_name());
-		
-		//(just quickly check node affinity didn't change)
-		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
-		assertEquals(2, status_after.node_affinity().size());
-		
+			
+		{
+			final ManagementFuture<Supplier<Object>> update_future3 = _bucket_crud.storeObject(mod_bucket3, true);
+			
+			assertEquals("id1", update_future3.get().get());
+	
+			final DataBucketBean bucket3 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket3.display_name());
+			
+			//(just quickly check node affinity didn't change)
+			final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(2, status_after.node_affinity().size());
+		}		
 		// Check that will set the affinity if it's null though:
-		
-		// (manually remove)
-		assertTrue("Updated", _underlying_bucket_status_crud.updateObjectById("id1", CrudUtils.update(DataBucketStatusBean.class).set("node_affinity", Arrays.asList())).get());		
-		final DataBucketStatusBean status_after2 = _bucket_status_crud.getObjectById("id1").get().get();
-		assertEquals("Really updated!", 0, status_after2.node_affinity().size());
-		
-		final ManagementFuture<Supplier<Object>> update_future4 = _bucket_crud.storeObject(mod_bucket3, true);
-		
-		assertEquals("id1", update_future4.get().get());
-
-		final DataBucketBean bucket4 = _bucket_crud.getObjectById("id1").get().get();
-		assertEquals("Something else", bucket4.display_name());
-		
-		//(Check that node affinity was set)
-		update_future4.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
-		final DataBucketStatusBean status_after3 = _bucket_status_crud.getObjectById("id1").get().get();
-		assertEquals(2, status_after3.node_affinity().size());
+		{
+			// (manually remove)
+			assertTrue("Updated", _underlying_bucket_status_crud.updateObjectById("id1", CrudUtils.update(DataBucketStatusBean.class).set("node_affinity", Arrays.asList())).get());		
+			final DataBucketStatusBean status_after2 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals("Really updated!", 0, status_after2.node_affinity().size());
+			
+			final ManagementFuture<Supplier<Object>> update_future4 = _bucket_crud.storeObject(mod_bucket3, true);
+			
+			assertEquals("id1", update_future4.get().get());
+	
+			final DataBucketBean bucket4 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket4.display_name());
+			
+			//(Check that node affinity was set)
+			update_future4.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after3 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(2, status_after3.node_affinity().size());
+		}		
+		// OK check that if moving to single node then it resets the affinity
+		{
+			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::display_name, "Something else")
+					.with(DataBucketBean::multi_node_enabled, false)
+					.done();
+			
+			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
+			
+			assertEquals("id1", update_future5.get().get());
+	
+			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket5.display_name());
+			
+			//(Check that node affinity was set to 1)
+			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(1, status_after4.node_affinity().size());
+		}		
+		// And check that moves back to 2 when set back to multi node
+		{
+			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::display_name, "Something else")
+					.with(DataBucketBean::multi_node_enabled, true)
+					.done();
+			
+			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
+			
+			assertEquals("id1", update_future5.get().get());
+	
+			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket5.display_name());
+			
+			//(Check that node affinity was set to 1)
+			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(2, status_after4.node_affinity().size());
+		}		
 	}
 }

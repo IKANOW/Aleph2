@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -71,7 +72,6 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
-import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
@@ -450,7 +450,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 												));
 						
 						final CompletableFuture<Collection<BasicMessageBean>> management_results =
-							MgmtCrudUtils.applyRetriableManagementOperation(_actor_context, _bucket_action_retry_store, 
+							MgmtCrudUtils.applyRetriableManagementOperation(to_delete, 
+									_actor_context, _bucket_action_retry_store, 
 									delete_message, source -> {
 										return new BucketActionMessage.DeleteBucketActionMessage(
 												delete_message.bucket(),
@@ -981,18 +982,34 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
+		// First off, a couple of special cases relating to node affinity
+		final boolean multi_node_enabled = Optional.ofNullable(new_object.multi_node_enabled()).orElse(false);
+		final Set<String> node_affinity = Optional.ofNullable(status.node_affinity())
+				.map(na -> {
+					if (multi_node_enabled && (1 == status.node_affinity().size())) {
+						//(this might indicate that we've moved from single node -> multi node
+						return Collections.<String>emptyList();
+					}
+					else if (!multi_node_enabled && (status.node_affinity().size() > 1)) {
+						//(this definitely indicates that we've moved from multi node -> single node)						
+						return Collections.<String>emptyList();
+					}
+					else return na;
+				})
+				.map(na -> na.stream().collect(Collectors.toSet()))
+				.orElse(Collections.emptySet());
+				
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
-				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version,  
-						new HashSet<String>(
-								null == status.node_affinity() ? Collections.emptySet() : status.node_affinity()));
+				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version, node_affinity);
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
-			MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, update_message,
-				source -> new BucketActionMessage.UpdateBucketActionMessage
+			MgmtCrudUtils.applyRetriableManagementOperation(new_object, 
+					actor_context, retry_store, update_message,
+					source -> new BucketActionMessage.UpdateBucketActionMessage
 							(new_object, !status.suspended(), old_version, new HashSet<String>(Arrays.asList(source))));
 		
 		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
-		if (Optionals.ofNullable(status.node_affinity()).isEmpty()) {
+		if (node_affinity.isEmpty()) {
 			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
 			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 		}

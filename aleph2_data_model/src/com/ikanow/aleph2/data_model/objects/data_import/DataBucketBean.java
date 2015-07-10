@@ -118,6 +118,7 @@ public class DataBucketBean implements Serializable {
 	
 	/** Determines whether the harvester associated with this bucket should run on a single node, or multiples nodes
 	 *  - regardless, will only run on nodes meeting the rules specified in node_list_rules()
+	 *  If not set then defaults to single node
 	 * @return whether the harvester associated with this bucket should run on a single node, or multiples nodes
 	 */
 	public Boolean multi_node_enabled() {

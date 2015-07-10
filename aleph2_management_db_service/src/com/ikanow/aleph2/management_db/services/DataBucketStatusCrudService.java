@@ -582,7 +582,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 						// Collect message and handle retries
 						
 						final CompletableFuture<Collection<BasicMessageBean>> management_results =
-							MgmtCrudUtils.applyRetriableManagementOperation(actor_context, retry_store, 
+							MgmtCrudUtils.applyRetriableManagementOperation(bucket.get(), 
+									actor_context, retry_store, 
 									update_message, source -> {
 										return new BucketActionMessage.UpdateBucketStateActionMessage(
 												update_message.bucket(), status_bean.suspended(),

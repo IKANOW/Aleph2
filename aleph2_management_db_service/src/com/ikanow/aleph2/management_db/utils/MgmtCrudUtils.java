@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.utils;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
 
 import scala.Tuple2;
 
@@ -75,18 +75,29 @@ public class MgmtCrudUtils {
 	 * @return
 	 */
 	static public <T extends BucketActionMessage> CompletableFuture<Collection<BasicMessageBean>> applyRetriableManagementOperation(
+			final DataBucketBean bucket, 
 			final ManagementDbActorContext actor_context,
 			final ICrudService<BucketActionRetryMessage> retry_store,
 			final T mgmt_operation,
 			final Function<String, T> clone_lambda_with_source
 			)
 	{		
+		final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
+		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				//TODO: needs to use choose actor if (multi-node==false AND) node affinity == null or empty, even though it's an update
+				!multi_node_enabled && Optional.ofNullable(mgmt_operation.handling_clients()).orElse(Collections.emptySet()).isEmpty()
+				?
+				//(special case: single-node-mode and no node affinity (due to error) => go back to choosing
+				BucketActionSupervisor.askChooseActor(
+						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
+						(BucketActionMessage)mgmt_operation, 
+						Optional.empty())
+				:
 				BucketActionSupervisor.askDistributionActor(
 						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)mgmt_operation, 
-						Optional.empty());
+						Optional.empty())
+				;
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 				f.<Collection<BasicMessageBean>>thenApply(replies -> {
