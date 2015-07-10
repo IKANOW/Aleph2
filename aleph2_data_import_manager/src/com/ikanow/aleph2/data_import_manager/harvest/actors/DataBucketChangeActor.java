@@ -133,8 +133,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	    						// Some information logging:
 	    						Patterns.match(reply).andAct()
 	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-	    									m.getClass(), msg.reply().success())))
-	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={1}", m.getClass(), m.bucket().full_name(), msg.getClass())));
+	    									m.getClass(), m.bucket().full_name(), msg.reply().success())))
+	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass(), m.bucket().full_name(), msg.getClass())));
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
