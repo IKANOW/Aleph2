@@ -206,9 +206,9 @@
   		<version>2.7.1</version>
   	</dependency>
   	<dependency>
-  		<groupId>com.eaio.uuid</groupId>
+  		<groupId>com.github.stephenc.eaio-uuid</groupId>
   		<artifactId>uuid</artifactId>
-  		<version>3.2</version>
+  		<version>3.4.0</version>
   	</dependency>
   	<!-- 
   	<dependency>
