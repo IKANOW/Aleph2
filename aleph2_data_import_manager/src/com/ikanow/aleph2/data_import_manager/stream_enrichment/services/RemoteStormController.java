@@ -29,6 +29,7 @@ import org.json.simple.JSONValue;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 
 import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
@@ -47,7 +48,7 @@ import backtype.storm.utils.NimbusClient;
  */
 public class RemoteStormController implements IStormController  {
 	private static final Logger logger = LogManager.getLogger();
-	private Map<String, Object> remote_config = null;
+	final private Map<String, Object> remote_config;
 	private Client client;
 	
 	/**
@@ -87,7 +88,7 @@ public class RemoteStormController implements IStormController  {
 		remote_config.put(Config.NIMBUS_HOST, nimbus_host);
 		remote_config.put(Config.NIMBUS_THRIFT_PORT, nimbus_thrift_port);
 		remote_config.put(Config.STORM_THRIFT_TRANSPORT_PLUGIN, storm_thrift_transport_plugin);	
-		remote_config.put(Config.STORM_META_SERIALIZATION_DELEGATE, "todo"); //TODO need to find the correct file for this, throws an error in the logs currently and loads a default
+		remote_config.put(Config.STORM_META_SERIALIZATION_DELEGATE, "todo"); //TODO (ALEPH-10) need to find the correct file for this, throws an error in the logs currently and loads a default
 		logger.info("Connecting to remote storm: " + remote_config.toString() );
 		client = NimbusClient.getConfiguredClient(remote_config).getClient();
 	}
@@ -107,7 +108,9 @@ public class RemoteStormController implements IStormController  {
 		String json_conf = JSONValue.toJSONString(remote_config);
 		logger.info("submitting topology");
 		try {
-			client.submitTopology(job_name, remote_jar_location, json_conf, topology);
+			synchronized (client) {
+				client.submitTopology(job_name, remote_jar_location, json_conf, topology);
+			}
 		} catch (Exception ex ) {
 			logger.info( ErrorUtils.getLongForm("Error submitting job: " + job_name + ": {0}", ex));
 			return FutureUtils.returnError(ex);
@@ -128,8 +131,11 @@ public class RemoteStormController implements IStormController  {
 		
 		try {
 			String actual_job_name = getJobTopologySummaryFromJobPrefix(job_name).get_name();
-			if ( actual_job_name != null ) 
-				client.killTopology(actual_job_name);				
+			if ( actual_job_name != null ) { 
+				synchronized (client) {
+					client.killTopology(actual_job_name);
+				}
+			}
 		} catch (Exception ex) {
 			//let die for now, usually happens when top doesn't exist
 			logger.info( ErrorUtils.getLongForm("Error stopping job: " + job_name + "  this is typical with storm because the job may not exist that we try to kill {0}", ex));
@@ -150,8 +156,11 @@ public class RemoteStormController implements IStormController  {
 		logger.info("Looking for stats for job: " + job_name);		
 		String job_id = getJobTopologySummaryFromJobPrefix(job_name).get_id();
 		logger.info("Looking for stats with id: " + job_id);
-		if ( job_id != null )
-			return client.getTopologyInfo(job_id);		
+		if ( job_id != null ) {
+			synchronized (client) {
+				return client.getTopologyInfo(job_id);
+			}
+		}
 		return null;
 	}
 	
@@ -163,7 +172,11 @@ public class RemoteStormController implements IStormController  {
 	 * @throws TException
 	 */
 	private TopologySummary getJobTopologySummaryFromJobPrefix(String job_prefix) throws TException {
-		ClusterSummary cluster_summary = client.getClusterInfo();
+		ClusterSummary cluster_summary = Lambdas.wrap_u(() -> {
+			synchronized (client) {
+				return client.getClusterInfo();
+			}
+		}).get();
 		Iterator<TopologySummary> iter = cluster_summary.get_topologies_iterator();
 		 while ( iter.hasNext() ) {
 			 TopologySummary summary = iter.next();
