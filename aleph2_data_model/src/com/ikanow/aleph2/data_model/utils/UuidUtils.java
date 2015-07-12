@@ -15,7 +15,6 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import java.util.Date;
 import java.util.Optional;
 
 
@@ -24,6 +23,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
 
+/** Implementation of UUID service corresponding to com.eaio.uuid.UUIDGen
+ *  Note that this code is tightly coupled to the internals of that code and cannot
+ *  be swapped for another underlying library without modifying this one
+ *  (Use the TestUuidUtils to check, including temporarily commenting the "debug test" in
+ * @author Alex
+ */
 public class UuidUtils implements IUuidService {
 
 	protected final ObjectMapper _object_mapper; 
@@ -50,21 +55,25 @@ public class UuidUtils implements IUuidService {
 		return _singleton;
 	}
 	
-	/** Returns a NON_UNIQUE uuid based on the current date
+	/** Returns a UNIQUE uuid based on the current date (adjusts the time by a milli-second to make it unique where needed)
 	 * @return a string representation of the type 2 UUID
 	 */
 	@Override
 	public String getTimeBasedUuid() {
-		return new com.eaio.uuid.UUID(new Date().getTime(), UUIDGen.getClockSeqAndNode()).toString();
+		return new com.eaio.uuid.UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode()).toString();
 	}
 
-	/** Returns a NON_UNIQUE uuid based on the specified date
+	/** Returns a NON-UNIQUE uuid based on the specified date 
 	 * @param java_time - the date in java time
 	 * @return a string representation of the type 2 UUID
 	 */
 	@Override
 	public String getTimeBasedUuid(final long java_time) {
-		return new com.eaio.uuid.UUID(java_time, 0L).toString();
+		// (taken code from UUIDGen.createTime but without the monotonicity enforcement)
+		long new_time = (java_time * 10000) + 0x01B21DD213814000L;
+		new_time = new_time << 32 | ((new_time & 0xFFFF00000000L) >> 16) | (0x1000 | ((new_time >> 48) & 0x0FFF));
+		
+		return new com.eaio.uuid.UUID(new_time, UUIDGen.getClockSeqAndNode()).toString();
 	}
 
 	/** Gets the time from a UUID - must be a type 2 UUID, or errors will occur
@@ -73,9 +82,22 @@ public class UuidUtils implements IUuidService {
 	 */
 	@Override
 	public long getTimeUuid(final String uuid) {
-		return new com.eaio.uuid.UUID(uuid).getTime();
+		return getTimeFromTimeField(new com.eaio.uuid.UUID(uuid).getTime());
 	}
 
+	/** Returns the 
+	 * @param time_field
+	 * @return
+	 */
+	public long getTimeFromTimeField(long time_field) {
+		long tmp_time = ((time_field >> 32) & 0x00000000FFFFFFFFL) | ((time_field << 16) & 0x0000FFFF00000000L) | ((time_field & 0x0000000000000FFF) << 48);
+
+		tmp_time -= 0x01B21DD213814000L;
+		tmp_time /= 10000L;
+		
+		return tmp_time;
+	}
+	
 	/** Creates a random (type1) UUID
 	 * @return a string representation of the type 1 UUID
 	 */

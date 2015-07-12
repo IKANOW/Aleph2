@@ -56,7 +56,7 @@ public class TestUuidUtils {
 	}
 	
 	@Test
-	public void testDateUuidUtils() {
+	public void testDateUuidUtils() throws InterruptedException {
 		IUuidService test_service = UuidUtils.get();
 		
 		// 0) performance
@@ -78,7 +78,22 @@ public class TestUuidUtils {
 		final String time_uuid_2 = test_service.getTimeBasedUuid(d.getTime());
 		final long time = test_service.getTimeUuid(time_uuid_2);
 		
-		assertEquals(d.getTime(), time);
+		assertEquals("Time = " + time + " vs " + d.getTime(), (double)d.getTime(), (double)time, 500.0); // within 10ms
+		
+		// 2a) Test a known problem time (found by running debug test below)
+		final Date d_problem = new Date(1436739419106L);
+		final String time_uuid_problem = test_service.getTimeBasedUuid(d_problem.getTime());
+		final long time_problem = test_service.getTimeUuid(time_uuid_problem);
+		assertEquals("Time = " + time_problem + " vs " + d_problem.getTime(), (double)d_problem.getTime(), (double)time_problem, 500.0); // within 10ms
+		
+		//(Debug test)
+//		for (int i = 0; i < 300; ++i) {
+//			final String time_uuid_3 = test_service.getTimeBasedUuid();
+//			final long time_3 = test_service.getTimeUuid(time_uuid_3);
+//			System.out.println("Compare: " + new Date().getTime()/1000L + " vs " + time_3/1000L);
+//			assertEquals((double)new Date().getTime(), (double)time_3, 500.0); // within 500ms
+//			Thread.sleep(500L);
+//		}
 		
 		// 3) Check that the "get now" version returns dates around now
 
@@ -88,6 +103,12 @@ public class TestUuidUtils {
 		final Date now = new Date();
 		
 		assertEquals((double)now.getTime(), (double)time_3, 500.0); // within 500ms
+		
+		// Check time-based UUIDs are different each time (weak, but...)
+
+		for (int i = 0; i < 100; ++i) {
+			assertNotEquals(test_service.getTimeBasedUuid(), test_service.getTimeBasedUuid());
+		}		
 		
 		// 4) Check random UUIDs are different each time (weak, but...)
 		
