@@ -297,21 +297,20 @@ public class StormControllerUtil {
 	
 	/**
 	 * Converts a buckets path to a use-able topology name
+	 * 1 way conversion, ie can't convert back
 	 * Topology name cannot contain any of the following: #{"." "/" ":" "\\"})
 	 * . / : \
-	 * 
-	 * I picked a random different character to convert to for each substitution.
 	 * 
 	 * @param bucket_path
 	 * @return
 	 */
 	public static String bucketPathToTopologyName(final String bucket_path ) {
 		return bucket_path
-				.replaceAll("\\.", "_")
-				.replaceAll("/", "-")
-				.replaceAll(":", "=")
-				.replaceAll("\\\\", "+")
-				.replaceAll("__+", "_")
-				.replace(";", "__");
+				.replaceFirst("^/", "") // "/" -> "-"
+				.replaceAll("[-]", "_") 
+				.replaceAll("[/]", "-")
+				.replaceAll("[^a-zA-Z0-9_-]", "_")
+				.replaceAll("__+", "_") // (don't allow __ anywhere except at the end)
+				+ "__"; // (always end in __) 
 	}	
 }
