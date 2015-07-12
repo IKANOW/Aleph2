@@ -47,7 +47,7 @@ public class ManagementDbActorContext {
 		return _distributed_services.getAkkaSystem();
 	}
 	
-	public ActorRef getBucketActionSupervisor() {
+	public synchronized ActorRef getBucketActionSupervisor() {
 		if (null == _bucket_action_supervisor) {
 			_bucket_action_supervisor = _distributed_services.getAkkaSystem().actorOf(Props.create(BucketActionSupervisor.class), ActorUtils.BUCKET_ACTION_SUPERVISOR);
 		}

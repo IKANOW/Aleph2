@@ -132,7 +132,7 @@ public class RemoteStormController implements IStormController  {
 				client.killTopology(actual_job_name);				
 		} catch (Exception ex) {
 			//let die for now, usually happens when top doesn't exist
-			logger.info( ErrorUtils.getLongForm("Error stopping job: " + job_name + "  this is typical with storm becuase the job may not exist that we try to kill anyways {0}", ex));
+			logger.info( ErrorUtils.getLongForm("Error stopping job: " + job_name + "  this is typical with storm because the job may not exist that we try to kill {0}", ex));
 			return FutureUtils.returnError(ex);
 		}
 		

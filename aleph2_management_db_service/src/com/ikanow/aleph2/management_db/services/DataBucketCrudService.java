@@ -255,7 +255,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db, _bucket_action_retry_store)
 					: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
 				
-			// If we got no responses then leave the object but suspend it
+			// Update the status depending on the results of the management channels
 					
 			return FutureUtils.createManagementFuture(ret_val,
 					MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
@@ -781,7 +781,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	/** Checks active buckets for changes that will cause problems unless the bucket is suspended first (currently: only multi_node_enabled)
 	 * @param new_bucket - the proposed new bucket
-	 * @param old_bucket - the existing bucket (note in that V1/V2 sync scenarios, may not reflect changes)
+	 * @param old_bucket - the existing bucket (note may not have reflected changes based on errors in the management info)
 	 * @param corresponding_status - the existing status (note that in V1/V2 sync scenarios may have been changed at the same time as the bucket)
 	 * @return a collection of errors and warnings
 	 */

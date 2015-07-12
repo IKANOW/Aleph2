@@ -157,7 +157,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    			})
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket={3}", this.self(), m.getClass().getSimpleName(), this.sender()), m.bucket().full_name());
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket={3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -182,6 +182,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	    						Patterns.match(reply).andAct()
 	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
 	    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
+	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+	    									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())))
 	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
