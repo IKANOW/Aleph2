@@ -111,6 +111,16 @@ public class RemoteStormController implements IStormController  {
 			synchronized (client) {
 				client.submitTopology(job_name, remote_jar_location, json_conf, topology);
 			}
+			//verify job was assigned some executors
+			TopologyInfo info = getJobStats(job_name);
+			logger.info("submitted job received: " + info.get_executors_size() + " executors");
+			if ( info.get_executors_size() == 0 ) {
+				logger.info("received 0 executors, killing job, reporting failure");
+				//no executors were available for this job, stop the job, throw an error
+				stopJob(job_name);
+				future.complete(new BasicMessageBean(new Date(), false, null, "onNewSource", null, "No executors were assigned to this job, typically this is because to many jobs are currently running, kill some other jobs and resubmit.", null));
+				return future;					
+			}
 		} catch (Exception ex ) {
 			logger.info( ErrorUtils.getLongForm("Error submitting job: " + job_name + ": {0}", ex));
 			return FutureUtils.returnError(ex);
