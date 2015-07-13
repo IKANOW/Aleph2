@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.eaio.uuid.UUIDGen;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,59 +30,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
  */
 public class UuidUtils implements IUuidService {
 
-	/** Duplicate of https://github.com/stephenc/eaio-uuid/blob/master/src/main/java/com/eaio/uuid/UUIDGen.java
-	 *  except actually thread safe unique (sigh)
-	 * @author Alex
-	 *
-	 */
-	public static class ThreadSafeUuidGen {
-	    /**
-	     * The last time value. Used to remove duplicate UUIDs.
-	     */
-	    private static AtomicLong lastTime = new AtomicLong(Long.MIN_VALUE);
-	    
-	    /**
-	     * Creates a new time field from the given timestamp. Note that even identical
-	     * values of <code>currentTimeMillis</code> will produce different time fields.
-	     * 
-	     * @param currentTimeMillis the timestamp
-	     * @return a new time value
-	     * @see UUID#getTime()
-	     */
-	    public static long createTime(long currentTimeMillis) {
-
-	        long time;
-
-	        // UTC time
-
-	        long timeMillis = (currentTimeMillis * 10000) + 0x01B21DD213814000L;
-
-	        time = lastTime.updateAndGet(curr_time -> {
-	        	if (timeMillis > curr_time) {
-	        		return timeMillis;
-	        	}
-	        	else {
-	        		return curr_time + 1;
-	        	}
-	        });
-	        // time low
-
-	        time = time << 32;
-
-	        // time mid
-
-	        time |= (timeMillis & 0xFFFF00000000L) >> 16;
-
-	        // time hi and version
-
-	        time |= 0x1000 | ((timeMillis >> 48) & 0x0FFF); // version 1
-
-	        return time;
-
-	    }
-		
-	}
-	
 	protected final ObjectMapper _object_mapper; 
 	
 	/** Internal c'tor
@@ -113,7 +59,7 @@ public class UuidUtils implements IUuidService {
 	 */
 	@Override
 	public String getTimeBasedUuid() {
-		return new com.eaio.uuid.UUID(ThreadSafeUuidGen.createTime(new java.util.Date().getTime()), UUIDGen.getClockSeqAndNode()).toString();
+		return new com.eaio.uuid.UUID(UUIDGen.createTime(new java.util.Date().getTime()), UUIDGen.getClockSeqAndNode()).toString();
 	}
 
 	/** Returns a NON-UNIQUE uuid based on the specified date 
