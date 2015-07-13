@@ -118,7 +118,7 @@ public class RemoteStormController implements IStormController  {
 				logger.info("received 0 executors, killing job, reporting failure");
 				//no executors were available for this job, stop the job, throw an error
 				stopJob(job_name);
-				future.complete(new BasicMessageBean(new Date(), false, null, "onNewSource", null, "No executors were assigned to this job, typically this is because to many jobs are currently running, kill some other jobs and resubmit.", null));
+				future.complete(new BasicMessageBean(new Date(), false, null, "onNewSource", null, "No executors were assigned to this job, typically this is because too many jobs are currently running, kill some other jobs and resubmit.", null));
 				return future;					
 			}
 		} catch (Exception ex ) {
