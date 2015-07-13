@@ -164,10 +164,6 @@ public class TestBeanTemplateUtils {
 		
 	}
 	
-	public static class TestDeserializeBean {
-		Map<String, Object> testMap;
-	}
-	
 	@Test
 	public void testBeanCloner() {
 		
@@ -284,6 +280,13 @@ public class TestBeanTemplateUtils {
 		test.test6Fields.put("INF", 0);
 	}
 	
+	public static class TestDeserializeBean {
+		Map<String, Object> testMap;
+	}
+	public static class TestDeserializeBean2 {
+		Map<String, Double> testMap;
+	}
+	
 	@Test
 	public void testNumberDeserializer() {
 		TestDeserializeBean bean1 = BeanTemplateUtils
@@ -321,6 +324,14 @@ public class TestBeanTemplateUtils {
 		JsonNode plain = plainMapper.valueToTree(bean4);
 		
 		assertEquals(plain.toString(), number_deserialized.toString());
+	
+		// Just check it doesn't mess up actual double deserialization:
+		
+		TestDeserializeBean2 bean2_1 = BeanTemplateUtils
+				.from("{\"testMap\":{\"test\":1.0}}", TestDeserializeBean2.class).get();
+		JsonNode jn2_1 = BeanTemplateUtils.toJson(bean2_1);
+		
+		assertEquals("{\"testMap\":{\"test\":1.0}}", jn2_1.toString());
 		
 		
 	}
