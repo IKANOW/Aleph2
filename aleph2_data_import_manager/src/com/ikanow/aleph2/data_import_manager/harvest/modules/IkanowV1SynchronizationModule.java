@@ -35,7 +35,7 @@ import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationB
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
-import com.ikanow.aleph2.data_import_manager.utils.StormControllerUtil;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;

@@ -19,6 +19,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
+
 public class TestStormControllerUtil {
 
 	@Test

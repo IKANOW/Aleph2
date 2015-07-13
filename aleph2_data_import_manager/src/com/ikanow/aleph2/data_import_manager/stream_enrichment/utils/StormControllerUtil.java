@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.data_import_manager.stream_enrichment.utils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,7 +45,8 @@ import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.RemoteStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
+import com.ikanow.aleph2.data_import_manager.utils.JarBuilderUtil;
+import com.ikanow.aleph2.data_import_manager.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
