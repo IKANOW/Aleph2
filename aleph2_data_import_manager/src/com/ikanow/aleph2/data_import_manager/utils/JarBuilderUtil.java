@@ -17,8 +17,6 @@ package com.ikanow.aleph2.data_import_manager.utils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
@@ -33,9 +31,13 @@ import java.util.zip.ZipOutputStream;
 
 
 
+
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.io.ByteStreams;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 
 
@@ -46,7 +48,6 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
  *
  */
 public class JarBuilderUtil {
-	private static final byte[] BUFFER = new byte[4096 * 1024];
 	private static final Logger logger = LogManager.getLogger();
 	
 	/**
@@ -99,7 +100,7 @@ public class JarBuilderUtil {
 	                	if ( !shouldExclude(e.getName(), dir_names_to_not_merge) ) {
 		                    outputZip.putNextEntry(e);
 		                    if (!e.isDirectory() ) {
-		                        copy(currentZip.getInputStream(e), outputZip);
+		                    	ByteStreams.copy(currentZip.getInputStream(e), outputZip);
 		                    }	    
 	                	} else {
 	                		logger.debug("skipping: " + e.getName() + " because it's in our do not merge list");
@@ -136,18 +137,4 @@ public class JarBuilderUtil {
 		}
 		return false;
 	}
-
-	/**
-     * Helper function to copy input stream into output stream
-     * 
-     * @param input
-     * @param output
-     * @throws IOException
-     */
-    public static void copy(InputStream input, OutputStream output) throws IOException {
-        int bytesRead;
-        while ((bytesRead = input.read(BUFFER))!= -1) {
-            output.write(BUFFER, 0, bytesRead);
-        }
-    }
 }
