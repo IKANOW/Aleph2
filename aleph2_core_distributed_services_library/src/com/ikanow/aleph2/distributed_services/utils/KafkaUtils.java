@@ -68,8 +68,7 @@ public class KafkaUtils {
 	 * 
 	 * @return
 	 */
-	public static Producer<String, String> getKafkaProducer() {
-		producer = null;
+	public synchronized static Producer<String, String> getKafkaProducer() {		
 		if ( producer == null ) {
 			ProducerConfig config = new ProducerConfig(kafka_properties);
 			producer = new Producer<String, String>(config);
@@ -191,7 +190,7 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public static void createTopic(String topic) {		
+	public synchronized static void createTopic(String topic) {		
 		if ( !known_topics.containsKey(topic) ) {
 			logger.debug("CREATE TOPIC");
 			ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);				
