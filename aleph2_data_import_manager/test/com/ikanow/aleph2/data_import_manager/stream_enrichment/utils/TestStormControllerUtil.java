@@ -13,7 +13,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.data_import_manager.stream_enrichment.utils;
 
 import static org.junit.Assert.assertEquals;
 
