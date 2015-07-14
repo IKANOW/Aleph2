@@ -16,6 +16,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 
@@ -137,6 +138,12 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 
 	@Override
 	public Optional<DataBucketBean> getBucket() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public SharedLibraryBean getLibraryConfig() {
 		// TODO Auto-generated method stub
 		return null;
 	}

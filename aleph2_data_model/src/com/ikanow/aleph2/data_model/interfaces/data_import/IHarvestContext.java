@@ -29,6 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 /** A context library that is always passed to the IHarvestTechnology module and can also be 
  *  passed to the harvest library processing (TODO (ALEPH-4): need to document how, ie copy JARs into external classpath and call ContextUtils.getHarvestContext)
@@ -105,10 +106,17 @@ public interface IHarvestContext {
 	 */
 	<S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> sub_collection, final boolean auto_apply_prefix);
 	
-	/** (HarvestTechnology/HarvestModule) Returns the status bean for the specified bucket
+	/** (HarvestTechnology/HarvestModule) Returns the specified bucket
 	 * @return The bucket that this job is running for, or Optional.empty() if that is ambiguous
 	 */
 	Optional<DataBucketBean> getBucket();
+	
+	/** (HarvestTechnology/HarvestModule) Returns the library bean that provided the user callback currently being executed
+	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
+	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
+	 * @return the library bean that provided the user callback currently being executed
+	 */
+	SharedLibraryBean getLibraryConfig();
 	
 	/** (HarvestTechnology/HarvestModule) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

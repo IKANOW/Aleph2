@@ -29,6 +29,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public interface IEnrichmentModuleContext extends IUnderlyingService {
 
@@ -153,6 +154,13 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 * @return The bucket that this job is running for, or Optional.empty() if that is ambiguous
 	 */
 	Optional<DataBucketBean> getBucket();
+	
+	/** (All Enrichment Types) Returns the library bean that provided the user callback currently being executed
+	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
+	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
+	 * @return the library bean that provided the user callback currently being executed
+	 */
+	SharedLibraryBean getLibraryConfig();
 	
 	/** (All Enrichment Types) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

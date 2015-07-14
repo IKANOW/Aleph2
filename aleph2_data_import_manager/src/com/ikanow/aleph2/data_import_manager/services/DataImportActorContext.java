@@ -22,7 +22,6 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
-import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -71,7 +70,7 @@ public class DataImportActorContext {
 	/** Returns a new (non singleton) instance of a harvest context
 	 * @return the new harvest context
 	 */
-	public IHarvestContext getNewHarvestContext() {
+	public HarvestContext getNewHarvestContext() {
 		return _injector.getInstance(HarvestContext.class);
 	}
 	

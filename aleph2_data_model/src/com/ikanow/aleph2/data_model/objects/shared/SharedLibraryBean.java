@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.objects.shared;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -30,7 +31,8 @@ public class SharedLibraryBean implements Serializable {
 	public SharedLibraryBean(final String _id, final String display_name, final String path_name,
 			final LibraryType type, final String subtype, final String owner_id,
 			final Set<String> tags, final AuthorizationBean access_rights,
-			String batch_streaming_entry_point, String batch_enrichment_entry_point, String misc_entry_point) {
+			final String batch_streaming_entry_point, final String batch_enrichment_entry_point, final String misc_entry_point, 
+			final Map<String, Object> library_config) {
 		super();
 		this._id = _id;
 		this.display_name = display_name;
@@ -43,6 +45,7 @@ public class SharedLibraryBean implements Serializable {
 		this.streaming_enrichment_entry_point = batch_streaming_entry_point;
 		this.batch_enrichment_entry_point = batch_enrichment_entry_point;
 		this.misc_entry_point = misc_entry_point;
+		this.library_config = library_config;
 	}
 	/** The management DB id of the shared library (unchangeable, unlike the name)
 	 * @return the library _id
@@ -132,6 +135,13 @@ public class SharedLibraryBean implements Serializable {
 		return misc_entry_point;
 	}
 
+	/** Generic JSON object associated with this library bean
+	 * @return
+	 */
+	public Map<String, Object> library_config() {
+		return null == library_config ? null : Collections.unmodifiableMap(library_config);
+	}
+	
 	private String _id;
 	private Date created;
 	private Date modified;
@@ -151,6 +161,7 @@ public class SharedLibraryBean implements Serializable {
 	private Set<String> tags;
 	private AuthorizationBean access_rights;
 	private String batch_enrichment_entry_point; // (for batch module only)
-	private String streaming_enrichment_entry_point; // (for batch module only)
-	private String misc_entry_point;
+	private String streaming_enrichment_entry_point; // (for streaming module only)
+	private String misc_entry_point; // (harvest, others)
+	private Map<String, Object> library_config;
 }

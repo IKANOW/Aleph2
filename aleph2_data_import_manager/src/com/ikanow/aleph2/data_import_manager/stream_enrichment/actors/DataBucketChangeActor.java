@@ -236,7 +236,14 @@ public class DataBucketChangeActor extends AbstractActor {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
 					},		
 					//NORMAL grab enrichment topology
-					enrichment_topology -> {					
+					enrichment_topology -> {
+						
+						// set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist 
+						err_or_map.forEach(map ->									
+							Optional.ofNullable(map.get(m.bucket().harvest_technology_name_or_id()))
+								.ifPresent(lib -> context.setLibraryConfig(lib._1()))
+						);						
+						
 						context.setBucket(bucket);
 						context.setUserTopologyEntryPoint(enrichment_topology.getClass().getName());
 

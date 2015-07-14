@@ -55,6 +55,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -78,12 +79,14 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	
 	// CONSTRUCTION
 	
-	public static final String __MY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";	
+	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
+	public static final String __MY_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
 	
 	protected static class MutableState {
 		//TODO (ALEPH-10) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
-		SetOnce<String> user_topology_entry_point = new SetOnce<String>();
+		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
+		SetOnce<String> user_topology_entry_point = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();		
 	};	
@@ -134,6 +137,14 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the library bean for this harvest context instance
+	 * @param this_bucket - the library bean to be associated
+	 * @returns whether the library bean has been updated (ie fails if it's already been set)
+	 */
+	public boolean setLibraryConfig(SharedLibraryBean lib_config) {
+		return _mutable_state.library_config.set(lib_config);
+	}
+	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the user topology entry point for this harvest context instance
 	 * @param this_bucket - the user entry point to associate
 	 * @returns whether the user entry point has been updated (ie fails if it's already been set)
@@ -177,11 +188,15 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			}			
 			// Get bucket 
 
-			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_ID), DataBucketBean.class);
-			_batch_index_service = (_crud_index_service = _index_service.getCrudService(JsonNode.class, retrieve_bucket.get()))
-											.flatMap(cs -> cs.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty()))
-											.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
+			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
+			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
+			_mutable_state.library_config.set(retrieve_library.get());
+			
+			_batch_index_service = (_crud_index_service = _index_service.getCrudService(JsonNode.class, retrieve_bucket.get()))
+					.flatMap(cs -> cs.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty()))
+					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
+
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -250,10 +265,15 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
 			final Config last_call = config_subset_services
-								.withValue(__MY_ID, 
+								.withValue(__MY_BUCKET_ID, 
 											ConfigValueFactory
 												.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
-												);
+												)
+								.withValue(__MY_LIBRARY_ID, 
+											ConfigValueFactory
+												.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.library_config.get()).toString())
+												)
+												;
 			
 			final String ret = this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 			_mutable_state.signature_override.set(ret);
@@ -456,5 +476,11 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options) {
 		return Optional.empty();
 	}
-
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
+	 */
+	@Override
+	public SharedLibraryBean getLibraryConfig() {
+		return _mutable_state.library_config.get();
+	}
 }
