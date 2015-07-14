@@ -227,7 +227,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final List<String> user_lib_paths = err_or_map.<List<String>>validation(
 					fail -> Collections.emptyList() // (going to die soon anyway)
 					,
-					success -> success.values().stream().map(tuple -> tuple._2).collect(Collectors.toList())
+					success -> success.values().stream().map(tuple -> tuple._2.replaceFirst("file:", "")).collect(Collectors.toList())
 					);
 
 			return err_or_user_topology.<CompletableFuture<BucketActionReplyMessage>>validation(

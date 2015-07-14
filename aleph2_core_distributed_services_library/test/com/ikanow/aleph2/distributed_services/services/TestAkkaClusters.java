@@ -37,6 +37,7 @@ import akka.cluster.Cluster;
 import akka.cluster.seed.ZookeeperClusterSeed;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
@@ -78,7 +79,12 @@ public class TestAkkaClusters {
 				BeanTemplateUtils.clone(
 						BeanTemplateUtils.from(config.getConfig(DistributedServicesPropertyBean.PROPERTIES_ROOT), DistributedServicesPropertyBean.class))
 				.with("cluster_name", test_name)
-				.with("application_port", ImmutableMap.builder().put("test_application_4000", 4000).build())
+				.with("application_port", 
+						ImmutableMap.builder()
+							.put("test_application_4011", 4011)
+							.put("test_application_4129", 4129)
+							.put("test_application_4273", 4273)
+						.build())
 				.done();
 		
 		assertEquals(_connect_string, bean.zookeeper_connection());
@@ -99,7 +105,19 @@ public class TestAkkaClusters {
 	
 	@Test
 	public void test_setupComplete() throws Exception {
-		setup("test_application_4000", "doesLockNodeExist");
+		// (try a few in case something's camped on one of the ports)
+		try {
+			setup("test_application_4011", "doesLockNodeExist1");
+		}
+		catch (Exception ee) {
+			try {
+				setup("test_application_4129", "doesLockNodeExist2");
+			}
+			catch (Exception eee) {
+				setup("test_application_4273", "doesLockNodeExist3");
+			}
+			
+		}
 		
 		assertTrue("lock node built", doesLockNodeExist());				
 
@@ -109,7 +127,9 @@ public class TestAkkaClusters {
 		long now2 = new Date().getTime();
 		assertTrue("Didn't take too long to join: " + (now2 - now), now2 - now < 30000L);
 
-		assertEquals("4000", ZookeeperClusterSeed.get(_core_distributed_services.getAkkaSystem()).address().port().get().toString());		
+		assertTrue("Was one of the allowed ports: " + ZookeeperClusterSeed.get(_core_distributed_services.getAkkaSystem()).address().port().get().toString(),
+				ImmutableSet.builder().add("4011", "4129", "4273").build().contains(
+						ZookeeperClusterSeed.get(_core_distributed_services.getAkkaSystem()).address().port().get().toString()));		
 		
 		_core_distributed_services._shutdown_hook.get().run();
 		
