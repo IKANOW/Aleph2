@@ -129,8 +129,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getPerLibraryState(java.lang.Class, com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean, java.util.Optional)
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
-			SharedLibraryBean library, Optional<String> sub_collection) {
-		throw new RuntimeException("Method not yet supported");
+			SharedLibraryBean library, Optional<String> sub_collection) {		
+		return _underlying_management_db.getPerLibraryState(clazz, library, sub_collection).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -156,8 +156,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerBucketState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
-		// TODO (ALEPH-19) add this
-		throw new RuntimeException("Method not yet supported");
+		return _underlying_management_db.getPerBucketState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -173,8 +172,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerAnalyticThreadState(Class<T> clazz,
 			AnalyticThreadBean analytic_thread, Optional<String> sub_collection) {
-		// TODO (ALEPH-19) add this
-		throw new RuntimeException("Method not yet supported");
+		return _underlying_management_db.getPerAnalyticThreadState(clazz, analytic_thread, sub_collection).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
