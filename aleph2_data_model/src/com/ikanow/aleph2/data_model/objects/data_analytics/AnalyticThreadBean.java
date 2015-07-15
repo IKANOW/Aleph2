@@ -20,6 +20,13 @@ import java.io.Serializable;
 public class AnalyticThreadBean implements Serializable {
 	private static final long serialVersionUID = -1884220783549625389L;
 
+	/** The path name of this analytic thread
+	 * @return
+	 */
+	public String path_name() { return path_name; }
+	
+	private String path_name;
+	
 	//TODO (ALEPH-12): so the thread looks like
 	// analytic engine (MapReduce/Spark/Storm) -> module (eg sliding window aggregation) -> thread (set of modules within an engine + config)
 	// (Compare to import .. analytic engine <-> ?? / analytic module <-> harvester / bucket <->  analytic thread
