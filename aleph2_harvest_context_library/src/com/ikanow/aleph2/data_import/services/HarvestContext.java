@@ -287,7 +287,7 @@ public class HarvestContext implements IHarvestContext {
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 							.add(Tuples._2T(IStorageService.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
+							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 							.build();
 			
 			final Config config_no_services = full_config.withoutPath("service");

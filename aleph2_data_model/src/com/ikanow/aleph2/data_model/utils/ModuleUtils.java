@@ -506,7 +506,7 @@ public class ModuleUtils {
 		@Override
 		public IManagementDbService getCoreManagementDbService() {
 			try {
-				return getService(IManagementDbService.class, Optional.of("CoreManagementDbService")).get();
+				return getService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
 			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: CoreManagementDbService", e); }					
 		}
 

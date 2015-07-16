@@ -232,7 +232,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 							.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
 							.add(Tuples._2T(IStorageService.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
+							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 							.build();
 			
 			if (_mutable_state.service_manifest_override.isSet()) {
