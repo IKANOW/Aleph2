@@ -86,7 +86,7 @@ public class TestCoreManagementDbModule {
 		
 		_core_db_service = new CoreManagementDbService(_mock_service_context, 
 				_bucket_crud, _bucket_status_crud, _shared_library_crud);
-		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
+		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
 	}
 	
 	@Test

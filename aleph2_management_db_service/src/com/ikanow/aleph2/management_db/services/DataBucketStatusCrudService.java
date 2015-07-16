@@ -517,7 +517,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 								return new BasicMessageBean(
 										new Date(), // date
 										false, // success
-										"CoreManagementDbService",
+										IManagementDbService.CORE_MANAGEMENT_DB.get(),
 										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
 										null, // message code
 										ErrorUtils.get(ManagementDbErrorUtils.ILLEGAL_UPDATE_COMMAND, kv.getKey(), kv.getValue()._1()),
@@ -558,7 +558,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 						return CompletableFuture.completedFuture(Arrays.asList(new BasicMessageBean(
 										new Date(), // date
 										false, // success
-										"CoreManagementDbService",
+										IManagementDbService.CORE_MANAGEMENT_DB.get(),
 										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
 										null, // message code
 										ErrorUtils.get(ManagementDbErrorUtils.MISSING_STATUS_BEAN_OR_BUCKET, 
