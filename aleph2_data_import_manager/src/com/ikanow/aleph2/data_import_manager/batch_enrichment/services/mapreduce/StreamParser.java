@@ -17,7 +17,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 public class StreamParser implements IParser {
 
 	private static final Logger logger = LogManager.getLogger(StreamParser.class);
-
+	
 	@Override
 	public Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> getNextRecord(long currentFileIndex,String fileName,  InputStream inStream) {
 		logger.debug("StreamParser.getNextRecord");

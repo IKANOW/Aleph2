@@ -1,6 +1,7 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -110,14 +111,7 @@ public class BeJobLauncher implements IBeJobService{
 				catch (Exception e1) {} // (just doesn't exist yet)
 				FileOutputFormat.setOutputPath(job, outPath);    
 			    
-			    
-			    job.submit();
-			    //job.waitForCompletion(true);
-			    // TODO don't wait bit return job name instead and create utility function to check
-/*					while (!job.isComplete()) {
-						Thread.sleep(100);
-					}
-*/
+				launch(job);
 			}
 		}
 		} catch (Exception e) {
@@ -125,6 +119,12 @@ public class BeJobLauncher implements IBeJobService{
 		} 
 		return jobName;
 	     		
+	}
+	
+	// default behavior is to
+	public void launch(Job job) throws ClassNotFoundException, IOException, InterruptedException{
+		job.submit();
+		
 	}
 
 }

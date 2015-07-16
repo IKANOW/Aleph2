@@ -36,7 +36,7 @@ public class BatchEnrichmentJob{
 	}
 	
 	@SuppressWarnings("unused")
-	public static class BatchErichmentMapper extends Mapper<LongWritable,Text, LongWritable,Text>		
+	public static class BatchErichmentMapper extends Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>		
 	{
 
 		DataBucketBean bucket = null;
@@ -54,7 +54,7 @@ public class BatchEnrichmentJob{
 		}
 		
 		@Override
-		protected void setup(Mapper<LongWritable, Text, LongWritable, Text>.Context context) throws IOException, InterruptedException {
+		protected void setup(Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob setup");
 			try{
 			
@@ -80,8 +80,10 @@ public class BatchEnrichmentJob{
 
 		} // setup
 
+		
 		@Override
-		protected void map(LongWritable key, Text value, Mapper<LongWritable, Text, LongWritable, Text>.Context context) throws InterruptedException {			
+		protected void map(String key, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> value,
+				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob map");
 			System.out.println("BatchEnrichmentJob map");
 			List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();			
@@ -92,7 +94,7 @@ public class BatchEnrichmentJob{
 		
 	} //BatchErichmentMapper
 
-	public static class BatchEnrichmentReducer extends Reducer<LongWritable, Text, LongWritable, Text> {
+	public static class BatchEnrichmentReducer extends Reducer<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> {
 
 		
 	} // reducer

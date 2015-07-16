@@ -95,6 +95,9 @@ public abstract class DataBucketTest {
 		StringBuffer sb = new StringBuffer();
 		sb.append("bucket1data\r\n");
 		DirUtils.createUTF8File(fileContext,bucketReadyPath1+"/bucket1data.txt", sb);
+		StringBuffer sb2 = new StringBuffer();
+		sb2.append("{\"testField\":\"test1\"}");
+		DirUtils.createUTF8File(fileContext,bucketReadyPath1+"/bucket1data.json", sb2);
 	}
 
 	protected void createEnhancementBeanInDb() throws InterruptedException, ExecutionException, TimeoutException{
