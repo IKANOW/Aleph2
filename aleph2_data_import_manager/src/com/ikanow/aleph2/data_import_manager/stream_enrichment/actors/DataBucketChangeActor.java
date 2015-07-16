@@ -374,15 +374,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				return CompletableFuture.completedFuture(Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(Collections.emptyMap()));
 			}
 			
-			return management_db.getSharedLibraryStore().getObjectsBySpec(
-					spec.get(), 
-					Arrays.asList(
-						helper.field(SharedLibraryBean::_id), 
-						helper.field(SharedLibraryBean::path_name), 
-						helper.field(SharedLibraryBean::misc_entry_point),
-						helper.field(SharedLibraryBean::streaming_enrichment_entry_point)
-					), 
-					true)
+			return management_db.getSharedLibraryStore().getObjectsBySpec(spec.get())
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 
