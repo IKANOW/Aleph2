@@ -1,6 +1,9 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,4 +37,12 @@ public class LocalBeJobLauncher extends BeJobLauncher {
 	}
 
 
+	@Override
+	public void launch(Job job) throws ClassNotFoundException, IOException, InterruptedException {
+		job.waitForCompletion(true);
+		//super.launch(job);
+	}
+
+
+	
 }
