@@ -19,11 +19,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.StorageSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleStorageService implements IStorageService {
 
@@ -39,12 +43,24 @@ public class SampleStorageService implements IStorageService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(StorageSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(StorageSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public CompletableFuture<BasicMessageBean> handleAgeOutRequest(
+			DataBucketBean bucket) {
+		return null;
+	}
+
+	@Override
+	public CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(
+			DataBucketBean bucket, boolean bucket_getting_deleted) {
 		return null;
 	}
 }

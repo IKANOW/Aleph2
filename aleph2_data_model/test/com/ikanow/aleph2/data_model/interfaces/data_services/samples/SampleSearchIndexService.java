@@ -19,12 +19,16 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleSearchIndexService implements ISearchIndexService {
 
@@ -47,12 +51,18 @@ public class SampleSearchIndexService implements ISearchIndexService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(SearchIndexSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(SearchIndexSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(
+			DataBucketBean bucket, boolean bucket_getting_deleted) {
 		return null;
 	}
 }

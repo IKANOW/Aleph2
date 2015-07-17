@@ -20,10 +20,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.ColumnarSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleColumnarService implements IColumnarService {
 
@@ -34,8 +37,8 @@ public class SampleColumnarService implements IColumnarService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(ColumnarSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(ColumnarSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override

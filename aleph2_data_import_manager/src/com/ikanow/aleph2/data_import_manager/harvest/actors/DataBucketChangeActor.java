@@ -42,7 +42,6 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -353,17 +352,9 @@ public class DataBucketChangeActor extends AbstractActor {
 			)
 	{
 		try {
-			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
 			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket, cache_tech_jar_only);
 
-			return management_db.getSharedLibraryStore().getObjectsBySpec(
-					spec, 
-					Arrays.asList(
-						helper.field(SharedLibraryBean::_id), 
-						helper.field(SharedLibraryBean::path_name), 
-						helper.field(SharedLibraryBean::misc_entry_point)
-					), 
-					true)
+			return management_db.getSharedLibraryStore().getObjectsBySpec(spec)
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 

@@ -166,7 +166,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 						break;
 					}
 					catch (Exception e) {
-						logger.warn(ErrorUtils.getLongForm("Waiting for old instance to be cleared out (err={0}), retrying={1}", e, i < MAX_ZK_ATTEMPTS));
+						logger.warn(ErrorUtils.get("Waiting for old instance to be cleared out (err={0}), retrying={1}", e.getMessage(), i < MAX_ZK_ATTEMPTS));
 						try { Thread.sleep(10000L); } catch (Exception __) {}
 					}
 				}
