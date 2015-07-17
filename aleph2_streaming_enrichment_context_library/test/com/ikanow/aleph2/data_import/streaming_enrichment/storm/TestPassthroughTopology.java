@@ -101,7 +101,7 @@ public class TestPassthroughTopology {
 		test_context.overrideSavedContext(); // (THIS IS NEEDED WHEN TESTING THE KAFKA SPOUT)
 		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
-		final ICoreDistributedServices cds = test_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		final ICoreDistributedServices cds = test_context.getServiceContext().getService(ICoreDistributedServices.class, Optional.empty()).get();
 		final StormTopology topology = (StormTopology) new PassthroughTopology()
 											.getTopologyAndConfiguration(test_bucket, test_context)
 											._1();
@@ -113,7 +113,7 @@ public class TestPassthroughTopology {
 		Thread.sleep(5000L);
 		
 		//PHASE 3: CHECK INDEX
-		final ISearchIndexService index_service = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		final ISearchIndexService index_service = test_context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
 		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, test_bucket).get();
 		crud_service.deleteDatastore().get();
 		_logger.info("******** Cleansed existing datastore");

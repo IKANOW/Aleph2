@@ -417,8 +417,8 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I extends IUnderlyingService> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name) {
-		return _service_context.getService(service_clazz, service_name);
+	public IServiceContext getServiceContext() {
+		return _service_context;
 	}
 
 	@Override

@@ -96,7 +96,7 @@ public class TestBatchEnrichmentContext {
 			assertTrue("BatchEnrichmentContext dependencies", test_context._globals != null);
 			assertTrue("BatchEnrichmentContext dependencies", test_context._service_context != null);
 			
-			assertTrue("Find service", test_context.getService(ISearchIndexService.class, Optional.empty()).isPresent());
+			assertTrue("Find service", test_context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).isPresent());
 			
 			// Check if started in "technology" (internal mode)
 			assertEquals(test_context._state_name, BatchEnrichmentContext.State.IN_TECHNOLOGY);
@@ -462,7 +462,7 @@ public class TestBatchEnrichmentContext {
 		//(internal)
 //		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
 		//(external)
-		final ISearchIndexService check_index = test_external1a.getService(ISearchIndexService.class, Optional.empty()).get();
+		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
 		
 		final ICrudService<JsonNode> crud_check_index = check_index.getCrudService(JsonNode.class, test_bucket).get();
 		crud_check_index.deleteDatastore();

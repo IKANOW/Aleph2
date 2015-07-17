@@ -39,6 +39,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStatusBean;
@@ -148,8 +149,8 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz, Optional<String> service_name) {
-			return Optional.empty();
+		public IServiceContext getServiceContext() {
+			return null;
 		}
 
 		@Override
@@ -412,8 +413,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <I extends IUnderlyingService> Optional<I> getService(
-				Class<I> service_clazz, Optional<String> service_name) {
+		public IServiceContext getServiceContext() {
 			return null;
 		}
 

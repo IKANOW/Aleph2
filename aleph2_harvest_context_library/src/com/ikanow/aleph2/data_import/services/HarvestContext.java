@@ -176,9 +176,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz,
-			Optional<String> service_name) {
-		return _service_context.getService(service_clazz, service_name);
+	public IServiceContext getServiceContext() {
+		return _service_context;
 	}
 
 	/* (non-Javadoc)

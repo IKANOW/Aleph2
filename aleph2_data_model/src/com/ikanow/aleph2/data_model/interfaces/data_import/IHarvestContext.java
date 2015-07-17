@@ -25,6 +25,7 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -41,13 +42,11 @@ public interface IHarvestContext {
 	
 	// HARVESTER MODULE ONLY
 	
-	/** (HarvesterModule only) Returns a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
-	 * (NOTE: harvester technology modules do not need this, they can access the required service directly via the @Inject annotation)    
-	 * @param service_clazz - the class of the object desired; if specified, this overrides to a secondary service
-	 * @param service_name - optional - if ommitted, this is the default service of this type
-	 * @return the requested service
+	/** (HarvesterModule only) Returns context to return a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
+	 * (NOTE: harvester technology modules do not need this, they can access the service context directly via the @Inject annotation)    
+	 * @return the service context
 	 */
-	<I extends IUnderlyingService> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
+	IServiceContext getServiceContext();
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
