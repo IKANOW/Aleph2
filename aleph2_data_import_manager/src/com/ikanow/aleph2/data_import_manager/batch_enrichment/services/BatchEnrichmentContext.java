@@ -28,6 +28,9 @@ import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 import storm.kafka.BrokerHosts;
 import storm.kafka.KafkaSpout;
@@ -75,12 +78,14 @@ import com.typesafe.config.ConfigValueFactory;
  */
 public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 
+	static final Logger _logger = LogManager.getLogger(BatchEnrichmentContext.class); 
+
 	////////////////////////////////////////////////////////////////
 	
 	// CONSTRUCTION
 	
-	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
-	public static final String __MY_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
+	public static final String __MY_BUCKET_ID = "12fc53ed-44cc-4777-9251-d7347480efb2";	
+	public static final String __MY_LIBRARY_ID = "6b5a32e4-c457-4d37-94e7-3fce8f773be2";
 	
 	protected static class MutableState {
 		//TODO (ALEPH-10) logging information - will be genuinely mutable
