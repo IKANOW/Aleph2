@@ -103,7 +103,9 @@ public abstract class DataBucketTest {
 	}
 
 	protected void createEnhancementBeanInDb() throws InterruptedException, ExecutionException, TimeoutException{
-
+		// (just needed to prevent circ dependencies vs the underlying management db below)
+		_actor_context.getServiceContext().getCoreManagementDbService();
+		
 		IManagementCrudService<DataBucketBean> dataBucketStore = _actor_context.getServiceContext().getService(IManagementDbService.class,Optional.empty()).get().getDataBucketStore();
 		// delete all old copies of data but it is only implemented in underlying database which has to be retrieved after getCoremanagementDb() according to Alex
 		dataBucketStore.deleteDatastore();		

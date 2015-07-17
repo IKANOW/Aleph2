@@ -26,6 +26,7 @@ import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.utils.DataBucketTest;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
@@ -80,13 +81,18 @@ public class DataImportManagerTest extends DataBucketTest{
 
 	@Test
 	public void testBeBucketActor() throws Exception {
-
+		try {
 			Props props = Props.create(BeBucketActor.class,_service_context.getStorageService(),beJoBService);
 			ActorSystem system = _actor_context.getActorSystem();
 		    ActorRef beBucketActor = system.actorOf(props,"beBucket1");		    
 			createEnhancementBeanInDb();			
 			beBucketActor.tell(new BucketEnrichmentMessage(bucketPath1, "/misc/bucket1", ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + buckeFullName1),  ActorRef.noSender());
 			Thread.sleep(9000);
+		}
+		catch (Throwable t) {
+			System.out.println(ErrorUtils.getLongForm("{0}", t));
+			throw t;
+		}
 		
 	}
 	
