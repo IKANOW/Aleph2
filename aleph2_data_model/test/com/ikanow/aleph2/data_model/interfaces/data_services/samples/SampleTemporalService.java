@@ -19,11 +19,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.TemporalSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleTemporalService implements ITemporalService {
 
@@ -34,12 +38,18 @@ public class SampleTemporalService implements ITemporalService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(TemporalSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(TemporalSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public CompletableFuture<BasicMessageBean> handleAgeOutRequest(
+			DataBucketBean bucket) {
 		return null;
 	}
 }

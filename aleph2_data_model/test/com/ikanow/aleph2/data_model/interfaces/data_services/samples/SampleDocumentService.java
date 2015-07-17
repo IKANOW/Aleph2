@@ -20,11 +20,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleDocumentService implements IDocumentService {
 
@@ -47,8 +50,8 @@ public class SampleDocumentService implements IDocumentService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(DocumentSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override

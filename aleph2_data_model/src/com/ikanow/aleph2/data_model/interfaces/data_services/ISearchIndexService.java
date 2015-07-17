@@ -18,6 +18,9 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -32,10 +35,17 @@ public interface ISearchIndexService extends IUnderlyingService {
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
-	 * @return a list of errors, empty if none
+	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
 	 */
-	List<BasicMessageBean> validateSchema(final DataSchemaBean.SearchIndexSchemaBean schema, final DataBucketBean bucket);	
+	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.SearchIndexSchemaBean schema, final DataBucketBean bucket);	
 
+	/** This is called to offload bucket deletion and purging to the individual data services
+	 * @param bucket - the bucket being deleted
+	 * @param bucket_getting_deleted - true if it's an actual deletion, false is just purging all the data from the bucket
+	 * @return a future containing the results of the deletion request for this service
+	 */
+	CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(final DataBucketBean bucket, boolean bucket_getting_deleted);
+	
 	/** Returns a CRUD service (including simple searching) for the specified bucket or multi-bucket
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket The data bucket or multi-bucket
