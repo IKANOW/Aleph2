@@ -80,17 +80,14 @@ public class DataImportManagerTest extends DataBucketTest{
 
 	@Test
 	public void testBeBucketActor() throws Exception {
-		try {
+
 			Props props = Props.create(BeBucketActor.class,_service_context.getStorageService(),beJoBService);
 			ActorSystem system = _actor_context.getActorSystem();
 		    ActorRef beBucketActor = system.actorOf(props,"beBucket1");		    
 			createEnhancementBeanInDb();			
 			beBucketActor.tell(new BucketEnrichmentMessage(bucketPath1, "/misc/bucket1", ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + buckeFullName1),  ActorRef.noSender());
 			Thread.sleep(9000);
-		} catch (Exception e) {
-			logger.error("Caught exception",e);
-			fail(e.getMessage());
-		}
+		
 	}
 	
 }

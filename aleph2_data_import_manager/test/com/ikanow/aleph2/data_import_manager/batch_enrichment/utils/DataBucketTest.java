@@ -1,4 +1,6 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.utils;
+import static org.junit.Assert.assertEquals;
+
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,7 +82,7 @@ public abstract class DataBucketTest {
 
 		createFolderStructure();
 		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
-		
+			
 }
 
 	protected void createFolderStructure(){
@@ -102,9 +104,19 @@ public abstract class DataBucketTest {
 
 	protected void createEnhancementBeanInDb() throws InterruptedException, ExecutionException, TimeoutException{
 
-		IManagementCrudService<DataBucketBean> dataBucketStore = _management_db.getDataBucketStore();		
-		IManagementCrudService<DataBucketStatusBean> dataBucketStatusStore = _management_db.getDataBucketStatusStore();		
-		IManagementCrudService<SharedLibraryBean> libraryStore = _management_db.getSharedLibraryStore();	
+		IManagementCrudService<DataBucketBean> dataBucketStore = _actor_context.getServiceContext().getService(IManagementDbService.class,Optional.empty()).get().getDataBucketStore();
+		// delete all old copies of data but it is only implemented in underlying database which has to be retrieved after getCoremanagementDb() according to Alex
+		dataBucketStore.deleteDatastore();		
+		assertEquals(new Long(0L), dataBucketStore.countObjects().get());
+		
+		IManagementCrudService<DataBucketStatusBean> dataBucketStatusStore = _actor_context.getServiceContext().getService(IManagementDbService.class,Optional.empty()).get().getDataBucketStatusStore();		
+		dataBucketStatusStore.deleteDatastore().get(); 
+		assertEquals(new Long(0L), dataBucketStatusStore.countObjects().get());
+
+		IManagementCrudService<SharedLibraryBean> libraryStore = _actor_context.getServiceContext().getService(IManagementDbService.class,Optional.empty()).get().getSharedLibraryStore();	
+		libraryStore.deleteDatastore().get(); 
+		assertEquals(new Long(0L), libraryStore.countObjects().get());
+
 		SingleQueryComponent<DataBucketBean> query_comp_full_name = CrudUtils.anyOf(DataBucketBean.class).when("full_name", buckeFullName1);
 			Optional<DataBucketBean> oDataBucketBean = dataBucketStore.getObjectBySpec(query_comp_full_name).get(1, TimeUnit.SECONDS);
 			logger.debug(oDataBucketBean);
