@@ -238,14 +238,18 @@ public class DataBucketChangeActor extends AbstractActor {
 					//NORMAL grab enrichment topology
 					enrichment_topology -> {
 						
-						// set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist 
-						err_or_map.forEach(map ->									
-							Optional.ofNullable(map.get(m.bucket().harvest_technology_name_or_id()))
-								.ifPresent(lib -> context.setLibraryConfig(lib._1()))
-						);						
-						
+						final String entry_point = enrichment_topology.getClass().getName();
 						context.setBucket(bucket);
-						context.setUserTopologyEntryPoint(enrichment_topology.getClass().getName());
+						context.setUserTopologyEntryPoint(entry_point);
+						// also set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist
+						err_or_map.forEach(map -> {
+							context.setLibraryConfig(
+								map.values().stream().map(t2 -> t2._1())
+									.filter(lib -> entry_point.equals(lib.misc_entry_point()) || entry_point.equals(lib.streaming_enrichment_entry_point()))
+									.findFirst()
+									.orElse(BeanTemplateUtils.build(SharedLibraryBean.class).done().get()));
+										// (else this is a passthrough topology, so just use a dummy library bean)
+						});						
 
 						_logger.info("Set active class=" + enrichment_topology.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());						
 						
