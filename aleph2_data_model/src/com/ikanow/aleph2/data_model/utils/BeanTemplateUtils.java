@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -85,7 +86,22 @@ public class BeanTemplateUtils {
 	
 	/** Converts a JsonNode to a bean template of the specified type
 	 * (note: not very high performance, should only be used for management-type operations)
-	 * @param bean - the bean to convert to JSON
+	 * @param map_json - the bean to convert to JSON
+	 * @return - the bean template
+	 */
+	static public <T> BeanTemplate<T> from(final Map<String, Object> map_json, final Class<T> clazz) {
+		try {
+			ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+			return BeanTemplate.of(object_mapper.convertValue(map_json, clazz));
+		}
+		catch (Exception e) { // on fail returns an unchecked error
+			throw new RuntimeException(e); // (this can only happen due to "static" code type issues, so unchecked exception is fine
+		}
+	}
+
+	/** Converts a JsonNode to a bean template of the specified type
+	 * (note: not very high performance, should only be used for management-type operations)
+	 * @param bean - the JSON string to convert to a bean 
 	 * @return - the bean template
 	 */
 	static public <T> BeanTemplate<T> from(final String string_json, final Class<T> clazz) {
@@ -100,7 +116,7 @@ public class BeanTemplateUtils {
 
 	/** Converts a JsonNode to a bean template of the specified type
 	 * (note: not very high performance, should only be used for management-type operations)
-	 * @param bean - the bean to convert to JSON
+	 * @param bean - the JSON node to convert to a bean 
 	 * @return - the bean template
 	 */
 	static public <T> BeanTemplate<T> from(final JsonNode bean_json, final Class<T> clazz) {

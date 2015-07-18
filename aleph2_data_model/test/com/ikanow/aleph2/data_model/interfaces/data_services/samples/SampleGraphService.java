@@ -20,10 +20,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GraphSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleGraphService implements IGraphService {
 
@@ -34,8 +37,8 @@ public class SampleGraphService implements IGraphService {
 	}
 
 	@Override
-	public List<BasicMessageBean> validateSchema(DocumentSchemaBean schema, final DataBucketBean bucket) {
-		return Collections.emptyList();
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(GraphSchemaBean schema, final DataBucketBean bucket) {
+		return Tuples._2T("", Collections.emptyList());
 	}
 
 	@Override

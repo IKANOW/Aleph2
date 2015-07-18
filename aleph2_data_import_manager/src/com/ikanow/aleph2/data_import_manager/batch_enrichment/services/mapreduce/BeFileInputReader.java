@@ -62,7 +62,11 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 
 	@Override
 	public boolean nextKeyValue() throws IOException, InterruptedException {
-		if (null == _inStream) {
+		if (_currFile >= _numFiles) {
+			return false;
+		}
+		
+		if (null == _inStream){
 			
 			// Step 1: get input stream
 			_fs = FileSystem.get(_config);
@@ -81,8 +85,8 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 				}
 			}
 		}	 // instream = null		
-				this.currrentFileName = _fileSplit.getPath(_currFile).toString();
-				IParser parser = getParser(currrentFileName);
+		this.currrentFileName = _fileSplit.getPath(_currFile).toString();
+		IParser parser = getParser(currrentFileName);
 		_record = parser.getNextRecord(_currFile,currrentFileName,_inStream);
 		if (null == _record) { // Finished this file - are there any others?
 			
@@ -95,8 +99,13 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 			else {
 				return false; // all done
 			}
-		}//TESTED
-				
+		} // record = null
+		// close stream if not multiple records per file supported
+		if(!parser.multipleRecordsPerFile()){
+			_currFile++;
+			_inStream.close();
+			_inStream = null;
+		}
 		return true;
 	}
 
@@ -112,6 +121,7 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 				parser = parsers.get("BIN");
 			}
 		}
+		
 		return parser;
 	}
 

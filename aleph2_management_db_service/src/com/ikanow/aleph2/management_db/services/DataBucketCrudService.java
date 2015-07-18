@@ -23,8 +23,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -168,9 +170,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#storeObject(java.lang.Object, boolean)
 	 */
 	public ManagementFuture<Supplier<Object>> storeObject(final DataBucketBean new_object, final boolean replace_if_present)
-	{
-		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
-		
+	{		
 		try {			
 			// New bucket vs update - get the old bucket (we'll do this non-concurrently at least for now)
 			
@@ -188,84 +188,91 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				}
 			});
 
-			// Validation
+			// Validation (also generates a clone of the bucket with the data_locations written in)
 			
-			final Collection<BasicMessageBean> validation_info = validateBucket(new_object, old_bucket);
+			final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation_info = validateBucket(new_object, old_bucket);
 			
-			if (!validation_info.isEmpty() && validation_info.stream().anyMatch(m -> !m.success())) {
+			if (!validation_info._2().isEmpty() && validation_info._2().stream().anyMatch(m -> !m.success())) {
 				return FutureUtils.createManagementFuture(
 						FutureUtils.returnError(new RuntimeException("Bucket not valid, see management channels")),
-						CompletableFuture.completedFuture(validation_info)
+						CompletableFuture.completedFuture(validation_info._2())
 						);
 			}
-
-			// Error if a bucket status doesn't exist - must create a bucket status before creating the bucket
-			// (note the above validation ensures the bucket has an _id)
-			// (obviously need to block here until we're sure..)
-			
-			final CompletableFuture<Optional<DataBucketStatusBean>> corresponding_status = 
-					_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
-							Arrays.asList(helper.field(DataBucketStatusBean::_id), 
-											helper.field(DataBucketStatusBean::node_affinity), 
-											helper.field(DataBucketStatusBean::confirmed_master_enrichment_type), 
-											helper.field(DataBucketStatusBean::confirmed_suspended), 
-											helper.field(DataBucketStatusBean::confirmed_multi_node_enabled), 											
-											helper.field(DataBucketStatusBean::suspended), 
-											helper.field(DataBucketStatusBean::quarantined_until)), true);					
-					
-			if (!corresponding_status.get().isPresent()) {
-				return FutureUtils.createManagementFuture(
-						FutureUtils.returnError(new RuntimeException(
-								ErrorUtils.get(ManagementDbErrorUtils.BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS, new_object.full_name()))),
-						CompletableFuture.completedFuture(Collections.emptyList())
-						);				
-			}
-			
-			// Some fields like multi-node, you can only change if the bucket status is set to suspended, to make
-			// the control logic easy
-			old_bucket.ifPresent(ob -> {
-				validation_info.addAll(checkForInactiveOnlyUpdates(new_object, ob, corresponding_status.join().get()));
-				// (corresponding_status present and completed because of above check) 
-			});
-			if (!validation_info.isEmpty() && validation_info.stream().anyMatch(m -> !m.success())) {
-				return FutureUtils.createManagementFuture(
-						FutureUtils.returnError(new RuntimeException("Bucket not valid, see management channels")),
-						CompletableFuture.completedFuture(validation_info)
-						);
-			}
-			
-			// Create the directories
-			
-			try {
-				createFilePaths(new_object, _storage_service);
-			}
-			catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
-				return FutureUtils.createManagementFuture(
-						FutureUtils.returnError(e));			
-			}
-			
-			// OK if the bucket is validated we can store it (and create a status object)
-					
-			final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, replace_if_present);
-
-			// Get the status and then decide whether to broadcast out the new/update message
-			
-			final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
-			final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
-					? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db, _bucket_action_retry_store)
-					: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
-				
-			// Update the status depending on the results of the management channels
-					
-			return FutureUtils.createManagementFuture(ret_val,
-					MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
-										.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
+			return storeValidatedObject(validation_info._1(), old_bucket, validation_info._2(), replace_if_present);
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
 			return FutureUtils.createManagementFuture(
 					FutureUtils.returnError(e));			
 		}
+	}
+	public ManagementFuture<Supplier<Object>> storeValidatedObject(
+			final DataBucketBean new_object, final Optional<DataBucketBean> old_bucket, 
+			final Collection<BasicMessageBean> validation_info, boolean replace_if_present) throws Exception
+	{
+		final MethodNamingHelper<DataBucketStatusBean> helper = BeanTemplateUtils.from(DataBucketStatusBean.class); 
+			
+		// Error if a bucket status doesn't exist - must create a bucket status before creating the bucket
+		// (note the above validation ensures the bucket has an _id)
+		// (obviously need to block here until we're sure..)
+		
+		final CompletableFuture<Optional<DataBucketStatusBean>> corresponding_status = 
+				_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
+						Arrays.asList(helper.field(DataBucketStatusBean::_id), 
+										helper.field(DataBucketStatusBean::node_affinity), 
+										helper.field(DataBucketStatusBean::confirmed_master_enrichment_type), 
+										helper.field(DataBucketStatusBean::confirmed_suspended), 
+										helper.field(DataBucketStatusBean::confirmed_multi_node_enabled), 											
+										helper.field(DataBucketStatusBean::suspended), 
+										helper.field(DataBucketStatusBean::quarantined_until)), true);					
+				
+		if (!corresponding_status.get().isPresent()) {
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(new RuntimeException(
+							ErrorUtils.get(ManagementDbErrorUtils.BUCKET_CANNOT_BE_CREATED_WITHOUT_BUCKET_STATUS, new_object.full_name()))),
+					CompletableFuture.completedFuture(Collections.emptyList())
+					);				
+		}
+		
+		// Some fields like multi-node, you can only change if the bucket status is set to suspended, to make
+		// the control logic easy
+		old_bucket.ifPresent(ob -> {
+			validation_info.addAll(checkForInactiveOnlyUpdates(new_object, ob, corresponding_status.join().get()));
+			// (corresponding_status present and completed because of above check) 
+		});
+		if (!validation_info.isEmpty() && validation_info.stream().anyMatch(m -> !m.success())) {
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(new RuntimeException("Bucket not valid, see management channels")),
+					CompletableFuture.completedFuture(validation_info)
+					);
+		}
+		
+		// Create the directories
+		
+		try {
+			createFilePaths(new_object, _storage_service);
+		}
+		catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
+			return FutureUtils.createManagementFuture(
+					FutureUtils.returnError(e));			
+		}
+		
+		// OK if the bucket is validated we can store it (and create a status object)
+				
+		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, replace_if_present);
+
+		// Get the status and then decide whether to broadcast out the new/update message
+		
+		final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
+		final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
+				? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db, _bucket_action_retry_store)
+				: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
+			
+		// Update the status depending on the results of the management channels
+				
+		return FutureUtils.createManagementFuture(ret_val,
+				MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
+									.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
 	}
 
 	/* (non-Javadoc)
@@ -577,7 +584,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @throws ExecutionException 
 	 * @throws InterruptedException 
 	 */
-	protected Collection<BasicMessageBean> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
+	protected Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
 		
 		// (will live with this being mutable)
 		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
@@ -604,7 +611,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_FORMAT_ERROR, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
 				
-				return errors; // (this is catastrophic obviously)			
+				return Tuples._2T(bucket, errors); // (this is catastrophic obviously)			
 			}
 			
 			if (!old_version.isPresent()) { // (create not update)
@@ -615,7 +622,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					errors.add(MgmtCrudUtils.createValidationError(
 							ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
 					
-					return errors; // (this is catastrophic obviously)
+					return Tuples._2T(bucket, errors); // (this is catastrophic obviously)
 				}
 			}
 		}		
@@ -735,7 +742,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
 		if (!errors.isEmpty()) {
-			return errors;
+			return Tuples._2T(bucket, errors);
 		}
 		
 		/////////////////
@@ -751,7 +758,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
 		if (!errors.isEmpty()) {
-			return errors;
+			return Tuples._2T(bucket, errors);
 		}
 		
 		/////////////////
@@ -774,9 +781,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// PHASE 4 - DATA SCHEMA NOT MESSAGES AT THIS POINT CAN BE INFO, YOU NEED TO CHECK THE SUCCESS()
 
-		errors.addAll(validateSchema(bucket, _service_context));
+		Tuple2<Map<String, String>, List<BasicMessageBean>> schema_validation = validateSchema(bucket, _service_context);
 		
-		return errors;
+		errors.addAll(schema_validation._2());
+		
+		return Tuples._2T(
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::data_locations, schema_validation._1()).done(), 
+				errors);
 	}
 	
 	/** Checks active buckets for changes that will cause problems unless the bucket is suspended first (currently: only multi_node_enabled)
@@ -814,8 +825,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param service_context
 	 * @return
 	 */
-	protected static List<BasicMessageBean> validateSchema(final DataBucketBean bucket, final IServiceContext service_context) {
-		List<BasicMessageBean> errors = new LinkedList<>();
+	protected static Tuple2<Map<String, String>, List<BasicMessageBean>> validateSchema(final DataBucketBean bucket, final IServiceContext service_context) {
+		final List<BasicMessageBean> errors = new LinkedList<>();
+		final Map<String, String> data_locations = new LinkedHashMap<>(); // icky MUTABLE code)
 		
 		// Generic data schema:
 		errors.addAll(
@@ -829,6 +841,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			{
 				errors.addAll(service_context.getService(IColumnarService.class, Optional.ofNullable(bucket.data_schema().columnar_schema().service_name()))
 								.map(s -> s.validateSchema(bucket.data_schema().columnar_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("columnar_schema", s._1());
+									return s._2(); 
+								})
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "columnar_schema")))));
 			}
@@ -837,6 +853,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			{
 				errors.addAll(service_context.getService(IDocumentService.class, Optional.ofNullable(bucket.data_schema().document_schema().service_name()))
 								.map(s -> s.validateSchema(bucket.data_schema().document_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("document_schema", s._1());
+									return s._2(); 
+								})
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "document_schema")))));
 			}
@@ -845,6 +865,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			{
 				errors.addAll(service_context.getService(ISearchIndexService.class, Optional.ofNullable(bucket.data_schema().search_index_schema().service_name()))
 								.map(s -> s.validateSchema(bucket.data_schema().search_index_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("search_index_schema", s._1());
+									return s._2(); 
+								})
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "search_index_schema")))));
 			}
@@ -853,6 +877,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			{
 				errors.addAll(service_context.getService(IStorageService.class, Optional.ofNullable(bucket.data_schema().storage_schema().service_name()))
 								.map(s -> s.validateSchema(bucket.data_schema().storage_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("storage_schema", s._1());
+									return s._2(); 
+								})
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "storage_schema")))));
 			}
@@ -860,6 +888,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			{
 				errors.addAll(service_context.getService(ITemporalService.class, Optional.ofNullable(bucket.data_schema().temporal_schema().service_name()))
 								.map(s -> s.validateSchema(bucket.data_schema().temporal_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("temporal_schema", s._1());
+									return s._2(); 
+								})
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "temporal_schema")))));
 			}
@@ -880,7 +912,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "data_warehouse_schema")));
 			}
 		}
-		return errors;
+		return Tuples._2T(data_locations, errors);
 	}
 	
 	/** A utility routine to check whether the bucket is allowed to be in this location

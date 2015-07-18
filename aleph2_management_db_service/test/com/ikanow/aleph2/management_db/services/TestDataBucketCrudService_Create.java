@@ -19,9 +19,11 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -37,6 +39,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
+import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -60,6 +63,7 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -78,6 +82,8 @@ import com.mongodb.MongoException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
+
+import scala.Tuple2;
 
 //TODO test bucket validation
 
@@ -126,7 +132,7 @@ public class TestDataBucketCrudService_Create {
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _db_actor_context);
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);
 		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
-		_mock_service_context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), _core_db_service);		
+		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
 		
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;
 		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db;
@@ -281,28 +287,34 @@ public class TestDataBucketCrudService_Create {
 		MockServiceContext test_context = new MockServiceContext();
 		
 		IColumnarService service1 = Mockito.mock(IColumnarService.class);
-		Mockito.when(service1.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		Mockito.when(service1.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t1", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(IColumnarService.class, Optional.empty(), service1);
 
 		IDocumentService service2 = Mockito.mock(IDocumentService.class);
-		Mockito.when(service2.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		Mockito.when(service2.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t2", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(IDocumentService.class, Optional.empty(), service2);
 
 		ISearchIndexService service3 = Mockito.mock(ISearchIndexService.class);
-		Mockito.when(service3.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		Mockito.when(service3.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t3", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(ISearchIndexService.class, Optional.empty(), service3);
 
 		IStorageService service4 = Mockito.mock(IStorageService.class);
-		Mockito.when(service4.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		Mockito.when(service4.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t4", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(IStorageService.class, Optional.empty(), service4);
 
 		ITemporalService service5 = Mockito.mock(ITemporalService.class);
-		Mockito.when(service5.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null)));
+		Mockito.when(service5.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t5", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(ITemporalService.class, Optional.empty(), service5);
 
-		final List<BasicMessageBean> results1 = DataBucketCrudService.validateSchema(bucket_with_schema, test_context);
-		assertEquals(5, results1.size());
-		assertTrue("All returned success==true", results1.stream().allMatch(m -> m.success()));
+		final Tuple2<Map<String, String>, List<BasicMessageBean>> results1 = DataBucketCrudService.validateSchema(bucket_with_schema, test_context);
+		assertEquals(5, results1._2().size());
+		assertTrue("All returned success==true", results1._2().stream().allMatch(m -> m.success()));
+		assertEquals(5, results1._1().size());
+		assertEquals(ImmutableMap.<String, String>builder()
+				.put("columnar_schema", "t1").put("document_schema", "t2").put("search_index_schema", "t3").put("storage_schema", "t4").put("temporal_schema", "t5")
+				.build()
+				,
+				results1._1());
 		
 		// Not present tests:
 		
@@ -330,7 +342,7 @@ public class TestDataBucketCrudService_Create {
 		
 		MockServiceContext test_context2 = new MockServiceContext();
 		
-		final List<BasicMessageBean> results2 = DataBucketCrudService.validateSchema(bucket_with_other_schema, test_context2);
+		final List<BasicMessageBean> results2 = DataBucketCrudService.validateSchema(bucket_with_other_schema, test_context2)._2();
 		assertEquals(8, results2.size());
 		
 		assertTrue("All returned success==false", results2.stream().allMatch(m -> !m.success()));		
@@ -353,7 +365,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean bucket_with_disabled_schema = BeanTemplateUtils.clone(valid_bucket)
 				.with(DataBucketBean::data_schema, not_enabled_schema).done();		
 		
-		final List<BasicMessageBean> results3 = DataBucketCrudService.validateSchema(bucket_with_disabled_schema, test_context2);
+		final List<BasicMessageBean> results3 = DataBucketCrudService.validateSchema(bucket_with_disabled_schema, test_context2)._2();
 		assertEquals(0, results3.size());
 	}
 	
@@ -1268,6 +1280,9 @@ public class TestDataBucketCrudService_Create {
 		// Try to update it
 		
 		final DataBucketBean bucket = _bucket_crud.getObjectById("id1").get().get();
+		
+		//(while we're here, just check that the data schema map is written in)
+		assertEquals(Collections.emptyMap(), bucket.data_locations());
 		
 		final DataBucketBean mod_bucket1 = BeanTemplateUtils.clone(bucket)
 											.with(DataBucketBean::full_name, "/Something/else")

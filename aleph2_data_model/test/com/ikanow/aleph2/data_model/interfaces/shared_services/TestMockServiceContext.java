@@ -58,7 +58,7 @@ public class TestMockServiceContext implements IUnderlyingService {
 		context.addService(IDocumentService.class, Optional.empty(), new SampleDocumentService());
 		context.addService(IGeospatialService.class, Optional.empty(), new SampleGeospatialService());
 		context.addService(IGraphService.class, Optional.empty(), new SampleGraphService());
-		context.addService(IManagementDbService.class, Optional.of("CoreManagementDbService"), new SampleManagementDbService());
+		context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, new SampleManagementDbService());
 		context.addService(IManagementDbService.class, Optional.empty(), new SampleManagementDbService());
 		context.addService(ISearchIndexService.class, Optional.empty(), new SampleSearchIndexService());
 		context.addService(IStorageService.class, Optional.empty(), new SampleStorageService());

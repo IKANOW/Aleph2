@@ -28,6 +28,7 @@ import java.util.stream.StreamSupport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
@@ -41,7 +42,6 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -120,10 +120,16 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, hostname, m)
 	    					.thenCompose(err_or_map -> {
 	    						
-								final IHarvestContext h_context = _context.getNewHarvestContext();
+								final HarvestContext h_context = _context.getNewHarvestContext();
 								
 								final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
 										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
+
+								// set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist 
+								err_or_map.forEach(map ->									
+									Optional.ofNullable(map.get(m.bucket().harvest_technology_name_or_id()))
+										.ifPresent(lib -> h_context.setLibraryConfig(lib._1()))
+								);
 								
 								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
 								return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
@@ -346,17 +352,9 @@ public class DataBucketChangeActor extends AbstractActor {
 			)
 	{
 		try {
-			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
 			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket, cache_tech_jar_only);
 
-			return management_db.getSharedLibraryStore().getObjectsBySpec(
-					spec, 
-					Arrays.asList(
-						helper.field(SharedLibraryBean::_id), 
-						helper.field(SharedLibraryBean::path_name), 
-						helper.field(SharedLibraryBean::misc_entry_point)
-					), 
-					true)
+			return management_db.getSharedLibraryStore().getObjectsBySpec(spec)
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 

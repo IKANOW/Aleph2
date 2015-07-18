@@ -30,6 +30,7 @@ import java.util.stream.StreamSupport;
 
 import scala.Tuple2;
 
+import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -59,7 +60,7 @@ public class MgmtCrudUtils {
 		return new BasicMessageBean(
 				new Date(), // date
 				false, // success
-				"CoreManagementDbService",
+				IManagementDbService.CORE_MANAGEMENT_DB.get(),
 				BucketActionMessage.NewBucketActionMessage.class.getSimpleName(),
 				null, // message code
 				error,

@@ -91,7 +91,7 @@ public class MockServiceContext implements IServiceContext {
 
 	@Override
 	public IManagementDbService getCoreManagementDbService() {
-		return getService(IManagementDbService.class, Optional.of("CoreManagementDbService")).get();
+		return getService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
 	}
 
 	@Override

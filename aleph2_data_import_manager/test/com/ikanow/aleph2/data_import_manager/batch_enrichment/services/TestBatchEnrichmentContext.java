@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import.services;
+package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -58,8 +58,8 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class TestStreamingEnrichmentContext {
-	static final Logger _logger = LogManager.getLogger(); 
+public class TestBatchEnrichmentContext {
+	static final Logger _logger = LogManager.getLogger(TestBatchEnrichmentContext.class); 
 
 	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
@@ -76,7 +76,7 @@ public class TestStreamingEnrichmentContext {
 				e.printStackTrace();
 			}
 			catch (Exception ee) {
-				System.out.println(ErrorUtils.getLongForm("{0}", e));
+				_logger.error(ErrorUtils.getLongForm("{0}", e));
 			}
 		}
 	}
@@ -86,25 +86,25 @@ public class TestStreamingEnrichmentContext {
 		try {
 			assertTrue("Injector created", _app_injector != null);
 		
-			final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+			final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
 			
-			assertTrue("StreamingEnrichmentContext created", test_context != null);
+			assertTrue("BatchEnrichmentContext created", test_context != null);
 			
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._core_management_db != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._distributed_services != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._index_service != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._globals != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._service_context != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._core_management_db != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._distributed_services != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._index_service != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._globals != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._service_context != null);
 			
 			assertTrue("Find service", test_context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).isPresent());
 			
 			// Check if started in "technology" (internal mode)
-			assertEquals(test_context._state_name, StreamingEnrichmentContext.State.IN_TECHNOLOGY);
+			assertEquals(test_context._state_name, BatchEnrichmentContext.State.IN_TECHNOLOGY);
 			
 			// Check that multiple calls to create harvester result in different contexts but with the same injection:
-			final StreamingEnrichmentContext test_context2 = _app_injector.getInstance(StreamingEnrichmentContext.class);
-			assertTrue("StreamingEnrichmentContext created", test_context2 != null);
-			assertTrue("StreamingEnrichmentContexts different", test_context2 != test_context);
+			final BatchEnrichmentContext test_context2 = _app_injector.getInstance(BatchEnrichmentContext.class);
+			assertTrue("BatchEnrichmentContext created", test_context2 != null);
+			assertTrue("BatchEnrichmentContexts different", test_context2 != test_context);
 			assertEquals(test_context._service_context, test_context2._service_context);
 			
 			// Check calls that require that bucket/endpoint be set
@@ -148,7 +148,7 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.of(test_bucket)));
 		}
 		catch (Exception e) {
-			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
+			_logger.error(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
 			throw e;
 		}
 	}
@@ -159,7 +159,7 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
 			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
 			
-			final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+			final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
 	
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 													.with(DataBucketBean::_id, "test")
@@ -180,7 +180,7 @@ public class TestStreamingEnrichmentContext {
 			// Empty service set:
 			final String signature = test_context.getEnrichmentContextSignature(Optional.of(test_bucket), Optional.empty());
 						
-			final String expected_sig = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7e\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}";			
+			final String expected_sig = "com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext:{\"12fc53ed-44cc-4777-9251-d7347480efb2\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"6b5a32e4-c457-4d37-94e7-3fce8f773be2\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"}}}";			
 			assertEquals(expected_sig, signature);
 
 			// Check can't call multiple times
@@ -200,7 +200,7 @@ public class TestStreamingEnrichmentContext {
 			}
 			catch (Exception e) {}
 			// Create another injector:
-			final StreamingEnrichmentContext test_context2 = _app_injector.getInstance(StreamingEnrichmentContext.class);
+			final BatchEnrichmentContext test_context2 = _app_injector.getInstance(BatchEnrichmentContext.class);
 			test_context2.setLibraryConfig(library);			
 
 			final String signature2 = test_context2.getEnrichmentContextSignature(Optional.of(test_bucket),
@@ -213,22 +213,22 @@ public class TestStreamingEnrichmentContext {
 					);
 			
 			
-			final String expected_sig2 = "com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7e\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
+			final String expected_sig2 = "com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext:{\"12fc53ed-44cc-4777-9251-d7347480efb2\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"6b5a32e4-c457-4d37-94e7-3fce8f773be2\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
 			assertEquals(expected_sig2, signature2);
 			
 			final IEnrichmentModuleContext test_external1a = ContextUtils.getEnrichmentContext(signature);		
 			
 			assertTrue("external context non null", test_external1a != null);
 			
-			assertTrue("external context of correct type", test_external1a instanceof StreamingEnrichmentContext);
+			assertTrue("external context of correct type", test_external1a instanceof BatchEnrichmentContext);
 			
-			final StreamingEnrichmentContext test_external1b = (StreamingEnrichmentContext)test_external1a;
+			final BatchEnrichmentContext test_external1b = (BatchEnrichmentContext)test_external1a;
 			
-			assertTrue("StreamingEnrichmentContext dependencies", test_external1b._core_management_db != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external1b._distributed_services != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._index_service != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external1b._globals != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external1b._service_context != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external1b._core_management_db != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external1b._distributed_services != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._index_service != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external1b._globals != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external1b._service_context != null);
 			
 			assertEquals("test", test_external1b._mutable_state.bucket.get()._id());
 			
@@ -238,9 +238,9 @@ public class TestStreamingEnrichmentContext {
 			
 			assertTrue("external context non null", test_external1a_1 != null);
 			
-			assertTrue("external context of correct type", test_external1a_1 instanceof StreamingEnrichmentContext);
+			assertTrue("external context of correct type", test_external1a_1 instanceof BatchEnrichmentContext);
 			
-			final StreamingEnrichmentContext test_external1b_1 = (StreamingEnrichmentContext)test_external1a_1;
+			final BatchEnrichmentContext test_external1b_1 = (BatchEnrichmentContext)test_external1a_1;
 			
 			assertEquals(test_external1b_1._distributed_services, test_external1b._distributed_services);
 			
@@ -250,15 +250,15 @@ public class TestStreamingEnrichmentContext {
 			
 			assertTrue("external context non null", test_external2a != null);
 			
-			assertTrue("external context of correct type", test_external2a instanceof StreamingEnrichmentContext);
+			assertTrue("external context of correct type", test_external2a instanceof BatchEnrichmentContext);
 			
-			final StreamingEnrichmentContext test_external2b = (StreamingEnrichmentContext)test_external2a;
+			final BatchEnrichmentContext test_external2b = (BatchEnrichmentContext)test_external2a;
 			
-			assertTrue("StreamingEnrichmentContext dependencies", test_external2b._core_management_db != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external2b._distributed_services != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_context._index_service != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external2b._globals != null);
-			assertTrue("StreamingEnrichmentContext dependencies", test_external2b._service_context != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external2b._core_management_db != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external2b._distributed_services != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_context._index_service != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external2b._globals != null);
+			assertTrue("BatchEnrichmentContext dependencies", test_external2b._service_context != null);
 			
 			assertEquals("test", test_external2b._mutable_state.bucket.get()._id());
 			
@@ -309,7 +309,7 @@ public class TestStreamingEnrichmentContext {
 			
 		}
 		catch (Exception e) {
-			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
+			_logger.error(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
 			fail("Threw exception");
 		}
 	}
@@ -317,7 +317,7 @@ public class TestStreamingEnrichmentContext {
 	@Test
 	public void test_getUnderlyingArtefacts() {
 		
-		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
 		
 		// (interlude: check errors if called before getSignature
 		try {
@@ -346,8 +346,9 @@ public class TestStreamingEnrichmentContext {
 		// Empty service set:
 		test_context.getEnrichmentContextSignature(Optional.of(test_bucket), Optional.empty());		
 		final Collection<Object> res1 = test_context.getUnderlyingArtefacts();
-		final String exp1 = "class com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService:class com.ikanow.aleph2.shared.crud.elasticsearch.services.MockElasticsearchCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory";
-		assertEquals(exp1, res1.stream().map(o -> o.getClass().toString()).collect(Collectors.joining(":")));
+		final String exp1 = "class com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService:class com.ikanow.aleph2.shared.crud.elasticsearch.services.MockElasticsearchCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory";
+		String classes = res1.stream().map(o -> o.getClass().toString()).collect(Collectors.joining(":"));
+		assertEquals(exp1, classes);
 	}
 	
 	@Test
@@ -355,7 +356,7 @@ public class TestStreamingEnrichmentContext {
 		
 		assertTrue("Injector created", _app_injector != null);
 		
-		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
 		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		assertEquals(Optional.empty(), test_context.getBucket());
 		
@@ -428,7 +429,7 @@ public class TestStreamingEnrichmentContext {
 	@Test
 	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 
-		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
 		
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "test_objectemitting")

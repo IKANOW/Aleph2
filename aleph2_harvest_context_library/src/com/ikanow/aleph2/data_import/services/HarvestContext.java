@@ -72,14 +72,16 @@ import com.typesafe.config.ConfigValueFactory;
 @SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
 
-	public static final String __MY_ID = "030e2b82-0285-11e5-a322-1697f925ec7b";
+	public static final String __MY_BUCKET_ID = "030e2b82-0285-11e5-a322-1697f925ec7b";
+	public static final String __MY_LIBRARY_ID = "030e2b82-0285-11e5-a322-1697f925ec7c";
 	
 	public enum State { IN_TECHNOLOGY, IN_MODULE };
 	protected final State _state_name;
 	
 	protected static class MutableState {
 		//TODO (ALEPH-19) logging information - will be genuinely mutable
-		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
+		SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -121,6 +123,14 @@ public class HarvestContext implements IHarvestContext {
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the library bean for this harvest context instance
+	 * @param this_bucket - the library bean to be associated
+	 * @returns whether the library bean has been updated (ie fails if it's already been set)
+	 */
+	public boolean setLibraryConfig(SharedLibraryBean lib_config) {
+		return _mutable_state.library_config.set(lib_config);
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#initializeNewContext(java.lang.String)
 	 */
@@ -147,10 +157,11 @@ public class HarvestContext implements IHarvestContext {
 			}			
 			// Get bucket 
 			
-			String bucket_id = parsed_config.getString(__MY_ID);
-			
-			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_ID), DataBucketBean.class);
+			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
+			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
+			_mutable_state.library_config.set(retrieve_library.get());
+			
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -165,9 +176,8 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getService(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <I extends IUnderlyingService> Optional<I> getService(Class<I> service_clazz,
-			Optional<String> service_name) {
-		return _service_context.getService(service_clazz, service_name);
+	public IServiceContext getServiceContext() {
+		return _service_context;
 	}
 
 	/* (non-Javadoc)
@@ -276,7 +286,7 @@ public class HarvestContext implements IHarvestContext {
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 							.add(Tuples._2T(IStorageService.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, Optional.of("CoreManagementDbService")))
+							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 							.build();
 			
 			final Config config_no_services = full_config.withoutPath("service");
@@ -300,10 +310,15 @@ public class HarvestContext implements IHarvestContext {
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
 			final Config last_call = config_subset_services
-										.withValue(__MY_ID, 
+										.withValue(__MY_BUCKET_ID, 
 												ConfigValueFactory
 													.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
-													);
+													)
+										.withValue(__MY_LIBRARY_ID, 
+													ConfigValueFactory
+														.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.library_config.get()).toString())
+													)
+													;
 			
 			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 		}
@@ -463,6 +478,14 @@ public class HarvestContext implements IHarvestContext {
 			String quarantine_duration) {
 		//TODO (ALEPH-19): Fill this in later (need distributed Akka working)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
+	 */
+	@Override
+	public SharedLibraryBean getLibraryConfig() {
+		return _mutable_state.library_config.get();
 	}
 
 }

@@ -37,6 +37,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -87,15 +88,20 @@ public class TestPassthroughTopology {
 						.done().get())
 				.done().get();
 
+		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::path_name, "/test/lib")
+				.done().get();
+
 		// Context		
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		test_context.setBucket(test_bucket);
+		test_context.setLibraryConfig(library);			
 		test_context.setUserTopologyEntryPoint("com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology");
 		test_context.getEnrichmentContextSignature(Optional.empty(), Optional.empty());
 		test_context.overrideSavedContext(); // (THIS IS NEEDED WHEN TESTING THE KAFKA SPOUT)
 		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
-		final ICoreDistributedServices cds = test_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		final ICoreDistributedServices cds = test_context.getServiceContext().getService(ICoreDistributedServices.class, Optional.empty()).get();
 		final StormTopology topology = (StormTopology) new PassthroughTopology()
 											.getTopologyAndConfiguration(test_bucket, test_context)
 											._1();
@@ -107,7 +113,7 @@ public class TestPassthroughTopology {
 		Thread.sleep(5000L);
 		
 		//PHASE 3: CHECK INDEX
-		final ISearchIndexService index_service = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		final ISearchIndexService index_service = test_context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
 		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, test_bucket).get();
 		crud_service.deleteDatastore().get();
 		_logger.info("******** Cleansed existing datastore");

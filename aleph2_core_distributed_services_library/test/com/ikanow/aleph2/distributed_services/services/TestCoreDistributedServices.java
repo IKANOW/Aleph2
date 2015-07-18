@@ -137,6 +137,10 @@ public class TestCoreDistributedServices {
 	 */
 	@Test
 	public void testKafka() throws Exception {
+		if (!auto_configure) { // Only test this once per true/false cycle
+			return; 
+		}
+		
 		//create a random topic so its new (has to call create function)
 		final String TOPIC_NAME = "TEST_CDS_" + System.currentTimeMillis();  
 		final int num_to_test = 10;
@@ -166,6 +170,10 @@ public class TestCoreDistributedServices {
 		
 	@Test
 	public void testKafkaForStormSpout() throws Exception {
+		if (!auto_configure) { // Only test this once per true/false cycle
+			return; 
+		}
+		
 		//create a topic for a kafka spout, put some things in the spout		
 		final String TOPIC_NAME = "TEST_KAFKA_SPOUT_" + System.currentTimeMillis();  
 		final int num_to_test = 100; //set this high enough to hit the concurrent connection limit just incase we messed something up

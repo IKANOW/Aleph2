@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,6 +45,21 @@ public class TestBeanTemplateUtils {
 		
 		private String testField;
 	}
+	
+	@Test
+	public void test_fromJson() {
+		final String jsonstr1 = "{\"testField\":\"test1\"}";
+		final String jsonstr2 = "{\"testField\":\"test2\"}";
+		final String jsonstr3 = "{\"testField\":\"test3\"}";
+		final JsonNode json2 = BeanTemplateUtils.configureMapper(Optional.empty()).createObjectNode().put("testField", "test2");
+		final Map<String, Object> json3 = ImmutableMap.<String, Object>builder().put("testField", "test3").build();
+		
+		assertEquals(jsonstr1, BeanTemplateUtils.toJson(BeanTemplateUtils.from(jsonstr1, TestBean.class).get()).toString());
+		assertEquals(jsonstr2, BeanTemplateUtils.toJson(BeanTemplateUtils.from(json2, TestBean.class).get()).toString());
+		assertEquals(jsonstr3, BeanTemplateUtils.toJson(BeanTemplateUtils.from(json3, TestBean.class).get()).toString());
+	}
+	
+	
 	
 	@Test
 	public void testSingleMethodHelper() {

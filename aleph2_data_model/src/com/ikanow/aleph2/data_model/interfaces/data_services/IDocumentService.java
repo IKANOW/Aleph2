@@ -18,6 +18,8 @@ package com.ikanow.aleph2.data_model.interfaces.data_services;
 import java.util.Collection;
 import java.util.List;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -31,9 +33,9 @@ public interface IDocumentService extends IUnderlyingService {
 
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
-	 * @return a list of errors, empty if none
+	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
 	 */
-	List<BasicMessageBean> validateSchema(final DataSchemaBean.DocumentSchemaBean schema, final DataBucketBean bucket);
+	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.DocumentSchemaBean schema, final DataBucketBean bucket);
 	
 	/** Returns a CRUD service for the specified bucket or multi-bucket
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)

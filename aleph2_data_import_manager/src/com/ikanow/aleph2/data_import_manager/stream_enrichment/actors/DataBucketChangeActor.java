@@ -236,9 +236,20 @@ public class DataBucketChangeActor extends AbstractActor {
 						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
 					},		
 					//NORMAL grab enrichment topology
-					enrichment_topology -> {					
+					enrichment_topology -> {
+						
+						final String entry_point = enrichment_topology.getClass().getName();
 						context.setBucket(bucket);
-						context.setUserTopologyEntryPoint(enrichment_topology.getClass().getName());
+						context.setUserTopologyEntryPoint(entry_point);
+						// also set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist
+						err_or_map.forEach(map -> {
+							context.setLibraryConfig(
+								map.values().stream().map(t2 -> t2._1())
+									.filter(lib -> entry_point.equals(lib.misc_entry_point()) || entry_point.equals(lib.streaming_enrichment_entry_point()))
+									.findFirst()
+									.orElse(BeanTemplateUtils.build(SharedLibraryBean.class).done().get()));
+										// (else this is a passthrough topology, so just use a dummy library bean)
+						});						
 
 						_logger.info("Set active class=" + enrichment_topology.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());						
 						
@@ -367,15 +378,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				return CompletableFuture.completedFuture(Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(Collections.emptyMap()));
 			}
 			
-			return management_db.getSharedLibraryStore().getObjectsBySpec(
-					spec.get(), 
-					Arrays.asList(
-						helper.field(SharedLibraryBean::_id), 
-						helper.field(SharedLibraryBean::path_name), 
-						helper.field(SharedLibraryBean::misc_entry_point),
-						helper.field(SharedLibraryBean::streaming_enrichment_entry_point)
-					), 
-					true)
+			return management_db.getSharedLibraryStore().getObjectsBySpec(spec.get())
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 

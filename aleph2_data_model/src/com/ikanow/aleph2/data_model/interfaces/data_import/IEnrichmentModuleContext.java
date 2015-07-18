@@ -24,11 +24,13 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public interface IEnrichmentModuleContext extends IUnderlyingService {
 
@@ -134,12 +136,11 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	
 	// Common - Management
 	
-	/** (All Enrichment Types) Returns a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
-	 * @param service_clazz - the class of the object desired; if specified, this overrides to a secondary service
-	 * @param service_name - optional - if ommitted, this is the default service of this type
-	 * @return the requested service (optionally)
+	/** (HarvesterModule only) Returns context to return a service - for external clients, the corresponding library JAR must have been copied into the class file (path given by getHarvestContextLibraries)
+	 * (NOTE: harvester technology modules do not need this, they can access the service context directly via the @Inject annotation)    
+	 * @return the service context
 	 */
-	<I extends IUnderlyingService> Optional<I> getService(final Class<I> service_clazz, final Optional<String> service_name);
+	IServiceContext getServiceContext();
 	
 	/** (All Enrichment Types) Returns an object repository that the harvester/module can use to store arbitrary internal state
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
@@ -153,6 +154,13 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 * @return The bucket that this job is running for, or Optional.empty() if that is ambiguous
 	 */
 	Optional<DataBucketBean> getBucket();
+	
+	/** (All Enrichment Types) Returns the library bean that provided the user callback currently being executed
+	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
+	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
+	 * @return the library bean that provided the user callback currently being executed
+	 */
+	SharedLibraryBean getLibraryConfig();
 	
 	/** (All Enrichment Types) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

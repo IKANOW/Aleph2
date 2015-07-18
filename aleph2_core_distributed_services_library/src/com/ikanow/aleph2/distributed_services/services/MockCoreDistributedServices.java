@@ -79,7 +79,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 				.put("request.required.acks", "1")
 				.put("zookeeper.connect", _test_server.getConnectString())
 				.put("group.id", "somegroup")
-				.put("zookeeper.session.timeout.ms", "400")
+				.put("zookeeper.session.timeout.ms", "1200")
 				.put("zookeeper.sync.time.ms", "200")
 		        .put("auto.commit.interval.ms", "1000")			
 				.build();	
