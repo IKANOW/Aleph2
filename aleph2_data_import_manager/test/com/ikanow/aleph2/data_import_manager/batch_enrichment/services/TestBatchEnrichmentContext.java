@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
+import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -309,7 +309,6 @@ public class TestBatchEnrichmentContext {
 	}
 	
 	@Test
-	@Ignore
 	public void test_misc() {
 		
 		assertTrue("Injector created", _app_injector != null);
@@ -361,13 +360,8 @@ public class TestBatchEnrichmentContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 		}
-		try {
-			test_context.getNextUnusedId();
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_SUPPORTED_IN_STREAMING_ENRICHMENT, e.getMessage());
-		}
+
+		test_context.getNextUnusedId();
 		try {
 			test_context.storeErroredObject(0L, null);
 			fail("Should have thrown exception");
@@ -380,12 +374,11 @@ public class TestBatchEnrichmentContext {
 			fail("Should have errored");
 		}
 		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+			assertEquals(ErrorUtils.NOT_SUPPORTED_IN_BATCH_ENRICHMENT, e.getMessage());
 		}
 	}
 	
 	@Test
-	@Ignore
 	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 
 		final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
