@@ -24,28 +24,21 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.Tuple2;
-import storm.kafka.BrokerHosts;
-import storm.kafka.KafkaSpout;
-import storm.kafka.SpoutConfig;
-import storm.kafka.StringScheme;
-import storm.kafka.ZkHosts;
-import backtype.storm.spout.SchemeAsMultiScheme;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import.context.stream_enrichment.utils.ErrorUtils;
-import com.ikanow.aleph2.data_import.stream_enrichment.storm.OutputBolt;
+import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -67,7 +60,6 @@ import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -318,45 +310,17 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	
 	// OVERRIDES
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_TECHNOLOGY) {			
-			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
-			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
-			final String topic_name = KafkaUtils.bucketPathToTopicName(my_bucket.full_name());
-			KafkaUtils.createTopic(topic_name);	
-			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, my_bucket._id()); 
-			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
-			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
-			return (T) kafka_spout;			
-		}
-		else {
-			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
-		}
+		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_BATCH_ENRICHMENT);						
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getTopologyStorageEndpoint(java.lang.Class, java.util.Optional)
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyStorageEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_TECHNOLOGY) {
-			if (!_mutable_state.user_topology_entry_point.isSet()) {
-				throw new RuntimeException(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"));
-			}
-			if (!_mutable_state.signature_override.isSet()) {
-				// Assume the user is happy with defaults:
-				getEnrichmentContextSignature(bucket, Optional.empty());
-			}
-			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-			return (T) new OutputBolt(my_bucket, _mutable_state.signature_override.get(), _mutable_state.user_topology_entry_point.get());
-		}
-		else {
-			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
-		}
+			throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_BATCH_ENRICHMENT);						
 	}
 
 	/* (non-Javadoc)
@@ -364,12 +328,7 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	 */
 	@Override
 	public <T> T getTopologyErrorEndpoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_TECHNOLOGY) {
-			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-		}
-		else {
-			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
-		}
+		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_BATCH_ENRICHMENT);						
 	}
 
 	/* (non-Javadoc)
@@ -415,7 +374,8 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 
 	@Override
 	public long getNextUnusedId() {
-		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_STREAMING_ENRICHMENT);
+		//TODO
+		return 0;
 	}
 
 	/* (non-Javadoc)

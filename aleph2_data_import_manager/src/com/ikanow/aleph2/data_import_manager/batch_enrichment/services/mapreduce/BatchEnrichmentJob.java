@@ -19,12 +19,13 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleCont
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ContextUtils;
 
 public class BatchEnrichmentJob{
 
 	public static String BATCH_SIZE_PARAM = "batchSize";
-	public static String BE_JOB_BEAN_PARAM = "beJobBean";
+	public static String BE_META_BEAN_PARAM = "metadataName";
+	public static String BE_CONTEXT_SIGNATURE = "beContextSignature";
 
 	private static final Logger logger = LogManager.getLogger(BatchEnrichmentJob.class);
 	
@@ -55,19 +56,15 @@ public class BatchEnrichmentJob{
 		protected void setup(Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob setup");
 			try{
-			
-			String beJobBeanJson = context.getConfiguration().get(BE_JOB_BEAN_PARAM);
-			this.beJob  = BeanTemplateUtils.from(beJobBeanJson, BeJobBean.class).get();
-			this.bucket = beJob.getDataBucketBean();
-			
-			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket,beJob.getEnrichmentControlMetadataName()).get();			
-			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);
-			
-			this.beLibrary = BeJobBean.extractLibrary(beJob.getSharedLibraries(),SharedLibraryBean.LibraryType.enrichment_module).get();
-			this.module = (IEnrichmentBatchModule)Class.forName(beLibrary.batch_enrichment_entry_point()).newInstance();
+				
+			String contextSignature = context.getConfiguration().get(BE_CONTEXT_SIGNATURE);   
+			this.enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
+			this.bucket = enrichmentContext.getBucket().get();
 
-			// TODO initialize context
-			//this.enrichmentContext = e
+			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);			
+			this.beLibrary = enrichmentContext.getLibraryConfig();		
+			this.module = (IEnrichmentBatchModule)Class.forName(beLibrary.batch_enrichment_entry_point()).newInstance();
+			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket, context.getConfiguration().get(BE_META_BEAN_PARAM)).get();
 			
 			boolean final_stage = true;
 			module.onStageInitialize(enrichmentContext, bucket, final_stage);

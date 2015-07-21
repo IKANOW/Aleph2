@@ -1,7 +1,5 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
-import static org.junit.Assert.*;
-
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -52,7 +50,7 @@ public class BeJobServiceTest extends DataBucketTest {
 	} // setup dependencies
 	
 	@Test
-	public void testBeJobService(){
+	public void testBeJobService() throws Exception{
 		try {
 			
 			createEnhancementBeanInDb();
@@ -61,9 +59,9 @@ public class BeJobServiceTest extends DataBucketTest {
 			if(beJobService instanceof MiniClusterBeJobLauncher){
 				((MiniClusterBeJobLauncher)beJobService).stop();
 			}
-		} catch (Exception e) {
-			logger.error("testBeJobService caught exception");
-			fail(e.getMessage());
+		} catch (Throwable t) {
+			logger.error("testBeJobService caught exception",t);
+			throw t;
 		}
 	}
 }

@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.BeJobLauncher;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
@@ -36,6 +37,8 @@ public class DataImportManagerModule extends AbstractModule {
 	@Override
 	protected void configure() {
 	    bind(DataImportActorContext.class).in(Scopes.SINGLETON);
+	    bind(BatchEnrichmentContext.class).in(Scopes.SINGLETON);
+
 	    configureServices();
 	}
 	
