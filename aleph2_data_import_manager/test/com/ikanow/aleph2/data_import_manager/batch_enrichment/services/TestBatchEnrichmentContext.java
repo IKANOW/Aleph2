@@ -123,29 +123,6 @@ public class TestBatchEnrichmentContext {
 					.done().get();
 			test_context.setLibraryConfig(library);
 			
-			try {
-				test_context.getTopologyStorageEndpoint(null, null);
-				fail("Should have errored");
-			}
-			catch(Exception e) {
-				assertEquals(ErrorUtils.get(ErrorUtils.USER_TOPOLOGY_NOT_SET, "getTopologyStorageEndpoint"), e.getMessage());
-			}
-			test_context.setUserTopologyEntryPoint("test");
-			test_context.setBucket(test_bucket);
-			assertEquals(test_bucket, test_context.getBucket().get());
-			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.empty()));
-			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.of(test_bucket)));
-			//Other topology call
-			try {
-				test_context2.getTopologyEntryPoint(Object.class, Optional.empty());
-				fail("Should have errored");
-			}
-			catch(Exception e) {
-			}
-			test_context2.setUserTopologyEntryPoint("test");
-			test_context2.setBucket(test_bucket);
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.empty()));
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.of(test_bucket)));
 		}
 		catch (Exception e) {
 			_logger.error(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -280,27 +257,6 @@ public class TestBatchEnrichmentContext {
 			}
 			try {
 				test_external2b.getUnderlyingArtefacts();
-				fail("Should have errored");
-			}
-			catch (Exception e) {
-				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
-			}
-			try {
-				test_external2b.getTopologyEntryPoint(null, null);
-				fail("Should have errored");
-			}
-			catch (Exception e) {
-				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
-			}
-			try {
-				test_external2b.getTopologyStorageEndpoint(null, null);
-				fail("Should have errored");
-			}
-			catch (Exception e) {
-				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
-			}
-			try {
-				test_external2b.getTopologyErrorEndpoint(null, null);
 				fail("Should have errored");
 			}
 			catch (Exception e) {

@@ -82,7 +82,6 @@ public class BeJobLauncher implements IBeJobService{
 			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){
 
-				// TODO create context
 				batchEnrichmentContext.setBucket(bucket);
 				batchEnrichmentContext.setLibraryConfig(BeJobBean.extractLibrary(beJob.getSharedLibraries(),SharedLibraryBean.LibraryType.enrichment_module).get());
 
