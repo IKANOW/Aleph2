@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -308,6 +309,7 @@ public class TestBatchEnrichmentContext {
 	}
 	
 	@Test
+	@Ignore
 	public void test_misc() {
 		
 		assertTrue("Injector created", _app_injector != null);
@@ -383,6 +385,7 @@ public class TestBatchEnrichmentContext {
 	}
 	
 	@Test
+	@Ignore
 	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 
 		final BatchEnrichmentContext test_context = _app_injector.getInstance(BatchEnrichmentContext.class);
