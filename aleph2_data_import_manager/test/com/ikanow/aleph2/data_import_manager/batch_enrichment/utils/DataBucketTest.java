@@ -19,6 +19,7 @@ import org.junit.Before;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentModule;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
@@ -175,7 +176,7 @@ public abstract class DataBucketTest {
 				final SharedLibraryBean lib_element2 = BeanTemplateUtils.build(SharedLibraryBean.class)
 						.with(SharedLibraryBean::_id, "be_module1.jar")
 						.with(SharedLibraryBean::path_name, bucketPath1+"/library")
-						.with(SharedLibraryBean::batch_enrichment_entry_point, "com.ikanow.aleph2.data_import_manager.batch_enrichment.module.MockEnrichmentBatchModule")
+						.with(SharedLibraryBean::batch_enrichment_entry_point, BatchEnrichmentModule.class.getName())
 						.with(SharedLibraryBean::type,SharedLibraryBean.LibraryType.enrichment_module)
 						.done().get();
 
