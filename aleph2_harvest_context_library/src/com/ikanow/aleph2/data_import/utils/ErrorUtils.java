@@ -25,5 +25,7 @@ public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 	final public static String NO_BUCKET = "Unable to locate bucket: {0}";
 	final public static String NOT_SUPPORTED_IN_BATCH_ENRICHMENT = "Functionality does not apply to batch enrichment context - this is for streaming enrichment";
 	final public static String SERVICE_RESTRICTIONS = "Can't call getEnrichmentContextSignature with different 'services' parameter; can't call getUnderlyingArtefacts without having called getEnrichmentContextSignature.";
+	final public static String VALIDATION_ERROR = "Validation Error: {0}";
+	final public static String EXCEPTION_CAUGHT = "Caught Exception: {0}";
 
 }
