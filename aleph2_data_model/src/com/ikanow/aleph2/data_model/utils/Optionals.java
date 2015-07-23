@@ -17,8 +17,13 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 
 /**
@@ -54,18 +59,44 @@ public class Optionals {
 		}
 	}
 	
-	/**
+	/** Returns a possibly null collection
 	 * @param a collection of Ts
 	 * @return the collection, or an empty collection if "ts" is null
 	 */
 	public static <T> Collection<T> ofNullable(final Collection<T> ts) {
 		return Optional.ofNullable(ts).orElse(Collections.emptyList());
 	}
-	/**
+	/** Returns a possibly null iterable
 	 * @param ts
 	 * @return the iterable, or an empty iterable if "ts" is null
 	 */
 	public static <T> Iterable<T> ofNullable(final Iterable<T> ts) {
 		return Optional.ofNullable(ts).orElse(Collections.emptyList());
 	}
+	/** Returns a possibly null iterator
+	 * @param ts
+	 * @return the iterable, or an empty iterable if "ts" is null
+	 */
+	public static <T> Iterator<T> ofNullable(final Iterator<T> ts) {
+		return Optional.ofNullable(ts).orElse(Collections.emptyIterator());
+	}
+	
+	/** Returns a stream from a possibly null iterable (avoids messing about with spliterators/streamsupport)
+	 * @param ts
+	 * @param parallel
+	 * @return
+	 */
+	public static <T> Stream<T> streamOf(final Iterable<T> ts, boolean parallel) {
+		return StreamSupport.stream(Optional.ofNullable(ts).orElse(Collections.emptyList()).spliterator(), parallel);
+	}
+	
+	/** Returns a stream from a possibly null iterator (avoids messing about with spliterators/streamsupport)
+	 * @param ts
+	 * @param parallel
+	 * @return
+	 */
+	public static <T> Stream<T> streamOf(final Iterator<T> it, boolean parallel) {
+		return StreamSupport.stream(Spliterators.spliteratorUnknownSize(Optional.ofNullable(it).orElse(Collections.emptyIterator()), Spliterator.ORDERED), parallel);
+	}
+	
 }
