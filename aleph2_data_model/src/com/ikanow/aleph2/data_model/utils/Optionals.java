@@ -18,12 +18,27 @@ package com.ikanow.aleph2.data_model.utils;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 
 /**
  * Utility class that converts a null collection/iterable into an empty one
  */
 public class Optionals {
+	
+	/** Designed for low performance evaluation of a chain of accessors, eg a.b().c().d() - if any of them are empty then returns Optiona.empty()
+	 *  eg in the above case you just call Optionals.of(() -> a.b().c().d())
+	 * @param accessor_chain
+	 * @return
+	 */
+	public static <T> Optional<T> of(final Supplier<T> accessor_chain) {
+		try {
+			return Optional.ofNullable(accessor_chain.get());
+		}
+		catch (NullPointerException e) {
+			return Optional.empty();
+		}
+	}
 	
 	/** Returns the first element of a list that can be empty or null, with an empty option
 	 *  NOTE: the element inside can be null
