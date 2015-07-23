@@ -109,25 +109,14 @@ public class TestCoreDistributedServices {
         				.with("embedded", 
         						BeanTemplateUtils.build(EmbeddedTestBean.class).with("test2", "val2").done().get()).done().get();
         
-        byte[] test_bytes = tester.serialize(test).get();
-        
-        assertEquals("{\"test1\":\"val1\",\"embedded\":{\"test2\":\"val2\"}}", new String(test_bytes, "UTF-8"));
-
         Serializer serializer = tester.findSerializerFor(test);
 
-        assertEquals(true, serializer.includeManifest());
-        
         byte[] test_bytes2 = serializer.toBinary(test);        
-        
-        assertEquals("{\"test1\":\"val1\",\"embedded\":{\"test2\":\"val2\"}}", new String(test_bytes2, "UTF-8"));
         
         TestBean test2 = (TestBean) serializer.fromBinary(test_bytes2, TestBean.class);
         
         assertEquals(test.test1(), test2.test1());
         assertEquals(test.embedded().test2(), test2.embedded().test2());
-        
-        //(This doesn't really test what I wanted, which was that a manifest was passed along with the serialization info)
-        
 	}
 	
 	
