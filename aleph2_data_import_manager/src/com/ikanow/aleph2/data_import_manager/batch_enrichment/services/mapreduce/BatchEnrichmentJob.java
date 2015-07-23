@@ -60,11 +60,11 @@ public class BatchEnrichmentJob{
 			String contextSignature = context.getConfiguration().get(BE_CONTEXT_SIGNATURE);   
 			this.enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
 			this.bucket = enrichmentContext.getBucket().get();
+			this.beLibrary = enrichmentContext.getLibraryConfig();		
+			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket, context.getConfiguration().get(BE_META_BEAN_PARAM)).get();
 
 			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);			
-			this.beLibrary = enrichmentContext.getLibraryConfig();		
 			this.module = (IEnrichmentBatchModule)Class.forName(beLibrary.batch_enrichment_entry_point()).newInstance();
-			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket, context.getConfiguration().get(BE_META_BEAN_PARAM)).get();
 			
 			boolean final_stage = true;
 			module.onStageInitialize(enrichmentContext, bucket, final_stage);

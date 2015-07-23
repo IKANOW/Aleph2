@@ -43,7 +43,7 @@ public class BeJobServiceTest extends DataBucketTest {
 
 		this.beJobService = serverInjector.getInstance(IBeJobService.class);		
 	}
-		catch (Throwable t) { 
+		catch (Throwable t) {
 			System.out.println(ErrorUtils.getLongForm("{0}", t));
 			throw t; 
 			}
