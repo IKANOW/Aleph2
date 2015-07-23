@@ -121,19 +121,25 @@ public class DataSchemaBean implements Serializable {
 		 */
 		public StorageSchemaBean(final Boolean enabled, 
 				final String service_name,
+				final Boolean raw_enabled,
 				final String raw_grouping_time_period,
 				final String raw_exist_age_max,
+				final Boolean json_enabled,
 				final String json_grouping_time_period,
 				final String json_exist_age_max,
+				final Boolean processed_enabled,
 				final String processed_grouping_time_period,
 				final String processed_exist_age_max,
 				final Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
+			this.raw_enabled = raw_enabled;
 			this.raw_grouping_time_period = raw_grouping_time_period;
 			this.raw_exist_age_max = raw_exist_age_max;
+			this.json_enabled = json_enabled;
 			this.json_grouping_time_period = json_grouping_time_period;
 			this.json_exist_age_max = json_exist_age_max;
+			this.processed_enabled = processed_enabled;
 			this.processed_grouping_time_period = processed_grouping_time_period;
 			this.processed_exist_age_max = processed_exist_age_max;
 			this.technology_override_schema = technology_override_schema;
@@ -150,6 +156,12 @@ public class DataSchemaBean implements Serializable {
 		public String service_name() {
 			return service_name;
 		}
+		/** Describes if the archive service is used for raw data in this bucket
+		 * @return the enabled
+		 */
+		public Boolean raw_enabled() {
+			return raw_enabled;
+		}
 		/** A string describing the time period granularity for searches
 		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
 		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
@@ -165,6 +177,12 @@ public class DataSchemaBean implements Serializable {
 		public String raw_exist_age_max() {
 			return raw_exist_age_max;
 		}
+		/** Describes if the archive service is used for JSON data in this bucket
+		 * @return the enabled
+		 */
+		public Boolean json_enabled() {
+			return json_enabled;
+		}
 		/** A string describing the time period granularity for searches
 		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
 		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
@@ -179,6 +197,12 @@ public class DataSchemaBean implements Serializable {
 		 */
 		public String json_exist_age_max() {
 			return json_exist_age_max;
+		}
+		/** Describes if the archive service is used for JSON data in this bucket
+		 * @return the enabled
+		 */
+		public Boolean processed_enabled() {
+			return processed_enabled;
 		}
 		/** A string describing the time period granularity for searches
 		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
@@ -204,10 +228,13 @@ public class DataSchemaBean implements Serializable {
 		}
 		private Boolean enabled;
 		private String service_name;
+		private Boolean raw_enabled;
 		private String raw_grouping_time_period;
 		private String raw_exist_age_max;
+		private Boolean json_enabled;
 		private String json_grouping_time_period;
 		private String json_exist_age_max;
+		private Boolean processed_enabled;
 		private String processed_grouping_time_period;
 		private String processed_exist_age_max;
 		private Map<String, Object> technology_override_schema;

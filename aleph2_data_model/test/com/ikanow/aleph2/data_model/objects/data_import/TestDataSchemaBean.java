@@ -37,10 +37,13 @@ public class TestDataSchemaBean {
 				new DataSchemaBean.StorageSchemaBean(
 						true,
 						"service_name",
+						true,
 						"raw_grouping_time_period",
 						"raw_exist_age_max",
+						false,
 						"json_grouping_time_period",
 						"json_exist_age_max",
+						null,
 						"processed_grouping_time_period",
 						"processed_exist_age_max",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
@@ -48,6 +51,9 @@ public class TestDataSchemaBean {
 		
 		assertEquals("Storage bean enabled", storage_bean.enabled(), true);
 		assertEquals("Storage bean service_name", storage_bean.service_name(), "service_name");
+		assertTrue("Storage bean raw enabled", storage_bean.raw_enabled());
+		assertFalse("Storage bean json enabled", storage_bean.json_enabled());
+		assertEquals("Storage bean processed enabled", null, storage_bean.processed_enabled());
 		assertEquals("Storage bean raw_grouping_time_period", storage_bean.raw_grouping_time_period(), "raw_grouping_time_period");
 		assertEquals("Storage bean json_grouping_time_period", storage_bean.json_grouping_time_period(), "json_grouping_time_period");
 		assertEquals("Storage bean processed_grouping_time_period", storage_bean.processed_grouping_time_period(), "processed_grouping_time_period");
