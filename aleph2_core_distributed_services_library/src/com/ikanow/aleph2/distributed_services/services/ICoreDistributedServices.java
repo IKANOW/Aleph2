@@ -18,6 +18,7 @@ package com.ikanow.aleph2.distributed_services.services;
 //import kafka.javaapi.consumer.ConsumerConnector;
 //import kafka.javaapi.producer.Producer;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -27,10 +28,11 @@ import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.event.japi.LookupEventBus;
 
 /** Provides general access to distributed services in the cluster - eg distributed mutexes, control messaging, data queue access
@@ -54,12 +56,30 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 */
 	ActorSystem getAkkaSystem();
 
-	/** Returns a message bus for a specific topic
+	/** An empty message used to tell singleton actor's that they have been removed from the leadership role and are about to be closed
+	 */
+	public static class SingletonEndMessage {		
+	};
+	
+	/** Returns an actor that will be a singleton across the cluster - ie start it on all nodes, but it will only run on one node at a time
+	 * @param actor_config - the standard actor-defining configuration
+	 * @return the actorRef
+	 */
+	ActorRef getSingletonActor(final String actor_name, final Props actor_config);
+	
+	/** Returns a broadcast message bus for a specific topic
 	 * @param wrapper_clazz - the class of the _wrapper_ (not the underlying message)
 	 * @param topic
 	 * @return
 	 */
-	<U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
+	<U extends Serializable, M extends IBroadcastEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
+	
+	/** Returns a random  message bus for a specific topic
+	 * @param wrapper_clazz - the class of the _wrapper_ (not the underlying message)
+	 * @param topic
+	 * @return
+	 */
+	<U extends Serializable, M extends IRoundRobinEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getRoundRobinMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
 	
 	/** Writes a JSON string to the designated message queue
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)

@@ -15,23 +15,25 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.data_model;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 
 /** Just a top level message type for handling bucket actions 
  * @author acp
  */
-public class BucketActionReplyMessage implements IJsonSerializable {
+public class BucketActionReplyMessage implements Serializable {
+	private static final long serialVersionUID = -4001957953720739902L;
 
 	private BucketActionReplyMessage() {}
 	
 	/** System message indicating that not all messages have been replied to in time
 	 * @author acp
 	 */
-	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage {
+	public static class BucketActionTimeoutMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = -4567739291666424032L;
 		@SuppressWarnings("unused")
 		private BucketActionTimeoutMessage() {}
 		/** User c'tor for creating a timeout message
@@ -47,7 +49,8 @@ public class BucketActionReplyMessage implements IJsonSerializable {
 	/** The message a BucketAction*Actor sends out when it is complete
 	 * @author acp
 	 */
-	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage {
+	public static class BucketActionCollectedRepliesMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = -4541373129314672428L;
 		@SuppressWarnings("unused")
 		private BucketActionCollectedRepliesMessage() {}
 		/** User c'tor for creating a message encapsulating the reply from 0+ sources (hosts) that handled a message
@@ -68,7 +71,8 @@ public class BucketActionReplyMessage implements IJsonSerializable {
 	/** When a data import manager will accept a bucket action
 	 * @author acp
 	 */
-	public static class BucketActionWillAcceptMessage extends BucketActionReplyMessage {
+	public static class BucketActionWillAcceptMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = -3486747240844926323L;
 		@SuppressWarnings("unused")
 		private BucketActionWillAcceptMessage() {}
 		
@@ -85,7 +89,8 @@ public class BucketActionReplyMessage implements IJsonSerializable {
 	/** When a data import manager cannot or does not wish to handle a bucket action message
 	 * @author acp
 	 */
-	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage {
+	public static class BucketActionIgnoredMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = 4808455789257375566L;
 		@SuppressWarnings("unused")
 		private BucketActionIgnoredMessage() {}
 		
@@ -102,7 +107,8 @@ public class BucketActionReplyMessage implements IJsonSerializable {
 	/** Encapsulates the reply from any requested bucket action
 	 * @author acp
 	 */
-	public static class BucketActionHandlerMessage extends BucketActionReplyMessage {
+	public static class BucketActionHandlerMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = 8098547692966611294L;
 		@SuppressWarnings("unused")
 		private BucketActionHandlerMessage() {}
 		

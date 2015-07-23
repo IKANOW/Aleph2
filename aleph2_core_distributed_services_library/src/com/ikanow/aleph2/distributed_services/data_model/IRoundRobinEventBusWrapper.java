@@ -15,9 +15,15 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.data_model;
 
-/** Just so Akka can recognize that this message needs to be handled with my custom serializer
+import akka.actor.ActorRef;
+
+/** Just enforces an interface contract for anything that needs to use a round robin event bus
  * @author Alex
+ *
+ * @param <T> - the message type being implemented
  */
-public interface IJsonSerializable {
-	//(no methods)
+public interface IRoundRobinEventBusWrapper<T> {
+
+	ActorRef sender();
+	T message();
 }

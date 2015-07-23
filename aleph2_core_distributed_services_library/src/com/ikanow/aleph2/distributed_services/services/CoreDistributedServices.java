@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,8 +44,11 @@ import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.cluster.Cluster;
 import akka.cluster.seed.ZookeeperClusterSeed;
+import akka.cluster.singleton.ClusterSingletonManager;
+import akka.cluster.singleton.ClusterSingletonManagerSettings;
 import akka.event.japi.LookupEventBus;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,7 +63,7 @@ import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.modules.CoreDistributedServicesModule;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
@@ -89,8 +93,10 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	boolean _initializing_kafka = true;
 	protected final CompletableFuture<Void> _initialized_kafka;
 	
-	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>> _buses = 
-			new ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>>();
+	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteBroadcastMessageBus<?>> _broadcast_buses = 
+			new ConcurrentHashMap<>();
+	protected final static ConcurrentHashMap<Tuple3<String, String, String>, RemoteRoundRobinMessageBus<?>> _roundrobin_buses = 
+			new ConcurrentHashMap<>();
 	
 	/** Guice-invoked constructor
 	 * @throws Exception 
@@ -269,8 +275,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 												.put("akka.remote.netty.tcp.port", port.toString())
 												.put("akka.cluster.seed.zookeeper.url", _config_bean.zookeeper_connection())
 												.put("akka.cluster.auto-down-unreachable-after", "120s")
-												.put("akka.actor.serializers.jackson", "com.ikanow.aleph2.distributed_services.services.JsonSerializerService")
-												.put("akka.actor.serialization-bindings.\"com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable\"", "jackson")
+												.put("akka.cluster.pub-sub.routing-logic", "round-robin")
 												.build();		
 			_akka_system.set(ActorSystem.create(Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME), 
 								ConfigFactory.parseMap(config_map)));
@@ -283,21 +288,50 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getBroadcastMessageBus(java.lang.Class, java.lang.String)
 	 */
 	@Override
-	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
+	public <U extends Serializable, M extends IBroadcastEventBusWrapper<U>> 
 		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic) {
 		this.waitForAkkaJoin(Optional.empty());
 		
 		final Tuple3<String, String, String> key = Tuples._3T(wrapper_clazz.getName(), base_message_clazz.getName(), topic);
 		
 		@SuppressWarnings("unchecked")
-		RemoteBroadcastMessageBus<M> ret_val = (RemoteBroadcastMessageBus<M>) _buses.get(key);
+		RemoteBroadcastMessageBus<M> ret_val = (RemoteBroadcastMessageBus<M>) _broadcast_buses.get(key);
 		
 		if (null == ret_val) {
-			_buses.put(key, (ret_val = new RemoteBroadcastMessageBus<M>(this.getAkkaSystem(), topic)));
+			_broadcast_buses.put(key, (ret_val = new RemoteBroadcastMessageBus<M>(this.getAkkaSystem(), topic)));
 		}
 		return ret_val;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getRoundRobinMessageBus(java.lang.Class, java.lang.Class, java.lang.String)
+	 */
+	@Override
+	public <U extends Serializable, M extends IRoundRobinEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getRoundRobinMessageBus(
+			Class<M> wrapper_clazz, Class<U> base_message_clazz, String topic) {
+		this.waitForAkkaJoin(Optional.empty());
+		
+		final Tuple3<String, String, String> key = Tuples._3T(wrapper_clazz.getName(), base_message_clazz.getName(), topic);
+		
+		@SuppressWarnings("unchecked")
+		RemoteRoundRobinMessageBus<M> ret_val = (RemoteRoundRobinMessageBus<M>) _roundrobin_buses.get(key);
+		
+		if (null == ret_val) {
+			_roundrobin_buses.put(key, (ret_val = new RemoteRoundRobinMessageBus<M>(this.getAkkaSystem(), topic)));
+		}
+		return ret_val;
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(akka.actor.Props)
+	 */
+	@Override
+	public ActorRef getSingletonActor(final String actor_name, final Props actor_config) {
+		return getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 
+				ClusterSingletonManagerSettings.create(getAkkaSystem()).withSingletonName(actor_name)
+				));
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */
@@ -359,5 +393,4 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		// done!
 		
 	}
-
 }

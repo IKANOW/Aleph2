@@ -15,7 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.Serializable;
 import java.util.concurrent.Executors;
@@ -34,12 +34,12 @@ import akka.event.japi.LookupEventBus;
 
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
-import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 
-public class TestLocalBroadcastMessageBus {
+public class TestLocalRoundRobinMessageBus {
 	public static final Logger _logger = LogManager.getLogger();
-	
-	public TestLocalBroadcastMessageBus() {}
+		
+	public TestLocalRoundRobinMessageBus() {}
 	
 	///////////////////////////////////
 	///////////////////////////////////
@@ -54,7 +54,7 @@ public class TestLocalBroadcastMessageBus {
 	
 	// MESSAGES	
 	
-	public static class TestBeanWrapper implements IBroadcastEventBusWrapper<TestBean> {
+	public static class TestBeanWrapper implements IRoundRobinEventBusWrapper<TestBean> {
 		TestBeanWrapper(TestBean message, ActorRef sender) {
 			this.message = message; this.sender = sender;
 		}
@@ -72,7 +72,7 @@ public class TestLocalBroadcastMessageBus {
 		}
 		
 	}
-	public static class EmbeddedTestBeanWrapper implements IBroadcastEventBusWrapper<EmbeddedTestBean> {
+	public static class EmbeddedTestBeanWrapper implements IRoundRobinEventBusWrapper<EmbeddedTestBean> {
 		EmbeddedTestBeanWrapper(EmbeddedTestBean message, ActorRef sender) {
 			this.message = message; this.sender = sender;
 		}
@@ -110,7 +110,7 @@ public class TestLocalBroadcastMessageBus {
 	///////////////////////////////////
 	
 	// ACTORS	
-	TestLocalBroadcastMessageBus(
+	TestLocalRoundRobinMessageBus(
 		LookupEventBus<TestBeanWrapper, ActorRef, String> test_bus1, 
 		LookupEventBus<EmbeddedTestBeanWrapper, ActorRef, String> test_bus2,
 		LookupEventBus<EmbeddedTestBeanWrapper, ActorRef, String> test_bus3
@@ -125,9 +125,9 @@ public class TestLocalBroadcastMessageBus {
 	LookupEventBus<EmbeddedTestBeanWrapper, ActorRef, String> _test_bus3;
 	// Test actors:
 	public static class TestActor_Unwrapper extends UntypedActor { // (will sit on test bus 2)
-		TestLocalBroadcastMessageBus _odd;
+		TestLocalRoundRobinMessageBus _odd;
 		boolean _remote;
-		public TestActor_Unwrapper(TestLocalBroadcastMessageBus odd, boolean remote) {
+		public TestActor_Unwrapper(TestLocalRoundRobinMessageBus odd, boolean remote) {
 			_odd = odd;
 			_remote = remote;
 		}
@@ -135,7 +135,7 @@ public class TestLocalBroadcastMessageBus {
 		public void onReceive(Object arg0) throws Exception {
 			_logger.info(this.self() + ": Unwrap from: " + this.sender() + ": " + arg0.getClass());
 			if (arg0 instanceof TestBean) {
-				_odd._received_bus1++;
+				if (!_remote) _odd._received_bus1++;
 				TestBean msg = (TestBean) arg0;
 				_logger.info("TestBean: " + msg.test1);
 				_odd._test_bus2.publish(new EmbeddedTestBeanWrapper(msg.embedded(), this.self()));
@@ -155,8 +155,8 @@ public class TestLocalBroadcastMessageBus {
 	}
 	
 	public static class TestActor_Echo extends UntypedActor { // (will sit on test bus1)
-		TestLocalBroadcastMessageBus _odd;
-		public TestActor_Echo(TestLocalBroadcastMessageBus odd) {
+		TestLocalRoundRobinMessageBus _odd;
+		public TestActor_Echo(TestLocalRoundRobinMessageBus odd) {
 			_odd = odd;
 		}
 		@Override
@@ -179,19 +179,19 @@ public class TestLocalBroadcastMessageBus {
 	}
 	
 	public static class TestActor_Publisher extends UntypedActor {
-		TestLocalBroadcastMessageBus _odd;
-		public TestActor_Publisher(TestLocalBroadcastMessageBus odd) {
-			_odd = odd;
+		final LookupEventBus<TestBeanWrapper, ActorRef, String> _test_bus1;
+		
+		public TestActor_Publisher(ICoreDistributedServices core_distributed_services) {
+			_test_bus1 = core_distributed_services.getRoundRobinMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
 		}
 		@Override
 		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Publishing: " + arg0.getClass());
 			if (arg0 instanceof TestBeanWrapper) {
-				_logger.info("Publishing: " + arg0.getClass() + ": " + ((TestBeanWrapper) arg0).message.test1);
-				_odd._test_bus1.publish((TestBeanWrapper) arg0);
+				_test_bus1.publish((TestBeanWrapper) arg0);
 			}
 			else if (arg0 instanceof TestBean) {
-				_logger.info("Publishing: " + arg0.getClass() + ": " + ((TestBean) arg0).test1);				
-				_odd._test_bus1.publish(new TestBeanWrapper((TestBean) arg0, this.self()));
+				_test_bus1.publish(new TestBeanWrapper((TestBean) arg0, this.self()));
 			}
 		}
 	}
@@ -205,9 +205,9 @@ public class TestLocalBroadcastMessageBus {
 	public void setup() throws Exception {
 		_core_distributed_services = new MockCoreDistributedServices();
 		
-		_test_bus1 = _core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
-		_test_bus2 = _core_distributed_services.getBroadcastMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "embedded_test_bean");
-		_test_bus3 = _core_distributed_services.getBroadcastMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "counting_bus");
+		_test_bus1 = _core_distributed_services.getRoundRobinMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
+		_test_bus2 = _core_distributed_services.getRoundRobinMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "embedded_test_bean");
+		_test_bus3 = _core_distributed_services.getRoundRobinMessageBus(EmbeddedTestBeanWrapper.class, EmbeddedTestBean.class, "counting_bus");
 		
 		ActorRef handler = _core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Unwrapper.class, this, false));
 		_test_bus1.subscribe(handler, "test_bean");
@@ -225,7 +225,7 @@ public class TestLocalBroadcastMessageBus {
 	int _received_post_bus2 = 0;
 	
 	@Test
-	public void testLocalBroadcast() throws Exception {
+	public void testLocalRoundRobin() throws Exception {
 				
 		// Launch a thread to send me messages
 		
@@ -238,7 +238,7 @@ public class TestLocalBroadcastMessageBus {
 		int waiting = 0;
 		final int MAX_WAIT = 20;
 		while ((waiting++ < MAX_WAIT) && !f.isDone()) {
-			if ((_received_post_bus2 >= 2*MESSAGES_TO_SEND)) {
+			if ((_received_post_bus2 >= MESSAGES_TO_SEND)) {
 				break;
 			}
 			try { Thread.sleep(1000); } catch (Exception e) {}
@@ -247,8 +247,8 @@ public class TestLocalBroadcastMessageBus {
 		
 		// Check that my actor received all its messages
 		
-		assertEquals(2*MESSAGES_TO_SEND, _received_bus1);
-		assertEquals(2*MESSAGES_TO_SEND, _received_post_bus2);
+		assertEquals(MESSAGES_TO_SEND/2, _received_bus1);
+		assertEquals(MESSAGES_TO_SEND, _received_post_bus2);
 		assertEquals(0, _unexpected);
 	}
 	
@@ -260,7 +260,7 @@ public class TestLocalBroadcastMessageBus {
 	// A "remote" service that will shoot messages over the broadcast bus
 	
 	public void threadMain() throws Exception {
-		ActorRef publisher = _core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Publisher.class, this));
+		ActorRef publisher = _core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Publisher.class, _core_distributed_services));
 		
 		ActorRef handler1 = _core_distributed_services.getAkkaSystem().actorOf(Props.create(TestActor_Unwrapper.class, this, true));
 		_test_bus1.subscribe(handler1, "test_bean");

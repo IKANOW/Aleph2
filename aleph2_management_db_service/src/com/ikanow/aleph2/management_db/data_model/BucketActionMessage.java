@@ -15,8 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.data_model;
 
+import java.io.Serializable;
 import java.util.Collections;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+
 import java.util.Set;
 
 import akka.actor.ActorRef;
@@ -27,7 +28,8 @@ import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapp
 /** Just a top level message type for handling bucket actions 
  * @author acp
  */
-public class BucketActionMessage implements IJsonSerializable {
+public class BucketActionMessage implements Serializable {
+	private static final long serialVersionUID = 1346768843193566447L;
 	protected BucketActionMessage() {} // (for bean template utils)
 	private BucketActionMessage(final DataBucketBean bucket) { this.bucket = bucket; handling_clients = Collections.emptySet(); }
 	private BucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) { 
@@ -43,7 +45,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** An internal class used to wrap event bus publications
 	 * @author acp
 	 */
-	public static class BucketActionEventBusWrapper implements IBroadcastEventBusWrapper<BucketActionMessage> {
+	public static class BucketActionEventBusWrapper implements IBroadcastEventBusWrapper<BucketActionMessage>,Serializable {
+		private static final long serialVersionUID = -1023018248827463800L;
 		protected BucketActionEventBusWrapper() { }
 		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
 		 * @param sender - the sender of the message
@@ -65,7 +68,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** Offer a single node bucket to see who wants it
 	 * @author acp
 	 */
-	public static class BucketActionOfferMessage extends BucketActionMessage {
+	public static class BucketActionOfferMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = -116634730960854365L;
 		protected BucketActionOfferMessage() { super(null, null); }
 		/** User c'tor for creating a message to see which nodes can handle the given bucket
 		 * @param bucket - the bucket with an outstanding operation to apply
@@ -78,7 +82,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** Send a new bucket action message to one (single node) or many (distributed node) buckets
 	 * @author acp
 	 */
-	public static class NewBucketActionMessage extends BucketActionMessage {
+	public static class NewBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = 1018365226626559444L;
 		protected NewBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to create a bucket
 		 * @param bucket - the bucket to create
@@ -95,7 +100,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** Updates an existing bucket
 	 * @author acp
 	 */
-	public static class UpdateBucketActionMessage extends BucketActionMessage {
+	public static class UpdateBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = -560785248755633380L;
 		protected UpdateBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to update a bucket
 		 * @param new_bucket - the updated bucket
@@ -119,7 +125,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** Updates the state of an existing bucket
 	 * @author acp
 	 */
-	public static class UpdateBucketStateActionMessage extends BucketActionMessage {
+	public static class UpdateBucketStateActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = -3881647647983800930L;
 		protected UpdateBucketStateActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to update a bucket's state
 		 * @param bucket - the bucket whose state is being changed
@@ -139,7 +146,8 @@ public class BucketActionMessage implements IJsonSerializable {
 	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running
 	 * @author acp
 	 */
-	public static class DeleteBucketActionMessage extends BucketActionMessage {
+	public static class DeleteBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = 5160292249041725509L;
 		protected DeleteBucketActionMessage() { super(null, null); }
 		/** User c'tor for creating a message to delete a bucket
 		 * @param bucket - the bucket to delete

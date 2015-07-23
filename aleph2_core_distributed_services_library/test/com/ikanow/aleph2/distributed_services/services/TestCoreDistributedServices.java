@@ -17,6 +17,7 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import static org.junit.Assert.*;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,7 +40,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -80,7 +80,8 @@ public class TestCoreDistributedServices {
 		_core_distributed_services = new CoreDistributedServices(bean);
 	}
 	
-	public static class TestBean implements IJsonSerializable {
+	public static class TestBean implements Serializable {
+		private static final long serialVersionUID = -1131596822679170769L;
 		protected TestBean() {}
 		public String test1() { return test1; }
 		public EmbeddedTestBean embedded() { return embedded; };
@@ -88,7 +89,8 @@ public class TestCoreDistributedServices {
 		private EmbeddedTestBean embedded;
 	};
 	
-	public static class EmbeddedTestBean {
+	public static class EmbeddedTestBean implements Serializable {
+		private static final long serialVersionUID = 6856113449690828609L;
 		protected EmbeddedTestBean() {}
 		public String test2() { return test2; }
 		private String test2;

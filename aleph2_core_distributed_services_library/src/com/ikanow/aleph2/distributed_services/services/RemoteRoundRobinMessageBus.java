@@ -15,7 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
-import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -23,12 +23,12 @@ import akka.cluster.pubsub.DistributedPubSub;
 import akka.cluster.pubsub.DistributedPubSubMediator;
 import akka.event.japi.LookupEventBus;
 
-/** Remote broadcast message bus
+/** Remote round-robin message bus
  * @author Alex
  *
  * @param <M>
  */
-public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> extends LookupEventBus<M, ActorRef, String> {
+public class RemoteRoundRobinMessageBus<M extends IRoundRobinEventBusWrapper<?>> extends LookupEventBus<M, ActorRef, String> {
 
 	final ActorRef _mediator;
 	protected final String _topic;
@@ -37,14 +37,15 @@ public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> e
 	 * @param akka_system
 	 * @param topic
 	 */
-	public RemoteBroadcastMessageBus(ActorSystem akka_system, final String topic) {
+	public RemoteRoundRobinMessageBus(ActorSystem akka_system, final String topic) {
 		_mediator = DistributedPubSub.get(akka_system).mediator();
 		_topic = topic;
 	}
 	
 	@Override
 	public boolean subscribe(ActorRef subscriber, String to) {
-		_mediator.tell(new DistributedPubSubMediator.Subscribe(to, subscriber), subscriber);
+		//(or do Put here and .Send below, but that didn't work for me)
+		_mediator.tell(new DistributedPubSubMediator.Subscribe(to, "round_robin", subscriber), subscriber);
 		return true;
 	}	
 	
@@ -66,7 +67,7 @@ public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> e
 	 */
 	@Override
 	public void publish(M event, ActorRef subscriber) {
-		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message()), subscriber);
+		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message(), true), subscriber);
 	}
 
 	/* (non-Javadoc)
@@ -74,7 +75,7 @@ public class RemoteBroadcastMessageBus<M extends IBroadcastEventBusWrapper<?>> e
 	 */
 	@Override
 	public void publish(M event) {
-		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message()), event.sender());
+		_mediator.tell(new DistributedPubSubMediator.Publish(classify(event), event.message(), true), event.sender());
 	}
 
 	/* (non-Javadoc)

@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.services;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -36,12 +37,13 @@ import org.apache.logging.log4j.Logger;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.event.japi.LookupEventBus;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
-import com.ikanow.aleph2.distributed_services.data_model.IJsonSerializable;
+import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.MockKafkaBroker;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
@@ -106,27 +108,55 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getBroadcastMessageBus(java.lang.Class, java.lang.String)
 	 */
 	@Override
-	public <U extends IJsonSerializable, M extends IBroadcastEventBusWrapper<U>> 
+	public <U extends Serializable, M extends IBroadcastEventBusWrapper<U>> 
 		LookupEventBus<M, ActorRef, String> getBroadcastMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic)
 	{		
 		return new LocalBroadcastMessageBus<M>(topic);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getRoundRobinMessageBus(java.lang.Class, java.lang.Class, java.lang.String)
+	 */
+	@Override
+	public <U extends Serializable, M extends IRoundRobinEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getRoundRobinMessageBus(
+			Class<M> wrapper_clazz, Class<U> base_message_clazz, String topic) {
+		return new LocalRoundRobinMessageBus<M>(topic);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(java.lang.String, akka.actor.Props)
+	 */
+	@Override
+	public ActorRef getSingletonActor(final String actor_name, final Props actor_config) {
+		//(single node - therefore just generates a single actor as per usual)
+		return _akka_system.actorOf(actor_config, actor_name);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#waitForAkkaJoin(java.util.Optional)
+	 */
+	@Override
+	public boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
+		return true;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
+	 */
 	@Override
 	public void produce(String topic, String message) {
-		//TODO memoize this function?
 		KafkaUtils.createTopic(topic);
 		
-		//TODO we should probably cache producers for a bit? or return back some wrapped object?
 		logger.debug("PRODUCING");
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
 		logger.debug("SENDING");
 		producer.send(new KeyedMessage<String, String>(topic, message));
 		logger.debug("DONE SENDING");
-		//TODO close out the producer, we shouldn't be doing this after each message because its costly to start		
-		//producer.close();
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#consume(java.lang.String)
+	 */
 	@Override
 	public Iterator<String> consume(String topic) {
 		logger.debug("CONSUMING");
@@ -134,27 +164,34 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
+	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		return Arrays.asList(this);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
+	 */
 	@Override
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
 		return Optional.empty();
 	}
 	
+	/** Stops a kafka broker
+	 */
 	public void kill() {
 		getKafkaBroker().stop();
 	}
 
-	@Override
-	public boolean waitForAkkaJoin(Optional<FiniteDuration> timeout) {
-		return true;
-	}
-
+	/** Returns the current Kafka broker
+	 * @return
+	 */
 	public MockKafkaBroker getKafkaBroker() {
 		return _kafka_broker;
 	}
+
 }
