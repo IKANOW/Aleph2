@@ -86,6 +86,23 @@ public class TestTimeUtils {
 		assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "banana"), error.fail());
 	}
 	
+	@SuppressWarnings("unused")
+	@Test
+	public void test_timePeriods() {
+		String s1, s2, s3, s4, s5, s6, s7;
+		
+		assertEquals("_{yyyy-MM-dd-HH:mm:ss}", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.empty()));
+		assertEquals("_{yyyy-MM-dd-HH:mm}", s2 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MINUTES, Optional.empty()));
+		assertEquals("_{yyyy-MM-dd-HH}", s3 = TimeUtils.getTimeBasedSuffix(ChronoUnit.HOURS, Optional.empty()));
+		assertEquals("_{yyyy-MM-dd}", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.empty()));
+		assertEquals("_{YYYY.ww}", s5 = TimeUtils.getTimeBasedSuffix(ChronoUnit.WEEKS, Optional.empty()));
+		assertEquals("_{yyyy-MM}", s6 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MONTHS, Optional.empty()));
+		assertEquals("_{yyyy}", s7 = TimeUtils.getTimeBasedSuffix(ChronoUnit.YEARS, Optional.empty()));
+		assertEquals("_{yyyy-MM-dd-HH}", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.of(ChronoUnit.HOURS)));
+		assertEquals("_{yyyy-MM-dd}", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.of(ChronoUnit.HOURS)));
+		assertEquals("", TimeUtils.getTimeBasedSuffix(ChronoUnit.CENTURIES, Optional.empty()));
+	}		
+	
 	
 	@Test
 	public void test_getDuration() {

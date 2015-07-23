@@ -89,6 +89,28 @@ public class TimeUtils {
 				.otherwise(__ -> Validation.fail(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, human_readable_period)));
 	}
 	
+	/** Returns the suffix of a time-based index given the grouping period
+	 * @param grouping_period - the grouping period
+	 * @param lowest_granularity
+	 * @return the index suffix, ie added to the base index
+	 */
+	public static String getTimeBasedSuffix(final ChronoUnit grouping_period, final Optional<ChronoUnit> lowest_granularity) {
+		return lowest_granularity
+				.map(lg -> grouping_period.compareTo(lg) < 0  ? getTimeBasedSuffix(lg, Optional.empty()) : null )
+				.orElse(
+					Patterns.match(grouping_period).<String>andReturn()
+						.when(p -> ChronoUnit.SECONDS == p, __ -> "_{yyyy-MM-dd-HH:mm:ss}") 
+						.when(p -> ChronoUnit.MINUTES == p, __ -> "_{yyyy-MM-dd-HH:mm}") 
+						.when(p -> ChronoUnit.HOURS == p, __ -> "_{yyyy-MM-dd-HH}")
+						.when(p -> ChronoUnit.DAYS == p, __ -> "_{yyyy-MM-dd}")
+						.when(p -> ChronoUnit.WEEKS == p, __ -> "_{YYYY.ww}") // (deliberately 'Y' (week-year) not 'y' since 'w' is week-of-year 
+						.when(p -> ChronoUnit.MONTHS == p, __ -> "_{yyyy-MM}")
+						.when(p -> ChronoUnit.YEARS == p, __ -> "_{yyyy}")
+						.otherwise(__ -> "")
+					);
+	}
+	
+	
 	/** Attempts to parse a (typically recurring) time  
 	 * @param human_readable_duration - Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
 	 * @return the machine readable duration, or an error
