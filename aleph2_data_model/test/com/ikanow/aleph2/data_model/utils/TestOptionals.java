@@ -15,7 +15,38 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import static org.junit.Assert.*;
+
+import java.util.Optional;
+
+import org.junit.Test;
+
 public class TestOptionals {
 
+	public static class Chain1 {
+		public static class Chain2 {
+			public static class Chain3 {
+				String val;
+			}
+			Chain3 chain3;
+		}
+		Chain2 chain2;
+	}
+	
+	@Test
+	public void test_accessorChain() {
+		
+		Chain1 c1 = new Chain1();
+		Chain1.Chain2 c2 = new Chain1.Chain2();
+		Chain1.Chain2.Chain3 c3 = new Chain1.Chain2.Chain3();
+		c3.val = "test";
+		c2.chain3 = c3;
+		c1.chain2 = c2;		
+		assertEquals("test", Optionals.of(() -> c1.chain2.chain3.val).get());		
+		c1.chain2 = null;		
+		assertEquals(Optional.empty(), Optionals.of(() -> c1.chain2.chain3.val));
+		
+	}
+	
 	//TODO (ALEPH-3): very quick 
 }

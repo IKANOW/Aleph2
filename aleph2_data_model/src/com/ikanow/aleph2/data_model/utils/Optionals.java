@@ -35,7 +35,7 @@ public class Optionals {
 		try {
 			return Optional.ofNullable(accessor_chain.get());
 		}
-		catch (NullPointerException e) {
+		catch (Exception e) {
 			return Optional.empty();
 		}
 	}
