@@ -2,6 +2,7 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
@@ -14,9 +15,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Inject;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 
 public class BeJobLauncher implements IBeJobService{
@@ -29,11 +31,14 @@ public class BeJobLauncher implements IBeJobService{
 	protected BeJobLoader beJobLoader;
 
 	protected String yarnConfigie = null;
-	
+
+	protected BatchEnrichmentContext batchEnrichmentContext;
+
 	@Inject 
-	BeJobLauncher(GlobalPropertiesBean globals, BeJobLoader beJobLoader) {
+	BeJobLauncher(GlobalPropertiesBean globals, BeJobLoader beJobLoader, BatchEnrichmentContext batchEnrichmentContext) {
 		_globals = globals;	
 		this.beJobLoader = beJobLoader;
+		this.batchEnrichmentContext = batchEnrichmentContext;
 	}
 	
 	/** 
@@ -77,12 +82,15 @@ public class BeJobLauncher implements IBeJobService{
 			DataBucketBean bucket = beJob.getDataBucketBean(); 
 			if(bucket!=null){
 
+				batchEnrichmentContext.setBucket(bucket);
+				batchEnrichmentContext.setLibraryConfig(BeJobBean.extractLibrary(beJob.getSharedLibraries(),SharedLibraryBean.LibraryType.enrichment_module).get());
+
+				String contextSignature = batchEnrichmentContext.getEnrichmentContextSignature(Optional.of(bucket), Optional.empty()); 
+			    config.set(BatchEnrichmentJob.BE_CONTEXT_SIGNATURE, contextSignature);
+				
 				jobName = beJob.getDataBucketBean().full_name()+"_BatchEnrichment";
-			    // add configuration into config
-				String beJobJson = BeanTemplateUtils.toJson(beJob).toString();
-			    config.set(BatchEnrichmentJob.BE_JOB_BEAN_PARAM, beJobJson);
-			    //String bucketJson = BeanTemplateUtils.toJson(bucket).toString();
-			    //config.set(BatchEnrichmentJob.DATA_BUCKET_BEAN_PARAM, bucketJson);
+				// set metadata bean to job jik we need to have more config, bean is included in bucket data but needs to be identified
+				config.set(BatchEnrichmentJob.BE_META_BEAN_PARAM, ecMetadataBeanName);
 
 			    // do not set anything into config past this line
 			    Job job = Job.getInstance( config ,jobName);

@@ -1,7 +1,6 @@
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -46,6 +45,7 @@ public class DataImportManagerTest extends DataBucketTest{
 			    bind(DataImportManager.class).in(Scopes.SINGLETON);
 			    bind(IBeJobService.class).to(MockBeJobService.class).in(Scopes.SINGLETON);
 			    bind(IStormController.class).to(LocalStormController.class).in(Scopes.SINGLETON);
+			    
 			}
 			
 		}), Optional.of(config));
@@ -72,8 +72,6 @@ public class DataImportManagerTest extends DataBucketTest{
 
 	@Test
 	public void testFolderWatch() throws Exception {
-//		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
-//		DataImportManager dataImportManager = serverInjector.getInstance(DataImportManager.class);
 		assertNotNull(dataImportManager);
 		dataImportManager.folderWatch();	
 		Thread.sleep(3000);

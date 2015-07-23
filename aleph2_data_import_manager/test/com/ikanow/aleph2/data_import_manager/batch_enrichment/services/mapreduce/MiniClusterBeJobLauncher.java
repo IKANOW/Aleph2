@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.inject.Inject;
+import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.utils.DataBucketTest;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 
@@ -20,8 +21,8 @@ public class MiniClusterBeJobLauncher extends BeJobLauncher {
     private MiniMRYarnCluster mrCluster;
     
 	@Inject 
-	public MiniClusterBeJobLauncher(GlobalPropertiesBean globals,BeJobLoader beJobLoader) {
-		super(globals,beJobLoader);
+	public MiniClusterBeJobLauncher(GlobalPropertiesBean globals,BeJobLoader beJobLoader,BatchEnrichmentContext batchEnrichmentContext) {
+		super(globals,beJobLoader,batchEnrichmentContext);
 	}
 
 

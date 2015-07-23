@@ -16,11 +16,14 @@
 package com.ikanow.aleph2.data_import.utils;
 
 /** Error messages for harvest context
- * @author Alex
+ * @author Joern
  */
 public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 
 	final public static String NOT_YET_IMPLEMENTED = "This operation is not currently supported";
 	final public static String TECHNOLOGY_NOT_MODULE = "Can only be called from technology, not module";
 	final public static String NO_BUCKET = "Unable to locate bucket: {0}";
+	final public static String NOT_SUPPORTED_IN_BATCH_ENRICHMENT = "Functionality does not apply to batch enrichment context - this is for streaming enrichment";
+	final public static String SERVICE_RESTRICTIONS = "Can't call getEnrichmentContextSignature with different 'services' parameter; can't call getUnderlyingArtefacts without having called getEnrichmentContextSignature.";
+
 }
