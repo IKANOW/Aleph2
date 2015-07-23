@@ -99,13 +99,13 @@ public class TimeUtils {
 				.map(lg -> grouping_period.compareTo(lg) < 0  ? getTimeBasedSuffix(lg, Optional.empty()) : null )
 				.orElse(
 					Patterns.match(grouping_period).<String>andReturn()
-						.when(p -> ChronoUnit.SECONDS == p, __ -> "_{yyyy-MM-dd-HH:mm:ss}") 
-						.when(p -> ChronoUnit.MINUTES == p, __ -> "_{yyyy-MM-dd-HH:mm}") 
-						.when(p -> ChronoUnit.HOURS == p, __ -> "_{yyyy-MM-dd-HH}")
-						.when(p -> ChronoUnit.DAYS == p, __ -> "_{yyyy-MM-dd}")
-						.when(p -> ChronoUnit.WEEKS == p, __ -> "_{YYYY.ww}") // (deliberately 'Y' (week-year) not 'y' since 'w' is week-of-year 
-						.when(p -> ChronoUnit.MONTHS == p, __ -> "_{yyyy-MM}")
-						.when(p -> ChronoUnit.YEARS == p, __ -> "_{yyyy}")
+						.when(p -> ChronoUnit.SECONDS == p, __ -> "yyyy-MM-dd-HH:mm:ss") 
+						.when(p -> ChronoUnit.MINUTES == p, __ -> "yyyy-MM-dd-HH:mm") 
+						.when(p -> ChronoUnit.HOURS == p, __ -> "yyyy-MM-dd-HH")
+						.when(p -> ChronoUnit.DAYS == p, __ -> "yyyy-MM-dd")
+						.when(p -> ChronoUnit.WEEKS == p, __ -> "YYYY.ww") // (deliberately 'Y' (week-year) not 'y' since 'w' is week-of-year 
+						.when(p -> ChronoUnit.MONTHS == p, __ -> "yyyy-MM")
+						.when(p -> ChronoUnit.YEARS == p, __ -> "yyyy")
 						.otherwise(__ -> "")
 					);
 	}
