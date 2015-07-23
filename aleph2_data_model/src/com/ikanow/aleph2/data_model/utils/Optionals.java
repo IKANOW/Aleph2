@@ -82,21 +82,23 @@ public class Optionals {
 	}
 	
 	/** Returns a stream from a possibly null iterable (avoids messing about with spliterators/streamsupport)
+	 *  Also removes null elements in the stream
 	 * @param ts
 	 * @param parallel
 	 * @return
 	 */
 	public static <T> Stream<T> streamOf(final Iterable<T> ts, boolean parallel) {
-		return StreamSupport.stream(Optional.ofNullable(ts).orElse(Collections.emptyList()).spliterator(), parallel);
+		return StreamSupport.stream(Optional.ofNullable(ts).orElse(Collections.emptyList()).spliterator(), parallel).filter(x -> x != null);
 	}
 	
 	/** Returns a stream from a possibly null iterator (avoids messing about with spliterators/streamsupport)
+	 *  Also removes null elements in the stream
 	 * @param ts
 	 * @param parallel
 	 * @return
 	 */
 	public static <T> Stream<T> streamOf(final Iterator<T> it, boolean parallel) {
-		return StreamSupport.stream(Spliterators.spliteratorUnknownSize(Optional.ofNullable(it).orElse(Collections.emptyIterator()), Spliterator.ORDERED), parallel);
+		return StreamSupport.stream(Spliterators.spliteratorUnknownSize(Optional.ofNullable(it).orElse(Collections.emptyIterator()), Spliterator.ORDERED), parallel).filter(x -> x != null);
 	}
 	
 }
