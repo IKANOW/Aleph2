@@ -20,6 +20,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import org.apache.hadoop.conf.Configuration;
 
 public class BatchEnrichmentJob{
 
@@ -36,15 +37,17 @@ public class BatchEnrichmentJob{
 	
 	@SuppressWarnings("unused")
 	public static class BatchErichmentMapper extends Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>		
-	{
+	implements IBeJobConfigurable {
 
-		DataBucketBean bucket = null;
-		IEnrichmentBatchModule module = null;			
-		IEnrichmentModuleContext enrichmentContext = null;
+		protected DataBucketBean dataBucket = null;
+		protected IEnrichmentBatchModule enrichmentBatchModule = null;			
+
+		protected IEnrichmentModuleContext enrichmentContext = null;
+
 		private int batchSize = 1;
-		private BeJobBean beJob = null;;
-		private EnrichmentControlMetadataBean ecMetadata = null;
-		private SharedLibraryBean beLibrary = null;
+		protected BeJobBean beJob = null;;
+		protected EnrichmentControlMetadataBean ecMetadata = null;
+		protected SharedLibraryBean beSharedLibrary = null;
 			
 		
 		public BatchErichmentMapper(){
@@ -57,17 +60,14 @@ public class BatchEnrichmentJob{
 			logger.debug("BatchEnrichmentJob setup");
 			try{
 				
-			String contextSignature = context.getConfiguration().get(BE_CONTEXT_SIGNATURE);   
-			this.enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
-			this.bucket = enrichmentContext.getBucket().get();
-			this.beLibrary = enrichmentContext.getLibraryConfig();		
-			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket, context.getConfiguration().get(BE_META_BEAN_PARAM)).get();
 
-			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);			
-			this.module = (IEnrichmentBatchModule)Class.forName(beLibrary.batch_enrichment_entry_point()).newInstance();
+			extractBeJobParameters(this,  context.getConfiguration());
+			
+			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);	
+			this.enrichmentBatchModule = (IEnrichmentBatchModule)Class.forName(beSharedLibrary.batch_enrichment_entry_point()).newInstance();
 			
 			boolean final_stage = true;
-			module.onStageInitialize(enrichmentContext, bucket, final_stage);
+			enrichmentBatchModule.onStageInitialize(enrichmentContext, dataBucket, final_stage);
 			}
 			catch(Exception e){
 				logger.error("Caught Exception",e);
@@ -76,16 +76,39 @@ public class BatchEnrichmentJob{
 		} // setup
 
 		
+
 		@Override
 		protected void map(String key, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> value,
 				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob map");
 			System.out.println("BatchEnrichmentJob map");
 			List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();			
-			module.onObjectBatch(batch);
+			enrichmentBatchModule.onObjectBatch(batch);
 			
 		} // map
+
+		@Override
+		public void setEcMetadata(EnrichmentControlMetadataBean ecMetadata) {
+			this.ecMetadata = ecMetadata;
+		}
+
+		@Override
+		public void setBeSharedLibrary(SharedLibraryBean beSharedLibrary) {
+			this.beSharedLibrary = beSharedLibrary;
+		}
+
+		@Override
+		public void setDataBucket(DataBucketBean dataBucketBean) {
+			this.dataBucket = dataBucketBean;
 			
+		}
+			
+		
+		@Override
+		public void setEnrichmentContext(IEnrichmentModuleContext enrichmentContext) {
+			this.enrichmentContext = enrichmentContext;
+		}
+		
 		
 	} //BatchErichmentMapper
 
@@ -94,6 +117,15 @@ public class BatchEnrichmentJob{
 		
 	} // reducer
 
-
+	public static void extractBeJobParameters(IBeJobConfigurable beJobConfigurable, Configuration configuration) throws Exception{
+		
+		String contextSignature = configuration.get(BE_CONTEXT_SIGNATURE);  
+		IEnrichmentModuleContext enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
+		beJobConfigurable.setEnrichmentContext(enrichmentContext);
+		DataBucketBean dataBucket = enrichmentContext.getBucket().get();
+		beJobConfigurable.setDataBucket(dataBucket);
+		beJobConfigurable.setBeSharedLibrary(enrichmentContext.getLibraryConfig());		
+		beJobConfigurable.setEcMetadata(BeJobBean.extractEnrichmentControlMetadata(dataBucket, configuration.get(BE_META_BEAN_PARAM)).get());		
+	}
 
 }
