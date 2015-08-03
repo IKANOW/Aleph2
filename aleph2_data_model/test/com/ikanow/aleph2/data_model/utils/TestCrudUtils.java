@@ -141,21 +141,26 @@ public class TestCrudUtils {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static <T> DBObject convertToMongoQuery_multi(String andVsOr, MultiQueryComponent<T> query_in) {
 		
 		return Patterns.match(query_in.getElements())
 				.<DBObject>andReturn()
 				.when(f -> f.isEmpty(), f -> new BasicDBObject())
 				.otherwise(f -> f.stream().collect(
-						new Collector<SingleQueryComponent<T>, BasicDBList, DBObject>() {
+						new Collector<QueryComponent<T>, BasicDBList, DBObject>() {
 							@Override
 							public Supplier<BasicDBList> supplier() {
 								return BasicDBList::new;
 							}	
 							@Override
-							public BiConsumer<BasicDBList,SingleQueryComponent<T>> accumulator() {
+							public BiConsumer<BasicDBList,QueryComponent<T>> accumulator() {
 								return (acc, entry) -> {
-									acc.add(convertToMongoQuery_single(getOperatorName(entry.getOp()), entry));
+									Patterns.match(entry).andAct()
+										.when(SingleQueryComponent.class, 
+												e -> acc.add(convertToMongoQuery_single(getOperatorName(e.getOp()), e)))
+										.when(MultiQueryComponent.class, 
+												e -> acc.add(convertToMongoQuery_multi(getOperatorName(e.getOp()), e)));
 								};
 							}	
 							@Override

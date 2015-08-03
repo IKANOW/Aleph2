@@ -21,9 +21,10 @@ import java.util.Optional;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -53,21 +54,22 @@ public class SampleManagementDbService implements IManagementDbService {
 	}
 
 	@Override
-	public <T> ICrudService<T> getPerBucketState(
+	public <T> ICrudService<T> getBucketHarvestState(
 			Class<T> clazz, DataBucketBean bucket,
 			Optional<String> sub_collection) {
 		return null;
 	}
 
 	@Override
-	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
+	public <T> ICrudService<T> getBucketEnrichmentState(
+			Class<T> clazz, DataBucketBean bucket,
+			Optional<String> sub_collection) {
 		return null;
 	}
-
+	
 	@Override
-	public <T> ICrudService<T> getPerAnalyticThreadState(
-			Class<T> clazz,
-			AnalyticThreadBean analytic_thread,
+	public <T> ICrudService<T> getBucketAnalyticThreadState(
+			Class<T> clazz, DataBucketBean bucket,
 			Optional<String> sub_collection) {
 		return null;
 	}
@@ -98,6 +100,18 @@ public class SampleManagementDbService implements IManagementDbService {
 
 	@Override
 	public IManagementDbService readOnlyVersion() {
+		return null;
+	}
+
+	@Override
+	public <T> ICrudService<T> getBucketDeletionQueue(
+			Class<T> deletion_queue_clazz) {
+		return null;
+	}
+
+	@Override
+	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
+			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
 		return null;
 	}
 

@@ -190,7 +190,7 @@ public class CrudUtils {
 	 * @return the "multi" query component "helper"
 	 */
 	@SafeVarargs
-	public static <T> MultiQueryComponent<T> allOf(final SingleQueryComponent<T> component1, SingleQueryComponent<T>... components) {
+	public static <T> MultiQueryComponent<T> allOf(final QueryComponent<T> component1, QueryComponent<T>... components) {
 		return new MultiQueryComponent<T>(Operator.all_of, component1, components);
 	}
 	
@@ -198,7 +198,7 @@ public class CrudUtils {
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> allOf(final List<SingleQueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> allOf(final List<? extends QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.all_of, components);
 	}
 	
@@ -206,7 +206,7 @@ public class CrudUtils {
 	 * @param components - a stream of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> allOf(final Stream<SingleQueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> allOf(final Stream<? extends QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.all_of, components.collect(Collectors.toList()));
 	}
 	
@@ -215,7 +215,7 @@ public class CrudUtils {
 	 * @return the "multi" query component "helper"
 	 */
 	@SafeVarargs
-	public static <T> MultiQueryComponent<T> anyOf(final SingleQueryComponent<T> component1, SingleQueryComponent<T>... components) {
+	public static <T> MultiQueryComponent<T> anyOf(final QueryComponent<T> component1, QueryComponent<T>... components) {
 		return new MultiQueryComponent<T>(Operator.any_of, component1, components);
 	}
 
@@ -223,7 +223,7 @@ public class CrudUtils {
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> anyOf(final List<SingleQueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> anyOf(final List<? extends QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components);
 	}
 	
@@ -231,7 +231,7 @@ public class CrudUtils {
 	 * @param components - a stream of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> anyOf(final Stream<SingleQueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> anyOf(final Stream<? extends SingleQueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components.collect(Collectors.toList()));
 	}
 		
@@ -278,7 +278,7 @@ public class CrudUtils {
 		/** A list of all the single query elements in a multi query 
 		 * @return a list of single query elements
 		 */
-		public List<SingleQueryComponent<T>> getElements() {
+		public List<QueryComponent<T>> getElements() {
 			return _elements;
 		}
 		
@@ -310,7 +310,7 @@ public class CrudUtils {
 		 * @return the "multi" query component "helper"
 		 */
 		@SafeVarargs
-		public final MultiQueryComponent<T> also(final SingleQueryComponent<T>... components) {
+		public final MultiQueryComponent<T> also(final QueryComponent<T>... components) {
 			_elements.addAll(Arrays.asList(components)); 
 			return this;
 		}
@@ -343,18 +343,18 @@ public class CrudUtils {
 		protected Long _limit;
 		protected List<Tuple2<String, Integer>> _orderBy;
 		
-		List<SingleQueryComponent<T>> _elements;
+		List<QueryComponent<T>> _elements;
 		Operator _op;
 		
-		protected MultiQueryComponent(final Operator op, final List<SingleQueryComponent<T>> components) {
+		protected MultiQueryComponent(final Operator op, final List<? extends QueryComponent<T>> components) {
 			_op = op;
-			_elements = components;
+			_elements = components.stream().map(x -> (QueryComponent<T>)x).collect(Collectors.toList());
 		}
 
 		@SafeVarargs
-		protected MultiQueryComponent(final Operator op, final SingleQueryComponent<T> component1, SingleQueryComponent<T>... components) {
+		protected MultiQueryComponent(final Operator op, final QueryComponent<T> component1, QueryComponent<T>... components) {
 			_op = op;
-			_elements = new ArrayList<SingleQueryComponent<T>>(null == components ? 1 : (1 + components.length));
+			_elements = new ArrayList<QueryComponent<T>>(null == components ? 1 : (1 + components.length));
 			_elements.add(component1);
 			if (null != components) _elements.addAll(Arrays.asList(components));
 		}
@@ -1166,7 +1166,7 @@ public class CrudUtils {
 		//Recursive helper:
 		
 	}	
-	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final Object bean, boolean denest) {
+	protected static Stream<Tuple2<String, Object>> recursiveQueryBuilder_init(final Object bean, final boolean denest) {
 		if (null == bean) { // (for handling JSON, where you don't have a bean)
 			return Stream.of();
 		}

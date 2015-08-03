@@ -32,7 +32,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -191,7 +190,31 @@ public class TestCoreManagementDbModule {
 		
 		// Per-asset state:
 		{
-			ICrudService<String> per_bucket = read_only_management_db_service.getPerBucketState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+			ICrudService<String> per_bucket = read_only_management_db_service.getBucketHarvestState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
+			try {
+				per_bucket.deleteDatastore();
+				fail("Should have thrown error");
+			}
+			catch (Exception e) {
+				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+			}
+			per_bucket.countObjects(); // (just check doesn't thrown)
+		}		
+		{
+			ICrudService<String> per_bucket = read_only_management_db_service.getBucketEnrichmentState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
+			try {
+				per_bucket.deleteDatastore();
+				fail("Should have thrown error");
+			}
+			catch (Exception e) {
+				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+			}
+			per_bucket.countObjects(); // (just check doesn't thrown)
+		}		
+		{
+			ICrudService<String> per_bucket = read_only_management_db_service.getBucketAnalyticThreadState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
 			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
 			try {
 				per_bucket.deleteDatastore();
@@ -213,18 +236,6 @@ public class TestCoreManagementDbModule {
 				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
 			}
 			per_library.countObjects(); // (just check doesn't thrown)
-		}		
-		{
-			ICrudService<String> per_analytics = read_only_management_db_service.getPerAnalyticThreadState(String.class, BeanTemplateUtils.build(AnalyticThreadBean.class).with("path_name", "/test").done().get(), Optional.empty());
-			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_analytics.getClass()));
-			try {
-				per_analytics.deleteDatastore();
-				fail("Should have thrown error");
-			}
-			catch (Exception e) {
-				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
-			}
-			per_analytics.countObjects(); // (just check doesn't thrown)
 		}		
 	}	
 }

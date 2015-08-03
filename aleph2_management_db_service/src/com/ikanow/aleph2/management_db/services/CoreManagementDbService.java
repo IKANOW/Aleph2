@@ -34,6 +34,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -154,9 +156,17 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getPerBucketState(java.lang.Class, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional)
 	 */
-	public <T> ICrudService<T> getPerBucketState(Class<T> clazz,
+	public <T> ICrudService<T> getBucketHarvestState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
-		return _underlying_management_db.getPerBucketState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
+		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getPerBucketState(java.lang.Class, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional)
+	 */
+	public <T> ICrudService<T> getBucketEnrichmentState(Class<T> clazz,
+			DataBucketBean bucket, Optional<String> sub_collection) {
+		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -170,9 +180,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getPerAnalyticThreadState(java.lang.Class, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean, java.util.Optional)
 	 */
-	public <T> ICrudService<T> getPerAnalyticThreadState(Class<T> clazz,
-			AnalyticThreadBean analytic_thread, Optional<String> sub_collection) {
-		return _underlying_management_db.getPerAnalyticThreadState(clazz, analytic_thread, sub_collection).readOnlyVersion(_read_only);
+	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
+			DataBucketBean bucket, Optional<String> sub_collection) {
+		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
 	/* (non-Javadoc)
@@ -208,6 +218,27 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
 		return _underlying_management_db.getRetryStore(retry_message_clazz).readOnlyVersion(_read_only);
 	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getBucketDeletionQueue(java.lang.Class)
+	 */
+	@Override
+	public <T> ICrudService<T> getBucketDeletionQueue(
+			Class<T> deletion_queue_clazz) {
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
+		return _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getStateDirectory(java.util.Optional)
+	 */
+	@Override
+	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
+			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
+		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only);
+	}
+	
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getUnderlyingArtefacts()
@@ -229,4 +260,5 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
 				_auth, _project, true);
 	}
+
 }

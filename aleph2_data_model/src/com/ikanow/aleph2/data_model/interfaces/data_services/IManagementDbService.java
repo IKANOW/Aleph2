@@ -20,9 +20,10 @@ import java.util.Optional;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -67,10 +68,10 @@ public interface IManagementDbService extends IUnderlyingService {
 	/** Gets or (lazily) creates a repository shared by all users of the specified library (eg Harvest Technology)
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param library a partial bean with the name or _id set
-	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
+	 * @param collection - arbitrary string, enables the user to split the per library state into multiple independent collections. If empty returns a read-only CRUD service of type AssetStateDirectoryBean.
 	 * @return the CRUD service for the per library generic object store
 	 */
-	<T> ICrudService<T> getPerLibraryState(final Class<T> clazz, final SharedLibraryBean library, final Optional<String> sub_collection);
+	<T> ICrudService<T> getPerLibraryState(final Class<T> clazz, final SharedLibraryBean library, final Optional<String> collection);
 	
 	////////////////////////////////////
 	
@@ -88,30 +89,35 @@ public interface IManagementDbService extends IUnderlyingService {
 	 */
 	IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore();
 	
-	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket
+	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket (harvest stage)
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket a partial bean with the name or _id set
-	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
+	 * @param collection - arbitrary string, enables the user to split the per library state into multiple independent collections. If empty returns a read-only CRUD service of type AssetStateDirectoryBean.
 	 * @return the CRUD service for the per bucket generic object store
 	 */
-	<T> ICrudService<T> getPerBucketState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> sub_collection);
+	<T> ICrudService<T> getBucketHarvestState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> collection);
+	
+	// 2.2] Enrichment
+	
+	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified bucket (enrichment stage)
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param bucket a partial bean with the name or _id set
+	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections. If empty returns a read-only CRUD service of type AssetStateDirectoryBean.
+	 * @return the CRUD service for the per bucket generic object store
+	 */
+	<T> ICrudService<T> getBucketEnrichmentState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> sub_collection);
 	
 	////////////////////////////////////
 	
 	// 3] Analytics
 
-	/** Gets the store of analytic threads
-	 * @return the CRUD service for the analytic thread store
-	 */
-	IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore();
-	
-	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread
+	/** Gets or (lazily) creates a repository accessible from processing that occurs in the context of the specified analytic thread (that is part of a bucket)
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
-	 * @param analytic_thread a partial bean with the name or _id set
-	 * @param sub_collection - arbitrary string, enables the user to split the per library state into multiple independent collections
+	 * @param bucket a partial bean with the name or _id set
+	 * @param collection - arbitrary string, enables the user to split the per library state into multiple independent collections. If empty returns a read-only CRUD service of type AssetStateDirectoryBean.
 	 * @return the CRUD service for the per analytic thread generic object store
 	 */
-	<T> ICrudService<T> getPerAnalyticThreadState(final Class<T> clazz, final AnalyticThreadBean analytic_thread, final Optional<String> sub_collection);	
+	<T> ICrudService<T> getBucketAnalyticThreadState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> collection);	
 	
 	////////////////////////////////////
 
@@ -127,12 +133,24 @@ public interface IManagementDbService extends IUnderlyingService {
 		
 	////////////////////////////////////
 
-	// X] Misc
+	// X] Misc/Internals
 
 	/** When an internal message gets lost, it will usually end up in the retry store - regular re-attempts will then be made
 	 * @param retry_message_clazz - the class of the (internal) bean containing the lost message and some metadata
-	 * @return a CRUD service intended to support
+	 * @return a CRUD service from the underlying technology
 	 */
 	<T> ICrudService<T> getRetryStore(final Class<T> retry_message_clazz);
 	
+	/** When a bucket is deleted (or purged), it is added to this queue, which is responsible for actual deletion of data 
+	 * @param deletion_queue_clazz - the class of the (internal) bean containing the lost message and some metadata
+	 * @return a CRUD service from the underlying technology
+	 */
+	<T> ICrudService<T> getBucketDeletionQueue(final Class<T> deletion_queue_clazz);
+	
+	/** Returns a list of all the "user" state objects
+	 * @param bucket_filter - if enabled then only returns CRUD datastores for the designated buckets
+	 * @param type_filter - if enabled then only returns CRUD datastores for the designated type (harvest/analytic_thread/enrichment/library)
+	 * @return the implementation of the CRUD service 
+	 */
+	ICrudService<AssetStateDirectoryBean> getStateDirectory(final Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter);
 }
