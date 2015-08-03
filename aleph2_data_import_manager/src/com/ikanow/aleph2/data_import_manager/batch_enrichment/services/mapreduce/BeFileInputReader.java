@@ -33,7 +33,7 @@ import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 
-public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> {
+public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> implements IBeJobConfigurable{
 
 	private static final Logger logger = LogManager.getLogger(BeJobLauncher.class);
 	public static String DEFAULT_GROUPING = "daily";
@@ -51,9 +51,9 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 
 	protected IEnrichmentModuleContext enrichmentContext;
 
-	protected DataBucketBean bucket;
+	protected DataBucketBean dataBucket;
 
-	protected SharedLibraryBean beLibrary;
+	protected SharedLibraryBean beSharedLibrary;
 
 	protected EnrichmentControlMetadataBean ecMetadata;
 	protected static Map<String, IParser> parsers = new HashMap<String, IParser>();
@@ -80,9 +80,9 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 		String contextSignature = context.getConfiguration().get(BatchEnrichmentJob.BE_CONTEXT_SIGNATURE);   
 		try {
 			this.enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
-			this.bucket = enrichmentContext.getBucket().get();
-			this.beLibrary = enrichmentContext.getLibraryConfig();		
-			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(bucket, context.getConfiguration().get(BatchEnrichmentJob.BE_META_BEAN_PARAM)).get();
+			this.dataBucket = enrichmentContext.getBucket().get();
+			this.beSharedLibrary = enrichmentContext.getLibraryConfig();		
+			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(dataBucket, context.getConfiguration().get(BatchEnrichmentJob.BE_META_BEAN_PARAM)).get();
 		} catch (Exception e) {
 			logger.error(ErrorUtils.getLongForm("{0}", e),e);
 		}
@@ -144,7 +144,7 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 
 	private void archiveOrDeleteFile() {
 		try {
-			if (bucket.data_schema()!=null && bucket.data_schema().storage_schema()!=null && bucket.data_schema().storage_schema().enabled()) {
+			if (dataBucket.data_schema()!=null && dataBucket.data_schema().storage_schema()!=null && dataBucket.data_schema().storage_schema().enabled()) {
 				Path currentPath = _fileSplit.getPath(_currFile);
 				_fs.rename(currentPath, createArchivePath(currentPath));
 			} else {
@@ -162,7 +162,7 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 
 		ChronoUnit timeGroupingUnit = ChronoUnit.DAYS;
 		try {
-			timeGroupingUnit = TimeUtils.getTimePeriod(Optionals.of(() -> bucket.data_schema().storage_schema().processed_grouping_time_period()).orElse(DEFAULT_GROUPING)).success();			
+			timeGroupingUnit = TimeUtils.getTimePeriod(Optionals.of(() -> dataBucket.data_schema().storage_schema().processed_grouping_time_period()).orElse(DEFAULT_GROUPING)).success();			
 		} catch (Throwable t) {			
 			logger.error(ErrorUtils.getLongForm(ErrorUtils.VALIDATION_ERROR,t),t);
 		}
@@ -213,6 +213,28 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 		if (null != _fs) {
 			_fs.close();
 		}		
+	}
+
+	@Override
+	public void setEcMetadata(EnrichmentControlMetadataBean ecMetadata) {
+		this.ecMetadata = ecMetadata;
+	}
+
+	@Override
+	public void setBeSharedLibrary(SharedLibraryBean beSharedLibrary) {
+		this.beSharedLibrary = beSharedLibrary;
+	}
+
+	@Override
+	public void setDataBucket(DataBucketBean dataBucketBean) {
+		this.dataBucket = dataBucketBean;
+		
+	}
+		
+	
+	@Override
+	public void setEnrichmentContext(IEnrichmentModuleContext enrichmentContext) {
+		this.enrichmentContext = enrichmentContext;
 	}
 	
 	
