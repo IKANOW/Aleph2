@@ -15,10 +15,17 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import scala.Tuple2;
 
@@ -558,12 +565,53 @@ public class CrudServiceUtils {
 		}
 	}
 
-	/** CRUD service proxy that optionally adds an extra term 
-	 * @author Alex
-	 *
+	/** Utility function - just returns ret_val
+	 * @param ret_val
+	 * @param ignore
+	 * @return
 	 */
-	public static class ManagedCrudServiceWrapper {
-		
+	private static Object identityInterceptor(Object ret_val, Object[] ignore) {
+		return ret_val;
 	}
 	
+	/** CRUD service proxy that optionally adds an extra term and allows the user to modify the results after they've run (eg to apply security service settings) 
+	 * @author Alex
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> ICrudService<T> intercept(final ICrudService<T> delegate, 
+												final Optional<QueryComponent<T>> extra_query, 
+												final Map<String, BiFunction<Object, Object[], Object>> interceptors,
+												final Optional<BiFunction<Object, Object[], Object>> default_interceptor)
+	{
+		
+		InvocationHandler handler = new InvocationHandler() {
+			@Override
+			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+				final Method m = delegate.getClass().getMethod(method.getName(), method.getParameterTypes());
+				
+				// First off, apply the extra term to any relevant args:
+				final Object[] args_with_extra_query = extra_query
+													.map(q -> {
+														return Arrays.stream(args)
+																.map(o -> 
+																	(null != o) && QueryComponent.class.isAssignableFrom(o.getClass())
+																		? CrudUtils.allOf((QueryComponent<T>)o, q)
+																		: o
+																)
+																.collect(Collectors.toList())
+																.toArray();
+													})
+													.orElse(args);
+				
+				final Object o = m.invoke(delegate, args_with_extra_query);
+				
+				return interceptors.getOrDefault(m.getName(), 
+										default_interceptor.orElse(CrudServiceUtils::identityInterceptor))
+									.apply(o, args_with_extra_query);
+			}
+		};
+
+		return (ICrudService<T>)Proxy.newProxyInstance(ICrudService.class.getClassLoader(),
+																new Class[] { ICrudService.class }, handler);
+	}
 }
