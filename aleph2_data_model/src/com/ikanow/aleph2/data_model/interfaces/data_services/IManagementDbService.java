@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -25,8 +26,10 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 /** The interface to the management database
  * @author acp
@@ -107,6 +110,22 @@ public interface IManagementDbService extends IUnderlyingService {
 	 */
 	<T> ICrudService<T> getBucketEnrichmentState(final Class<T> clazz, final DataBucketBean bucket, final Optional<String> sub_collection);
 	
+	// 2.3] Misc bucket operations
+	
+	/** Purges the specified bucket of all of its data objects (and ditto for all of its sub-buckets)
+	 * @param to_purge - the bucket whose data objects should be deleted
+	 * @param in - an optional duration to pause before purging the bucket
+	 * @return - whether the purge was scheduled/successful, with a management side channel
+	 */
+	ManagementFuture<Boolean> purgeBucket(final DataBucketBean to_purge, final Optional<Duration> in);
+	
+	/** Launches a test of the specified bucket using the provided test spec
+	 * @param to_test - the bucket to test
+	 * @param test_spec - the details of the test
+	 * @return whether the test was started successfully, with a management side channel
+	 */
+	ManagementFuture<Boolean> testBucket(final DataBucketBean to_test, final ProcessingTestSpecBean test_spec);
+	
 	////////////////////////////////////
 	
 	// 3] Analytics
@@ -142,10 +161,16 @@ public interface IManagementDbService extends IUnderlyingService {
 	<T> ICrudService<T> getRetryStore(final Class<T> retry_message_clazz);
 	
 	/** When a bucket is deleted (or purged), it is added to this queue, which is responsible for actual deletion of data 
-	 * @param deletion_queue_clazz - the class of the (internal) bean containing the lost message and some metadata
+	 * @param deletion_queue_clazz - the class of the (internal) bean containing the bucket to be deleted and some metadata
 	 * @return a CRUD service from the underlying technology
 	 */
 	<T> ICrudService<T> getBucketDeletionQueue(final Class<T> deletion_queue_clazz);
+	
+	/** This queue contains all buckets currently being tested 
+	 * @param test_queue_clazz - the class of the (internal) bean containing the bucket to be tested and some metadata
+	 * @return a CRUD service from the underlying technology
+	 */
+	<T> ICrudService<T> getBucketTestQueue(final Class<T> test_queue_clazz);
 	
 	/** Returns a list of all the "user" state objects
 	 * @param bucket_filter - if enabled then only returns CRUD datastores for the designated buckets

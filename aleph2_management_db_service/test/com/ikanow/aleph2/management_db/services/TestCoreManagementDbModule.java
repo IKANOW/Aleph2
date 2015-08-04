@@ -34,6 +34,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -190,7 +191,20 @@ public class TestCoreManagementDbModule {
 		
 		// Per-asset state:
 		{
-			ICrudService<String> per_bucket = read_only_management_db_service.getBucketHarvestState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+			ICrudService<AssetStateDirectoryBean> per_bucket = read_only_management_db_service.getBucketHarvestState(AssetStateDirectoryBean.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+
+			assertTrue("Is read only: " + per_bucket.getClass(), ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
+			try {
+				per_bucket.deleteDatastore();
+				fail("Should have thrown error");
+			}
+			catch (Exception e) {
+				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
+			}
+			per_bucket.countObjects(); // (just check doesn't thrown)
+		}	
+		{
+			ICrudService<AssetStateDirectoryBean> per_bucket = read_only_management_db_service.getBucketEnrichmentState(AssetStateDirectoryBean.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
 			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
 			try {
 				per_bucket.deleteDatastore();
@@ -202,7 +216,7 @@ public class TestCoreManagementDbModule {
 			per_bucket.countObjects(); // (just check doesn't thrown)
 		}		
 		{
-			ICrudService<String> per_bucket = read_only_management_db_service.getBucketEnrichmentState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
+			ICrudService<AssetStateDirectoryBean> per_bucket = read_only_management_db_service.getBucketAnalyticThreadState(AssetStateDirectoryBean.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
 			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
 			try {
 				per_bucket.deleteDatastore();
@@ -214,19 +228,7 @@ public class TestCoreManagementDbModule {
 			per_bucket.countObjects(); // (just check doesn't thrown)
 		}		
 		{
-			ICrudService<String> per_bucket = read_only_management_db_service.getBucketAnalyticThreadState(String.class, BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/test").done().get(), Optional.empty());
-			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_bucket.getClass()));
-			try {
-				per_bucket.deleteDatastore();
-				fail("Should have thrown error");
-			}
-			catch (Exception e) {
-				assertEquals("Correct error message", ErrorUtils.READ_ONLY_CRUD_SERVICE, e.getMessage());
-			}
-			per_bucket.countObjects(); // (just check doesn't thrown)
-		}		
-		{
-			ICrudService<String> per_library = read_only_management_db_service.getPerLibraryState(String.class, BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "/test").done().get(), Optional.empty());
+			ICrudService<AssetStateDirectoryBean> per_library = read_only_management_db_service.getPerLibraryState(AssetStateDirectoryBean.class, BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "/test").done().get(), Optional.empty());
 			assertTrue("Is read only", ICrudService.IReadOnlyCrudService.class.isAssignableFrom(per_library.getClass()));
 			try {
 				per_library.deleteDatastore();

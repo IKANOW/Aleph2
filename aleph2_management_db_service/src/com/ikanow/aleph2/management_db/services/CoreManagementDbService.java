@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -37,8 +38,10 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
@@ -259,6 +262,25 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		return new CoreManagementDbService(_underlying_management_db, 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
 				_auth, _project, true);
+	}
+
+	@Override
+	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge,
+			Optional<Duration> in) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test,
+			ProcessingTestSpecBean test_spec) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
+		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
 
 }

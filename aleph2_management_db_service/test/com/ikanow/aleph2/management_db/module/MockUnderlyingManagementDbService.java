@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.module;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -31,8 +32,10 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.management_db.module.MockUnderlyingManagementDbModule.IMockUnderlyingCrudServiceFactory;
 
 public class MockUnderlyingManagementDbService implements IManagementDbService, IExtraDependencyLoader {
@@ -140,6 +143,23 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 
 	@Override
 	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
+		return null;
+	}
+
+	@Override
+	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge,
+			Optional<Duration> in) {
+		return null;
+	}
+
+	@Override
+	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test,
+			ProcessingTestSpecBean test_spec) {
+		return null;
+	}
+
+	@Override
+	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
 		return null;
 	}
 

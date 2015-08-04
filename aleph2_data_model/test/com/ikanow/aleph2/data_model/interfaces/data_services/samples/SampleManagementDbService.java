@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,8 +27,10 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class SampleManagementDbService implements IManagementDbService {
 
@@ -112,6 +115,23 @@ public class SampleManagementDbService implements IManagementDbService {
 	@Override
 	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
 			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
+		return null;
+	}
+
+	@Override
+	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge,
+			Optional<Duration> in) {
+		return null;
+	}
+
+	@Override
+	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test,
+			ProcessingTestSpecBean test_spec) {
+		return null;
+	}
+
+	@Override
+	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
 		return null;
 	}
 
