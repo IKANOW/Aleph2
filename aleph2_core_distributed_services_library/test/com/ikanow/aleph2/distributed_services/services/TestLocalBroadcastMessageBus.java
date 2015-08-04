@@ -20,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.Serializable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -135,7 +136,7 @@ public class TestLocalBroadcastMessageBus {
 		public void onReceive(Object arg0) throws Exception {
 			_logger.info(this.self() + ": Unwrap from: " + this.sender() + ": " + arg0.getClass());
 			if (arg0 instanceof TestBean) {
-				_odd._received_bus1++;
+				_odd._received_bus1.incrementAndGet();
 				TestBean msg = (TestBean) arg0;
 				_logger.info("TestBean: " + msg.test1);
 				_odd._test_bus2.publish(new EmbeddedTestBeanWrapper(msg.embedded(), this.self()));
@@ -143,13 +144,13 @@ public class TestLocalBroadcastMessageBus {
 			else if (arg0 instanceof EmbeddedTestBean) {
 				EmbeddedTestBean msg = (EmbeddedTestBean) arg0;
 				_logger.info("EmbeddedTestBean: " + msg.test2);
-				_odd._received_post_bus2++;
+				_odd._received_post_bus2.incrementAndGet();
 			}
 			else if (arg0 instanceof DistributedPubSubMediator.SubscribeAck) {
 				_logger.info("Subscribed");
 			}
 			else {
-				_odd._unexpected++;
+				_odd._unexpected.incrementAndGet();
 			}
 		}		
 	}
@@ -220,9 +221,9 @@ public class TestLocalBroadcastMessageBus {
 	// TEST	
 		
 	static final int MESSAGES_TO_SEND = 10;
-	int _unexpected = 0;
-	int _received_bus1 = 0;
-	int _received_post_bus2 = 0;
+	AtomicInteger _unexpected = new AtomicInteger(0);
+	AtomicInteger _received_bus1 = new AtomicInteger(0);
+	AtomicInteger _received_post_bus2 = new AtomicInteger(0);
 	
 	@Test
 	public void testLocalBroadcast() throws Exception {
@@ -238,7 +239,7 @@ public class TestLocalBroadcastMessageBus {
 		int waiting = 0;
 		final int MAX_WAIT = 20;
 		while ((waiting++ < MAX_WAIT) && !f.isDone()) {
-			if ((_received_post_bus2 >= 2*MESSAGES_TO_SEND)) {
+			if ((_received_post_bus2.get() >= 2*MESSAGES_TO_SEND)) {
 				break;
 			}
 			try { Thread.sleep(1000); } catch (Exception e) {}
@@ -247,9 +248,9 @@ public class TestLocalBroadcastMessageBus {
 		
 		// Check that my actor received all its messages
 		
-		assertEquals(2*MESSAGES_TO_SEND, _received_bus1);
-		assertEquals(2*MESSAGES_TO_SEND, _received_post_bus2);
-		assertEquals(0, _unexpected);
+		assertEquals(2*MESSAGES_TO_SEND, _received_bus1.get());
+		assertEquals(2*MESSAGES_TO_SEND, _received_post_bus2.get());
+		assertEquals(0, _unexpected.get());
 	}
 	
 	///////////////////////////////////
