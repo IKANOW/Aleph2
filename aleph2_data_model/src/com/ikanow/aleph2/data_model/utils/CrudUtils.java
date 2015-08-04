@@ -54,6 +54,8 @@ public class CrudUtils {
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		
+		public abstract QueryComponent<JsonNode> toJson();
+		
 		public abstract Operator getOp();
 		
 		public abstract Long getLimit();
@@ -272,6 +274,24 @@ public class CrudUtils {
 	 */
 	public static class MultiQueryComponent<T> extends QueryComponent<T> {
 
+		/** Converts a bean version of a query across to a JSON one, ie if you want to build a query using type checking
+		 *  but then want to apply to a "raw" (JSON) CRUD repo
+		 * @param bean_version - the original query component
+		 * @return
+		 */
+		@SuppressWarnings("unchecked")
+		public MultiQueryComponent<JsonNode> toJson() {
+			final Stream<QueryComponent<JsonNode>> stream = this.getElements().stream().map(qc -> 
+				Patterns.match(qc).<QueryComponent<JsonNode>>andReturn()
+					.when(SingleQueryComponent.class, sqc -> sqc.toJson())
+					.when(MultiQueryComponent.class, mqc -> ((MultiQueryComponent<T>)mqc).toJson())										
+					.otherwise(__ -> { return null; })); // (internal logic error)
+			
+			return this.getOp() == Operator.all_of
+					? CrudUtils.allOf(stream)
+					: CrudUtils.anyOf(stream);
+		}		
+		
 		// Public interface - read
 		// THIS IS FOR CRUD INTERFACE IMPLEMENTERS ONLY
 		

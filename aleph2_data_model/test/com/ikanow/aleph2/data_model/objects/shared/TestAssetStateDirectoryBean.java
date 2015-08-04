@@ -33,6 +33,6 @@ public class TestAssetStateDirectoryBean {
 		assertEquals("test1", t1.asset_path());
 		assertEquals(StateDirectoryType.harvest, t1.state_type());
 		assertEquals("test2", t1.collection_name());
-		assertEquals("test3", t1.database_location());		
+		assertEquals("test3", t1._id());		
 	}
 }

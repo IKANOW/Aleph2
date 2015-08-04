@@ -565,45 +565,69 @@ public class CrudServiceUtils {
 		}
 	}
 
-	/** Utility function - just returns ret_val
-	 * @param ret_val
-	 * @param ignore
-	 * @return
-	 */
-	private static Object identityInterceptor(Object ret_val, Object[] ignore) {
-		return ret_val;
-	}
-	
 	/** CRUD service proxy that optionally adds an extra term and allows the user to modify the results after they've run (eg to apply security service settings) 
 	 * @author Alex
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> ICrudService<T> intercept(final ICrudService<T> delegate, 
+	public static <T> ICrudService<T> intercept(final Class<T> clazz,
+												final ICrudService<T> delegate, 
 												final Optional<QueryComponent<T>> extra_query, 
 												final Map<String, BiFunction<Object, Object[], Object>> interceptors,
 												final Optional<BiFunction<Object, Object[], Object>> default_interceptor)
-	{
-		
+	{		
 		InvocationHandler handler = new InvocationHandler() {
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 				final Method m = delegate.getClass().getMethod(method.getName(), method.getParameterTypes());
 				
 				// First off, apply the extra term to any relevant args:
-				final Object[] args_with_extra_query = extra_query
-													.map(q -> {
-														return Arrays.stream(args)
-																.map(o -> 
-																	(null != o) && QueryComponent.class.isAssignableFrom(o.getClass())
-																		? CrudUtils.allOf((QueryComponent<T>)o, q)
-																		: o
-																)
-																.collect(Collectors.toList())
-																.toArray();
-													})
-													.orElse(args);
+				final Object[] args_with_extra_query = 
+						extra_query
+							.map(q -> {
+								return (null != args)
+										? Arrays.stream(args)
+											.map(o -> 
+												(null != o) && QueryComponent.class.isAssignableFrom(o.getClass())
+													? CrudUtils.allOf((QueryComponent<T>)o, q)
+													: o
+											)
+											.collect(Collectors.toList())
+											.toArray()
+										: args;
+							})
+							.orElse(args);
 				
-				final Object o = m.invoke(delegate, args_with_extra_query);
+				// Special cases for: readOnlyVersion, getFilterdRepo / countObjects / getRawCrudService / *byId
+				final Object o = Lambdas.get(Lambdas.wrap_u(() -> {
+					if (extra_query.isPresent() && m.getName().equals("countObjects")) { // special case....change method and apply spec
+						return delegate.countObjectsBySpec(extra_query.get());
+					}
+					else if (extra_query.isPresent() && m.getName().equals("getObjectById")) { // convert from id to spec and append extra_query
+						if (1 == args.length) {
+							return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])));
+						}
+						else {
+							return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), (List<String>)args[1], (Boolean)args[2]);							
+						}
+					}
+					else if (extra_query.isPresent() && m.getName().equals("deleteObjectById")) { // convert from id to spec and append extra_query
+						return delegate.deleteObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])));
+					}
+					else if (extra_query.isPresent() && m.getName().equals("updateObjectById")) { // convert from id to spec and append extra_query
+						return delegate.updateObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), Optional.empty(), (UpdateComponent<T>)args[1]);
+					}
+					else if (m.getName().equals("getRawCrudService")) { // special case....convert the default query to JSON, if present
+						Object o_internal = m.invoke(delegate, args_with_extra_query);
+						Optional<QueryComponent<JsonNode>> json_extra_query = extra_query.map(qc -> qc.toJson());
+						return intercept(JsonNode.class, (ICrudService<JsonNode>)o_internal, json_extra_query, interceptors, default_interceptor);
+					}
+					else { // wrap any CrudService types
+						Object o_internal = m.invoke(delegate, args_with_extra_query);
+						return (null != o_internal) && ICrudService.class.isAssignableFrom(o_internal.getClass())
+								? intercept(clazz, (ICrudService<T>)o_internal, extra_query, interceptors, default_interceptor)
+								: o_internal;
+					}
+				}));				
 				
 				return interceptors.getOrDefault(m.getName(), 
 										default_interceptor.orElse(CrudServiceUtils::identityInterceptor))
@@ -614,4 +638,14 @@ public class CrudServiceUtils {
 		return (ICrudService<T>)Proxy.newProxyInstance(ICrudService.class.getClassLoader(),
 																new Class[] { ICrudService.class }, handler);
 	}
+	
+	/** Utility function - just returns ret_val
+	 * @param ret_val
+	 * @param ignore
+	 * @return
+	 */
+	private static Object identityInterceptor(Object ret_val, Object[] ignore) {
+		return ret_val;
+	}
+	
 }

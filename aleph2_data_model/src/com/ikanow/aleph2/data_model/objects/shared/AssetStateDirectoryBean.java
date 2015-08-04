@@ -39,7 +39,7 @@ public class AssetStateDirectoryBean implements Serializable {
 		this.asset_path = asset_path;
 		this.state_type = state_type;
 		this.collection_name = collection_name;
-		this.database_location = database_location;
+		this._id = database_location;
 	}
 
 	/** The storage path of the asset (bucket/bean)
@@ -60,10 +60,10 @@ public class AssetStateDirectoryBean implements Serializable {
 	/** A string specific to the underlying technology that describes the location of the CRUD service within that technology
 	 * @return
 	 */
-	public String database_location() { return database_location; }	
+	public String _id() { return _id; }	
 	
 	private String asset_path;
 	private StateDirectoryType state_type; 
 	private String collection_name;
-	private String database_location;
+	private String _id;
 }

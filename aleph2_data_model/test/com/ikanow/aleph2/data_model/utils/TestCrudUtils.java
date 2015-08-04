@@ -140,37 +140,28 @@ public class TestCrudUtils {
 		return Tuples._2T(query_out, meta);
 		
 	}
-	
+		
 	@SuppressWarnings("unchecked")
-	private static <T> DBObject convertToMongoQuery_multi(String andVsOr, MultiQueryComponent<T> query_in) {
+	protected static <T> DBObject convertToMongoQuery_multi(final String andVsOr, final MultiQueryComponent<T> query_in) {
 		
 		return Patterns.match(query_in.getElements())
 				.<DBObject>andReturn()
 				.when(f -> f.isEmpty(), f -> new BasicDBObject())
 				.otherwise(f -> f.stream().collect(
-						new Collector<QueryComponent<T>, BasicDBList, DBObject>() {
-							@Override
-							public Supplier<BasicDBList> supplier() {
-								return BasicDBList::new;
-							}	
-							@Override
-							public BiConsumer<BasicDBList,QueryComponent<T>> accumulator() {
-								return (acc, entry) -> {
+					Collector.of( 
+						BasicDBList::new,
+						(acc, entry) -> {
 									Patterns.match(entry).andAct()
 										.when(SingleQueryComponent.class, 
 												e -> acc.add(convertToMongoQuery_single(getOperatorName(e.getOp()), e)))
 										.when(MultiQueryComponent.class, 
-												e -> acc.add(convertToMongoQuery_multi(getOperatorName(e.getOp()), e)));
-								};
-							}	
-							@Override
-							public BinaryOperator<BasicDBList> combiner() { return (a, b) -> { a.addAll(b); return a; } ; }	
-							@Override
-							public Function<BasicDBList, DBObject> finisher() { return acc -> (DBObject)new BasicDBObject(andVsOr, acc); }
-							@Override
-							public Set<java.util.stream.Collector.Characteristics> characteristics() { return EnumSet.of(Characteristics.UNORDERED); }
-						} )); 
-	}	
+												e -> acc.add(convertToMongoQuery_multi(getOperatorName(((MultiQueryComponent<?>)e).getOp()), (MultiQueryComponent<?>)e)));
+											//(at various other points in the code, oraclej has complained about this though ecj is happy, so just added these casts for safety)
+						},
+						(a, b) -> { a.addAll(b); return a; },
+						acc -> (DBObject)new BasicDBObject(andVsOr, acc),
+						Characteristics.UNORDERED))); 
+	}
 	
 	private static <T> DBObject convertToMongoQuery_single(String andVsOr, SingleQueryComponent<T> query_in) {
 		LinkedHashMultimap<String, Tuple2<Operator, Tuple2<Object, Object>>> fields = query_in.getAll();
@@ -1056,6 +1047,54 @@ public class TestCrudUtils {
 		assertEquals("{ \"$limit\" : 5}", query_meta_5._2().toString());		
 		assertEquals(expected_meta_2.toString(), query_meta_6._2().toString());
 	}
+	
+	@Test
+	public void testNestedMultiQuery() throws IOException {
+		// Mainly just testing toJson here
+		
+		final BeanTemplate<TestBean> template1a = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
+		final SingleQueryComponent<TestBean> query_comp_1a = CrudUtils.anyOf(template1a);		
+		final SingleQueryComponent<TestBean> query_comp_2a = CrudUtils.allOf(TestBean.class).when(TestBean::bool_field, true);	
+		final MultiQueryComponent<TestBean> multi_query_1 = CrudUtils.allOf(Arrays.asList(query_comp_1a, query_comp_2a));
+
+		final BeanTemplate<TestBean> template1b = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field_b").done();
+		final SingleQueryComponent<TestBean> query_comp_1b = CrudUtils.allOf(template1b);		
+		final SingleQueryComponent<TestBean> query_comp_2b = CrudUtils.anyOf(TestBean.class).when(TestBean::bool_field, false);		
+		final MultiQueryComponent<TestBean> multi_query_2 = CrudUtils.allOf(query_comp_1b, query_comp_2b);
+		
+		final MultiQueryComponent<JsonNode> multi_query_test_1 = CrudUtils.anyOf(multi_query_1, multi_query_2).toJson();
+		final MultiQueryComponent<JsonNode> multi_query_test_2 = CrudUtils.allOf(multi_query_1, query_comp_1b).toJson();
+		
+		final Tuple2<DBObject, DBObject> multi_query_meta_1 = convertToMongoQuery(multi_query_test_1);
+		final Tuple2<DBObject, DBObject> multi_query_meta_2 = convertToMongoQuery(multi_query_test_2);
+		
+		final DBObject expected_1 = QueryBuilder.start().or(
+										QueryBuilder.start().and(
+											QueryBuilder.start().or(QueryBuilder.start("string_field").is("string_field").get()).get(),
+											QueryBuilder.start().and(QueryBuilder.start("bool_field").is(true).get()).get()
+										).get()
+										,
+										QueryBuilder.start().and(
+											QueryBuilder.start().and(QueryBuilder.start("string_field").is("string_field_b").get()).get(),
+											QueryBuilder.start().or(QueryBuilder.start("bool_field").is(false).get()).get()
+										).get()										
+									).get();
+		
+		final DBObject expected_2 = QueryBuilder.start().and(
+										QueryBuilder.start().and(
+											QueryBuilder.start().or(QueryBuilder.start("string_field").is("string_field").get()).get(),
+											QueryBuilder.start().and(QueryBuilder.start("bool_field").is(true).get()).get()
+										).get()
+										,
+										QueryBuilder.start().and(QueryBuilder.start("string_field").is("string_field_b").get()).get()
+									).get();
+
+		
+		assertEquals(expected_1.toString(), multi_query_meta_1._1().toString());
+		assertEquals(expected_2.toString(), multi_query_meta_2._1().toString());
+
+	}	
+	
 	///////////////////////////////////////////////////////////////////////	
 	///////////////////////////////////////////////////////////////////////	
 	///////////////////////////////////////////////////////////////////////	
