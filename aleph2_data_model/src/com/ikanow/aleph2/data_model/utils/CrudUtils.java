@@ -281,11 +281,13 @@ public class CrudUtils {
 		 */
 		@SuppressWarnings("unchecked")
 		public MultiQueryComponent<JsonNode> toJson() {
-			final Stream<QueryComponent<JsonNode>> stream = this.getElements().stream().map(qc -> 
-				Patterns.match(qc).<QueryComponent<JsonNode>>andReturn()
-					.when(SingleQueryComponent.class, sqc -> sqc.toJson())
-					.when(MultiQueryComponent.class, mqc -> ((MultiQueryComponent<T>)mqc).toJson())										
-					.otherwise(__ -> { return null; })); // (internal logic error)
+			final Stream<QueryComponent<JsonNode>> stream = this.getElements().stream()
+				.map(qc ->
+					(QueryComponent<JsonNode>)
+						Patterns.match(qc).<QueryComponent<JsonNode>>andReturn()
+							.when(SingleQueryComponent.class, sqc -> sqc.toJson())
+							.when(MultiQueryComponent.class, mqc -> ((MultiQueryComponent<T>)mqc).toJson())										
+							.otherwise(__ -> { return null; })); // (internal logic error)
 			
 			return this.getOp() == Operator.all_of
 					? CrudUtils.allOf(stream)
