@@ -198,7 +198,7 @@ public class CrudUtils {
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> allOf(final List<? extends QueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> allOf(final List<QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.all_of, components);
 	}
 	
@@ -206,7 +206,7 @@ public class CrudUtils {
 	 * @param components - a stream of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> allOf(final Stream<? extends QueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> allOf(final Stream<QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.all_of, components.collect(Collectors.toList()));
 	}
 	
@@ -223,7 +223,7 @@ public class CrudUtils {
 	 * @param components - a list of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> anyOf(final List<? extends QueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> anyOf(final List<QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components);
 	}
 	
@@ -231,7 +231,7 @@ public class CrudUtils {
 	 * @param components - a stream of query components
 	 * @return the "multi" query component "helper"
 	 */
-	public static <T> MultiQueryComponent<T> anyOf(final Stream<? extends SingleQueryComponent<T>> components) {
+	public static <T> MultiQueryComponent<T> anyOf(final Stream<QueryComponent<T>> components) {
 		return new MultiQueryComponent<T>(Operator.any_of, components.collect(Collectors.toList()));
 	}
 		
@@ -346,7 +346,7 @@ public class CrudUtils {
 		List<QueryComponent<T>> _elements;
 		Operator _op;
 		
-		protected MultiQueryComponent(final Operator op, final List<? extends QueryComponent<T>> components) {
+		protected MultiQueryComponent(final Operator op, final List<QueryComponent<T>> components) {
 			_op = op;
 			_elements = components.stream().map(x -> (QueryComponent<T>)x).collect(Collectors.toList());
 		}

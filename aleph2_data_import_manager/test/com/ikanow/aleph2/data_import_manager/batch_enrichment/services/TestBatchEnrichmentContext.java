@@ -108,6 +108,7 @@ public class TestBatchEnrichmentContext {
 			assertEquals(test_context._service_context, test_context2._service_context);
 			
 			// Check calls that require that bucket/endpoint be set
+			@SuppressWarnings("unused")
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 					.with(DataBucketBean::_id, "test")
 					.with(DataBucketBean::full_name, "/test/basicContextCreation")

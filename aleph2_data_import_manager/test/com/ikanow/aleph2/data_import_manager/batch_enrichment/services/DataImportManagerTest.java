@@ -30,7 +30,8 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 public class DataImportManagerTest extends DataBucketTest{
-    private static final Logger logger = LogManager.getLogger(DataImportManagerTest.class);
+    @SuppressWarnings("unused")
+	private static final Logger logger = LogManager.getLogger(DataImportManagerTest.class);
 
 	protected DataImportManager dataImportManager = null;	
 	protected IBeJobService beJoBService;

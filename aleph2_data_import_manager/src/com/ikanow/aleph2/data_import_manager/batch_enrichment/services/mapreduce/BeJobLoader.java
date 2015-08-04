@@ -17,6 +17,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 
 
@@ -47,7 +48,7 @@ public class BeJobLoader {
 					if (ec.name().equals(ecMetadataBeanName)) {
 						logger.info("Loading libraries: " + bucketFullName);
 
-						List<SingleQueryComponent<SharedLibraryBean>> sharedLibsQuery = ec
+						List<QueryComponent<SharedLibraryBean>> sharedLibsQuery = ec
 								.library_ids_or_names()
 								.stream()
 								.map(name -> {

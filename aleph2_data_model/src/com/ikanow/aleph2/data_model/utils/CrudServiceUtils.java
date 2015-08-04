@@ -558,4 +558,12 @@ public class CrudServiceUtils {
 		}
 	}
 
+	/** CRUD service proxy that optionally adds an extra term 
+	 * @author Alex
+	 *
+	 */
+	public static class ManagedCrudServiceWrapper {
+		
+	}
+	
 }
