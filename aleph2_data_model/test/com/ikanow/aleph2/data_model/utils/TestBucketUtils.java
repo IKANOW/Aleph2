@@ -47,15 +47,16 @@ public class TestBucketUtils {
 	public void testConvertDataBucketBeanToTest() {
 		String original_full_name = "/my_bean/sample_path";
 		String original_id = "id12345";
+		String user_id = "user12345";
 		DataBucketBean original_bean = BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "id12345")
 				.with(DataBucketBean::full_name, original_full_name)
 				.done().get();
 		
-		DataBucketBean test_bean = BucketUtils.convertDataBucketBeanToTest(original_bean);
+		DataBucketBean test_bean = BucketUtils.convertDataBucketBeanToTest(original_bean, user_id);
 		
 		assertTrue(test_bean._id().equals(original_id));
-		assertTrue(test_bean.full_name().equals("/test" + original_full_name));
+		assertTrue(test_bean.full_name().equals("/aleph2_testing/" + user_id + "/" + original_full_name));
 	}
 
 }
