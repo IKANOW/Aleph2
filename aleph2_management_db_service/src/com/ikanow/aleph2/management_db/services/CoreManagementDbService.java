@@ -32,7 +32,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
@@ -173,14 +172,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAnalyticThreadStore()
-	 */
-	public IManagementCrudService<AnalyticThreadBean> getAnalyticThreadStore() {
-		// TODO (ALEPH-19) add this
-		throw new RuntimeException("Method not yet supported");
-	}
-
-	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getPerAnalyticThreadState(java.lang.Class, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean, java.util.Optional)
 	 */
 	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
@@ -272,9 +263,18 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	}
 
 	@Override
-	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test,
-			ProcessingTestSpecBean test_spec) {
+	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {
 		// TODO Auto-generated method stub
+		
+		//TODO: delegate straight over to DataBucketCrudService to avoid putting bucket specific logic here
+		// maybe something like (in DBCS):
+		// - validate the bucket 
+		// - is there any test data already present for this user, delete if so (?)
+		//   (I'm writing deletion logic atm so may need to TODO that out for now until I'm done)
+		// - send messages to start the test (ie like other messages, via the BucketActionSupervisor)
+		// - add to the test queue
+		// anything else?
+		
 		return null;
 	}
 
