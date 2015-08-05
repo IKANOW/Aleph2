@@ -119,25 +119,26 @@ public class KafkaUtils {
 	 */
 	public static void setProperties(Config parseMap) {
 		kafka_properties = new Properties();
+		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				.put("group.id", "somegroup_1")
+				.put("serializer.class", "kafka.serializer.StringEncoder")
+				.put("request.required.acks", "1")
+				.put("zookeeper.session.timeout.ms", "400")
+				.put("consumer.timeout.ms", "3000")
+				.put("zookeeper.sync.time.ms", "200")
+		        .put("auto.commit.interval.ms", "1000")			
+				.build();	
 		
+		final Config fullConfig = parseMap.withFallback(ConfigFactory.parseMap(config_map_kafka));
+		fullConfig.entrySet().stream().forEach(e -> kafka_properties.put(e.getKey(), e.getValue().unwrapped()));
+
 		//PRODUCER PROPERTIES		
-		String broker = parseMap.getString("metadata.broker.list");
-		logger.debug("BROKER: " + broker);		
-		kafka_properties.put("metadata.broker.list", broker);
-		//kafka_properties.put("metadata.broker.list", "api001.dev.ikanow.com:6667");		
-		kafka_properties.put("serializer.class", "kafka.serializer.StringEncoder");
-		kafka_properties.put("request.required.acks", "1");
-        
+		String broker = fullConfig.getString("metadata.broker.list");
+		logger.debug("BROKER: " + broker);
+		
         //CONSUMER PROPERTIES		
-		String zk = parseMap.getString("zookeeper.connect");
+		String zk = fullConfig.getString("zookeeper.connect");
 		logger.debug("ZOOKEEPER: " + zk);
-		kafka_properties.put("zookeeper.connect", zk);
-		//kafka_properties.put("zookeeper.connect", "api001.dev.ikanow.com:2181");		
-		kafka_properties.put("group.id", "somegroup_1");
-        kafka_properties.put("zookeeper.session.timeout.ms", "400");
-        kafka_properties.put("zookeeper.sync.time.ms", "200");
-        kafka_properties.put("auto.commit.interval.ms", "1000");
-        kafka_properties.put("consumer.timeout.ms", "3000"); //throw an exception if no item found for 3s
         
         //reset producer so a new one will be created
         if ( producer != null )
@@ -168,13 +169,8 @@ public class KafkaUtils {
 	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name) {
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				.put("metadata.broker.list", broker_list)
-				.put("serializer.class", "kafka.serializer.StringEncoder")
-				.put("request.required.acks", "1")
 				.put("zookeeper.connect", zk_connection)
 				.put("group.id", cluster_name)
-				.put("zookeeper.session.timeout.ms", "400")
-				.put("zookeeper.sync.time.ms", "200")
-		        .put("auto.commit.interval.ms", "1000")			
 				.build();	
 		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));		
 	}
