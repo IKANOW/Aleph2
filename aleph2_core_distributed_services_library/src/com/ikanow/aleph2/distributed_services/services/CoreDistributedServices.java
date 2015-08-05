@@ -326,7 +326,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(akka.actor.Props)
 	 */
 	@Override
-	public ActorRef getSingletonActor(final String actor_name, final Props actor_config) {
+	public ActorRef createSingletonActor(final String actor_name, final Props actor_config) {
 		return getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 
 				ClusterSingletonManagerSettings.create(getAkkaSystem()).withSingletonName(actor_name)
 				));

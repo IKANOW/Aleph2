@@ -122,7 +122,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(java.lang.String, akka.actor.Props)
 	 */
 	@Override
-	public ActorRef getSingletonActor(final String actor_name, final Props actor_config) {
+	public ActorRef createSingletonActor(final String actor_name, final Props actor_config) {
 		//(single node - therefore just generates a single actor as per usual)
 		return _akka_system.actorOf(actor_config, actor_name);
 	}

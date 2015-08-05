@@ -63,9 +63,9 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	
 	/** Returns an actor that will be a singleton across the cluster - ie start it on all nodes, but it will only run on one node at a time
 	 * @param actor_config - the standard actor-defining configuration
-	 * @return the actorRef
+	 * @return the cluster manager - note the actual actor cannot be interacted with directly from this ActorRef, only via actorSelection ("using the names you have specified when creating the ClusterSingletonManager"). Best solution is to have the master register itself with a message bus.
 	 */
-	ActorRef getSingletonActor(final String actor_name, final Props actor_config);
+	ActorRef createSingletonActor(final String actor_name, final Props actor_config);
 	
 	/** Returns a broadcast message bus for a specific topic
 	 * @param wrapper_clazz - the class of the _wrapper_ (not the underlying message)
