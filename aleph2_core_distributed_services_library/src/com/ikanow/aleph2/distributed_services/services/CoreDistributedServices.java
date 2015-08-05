@@ -268,7 +268,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 					));
 			
 			// Set up a config for Akka overrides
-			final Map<String, Object> config_map = ImmutableMap.<String, Object>builder()
+			final ImmutableMap.Builder<String, Object> config_map_builder = 
+			ImmutableMap.<String, Object>builder()
 												//.put("akka.loglevel", "DEBUG") // (just in case it's quickly needed during unit testing)
 												.put("akka.actor.provider", "akka.cluster.ClusterActorRefProvider")
 												.put("akka.extensions", Arrays.asList("akka.cluster.pubsub.DistributedPubSub"))
@@ -276,7 +277,12 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 												.put("akka.cluster.seed.zookeeper.url", _config_bean.zookeeper_connection())
 												.put("akka.cluster.auto-down-unreachable-after", "120s")
 												.put("akka.cluster.pub-sub.routing-logic", "round-robin")
-												.build();		
+												;
+
+			if (null != _config_bean.application_name()) {
+				config_map_builder.put("akka.cluster.roles", Arrays.asList(_config_bean.application_name()));
+			}			
+			final Map<String, Object> config_map = config_map_builder.build();;
 			_akka_system.set(ActorSystem.create(Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME), 
 								ConfigFactory.parseMap(config_map)));
 			this.joinAkkaCluster();
@@ -326,10 +332,14 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(akka.actor.Props)
 	 */
 	@Override
-	public ActorRef createSingletonActor(final String actor_name, final Props actor_config) {
-		return getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 
-				ClusterSingletonManagerSettings.create(getAkkaSystem()).withSingletonName(actor_name)
-				));
+	public Optional<ActorRef> createSingletonActor(final String actor_name, final String for_role, final Props actor_config) {
+		return for_role.equals(_config_bean.application_name())
+				?
+				Optional.of(getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 
+								ClusterSingletonManagerSettings.create(getAkkaSystem()).withRole(for_role).withSingletonName(actor_name)
+								)))
+				:
+				Optional.empty();
 	}
 	
 	/* (non-Javadoc)

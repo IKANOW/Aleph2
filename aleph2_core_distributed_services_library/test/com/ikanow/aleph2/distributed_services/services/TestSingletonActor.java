@@ -24,6 +24,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.Scanner;
 
 import org.apache.logging.log4j.LogManager;
@@ -35,6 +36,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -154,7 +156,19 @@ public class TestSingletonActor {
 	@Test
 	public void testSingletonActor() throws Exception {
 		
-		// Launch a thread to send me messages
+		// Launch a remote process #1, will create with wrong role
+		
+		@SuppressWarnings("unused")
+		final Process px_wrong_role = Runtime.getRuntime().exec(Arrays.<String>asList(
+				System.getenv("JAVA_HOME") + File.separator + "bin" + File.separator + "java",
+				"-classpath",
+				System.getProperty("java.class.path"),
+				"com.ikanow.aleph2.distributed_services.services.TestSingletonActor",
+				_connect_string,
+				"CREATE_ME_WITH_WRONG_ROLE"
+				).toArray(new String[0]));
+		
+		// Launch a remote process #2
 		
 		final Process px = Runtime.getRuntime().exec(Arrays.<String>asList(
 				System.getenv("JAVA_HOME") + File.separator + "bin" + File.separator + "java",
@@ -175,6 +189,7 @@ public class TestSingletonActor {
 		
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, _connect_string);
+		config_map.put(DistributedServicesPropertyBean.APPLICATION_NAME, "test_role");
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
@@ -195,6 +210,8 @@ public class TestSingletonActor {
 		if (!started.isSet()) {
 			fail("Cluster never woke up");
 		}
+		
+		assertEquals("Shouldn't create actor with wrong role", Optional.empty(), _core_distributed_services.createSingletonActor("should_fail", "missing_role", Props.create(StatusActor.class)));		
 		
 		_test_bus1 = _core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");			
 		
@@ -217,7 +234,7 @@ public class TestSingletonActor {
 		// OK now I can start my singleton and check it remains down (because it's a singleton!) 
 		
 		@SuppressWarnings("unused")
-		ActorRef handler = _core_distributed_services.createSingletonActor("test_actor", Props.create(TestActor.class, _core_distributed_services));
+		ActorRef handler = _core_distributed_services.createSingletonActor("test_actor", "test_role", Props.create(TestActor.class, _core_distributed_services)).get();
 		
 		_logger.info("Starting local singleton, shouldn't start up");
 		for (int k = 0;k < 20; ++k) {
@@ -250,12 +267,29 @@ public class TestSingletonActor {
 	
 	// A "remote" service that will shoot messages over the broadcast bus
 	
-	public static void main(String args[]) throws Exception {
-		if (1 != args.length) {
-			System.exit(-3);			
+	public static void main(String args[]) throws Exception {		
+		final boolean wrong_role;
+		if (2 == args.length) { // I'm support to have the wrong role
+			wrong_role = true;
+			ZookeeperUtils.overrideHostname("wrong_role");
+			_logger.info("STARTING WITH WRONG ROLE");
+		}
+		else if (1 != args.length) {
+			wrong_role = true;
+			System.exit(-3);	
+		}
+		else {
+			ZookeeperUtils.overrideHostname("right_role");
+			wrong_role = false;
 		}
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, args[0]);
+		if (wrong_role) {
+			config_map.put(DistributedServicesPropertyBean.APPLICATION_NAME, "random_application");
+		}
+		else {
+			config_map.put(DistributedServicesPropertyBean.APPLICATION_NAME, "test_role");			
+		}
 		
 		Config config = ConfigFactory.parseMap(config_map);				
 		DistributedServicesPropertyBean bean =
@@ -266,8 +300,10 @@ public class TestSingletonActor {
 		ICoreDistributedServices core_distributed_services = new CoreDistributedServices(bean);
 
 		Cluster.get(core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
-			ActorRef handler = core_distributed_services.createSingletonActor("test_actor", Props.create(TestActor.class, core_distributed_services));						
-			_logger.info("Singleton manager = " + handler.toString() + ": " + handler.path().name());			
+			if (!wrong_role) {
+				ActorRef handler = core_distributed_services.createSingletonActor("test_actor", "test_role", Props.create(TestActor.class, core_distributed_services)).get();						
+				_logger.info("Singleton manager = " + handler.toString() + ": " + handler.path().name());
+			}
 		});
 		
 		for (int k = 0;k < 180; ++k) {
@@ -309,5 +345,4 @@ public class TestSingletonActor {
 	        }
 	    }).start();
 	}	
-	
 }

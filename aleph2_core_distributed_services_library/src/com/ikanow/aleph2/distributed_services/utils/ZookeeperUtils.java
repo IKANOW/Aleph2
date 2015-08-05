@@ -24,7 +24,13 @@ import com.typesafe.config.Config;
  * @author Alex
  */
 public class ZookeeperUtils {
-
+	/** Mainly for debugging
+	 * @param host
+	 */
+	public static void overrideHostname(final String host) {
+		_hostname = host;
+	}
+	
 	/** Builds a standard connection string (list of host:port) from the zoo.cfg file
 	 * @param zookeeper_config
 	 * @return the connection string
