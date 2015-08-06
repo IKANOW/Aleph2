@@ -203,7 +203,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
 				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");
-				synchronized (this) { // (prevents a race condition vs runOnAkkaJoin)
+				synchronized (_joined_akka_cluster) { // (prevents a race condition vs runOnAkkaJoin)
 					_joined_akka_cluster.complete(true);
 				}
 				// Now register a shutdown hook
@@ -272,7 +272,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public CompletableFuture<Void> runOnAkkaJoin(Runnable task) {
-		synchronized (this) {
+		synchronized (_joined_akka_cluster) {
 			if (_joined_akka_cluster.isDone()) {
 				return CompletableFuture.runAsync(task);
 			}
