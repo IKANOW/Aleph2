@@ -47,10 +47,10 @@ public class ManagementDbActorContext {
 		_singleton = this;
 		
 		_distributed_services.runOnAkkaJoin(() -> {
-			_distributed_services.createSingletonActor("test_cycle_singleton", 
+			_distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
 					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 					Props.create(BucketTestCycleSingletonActor.class));
-			_distributed_services.createSingletonActor("deletion_singleton", 
+			_distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
 					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 					Props.create(BucketDeletionSingletonActor.class));
 		});

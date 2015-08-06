@@ -29,5 +29,7 @@ public class ActorUtils {
 	
 	public final static String BUCKET_ACTION_SUPERVISOR = "bucket_actions_supervisor";
 	public final static String BUCKET_ACTION_HANDLER = "bucket_actions_handler";
+	public final static String BUCKET_TEST_CYCLE_SINGLETON_ACTOR = "test_cycle_singleton";
+	public final static String BUCKET_DELETION_SINGLETON_ACTOR = "deletion_singleton";
 	
 }
