@@ -125,13 +125,14 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 							.increment(BucketDeletionMessage::deletion_attempts, 1)
 							;
 					
-					// Update the 
+					// Update the buckets' times - will try again in an hour if the delete fails for any reason
 					_bucket_deletion_queue.updateObjectsBySpec(recent_msg_ids, Optional.of(false), update_time);
 					
 					// Send out the buckets for proper deletion
 					msgs.forEach(msg -> {
 						_bucket_deletion_bus.publish(new BucketMgmtEventBusWrapper(self, msg));
 					});
+					_logger.info("Prepared for deletion num_buckets=" + msgs.size()); 
 				}
 			});
 		}
