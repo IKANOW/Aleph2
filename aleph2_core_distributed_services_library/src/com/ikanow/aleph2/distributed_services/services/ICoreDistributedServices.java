@@ -21,6 +21,7 @@ package com.ikanow.aleph2.distributed_services.services;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -66,7 +67,7 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 * @param for_role - singletons can only be created for a specific role (eg DataImportManager, DataAnalyticsManager)
 	 * @return Optionally (if the role matches this process) the cluster manager - note the actual actor cannot be interacted with directly from this ActorRef, only via actorSelection ("using the names you have specified when creating the ClusterSingletonManager"). Best solution is to have the master register itself with a message bus.
 	 */
-	Optional<ActorRef> createSingletonActor(final String actor_name, final String for_role, final Props actor_config);
+	Optional<ActorRef> createSingletonActor(final String actor_name, final Set<String> for_roles, final Props actor_config);
 	
 	/** Returns a broadcast message bus for a specific topic
 	 * @param wrapper_clazz - the class of the _wrapper_ (not the underlying message)

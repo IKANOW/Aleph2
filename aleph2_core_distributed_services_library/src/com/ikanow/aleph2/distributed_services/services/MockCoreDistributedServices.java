@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
@@ -122,7 +123,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(java.lang.String, akka.actor.Props)
 	 */
 	@Override
-	public Optional<ActorRef> createSingletonActor(final String actor_name, final String for_role, final Props actor_config) {
+	public Optional<ActorRef> createSingletonActor(final String actor_name, final Set<String> for_roles, final Props actor_config) {
 		//(single node - therefore just generates a single actor as per usual)
 		return Optional.of(_akka_system.actorOf(actor_config, actor_name));
 	}

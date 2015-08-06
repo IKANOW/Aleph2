@@ -32,6 +32,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
@@ -211,7 +212,8 @@ public class TestSingletonActor {
 			fail("Cluster never woke up");
 		}
 		
-		assertEquals("Shouldn't create actor with wrong role", Optional.empty(), _core_distributed_services.createSingletonActor("should_fail", "missing_role", Props.create(StatusActor.class)));		
+		assertEquals("Shouldn't create actor with wrong role", Optional.empty(), _core_distributed_services.createSingletonActor("should_fail", 
+				ImmutableSet.<String>builder().add("missing_role").build(), Props.create(StatusActor.class)));		
 		
 		_test_bus1 = _core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");			
 		
@@ -234,7 +236,8 @@ public class TestSingletonActor {
 		// OK now I can start my singleton and check it remains down (because it's a singleton!) 
 		
 		@SuppressWarnings("unused")
-		ActorRef handler = _core_distributed_services.createSingletonActor("test_actor", "test_role", Props.create(TestActor.class, _core_distributed_services)).get();
+		ActorRef handler = _core_distributed_services.createSingletonActor("test_actor", 
+				ImmutableSet.<String>builder().add("test_role").build(), Props.create(TestActor.class, _core_distributed_services)).get();
 		
 		_logger.info("Starting local singleton, shouldn't start up");
 		for (int k = 0;k < 20; ++k) {
@@ -301,7 +304,8 @@ public class TestSingletonActor {
 
 		Cluster.get(core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
 			if (!wrong_role) {
-				ActorRef handler = core_distributed_services.createSingletonActor("test_actor", "test_role", Props.create(TestActor.class, core_distributed_services)).get();						
+				ActorRef handler = core_distributed_services.createSingletonActor("test_actor", 
+						ImmutableSet.<String>builder().add("test_role").build(), Props.create(TestActor.class, core_distributed_services)).get();						
 				_logger.info("Singleton manager = " + handler.toString() + ": " + handler.path().name());
 			}
 		});

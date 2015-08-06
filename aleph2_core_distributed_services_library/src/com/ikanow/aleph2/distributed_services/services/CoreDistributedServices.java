@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -332,11 +333,11 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getSingletonActor(akka.actor.Props)
 	 */
 	@Override
-	public Optional<ActorRef> createSingletonActor(final String actor_name, final String for_role, final Props actor_config) {
-		return for_role.equals(_config_bean.application_name())
+	public Optional<ActorRef> createSingletonActor(final String actor_name, final Set<String> for_roles, final Props actor_config) {
+		return for_roles.contains(_config_bean.application_name())
 				?
 				Optional.of(getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 
-								ClusterSingletonManagerSettings.create(getAkkaSystem()).withRole(for_role).withSingletonName(actor_name)
+								ClusterSingletonManagerSettings.create(getAkkaSystem()).withRole(_config_bean.application_name()).withSingletonName(actor_name)
 								)))
 				:
 				Optional.empty();
