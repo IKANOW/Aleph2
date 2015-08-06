@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -492,7 +493,10 @@ public class TestDataBucketChangeActor {
 			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
 	
 			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
-			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
+			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();			
+			library_crud.deleteDatastore().get();
+			assertEquals(0L, (long)library_crud.countObjects().get());
+			
 			library_crud.storeObjects(lib_elements).get();
 			
 			assertEquals(3L, (long)library_crud.countObjects().get());
@@ -576,10 +580,10 @@ public class TestDataBucketChangeActor {
 
 		final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
-		try {
-			library_crud.storeObjects(lib_elements, true).get();
-		}
-		catch (Exception e) {} // (don't care as long as the assert below works)
+		library_crud.deleteDatastore().get();
+		assertEquals(0L, (long)library_crud.countObjects().get());
+		@SuppressWarnings("unused")
+		Tuple2<Supplier<List<Object>>, Supplier<Long>> oo = library_crud.storeObjects(lib_elements).get();
 		
 		assertEquals(3L, (long)library_crud.countObjects().get());		
 		assertEquals(3L, (long)_service_context.getCoreManagementDbService().getSharedLibraryStore().countObjects().get());
