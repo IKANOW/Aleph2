@@ -32,7 +32,9 @@ public class TestMockCoreDistributedServices {
 	
 	@Before
 	public void setupMockCoreDistributedServices() throws Exception {
-		_core_distributed_services = new MockCoreDistributedServices();
+		MockCoreDistributedServices test = new MockCoreDistributedServices();
+		test.setApplicationName("test_app_name");
+		_core_distributed_services = test;
 	}
 	
 	@Test
@@ -42,5 +44,7 @@ public class TestMockCoreDistributedServices {
         assertEquals(path, "/test");
         
         assertTrue(_core_distributed_services.waitForAkkaJoin(Optional.empty()));
+        
+        assertEquals("test_app_name", _core_distributed_services.getApplicationName().get());
 	}
 }

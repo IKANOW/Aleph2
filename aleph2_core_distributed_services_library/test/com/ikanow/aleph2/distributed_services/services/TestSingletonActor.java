@@ -200,6 +200,8 @@ public class TestSingletonActor {
 		
 		_core_distributed_services = new CoreDistributedServices(bean);
 		
+		assertEquals("test_role", _core_distributed_services.getApplicationName().get());
+		
 		final SetOnce<Boolean> started = new SetOnce<>();
 		Cluster.get(_core_distributed_services.getAkkaSystem()).registerOnMemberUp(() -> {
 			started.set(true);

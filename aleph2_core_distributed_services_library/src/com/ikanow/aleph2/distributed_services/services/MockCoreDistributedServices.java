@@ -62,6 +62,15 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	private final MockKafkaBroker _kafka_broker;
 	private final static Logger logger = LogManager.getLogger();
 	
+	protected String _mock_application_name = null;
+	
+	/** For testing, lets the developer create an application name for the mock CDS object
+	 * @param application_name
+	 */
+	public void setApplicationName(final String application_name) {
+		_mock_application_name = application_name;
+	}
+	
 	/** Guice-invoked constructor
 	 * @throws Exception 
 	 */
@@ -188,6 +197,14 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	public MockKafkaBroker getKafkaBroker() {
 		return _kafka_broker;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getApplicationName()
+	 */
+	@Override
+	public Optional<String> getApplicationName() {
+		return Optional.ofNullable(_mock_application_name);
 	}
 
 }

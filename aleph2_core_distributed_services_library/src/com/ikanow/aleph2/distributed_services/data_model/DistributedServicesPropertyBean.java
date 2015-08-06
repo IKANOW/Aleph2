@@ -36,6 +36,9 @@ public class DistributedServicesPropertyBean {
 	
 	public static final String ZOOKEEPER_APPLICATION_LOCK = "/app/aleph2/locks/zookeeper";
 	
+	// "Core" application names
+	public enum ApplicationNames { DataImportManager };
+	
 	/** User c'tor
 	 * @param zookeeper_connection
 	 */

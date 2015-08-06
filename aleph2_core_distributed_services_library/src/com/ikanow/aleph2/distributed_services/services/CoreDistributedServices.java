@@ -404,4 +404,12 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		// done!
 		
 	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getApplicationName()
+	 */
+	@Override
+	public Optional<String> getApplicationName() {
+		return Optional.ofNullable(_config_bean.application_name());
+	}
 }

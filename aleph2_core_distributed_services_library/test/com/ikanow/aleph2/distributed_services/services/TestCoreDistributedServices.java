@@ -21,6 +21,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
@@ -117,6 +118,8 @@ public class TestCoreDistributedServices {
         
         assertEquals(test.test1(), test2.test1());
         assertEquals(test.embedded().test2(), test2.embedded().test2());
+        
+        assertEquals(Optional.empty(), _core_distributed_services.getApplicationName());
 	}
 	
 	

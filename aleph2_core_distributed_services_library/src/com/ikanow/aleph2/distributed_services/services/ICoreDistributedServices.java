@@ -41,6 +41,11 @@ import akka.event.japi.LookupEventBus;
  */
 public interface ICoreDistributedServices extends IUnderlyingService {
 
+	/** Returns the application role associated with this process, or optional if none (eg transient processes)
+	 * @return
+	 */
+	Optional<String> getApplicationName();
+	
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
