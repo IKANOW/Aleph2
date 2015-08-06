@@ -22,14 +22,14 @@ public class BucketMgmtMessage implements Serializable {
 	/** An internal class used to wrap event bus publications
 	 * @author acp
 	 */
-	public static class BucketActionEventBusWrapper implements IRoundRobinEventBusWrapper<BucketMgmtMessage>,Serializable {
+	public static class BucketMgmtEventBusWrapper implements IRoundRobinEventBusWrapper<BucketMgmtMessage>,Serializable {
 		private static final long serialVersionUID = -7333589171293704873L;
-		protected BucketActionEventBusWrapper() { }
+		protected BucketMgmtEventBusWrapper() { }
 		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
 		 * @param sender - the sender of the message
 		 * @param message - the message to be wrapped
 		 */
-		public BucketActionEventBusWrapper(final ActorRef sender, final BucketMgmtMessage message) {
+		public BucketMgmtEventBusWrapper(final ActorRef sender, final BucketMgmtMessage message) {
 			this.sender = sender;
 			this.message = message;
 		}	

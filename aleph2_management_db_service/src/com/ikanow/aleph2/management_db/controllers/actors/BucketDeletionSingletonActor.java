@@ -16,18 +16,41 @@
 package com.ikanow.aleph2.management_db.controllers.actors;
 
 import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+
+
+
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
+
+
+
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+
+
+
+
+
 
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -54,12 +77,12 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	protected final IManagementDbService _core_management_db;
 	protected final ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
 	
-	protected final LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> _bucket_deletion_bus = null; //TODO
+	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	
 	public BucketDeletionSingletonActor() {
 		_logger.info("BucketDeletionSingletonActor has started on this node.");
 		
-		final FiniteDuration poll_frequency = Duration.create(30, TimeUnit.SECONDS);
+		final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
 		_ticker = this.context().system().scheduler()
 			.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
 		
@@ -68,7 +91,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		_core_management_db = _context.getCoreManagementDbService();
 		_bucket_deletion_queue = _core_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);
 		
-		//_bucket_deletion_bus = _actor_context.g
+		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();
 		
 		// ensure bucket deletion queue is optimized:
 		_bucket_deletion_queue.optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
@@ -79,11 +102,38 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	 */
 	@Override
 	public void onReceive(Object message) throws Exception {
+		final ActorRef self = this.self();
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
-			//TODO: handle tick
-			// Grab list of buckets to delete
-			// Bulk update with incremented attempts and new delete time
-			// Send out over round robin message
+			
+			final Date now = new Date();
+			final QueryComponent<BucketDeletionMessage> recent_messages = 
+					CrudUtils.allOf(BucketDeletionMessage.class).rangeAbove(BucketDeletionMessage::delete_on, now, false);
+
+			CompletableFuture<ICrudService.Cursor<BucketDeletionMessage>> matches = _bucket_deletion_queue.getObjectsBySpec(recent_messages);
+			
+			matches.thenAccept(m -> {
+				
+				final List<BucketDeletionMessage> msgs = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());
+				if (!msgs.isEmpty()) {
+					final QueryComponent<BucketDeletionMessage> recent_msg_ids = 
+							CrudUtils.allOf(BucketDeletionMessage.class)
+								.withAny(BucketDeletionMessage::_id, 
+									msgs.stream().map(msg -> msg._id()).collect(Collectors.toList()));
+					
+					final UpdateComponent<BucketDeletionMessage> update_time = CrudUtils.update(BucketDeletionMessage.class)
+							.set(BucketDeletionMessage::delete_on, new Date(now.getTime() + 3600L))
+							.increment(BucketDeletionMessage::deletion_attempts, 1)
+							;
+					
+					// Update the 
+					_bucket_deletion_queue.updateObjectsBySpec(recent_msg_ids, Optional.of(false), update_time);
+					
+					// Send out the buckets for proper deletion
+					msgs.forEach(msg -> {
+						_bucket_deletion_bus.publish(new BucketMgmtEventBusWrapper(self, msg));
+					});
+				}
+			});
 		}
 		else if (BucketDeletionMessage.class.isAssignableFrom(message.getClass())) { // deletion was successful
 			final BucketDeletionMessage msg = (BucketDeletionMessage)message;

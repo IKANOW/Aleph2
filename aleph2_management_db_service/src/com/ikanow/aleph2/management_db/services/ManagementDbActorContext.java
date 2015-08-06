@@ -7,6 +7,8 @@ import java.util.Optional;
 
 
 
+
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -19,8 +21,12 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingleto
 import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
+
 
 
 
@@ -97,6 +103,15 @@ public class ManagementDbActorContext {
 		return _streaming_enrichment_bus.get();
 	}
 	
+	/** Returns a static accessor to the deletion round robin message bus
+	 * @return the deletion round robin message bus
+	 */
+	public synchronized LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> getDeletionMgmtBus() {
+		if (!_delete_round_robin_bus.isSet()) {
+			_delete_round_robin_bus.set(_distributed_services.getRoundRobinMessageBus(BucketMgmtEventBusWrapper.class, BucketMgmtMessage.class, ActorUtils.BUCKET_DELETION_BUS));
+		}
+		return _delete_round_robin_bus.get();
+	}
 	/** Returns a static accessor to the designated message bus
 	 * @return the designated message bus
 	 */
@@ -132,5 +147,6 @@ public class ManagementDbActorContext {
 	protected final ICoreDistributedServices _distributed_services;
 	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus = new SetOnce<>();
 	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _streaming_enrichment_bus = new SetOnce<>();
+	protected final SetOnce<LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String>> _delete_round_robin_bus = new SetOnce<>();
 	protected final IServiceContext _service_context;
 }
