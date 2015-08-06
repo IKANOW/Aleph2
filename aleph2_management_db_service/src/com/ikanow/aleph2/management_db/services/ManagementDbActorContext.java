@@ -2,16 +2,30 @@ package com.ikanow.aleph2.management_db.services;
 
 import java.util.Optional;
 
+
+
+
+
+
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingletonActor;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
+
+
+
+
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -31,6 +45,15 @@ public class ManagementDbActorContext {
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
+		
+		_distributed_services.runOnAkkaJoin(() -> {
+			_distributed_services.createSingletonActor("test_cycle_singleton", 
+					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+					Props.create(BucketTestCycleSingletonActor.class));
+			_distributed_services.createSingletonActor("deletion_singleton", 
+					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+					Props.create(BucketDeletionSingletonActor.class));
+		});
 	}
 
 	/** Returns the global service context
