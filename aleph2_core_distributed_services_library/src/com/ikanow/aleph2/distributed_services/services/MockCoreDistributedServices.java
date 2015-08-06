@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
@@ -145,6 +146,14 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		return true;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#runOnAkkaJoin(java.util.Optional, java.lang.Runnable)
+	 */
+	@Override
+	public CompletableFuture<Void> runOnAkkaJoin(Runnable task) {
+		return CompletableFuture.runAsync(task);
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */

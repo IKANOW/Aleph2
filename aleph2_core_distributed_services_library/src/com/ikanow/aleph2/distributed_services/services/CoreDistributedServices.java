@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,6 +41,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 
+import scala.Tuple2;
 import scala.Tuple3;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
@@ -89,6 +91,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	protected CompletableFuture<Boolean> _joined_akka_cluster = new CompletableFuture<>();
 	protected boolean _has_joined_akka_cluster = false; 
 	protected final SetOnce<Runnable> _shutdown_hook = new SetOnce<>();
+	protected final LinkedList<Tuple2<CompletableFuture<Void>, Runnable>> _post_join_task_list = new LinkedList<>();
 	
 	// Kafka, initialize in the background
 	boolean _initializing_kafka = true;
@@ -200,10 +203,21 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
 				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");
-				_joined_akka_cluster.complete(true);
-				
+				synchronized (this) { // (prevents a race condition vs runOnAkkaJoin)
+					_joined_akka_cluster.complete(true);
+				}
 				// Now register a shutdown hook
 				Runtime.getRuntime().addShutdownHook(new Thread(_shutdown_hook.get()));
+				
+				_post_join_task_list.stream().parallel().forEach(retval_task -> {
+					try {
+						retval_task._2().run();
+						retval_task._1().complete(null);
+					}
+					catch (Throwable t) {
+						retval_task._1().completeExceptionally(t);
+					}
+				});				
 			});
 		}
 	}
@@ -252,6 +266,25 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			return false;
 		}
 	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#runOnAkkaJoin(java.util.Optional, java.lang.Runnable)
+	 */
+	@Override
+	public CompletableFuture<Void> runOnAkkaJoin(Runnable task) {
+		synchronized (this) {
+			if (_joined_akka_cluster.isDone()) {
+				return CompletableFuture.runAsync(task);
+			}
+			else {
+				final CompletableFuture<Void> on_complete = new CompletableFuture<>();		
+				_post_join_task_list.add(Tuples._2T(on_complete, task));				
+				return on_complete;
+			}
+		}
+	}
+	
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
 	 */

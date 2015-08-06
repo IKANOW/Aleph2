@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -56,6 +57,11 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 * @return true if joined, false otherwise
 	 */
 	boolean waitForAkkaJoin(final Optional<FiniteDuration> timeout);
+	
+	/** Wait for Akka node to become part of the Akka cluster and then run the designated code
+	 * @return a future that completes when the task is complete, and contains any errors (via the ExecutionException)
+	 */
+	CompletableFuture<Void> runOnAkkaJoin(Runnable task);
 	
 	/** Returns a connector to the Akka infrastructure
 	 * @return

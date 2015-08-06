@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
@@ -40,6 +42,7 @@ import akka.serialization.Serializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
@@ -57,6 +60,12 @@ public class TestCoreDistributedServices {
 	public TestCoreDistributedServices(Boolean auto_configure) {
 		this.auto_configure = auto_configure;
 	}
+	
+	protected SetOnce<Boolean> _test1 = new SetOnce<>();
+	protected SetOnce<Boolean> _test3 = new SetOnce<>();
+	protected CompletableFuture<Void> _completed1;
+	protected CompletableFuture<Void> _completed2;
+	protected CompletableFuture<Void> _completed3;	
 	
 	protected ICoreDistributedServices _core_distributed_services;
 	@Before
@@ -79,6 +88,13 @@ public class TestCoreDistributedServices {
 		assertEquals(connect_string, bean.zookeeper_connection());
 		
 		_core_distributed_services = new CoreDistributedServices(bean);
+		
+		_completed1 = _core_distributed_services.runOnAkkaJoin(() -> {
+			_test1.set(true);
+		});
+		_completed2 = _core_distributed_services.runOnAkkaJoin(() -> {
+			throw new RuntimeException("test2");
+		});		
 	}
 	
 	public static class TestBean implements Serializable {
@@ -120,6 +136,22 @@ public class TestCoreDistributedServices {
         assertEquals(test.embedded().test2(), test2.embedded().test2());
         
         assertEquals(Optional.empty(), _core_distributed_services.getApplicationName());
+        
+        _completed1.get(20, TimeUnit.SECONDS);
+        assertEquals(true, _test1.get());
+        
+        try {
+        	_completed2.get(20, TimeUnit.SECONDS);
+        }
+        catch (Exception e) {
+        	assertEquals(e.getCause().getMessage(), "test2");
+        }        
+		_completed3 = _core_distributed_services.runOnAkkaJoin(() -> {
+			_test3.set(false);
+		});
+        _completed3.get(20, TimeUnit.SECONDS);
+        assertEquals(false, _test3.get());
+        
 	}
 	
 	
