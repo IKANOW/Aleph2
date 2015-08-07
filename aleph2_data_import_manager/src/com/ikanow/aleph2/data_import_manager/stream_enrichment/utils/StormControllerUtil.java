@@ -27,11 +27,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -52,7 +52,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
-import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 
 /**
@@ -66,6 +65,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 public class StormControllerUtil {
 	private static final Logger logger = LogManager.getLogger();
 	private final static Set<String> dirs_to_ignore = Sets.newHashSet("org/slf4j", "org/apache/log4j");
+	protected final static ConcurrentHashMap<String, Date> storm_topology_jars_cache = new ConcurrentHashMap<>();
 	
 	/**
 	 * Returns an instance of a local storm controller.
@@ -152,17 +152,18 @@ public class StormControllerUtil {
 	 * the final jar.
 	 * 
 	 * @param jars_to_merge
+	 * @param jar_location location of the jar to send
 	 * @return
 	 */
-	public static String buildStormTopologyJar(List<String> jars_to_merge) {
+	public static boolean buildStormTopologyJar(final List<String> jars_to_merge, final String input_jar_location) {
 		try {				
-			logger.debug("creating jar to submit");
-			final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + UuidUtils.get().getTimeBasedUuid() + ".jar";
+			logger.debug("creating jar to submit at: " + input_jar_location);
+			//final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + UuidUtils.get().getTimeBasedUuid() + ".jar";
 			JarBuilderUtil.mergeJars(jars_to_merge, input_jar_location, dirs_to_ignore);
-			return input_jar_location;
+			return true;
 		} catch (Exception e) {
 			logger.error(ErrorUtils.getLongForm("Error building storm jar {0}", e));
-			return null;
+			return false;
 		}			
 	}
 	
@@ -237,24 +238,91 @@ public class StormControllerUtil {
 		jars_to_merge.addAll(user_lib_paths);
 		
 		//create jar
-		final String jar_file_location = buildStormTopologyJar(jars_to_merge);
-		
-		//submit to storm		
-		final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
-		try { 
-			if ( submit_future.get().success() ) {
-				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
-			} else {
-				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", submit_future.get()));				
-			}						
-		} catch (Exception ex ) {
+		final CompletableFuture<String> jar_future = buildOrReturnCachedStormTopologyJar(jars_to_merge);
+		try {
+			final String jar_file_location = jar_future.get();
+			//submit to storm		
+			final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
+			try { 
+				if ( submit_future.get().success() ) {
+					start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
+				} else {
+					start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", submit_future.get()));				
+				}						
+			} catch (Exception ex ) {
+				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob",
+								StreamErrorUtils.buildErrorMessage
+									("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
+						 ));
+			}
+		} catch ( Exception ex ) {
 			start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob",
-							StreamErrorUtils.buildErrorMessage
-								("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
-					 ));
+					StreamErrorUtils.buildErrorMessage
+						("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
+			 ));
 		}
 		
 		return start_future;
+	}
+	
+	/**
+	 * Checks the jar cache to see if an entry already exists for this list of jars,
+	 * returns the path of that entry if it does exist, otherwise creates the jar, adds
+	 * the path to the cache and returns it.
+	 * 
+	 * @param jars_to_merge
+	 * @return
+	 * @throws Exception 
+	 */
+	public static CompletableFuture<String> buildOrReturnCachedStormTopologyJar(final List<String> jars_to_merge) {
+		CompletableFuture<String> future = new CompletableFuture<String>();
+		final String hashed_jar_name = JarBuilderUtil.getHashedJarName(jars_to_merge);
+		//1. Check cache for this jar via hash of jar names
+		if ( storm_topology_jars_cache.containsKey(hashed_jar_name)) {
+			//if exists:
+			//2. validate jars has not been updated
+			Date most_recent_update = JarBuilderUtil.getMostRecentlyUpdatedFile(jars_to_merge);
+			//if the cache is more recent than any of the files, we assume nothing has been updated
+			if ( storm_topology_jars_cache.get(hashed_jar_name).getTime() > most_recent_update.getTime() ) {
+				//RETURN return cached jar file path
+				logger.debug("Returning a cached copy of the jar");
+				future.complete(hashed_jar_name);
+				return future;
+			} else {
+				//delete cache copy
+				logger.debug("Removing an expired cached copy of the jar");
+				removeCachedJar(hashed_jar_name);
+			}
+		}
+				
+		//if we fall through
+		//3. create jar
+		logger.debug("Fell through or cache copy is old, have to create a new version");
+		if ( buildStormTopologyJar(jars_to_merge, hashed_jar_name) ) {	//TODO do I need to set the jar name to the hash so we can always find it?	
+			//4. add jar to cache w/ current/newest file timestamp		
+			storm_topology_jars_cache.put(hashed_jar_name, new Date());
+			//RETURN return new jar file path
+			future.complete(hashed_jar_name);
+		} else {
+			//had an error creating jar, throw an exception?
+			future.completeExceptionally(new Exception("Error trying to create storm jar, see logs"));
+		}
+		return future;
+		
+	}
+
+	
+
+	
+	/**
+	 * Remove the give file from cache and locally if it exists
+	 * @param hashed_jar_name
+	 */
+	private static void removeCachedJar(String hashed_jar_name) {
+		storm_topology_jars_cache.remove(hashed_jar_name);
+		File hashed_file = new File(hashed_jar_name);
+		hashed_file.exists();
+		hashed_file.delete();
 	}
 
 	/**

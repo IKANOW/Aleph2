@@ -17,11 +17,16 @@ package com.ikanow.aleph2.data_import_manager.stream_enrichment;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -43,7 +48,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.storm_samples.SampleWebReaderSpout;
+import com.ikanow.aleph2.data_import_manager.stream_enrichment.storm_samples.SampleWordParserBolt;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
+import com.ikanow.aleph2.data_import_manager.utils.JarBuilderUtil;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaOutputFileBolt;
@@ -63,7 +70,7 @@ public class TestStorm {
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		storm_cluster = StormControllerUtil.getLocalStormController();
+		//storm_cluster = StormControllerUtil.getLocalStormController();
 	}
 	
 	protected ICoreDistributedServices _core_distributed_services;
@@ -153,5 +160,65 @@ public class TestStorm {
 //		
 //		//6. observe storm output receiving produced stuff
 //	}
-
+	
+//	@Test
+//	public void testCaching() throws Exception {
+//		TopologyBuilder builder = new TopologyBuilder();
+//		builder.setSpout("spout1", new SampleWebReaderSpout("http://lifehacker.com/the-best-board-games-for-developing-valuable-real-life-1714642211"));
+//		builder.setBolt("bolt1", new SampleWordParserBolt()).shuffleGrouping("spout1");
+//		
+//		//StormControllerUtil.submitJob(storm_cluster, "test_job", null, builder.createTopology());
+//		//storm_cluster.submitJob("test_job", null, builder.createTopology());
+//		
+//		String nimbus_host = "api001.dev.ikanow.com";
+//		int nimbus_thrift_port = 6627;
+//		String storm_thrift_transport_plugin = "backtype.storm.security.auth.SimpleTransportPlugin";
+//		IStormController storm_controller = StormControllerUtil.getRemoteStormController(nimbus_host, nimbus_thrift_port, storm_thrift_transport_plugin);
+//		//TODO
+//		//StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+//		
+//		Thread.sleep(10000);
+//		
+//		assertTrue(true);
+//	}
+	
+	@Test
+	public void testCache() throws IOException, InterruptedException, ExecutionException {
+		File file1 = File.createTempFile("recent_date_test_", null);
+		Thread.sleep(1);
+		File file2 = File.createTempFile("recent_date_test_", null);
+		Thread.sleep(1);
+		File file3 = File.createTempFile("recent_date_test_", null);		
+		List<String> files1 = Arrays.asList(file1.getCanonicalPath(),file2.getCanonicalPath(),file3.getCanonicalPath());
+		String input_jar_location = JarBuilderUtil.getHashedJarName(files1);
+		File input_jar = new File(input_jar_location);
+		input_jar.delete();
+		assertFalse(input_jar.exists());
+		
+		//first time it should create
+		final CompletableFuture<String> jar_future1 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		jar_future1.get();
+		assertTrue(input_jar.exists());
+		
+		//second time it should cache
+		long modified_time = input_jar.lastModified();
+		final CompletableFuture<String> jar_future2 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		jar_future2.get();
+		assertEquals(modified_time, input_jar.lastModified());
+		
+		//third time modify a file, it should no longer cache
+		FileWriter fw = new FileWriter(file2);
+		fw.write("modifying");
+		fw.close();
+		final CompletableFuture<String> jar_future3 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		jar_future3.get();
+		assertNotEquals(modified_time, input_jar.lastModified());
+		
+		//cleanup
+		file1.delete();
+		file2.delete();
+		file3.delete();
+		new File(input_jar_location).delete();
+		
+	}
 }
