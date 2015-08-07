@@ -15,16 +15,21 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.utils;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
+
+
 
 
 
@@ -136,5 +141,42 @@ public class JarBuilderUtil {
 				return true;
 		}
 		return false;
+	}
+    
+    /**
+	 * Hashes the jar names together to create a unique hash, then returns a filepath with that
+	 * hash set to tmpdir/{hash}.jar
+	 * 
+	 * The hash is only guaranteed to be the same if the file order in jars_to_merge is the same,
+	 * this is necessary because of the way we merge the files together to create the jar.
+	 * 
+	 * @param jars_to_merge
+	 * @return
+	 */
+	public static String getHashedJarName(final List<String> jars_to_merge) {				
+		final String hash = String.valueOf( Objects.hash(jars_to_merge));
+		final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + hash + ".jar";
+		return input_jar_location;
+	}
+	
+	/**
+	 * Returns the date of the most recently updated file in the list
+	 * 
+	 * @param jars_to_merge
+	 * @return
+	 */
+	public static Date getMostRecentlyUpdatedFile(final List<String> jars_to_merge) {
+		long most_recent_update = jars_to_merge.stream().map(jar_path -> {			
+			File file = new File(jar_path);
+			long last_modified = file.lastModified();
+			logger.debug("File: " + jar_path + " was last modified on: " + new Date(last_modified) + " ms: " + last_modified);			
+			return last_modified;			
+		}).reduce(0L, (a, b) -> {
+			if ( a >= b )
+				return a;
+			else
+				return b;
+		});
+		return new Date(most_recent_update);
 	}
 }

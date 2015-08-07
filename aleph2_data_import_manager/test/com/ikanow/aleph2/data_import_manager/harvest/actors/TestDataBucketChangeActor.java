@@ -437,6 +437,21 @@ public class TestDataBucketChangeActor {
 		assertEquals(false, test7_reply.reply().success());
 		assertEquals("test7", test7_reply.source());
 		assertEquals("Message type BucketActionMessage not recognized for bucket /test/path/", test7_reply.reply().message());
+		
+		// Test 8: test
+		//TODO check this in when I have my test code put together
+//		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
+//		final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
+//		
+//		final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketChangeActor.talkToHarvester(
+//				bucket, test, "test8", _actor_context.getNewHarvestContext(), 
+//				Validation.success(harvest_tech));		
+//		
+//		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
+//		final BucketActionReplyMessage.BucketActionHandlerMessage test8_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
+//		assertEquals("test8", test8_reply.source());
+//		assertEquals("10 / 1", test8_reply.reply().message());
+//		assertEquals(true, test8_reply.reply().success());
 	}
 	
 	@Test 
