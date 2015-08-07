@@ -52,9 +52,7 @@ public class LocalRoundRobinMessageBus<M extends IRoundRobinEventBusWrapper<?>> 
 	
 	@Override
 	public void unsubscribe(ActorRef subscriber) {
-		synchronized (LocalRoundRobinMessageBus.class) {
-			subscribers.get(_topic).remove(subscriber);
-		}				
+		this.unsubscribe(subscriber, "");
 	}
 	
 	@Override

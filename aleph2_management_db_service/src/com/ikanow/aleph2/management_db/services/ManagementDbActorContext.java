@@ -57,16 +57,20 @@ public class ManagementDbActorContext {
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
 		
-		_distributed_services.runOnAkkaJoin(() -> {
-			_distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
-					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
-					Props.create(BucketTestCycleSingletonActor.class));
-			_distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
-					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
-					Props.create(BucketDeletionSingletonActor.class));
-
-			// suubscriber one worker per node
-			_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR);
+		_distributed_services.getApplicationName()
+			.filter(name -> name.equals(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()))
+			.ifPresent(__ -> {
+				_distributed_services.runOnAkkaJoin(() -> {
+					_distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
+							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+							Props.create(BucketTestCycleSingletonActor.class));
+					_distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
+							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+							Props.create(BucketDeletionSingletonActor.class));
+		
+					// suubscriber one worker per node
+					_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR);
+			});
 		});
 	}
 

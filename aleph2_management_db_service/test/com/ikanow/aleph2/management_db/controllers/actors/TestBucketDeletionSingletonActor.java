@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
+import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
@@ -96,7 +97,6 @@ public class TestBucketDeletionSingletonActor {
 		if (null != _service_context) {
 			return;
 		}
-		
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		// OK we're going to use guice, it was too painful doing this by hand...				
@@ -110,6 +110,9 @@ public class TestBucketDeletionSingletonActor {
 		app_injector.injectMembers(this);
 		
 		_cds = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
+		mcds.setApplicationName("DataImportManager");
+		
 		new ManagementDbActorContext(_service_context);		
 		_actor_context = ManagementDbActorContext.get();
 		
@@ -118,8 +121,8 @@ public class TestBucketDeletionSingletonActor {
 
 	@Test
 	public void test_bucketDeletionSingletonActor() throws InterruptedException, ExecutionException {
-		Thread.sleep(2000L);
 		_cds.waitForAkkaJoin(Optional.of(Duration.create(10, TimeUnit.SECONDS)));
+		Thread.sleep(2000L);
 		
 		//(delete queue)
 		final ICrudService<BucketDeletionMessage> delete_queue = _core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class);
