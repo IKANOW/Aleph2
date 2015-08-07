@@ -30,8 +30,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -46,11 +48,13 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+
 
 
 
@@ -86,28 +90,36 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	
-	public BucketDeletionSingletonActor() {
-		_logger.info("BucketDeletionSingletonActor has started on this node.");
-		
-		final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
-		_ticker = this.context().system().scheduler()
-			.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
-		
+	public BucketDeletionSingletonActor() {		
 		_actor_context = ManagementDbActorContext.get();
-		_context = _actor_context.getServiceContext();
-		_core_management_db = _context.getCoreManagementDbService();
-		_bucket_deletion_queue = _core_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);
-		
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();
 		
-		// ensure bucket deletion queue is optimized:
-		_bucket_deletion_queue.optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
-		// (this optimization lets deletion messages be manipulated 
-		_bucket_deletion_queue.optimizeQuery(
-				Arrays.asList(
-						BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
-						+ "." +
-						BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
+		_context = _actor_context.getServiceContext();
+		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });
+		_bucket_deletion_queue = (null != _core_management_db) 
+									? _core_management_db.getBucketDeletionQueue(BucketDeletionMessage.class)
+									: null;
+		
+		if (null != _bucket_deletion_queue) {
+			// ensure bucket deletion queue is optimized:
+			_bucket_deletion_queue.optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
+			// (this optimization lets deletion messages be manipulated 
+			_bucket_deletion_queue.optimizeQuery(
+					Arrays.asList(
+							BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
+							+ "." +
+							BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
+			
+			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
+			_ticker = this.context().system().scheduler()
+				.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+			
+			_logger.info("BucketDeletionSingletonActor has started on this node.");			
+		}	
+		else { // (all this null checking is grovelling because in some tests ManagementDbActorContext may be set but not CoreManagementDbService)
+			_ticker = null;
+		}
+		
 	}
 	
 	/* (non-Javadoc)
