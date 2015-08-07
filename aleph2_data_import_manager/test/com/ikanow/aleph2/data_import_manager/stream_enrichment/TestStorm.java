@@ -207,6 +207,7 @@ public class TestStorm {
 		assertEquals(modified_time, input_jar.lastModified());
 		
 		//third time modify a file, it should no longer cache
+		Thread.sleep(1);
 		FileWriter fw = new FileWriter(file2);
 		fw.write("modifying");
 		fw.close();
