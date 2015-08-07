@@ -9,6 +9,8 @@ import java.util.Optional;
 
 
 
+
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -17,6 +19,7 @@ import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
@@ -25,6 +28,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
+
 
 
 
@@ -59,6 +64,9 @@ public class ManagementDbActorContext {
 			_distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
 					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 					Props.create(BucketDeletionSingletonActor.class));
+
+			// suubscriber one worker per node
+			_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR);
 		});
 	}
 

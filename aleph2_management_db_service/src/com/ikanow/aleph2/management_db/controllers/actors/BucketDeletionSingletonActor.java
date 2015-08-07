@@ -28,8 +28,12 @@ import java.util.stream.StreamSupport;
 
 
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 
 
@@ -39,6 +43,7 @@ import org.apache.logging.log4j.Logger;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -46,6 +51,8 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+
+
 
 
 
@@ -95,6 +102,12 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		
 		// ensure bucket deletion queue is optimized:
 		_bucket_deletion_queue.optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
+		// (this optimization lets deletion messages be manipulated 
+		_bucket_deletion_queue.optimizeQuery(
+				Arrays.asList(
+						BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
+						+ "." +
+						BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
 	}
 	
 	/* (non-Javadoc)
@@ -107,7 +120,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 			
 			final Date now = new Date();
 			final QueryComponent<BucketDeletionMessage> recent_messages = 
-					CrudUtils.allOf(BucketDeletionMessage.class).rangeAbove(BucketDeletionMessage::delete_on, now, false);
+					CrudUtils.allOf(BucketDeletionMessage.class).rangeBelow(BucketDeletionMessage::delete_on, now, false);
 
 			CompletableFuture<ICrudService.Cursor<BucketDeletionMessage>> matches = _bucket_deletion_queue.getObjectsBySpec(recent_messages);
 			
@@ -121,7 +134,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 									msgs.stream().map(msg -> msg._id()).collect(Collectors.toList()));
 					
 					final UpdateComponent<BucketDeletionMessage> update_time = CrudUtils.update(BucketDeletionMessage.class)
-							.set(BucketDeletionMessage::delete_on, new Date(now.getTime() + 3600L))
+							.set(BucketDeletionMessage::delete_on, new Date(now.getTime() + 3600000L))
 							.increment(BucketDeletionMessage::deletion_attempts, 1)
 							;
 					

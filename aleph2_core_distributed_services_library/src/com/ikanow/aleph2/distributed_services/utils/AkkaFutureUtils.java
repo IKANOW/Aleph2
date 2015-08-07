@@ -47,7 +47,7 @@ public class AkkaFutureUtils {
 	 * @return the CompletableFuture
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> CompletableFuture<T> efficientWrap(final scala.concurrent.Future<Object> f, final ExecutionContext execution_context) {
+	public static <T> CompletableFuture<T> efficientWrap(final scala.concurrent.Future<? extends Object> f, final ExecutionContext execution_context) {
 		return (CompletableFuture<T>) new FromScalaFuture<>(f).executeOn(execution_context);
 	}	
 	
