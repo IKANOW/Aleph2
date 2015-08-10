@@ -39,6 +39,7 @@ import java.util.zip.ZipOutputStream;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,6 +55,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
  */
 public class JarBuilderUtil {
 	private static final Logger logger = LogManager.getLogger();
+	private static final String DEFAULT_JAR_NAME_PREFIX = "aleph2_storm_jar_";
 	
 	/**
 	 * Combines all jars into an uber final jar, the final jar will be sent to
@@ -153,10 +155,10 @@ public class JarBuilderUtil {
 	 * @param jars_to_merge
 	 * @return
 	 */
-	public static String getHashedJarName(final List<String> jars_to_merge) {				
+	public static String getHashedJarName(final List<String> jars_to_merge, String output_folder) {				
 		final String hash = String.valueOf( Objects.hash(jars_to_merge));
-		final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + hash + ".jar";
-		return input_jar_location;
+		final String output_location = output_folder + File.separator + DEFAULT_JAR_NAME_PREFIX + hash + ".jar";
+		return output_location;
 	}
 	
 	/**
@@ -178,5 +180,16 @@ public class JarBuilderUtil {
 				return b;
 		});
 		return new Date(most_recent_update);
+	}
+
+	/**
+	 * Sets the given files modified time to now.
+	 * @param hashed_jar_name
+	 */
+	public static void updateJarModifiedTime(String hashed_jar_name) {
+		File file = new File(hashed_jar_name);
+		if ( file.exists() ) {
+			file.setLastModified(System.currentTimeMillis());
+		}
 	}
 }
