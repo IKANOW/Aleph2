@@ -51,5 +51,13 @@ public class BucketDeletionActor extends UntypedActor {
 	@Override
 	public void onReceive(Object arg0) throws Exception {
 		//_logger.info("REAL ACTOR Received message from singleton! " + arg0.getClass().toString());
+		
+		//TODO: delete the state directories
+		
+		//TODO: delete all the data services
+		
+		//TODO: delete the HDFS (containing both data and bucket)
+		
+		//TODO: return the message on success (or if failure indicates that bucket already deleted)
 	}
 }

@@ -68,7 +68,7 @@ public class ManagementDbActorContext {
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketDeletionSingletonActor.class));
 		
-					// suubscriber one worker per node
+					// subscriber one worker per node
 					_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR);
 			});
 		});
