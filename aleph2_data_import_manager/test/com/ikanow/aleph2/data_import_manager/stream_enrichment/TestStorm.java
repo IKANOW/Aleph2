@@ -185,9 +185,9 @@ public class TestStorm {
 	@Test
 	public void testCache() throws IOException, InterruptedException, ExecutionException {
 		File file1 = File.createTempFile("recent_date_test_", null);
-		Thread.sleep(1);
+		Thread.sleep(1500);
 		File file2 = File.createTempFile("recent_date_test_", null);
-		Thread.sleep(1);
+		Thread.sleep(1500);
 		File file3 = File.createTempFile("recent_date_test_", null);		
 		List<String> files1 = Arrays.asList(file1.getCanonicalPath(),file2.getCanonicalPath(),file3.getCanonicalPath());
 		String input_jar_location = JarBuilderUtil.getHashedJarName(files1);
@@ -207,15 +207,12 @@ public class TestStorm {
 		assertEquals(modified_time, input_jar.lastModified());
 		
 		//third time modify a file, it should no longer cache
-		Thread.sleep(1); //sleep a ms so the modified time updates
-//		FileWriter fw = new FileWriter(file2);
-//		fw.write("modifying");
-//		fw.close();
+		Thread.sleep(1500); //sleep a ms so the modified time updates
 		file2.delete();
 		file2.createNewFile();
 		final CompletableFuture<String> jar_future3 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
 		jar_future3.get();
-		assertNotEquals(modified_time, input_jar.lastModified());
+		assertNotEquals(modified_time, input_jar.lastModified()); //original jar creation time should not match its current modified time (it should have been remade)
 		
 		//cleanup
 		file1.delete();
