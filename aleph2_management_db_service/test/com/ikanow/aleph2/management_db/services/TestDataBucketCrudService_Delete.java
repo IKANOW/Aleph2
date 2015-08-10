@@ -52,6 +52,7 @@ import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServic
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -85,6 +86,7 @@ public class TestDataBucketCrudService_Delete {
 	public ICrudService<DataBucketBean> _underlying_bucket_crud;
 	public ICrudService<DataBucketStatusBean> _underlying_bucket_status_crud;
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
+	public ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
 	
 	@Before
 	public void setup() throws Exception {
@@ -111,6 +113,7 @@ public class TestDataBucketCrudService_Delete {
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;
 		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db;
 		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store;
+		_bucket_deletion_queue = _bucket_crud._bucket_deletion_queue;
 	}	
 	
 	@Test
@@ -182,6 +185,7 @@ public class TestDataBucketCrudService_Delete {
 		_underlying_bucket_crud.deleteDatastore();
 		_underlying_bucket_status_crud.deleteDatastore();
 		_bucket_action_retry_store.deleteDatastore();
+		_bucket_deletion_queue.deleteDatastore();
 	}
 	
 	/**
@@ -253,12 +257,14 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		assertEquals(0L, (long)_bucket_deletion_queue.countObjects().get());
 		
 		insertBucket(1, true, Arrays.asList("host1"), false, null);
 		
 		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
+		final Date approx_now = new Date();
 		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
 		assertEquals(1L, ret_val.getManagementResults().get().size());		
@@ -277,10 +283,17 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
+		// (element added to retry queue)
 		assertEquals(1L, (long)_bucket_action_retry_store.countObjects().get());
 		final BucketActionRetryMessage retry = _bucket_action_retry_store.getObjectBySpec(CrudUtils.anyOf(BucketActionRetryMessage.class)).get().get();
 		final BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.message(), Class.forName(retry.message_clazz())).get();
 		assertEquals("id1", to_retry.bucket()._id());
+				
+		// (should still have added to delete queue)
+		assertEquals(1L, _bucket_deletion_queue.countObjects().get().intValue());
+		final BucketDeletionMessage deletion_msg = _bucket_deletion_queue.getObjectById("/bucket/path/here/1").get().get();
+		assertEquals(deletion_msg._id(), deletion_msg.bucket().full_name());
+		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 5.0*1000.0); // ie within 5s of when it was added)		
 	}
 
 	@Test
@@ -325,6 +338,7 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
+		// (element added to retry queue)
 		assertEquals(1L, (long)_bucket_action_retry_store.countObjects().get());
 		final BucketActionRetryMessage retry = _bucket_action_retry_store.getObjectBySpec(CrudUtils.anyOf(BucketActionRetryMessage.class)).get().get();
 		final BucketActionMessage to_retry = (BucketActionMessage)BeanTemplateUtils.from(retry.message(), Class.forName(retry.message_clazz())).get();
@@ -342,12 +356,14 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		assertEquals(0L, (long)_bucket_deletion_queue.countObjects().get());
 		
 		insertBucket(1, true, Arrays.asList(host1, host2), false, null);
 		
 		assertEquals(1L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(1L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
+		final Date approx_now = new Date();
 		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
 		assertEquals(2L, ret_val.getManagementResults().get().size());		
@@ -374,7 +390,12 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(0L, (long)_underlying_bucket_crud.countObjects().get());
 		assertEquals(0L, (long)_underlying_bucket_status_crud.countObjects().get());				
 		
-		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());
+		assertEquals(0L, (long)_bucket_action_retry_store.countObjects().get());		
+		
+		assertEquals(1L, _bucket_deletion_queue.countObjects().get().intValue());
+		final BucketDeletionMessage deletion_msg = _bucket_deletion_queue.getObjectById("/bucket/path/here/1").get().get();
+		assertEquals(deletion_msg._id(), deletion_msg.bucket().full_name());
+		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 5.0*1000.0); // ie within 5s of when it was added)		
 	}
 	
 	@Test

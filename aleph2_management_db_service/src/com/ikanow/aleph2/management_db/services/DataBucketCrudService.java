@@ -16,11 +16,15 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.io.FileNotFoundException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -84,6 +88,7 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
@@ -106,6 +111,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
 	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_status_db;
 	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
+	protected final ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
 	
 	protected final ManagementDbActorContext _actor_context;
 	protected final IServiceContext _service_context;
@@ -120,6 +126,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
+		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);
 		
 		_storage_service = service_context.getStorageService();
 		
@@ -147,6 +154,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_db = underlying_data_bucket_db;
 		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
+		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);		
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -206,6 +214,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					FutureUtils.returnError(e));			
 		}
 	}
+	/** Worker function for storeObject
+	 * @param new_object - the bucket to create
+	 * @param old_bucket - the version of the bucket being overwritte, if an update
+	 * @param validation_info - validation info to be presented to the user
+	 * @param replace_if_present - update move
+	 * @return - the user return value
+	 * @throws Exception
+	 */
 	public ManagementFuture<Supplier<Object>> storeValidatedObject(
 			final DataBucketBean new_object, final Optional<DataBucketBean> old_bucket, 
 			final Collection<BasicMessageBean> validation_info, boolean replace_if_present) throws Exception
@@ -442,10 +458,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
 			deleteFilePath(to_delete, _storage_service);
 			
-			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
+			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
+			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));
+			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.storeObject(new BucketDeletionMessage(to_delete, to_delete_date));
+			
+			final CompletableFuture<Boolean> delete_reply = enqueue_delete
+																.thenCompose(__ -> _underlying_data_bucket_db.deleteObjectById(to_delete._id()));
 
 			return FutureUtils.denestManagementFuture(delete_reply
-				.thenCompose(del_reply -> {			
+				.thenCompose(del_reply -> {		
 					if (!del_reply) { // Didn't find an object to delete, just return that information to the user
 						return CompletableFuture.completedFuture(Optional.empty());
 					}

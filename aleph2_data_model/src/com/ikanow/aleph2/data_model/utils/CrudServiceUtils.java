@@ -612,6 +612,9 @@ public class CrudServiceUtils {
 								return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), (List<String>)args[1], (Boolean)args[2]);							
 							}
 						}
+						else if (extra_query.isPresent() && m.getName().equals("deleteDatastore")) {
+							return delegate.deleteObjectsBySpec(extra_query.get());
+						}
 						else if (extra_query.isPresent() && m.getName().equals("deleteObjectById")) { // convert from id to spec and append extra_query
 							return delegate.deleteObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])));
 						}
