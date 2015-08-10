@@ -200,7 +200,7 @@ public class StormControllerUtil {
 	 * @param enrichment_toplogy
 	 * @return
 	 */
-	public static CompletableFuture<BucketActionReplyMessage> startJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy) {
+	public static CompletableFuture<BucketActionReplyMessage> startJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy, final String cached_jar_dir) {
 		final CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
 
 		//Get topology from user
@@ -238,7 +238,7 @@ public class StormControllerUtil {
 		jars_to_merge.addAll(user_lib_paths);
 		
 		//create jar
-		final CompletableFuture<String> jar_future = buildOrReturnCachedStormTopologyJar(jars_to_merge);
+		final CompletableFuture<String> jar_future = buildOrReturnCachedStormTopologyJar(jars_to_merge, cached_jar_dir);
 		try {
 			final String jar_file_location = jar_future.get();
 			//submit to storm		
@@ -274,9 +274,9 @@ public class StormControllerUtil {
 	 * @return
 	 * @throws Exception 
 	 */
-	public static CompletableFuture<String> buildOrReturnCachedStormTopologyJar(final List<String> jars_to_merge) {
+	public static synchronized CompletableFuture<String> buildOrReturnCachedStormTopologyJar(final List<String> jars_to_merge, final String cached_jar_dir) {
 		CompletableFuture<String> future = new CompletableFuture<String>();
-		final String hashed_jar_name = JarBuilderUtil.getHashedJarName(jars_to_merge);
+		final String hashed_jar_name = JarBuilderUtil.getHashedJarName(jars_to_merge, cached_jar_dir);
 		//1. Check cache for this jar via hash of jar names
 		if ( storm_topology_jars_cache.containsKey(hashed_jar_name)) {
 			//if exists:
@@ -286,6 +286,8 @@ public class StormControllerUtil {
 			if ( storm_topology_jars_cache.get(hashed_jar_name).getTime() > most_recent_update.getTime() ) {
 				//RETURN return cached jar file path
 				logger.debug("Returning a cached copy of the jar");
+				//update the cache copy to set its modified time to now so we don't clean it up
+				JarBuilderUtil.updateJarModifiedTime(hashed_jar_name);				
 				future.complete(hashed_jar_name);
 				return future;
 			} else {
@@ -310,9 +312,6 @@ public class StormControllerUtil {
 		return future;
 		
 	}
-
-	
-
 	
 	/**
 	 * Remove the give file from cache and locally if it exists
@@ -353,7 +352,7 @@ public class StormControllerUtil {
 	 * @param enrichment_toplogy
 	 * @return
 	 */
-	public static CompletableFuture<BucketActionReplyMessage> restartJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy) {
+	public static CompletableFuture<BucketActionReplyMessage> restartJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy, final String cached_jar_dir) {
 		CompletableFuture<BucketActionReplyMessage> stop_future = stopJob(storm_controller, bucket);
 		try {
 			stop_future.get(5, TimeUnit.SECONDS);
@@ -361,7 +360,7 @@ public class StormControllerUtil {
 			CompletableFuture<BucketActionReplyMessage> error_future = new CompletableFuture<BucketActionReplyMessage>();
 			error_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", e)));
 		}
-		return startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy);
+		return startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy, cached_jar_dir);
 	}
 	
 	/**

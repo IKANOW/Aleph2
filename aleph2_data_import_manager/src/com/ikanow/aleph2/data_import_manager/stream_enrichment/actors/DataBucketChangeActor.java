@@ -176,7 +176,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_tech_module = 
 										getStreamingTopology(m.bucket(), m, hostname, err_or_map);
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, err_or_map, hostname, e_context, _globals.local_yarn_config_dir());
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, err_or_map, hostname, e_context, _globals.local_yarn_config_dir(), _globals.local_cached_jar_dir());
 								return ret;
 								
 	    					})
@@ -219,7 +219,8 @@ public class DataBucketChangeActor extends AbstractActor {
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_map,
 			final String source, 
 			final StreamingEnrichmentContext context,
-			final String yarn_config_dir
+			final String yarn_config_dir,
+			final String cached_jars_dir
 			)
 	{
 		try {
@@ -259,13 +260,13 @@ public class DataBucketChangeActor extends AbstractActor {
 								})
 								.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
 									if (!msg.is_suspended())
-										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
+										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
 									else
 										return StormControllerUtil.stopJob(storm_controller, bucket); // (nothing to do but just do this to return something sensible)
 								})
 								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
 									if ( msg.is_enabled() )
-										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
+										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
 									else
 										return StormControllerUtil.stopJob(storm_controller, bucket);
 								})
@@ -273,7 +274,7 @@ public class DataBucketChangeActor extends AbstractActor {
 									if ( msg.is_suspended() )
 										return StormControllerUtil.stopJob(storm_controller, bucket);
 									else
-										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology);
+										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
 								})
 								.otherwise(msg -> {
 									return CompletableFuture.completedFuture(

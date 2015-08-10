@@ -18,16 +18,26 @@ package com.ikanow.aleph2.data_import_manager.stream_enrichment;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
+import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -181,45 +191,67 @@ public class TestStorm {
 //		
 //		assertTrue(true);
 //	}
-	@Ignore //travvy fails this test for some reason
+	
 	@Test
 	public void testCache() throws IOException, InterruptedException, ExecutionException {
-		File file1 = File.createTempFile("recent_date_test_", null);
-		Thread.sleep(1);
-		File file2 = File.createTempFile("recent_date_test_", null);
-		Thread.sleep(1);
-		File file3 = File.createTempFile("recent_date_test_", null);		
+		final String jar_location = System.getProperty("java.io.tmpdir");
+		File file1 = createFakeZipFile(null);//File.createTempFile("recent_date_test_", null);
+		Thread.sleep(1500);
+		File file2 = createFakeZipFile(null);//File.createTempFile("recent_date_test_", null);
+		Thread.sleep(1500);
+		File file3 = createFakeZipFile(null);//File.createTempFile("recent_date_test_", null);		
 		List<String> files1 = Arrays.asList(file1.getCanonicalPath(),file2.getCanonicalPath(),file3.getCanonicalPath());
-		String input_jar_location = JarBuilderUtil.getHashedJarName(files1);
+		String input_jar_location = JarBuilderUtil.getHashedJarName(files1, jar_location);
 		File input_jar = new File(input_jar_location);
 		input_jar.delete();
 		assertFalse(input_jar.exists());
 		
 		//first time it should create
-		final CompletableFuture<String> jar_future1 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		final CompletableFuture<String> jar_future1 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1, jar_location);
 		jar_future1.get();
 		assertTrue(input_jar.exists());
 		
 		//second time it should cache
-		long modified_time = input_jar.lastModified();
-		final CompletableFuture<String> jar_future2 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		long file_mod_time = getFileModifiedTime(input_jar);
+		final CompletableFuture<String> jar_future2 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1, jar_location);
 		jar_future2.get();
-		assertEquals(modified_time, input_jar.lastModified());
+		assertEquals(file_mod_time, getFileModifiedTime(input_jar));
 		
 		//third time modify a file, it should no longer cache
-		Thread.sleep(1);
-		FileWriter fw = new FileWriter(file2);
-		fw.write("modifying");
-		fw.close();
-		final CompletableFuture<String> jar_future3 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
+		Thread.sleep(1500); //sleep a ms so the modified time updates
+		file1.delete();
+		file1 = createFakeZipFile(file2.getCanonicalPath());
+		final CompletableFuture<String> jar_future3 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1, jar_location);
 		jar_future3.get();
-		assertNotEquals(modified_time, input_jar.lastModified());
+		assertNotEquals(file_mod_time, getFileModifiedTime(input_jar)); //original jar creation time should not match its current modified time (it should have been remade)
 		
 		//cleanup
 		file1.delete();
 		file2.delete();
 		file3.delete();
 		new File(input_jar_location).delete();
-		
+	}
+	
+	private long getFileModifiedTime(File input_jar) throws IOException {
+		ZipInputStream inputZip = new ZipInputStream(new FileInputStream(input_jar));		
+		ZipEntry e = inputZip.getNextEntry();	
+		long time = e.getLastModifiedTime().toMillis();
+		inputZip.close();
+		return time;
+	}
+
+	private static File createFakeZipFile(String file_name) throws IOException {
+		File file;
+		if ( file_name == null )
+			file = File.createTempFile("recent_date_test_", ".zip");
+		else
+			file = new File(file_name);
+		Random r = new Random();
+		ZipOutputStream outputZip = new ZipOutputStream(new FileOutputStream(file));
+		ZipEntry e = new ZipEntry("some_file.tmp");		
+		outputZip.putNextEntry(e);
+		outputZip.write(r.nextInt());
+		outputZip.close();
+		return file;
 	}
 }

@@ -33,11 +33,12 @@ public class TestJarBuilderUtils {
 
 	@Test
 	public void testHash() {		
-		String hash1 = JarBuilderUtil.getHashedJarName(Arrays.asList("a","b","c"));
-		String hash2 = JarBuilderUtil.getHashedJarName(Arrays.asList("c","b","a"));
+		final String input_jar_location = System.getProperty("java.io.tmpdir");
+		String hash1 = JarBuilderUtil.getHashedJarName(Arrays.asList("a","b","c"), input_jar_location);
+		String hash2 = JarBuilderUtil.getHashedJarName(Arrays.asList("c","b","a"), input_jar_location);
 		
 		assertFalse(hash1.equals(hash2));
-		String hash1_again = JarBuilderUtil.getHashedJarName(Arrays.asList("a","b","c"));
+		String hash1_again = JarBuilderUtil.getHashedJarName(Arrays.asList("a","b","c"), input_jar_location);
 		assertTrue(hash1.equals(hash1_again));
 	}
 	
