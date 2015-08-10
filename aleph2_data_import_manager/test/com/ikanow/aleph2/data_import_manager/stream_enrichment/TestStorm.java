@@ -181,7 +181,7 @@ public class TestStorm {
 //		
 //		assertTrue(true);
 //	}
-	@Ignore //travvy fails this test for some reason
+	 //travvy fails this test for some reason
 	@Test
 	public void testCache() throws IOException, InterruptedException, ExecutionException {
 		File file1 = File.createTempFile("recent_date_test_", null);
@@ -207,10 +207,12 @@ public class TestStorm {
 		assertEquals(modified_time, input_jar.lastModified());
 		
 		//third time modify a file, it should no longer cache
-		Thread.sleep(1);
-		FileWriter fw = new FileWriter(file2);
-		fw.write("modifying");
-		fw.close();
+		Thread.sleep(1); //sleep a ms so the modified time updates
+//		FileWriter fw = new FileWriter(file2);
+//		fw.write("modifying");
+//		fw.close();
+		file2.delete();
+		file2.createNewFile();
 		final CompletableFuture<String> jar_future3 = StormControllerUtil.buildOrReturnCachedStormTopologyJar(files1);
 		jar_future3.get();
 		assertNotEquals(modified_time, input_jar.lastModified());
