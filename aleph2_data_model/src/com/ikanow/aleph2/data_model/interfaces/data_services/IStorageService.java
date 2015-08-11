@@ -30,6 +30,8 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public interface IStorageService extends IUnderlyingService {
 
+	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/"; 
+	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
 	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none

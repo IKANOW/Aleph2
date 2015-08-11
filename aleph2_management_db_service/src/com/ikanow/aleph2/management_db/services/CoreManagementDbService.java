@@ -15,9 +15,13 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
+import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +49,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
@@ -264,19 +269,28 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	}
 
 	@Override
-	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge,
-			Optional<Duration> in) {
+	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
 		
-		//TODO (ALEPH-25): decide .. only allow this if bucket is suspended?
+		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
 		
-		//TODO (ALEPH-25): support non-empty "in" with an executor (or put on delete Q?)
+		if (in.isPresent()) { // perform scheduled purge
+			
+			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			
+			
+			return FutureUtils.createManagementFuture(this.getBucketDeletionQueue(BucketDeletionMessage.class).storeObject(new BucketDeletionMessage(to_purge, to_purge_date, true), false)					
+					.thenApply(__ -> true)
+					.exceptionally(___ -> false)) // (fail if already present)
+					; 
+		}
+		else { // purge now...
 		
-		final CompletableFuture<Collection<BasicMessageBean>> res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
-		
-		return FutureUtils.createManagementFuture(
-				res.thenApply(msgs -> msgs.stream().allMatch(m -> m.success()))
-				, 
-				res);
+			final CompletableFuture<Collection<BasicMessageBean>> res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
+			
+			return FutureUtils.createManagementFuture(
+					res.thenApply(msgs -> msgs.stream().allMatch(m -> m.success()))
+					, 
+					res);
+		}
 	}
 
 	@Override
