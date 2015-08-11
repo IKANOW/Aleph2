@@ -460,7 +460,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
 			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));
-			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.storeObject(new BucketDeletionMessage(to_delete, to_delete_date));
+			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.storeObject(new BucketDeletionMessage(to_delete, to_delete_date, false));
 			
 			final CompletableFuture<Boolean> delete_reply = enqueue_delete
 																.thenCompose(__ -> _underlying_data_bucket_db.deleteObjectById(to_delete._id()));

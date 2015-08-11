@@ -106,7 +106,7 @@ public class BucketDeletionActor extends UntypedActor {
 		final ActorRef self_closure = this.self();		
 		final ActorRef sender_closure = this.sender();		
 		final BucketDeletionMessage msg = (BucketDeletionMessage) arg0;
-		
+
 		// 1) Before we do anything at all, has this bucket already been deleted somehow?
 		
 		if (DataBucketCrudService.doesBucketPathExist(msg.bucket(), _storage_service, Optional.empty())) {
@@ -114,38 +114,49 @@ public class BucketDeletionActor extends UntypedActor {
 			return;
 		}
 		
-		// 2) OK check for the rare but unpleasant case where the bucket wasn't deleted
+		if (msg.data_only()) { // 2) purge is a bit simpler
+			
+			// 2a) Delete the state directories					
+			final ICrudService<AssetStateDirectoryBean> states = _core_management_db_service.getStateDirectory(Optional.of(msg.bucket()), Optional.empty());
+			states.deleteDatastore();
+			
+			// 2b) Delete data in all data services
+			deleteAllDataStoresForBucket(msg.bucket(), _context, false);
+			
+			// If we got this far then remove from the queue
+			sender_closure.tell(msg, self_closure);
+		}
+		else { // 3) OK check for the rare but unpleasant case where the bucket wasn't deleted
 		
-		_bucket_crud_proxy.getObjectById(msg.bucket().full_name())
-			.thenAccept(bucket_opt -> {
-				if (bucket_opt.isPresent()) {
-					// Hasn't been deleted yet - try to delete async and then just exit out
-					_bucket_crud_proxy.deleteObjectById(msg.bucket().full_name());
-					//(see you in an hour!)
-				}
-				else { 
-					// (put them in functions to make this code more readable?)
-					
-					// Delete the state directories					
-					ICrudService<AssetStateDirectoryBean> states = _core_management_db_service.getStateDirectory(Optional.of(msg.bucket()), Optional.empty());
-					states.deleteDatastore();
-					
-					// Delete data in all data services
-					deleteAllDataStoresForBucket(msg.bucket(), _context, true);
-					
-					// Delete the HDFS data (includes all the archived/stored data)
-					try {
-						DataBucketCrudService.removeBucketPath(msg.bucket(), _storage_service, Optional.empty());
+			_bucket_crud_proxy.getObjectById(msg.bucket().full_name())
+				.thenAccept(bucket_opt -> {
+					if (bucket_opt.isPresent()) {
+						// Hasn't been deleted yet - try to delete async and then just exit out
+						_bucket_crud_proxy.deleteObjectById(msg.bucket().full_name());
+						//(see you in an hour!)
+					}
+					else { 
 						
-						// If we got this far then delete the bucket forever
-						sender_closure.tell(msg, self_closure);
-						return;
+						// 3a) Delete the state directories					
+						final ICrudService<AssetStateDirectoryBean> states = _core_management_db_service.getStateDirectory(Optional.of(msg.bucket()), Optional.empty());
+						states.deleteDatastore();
+						
+						// 3b) Delete data in all data services
+						deleteAllDataStoresForBucket(msg.bucket(), _context, true);
+						
+						// 3c) Delete the HDFS data (includes all the archived/stored data)
+						try {
+							DataBucketCrudService.removeBucketPath(msg.bucket(), _storage_service, Optional.empty());
+							
+							// If we got this far then delete the bucket forever
+							sender_closure.tell(msg, self_closure);
+						}
+						catch (Exception e) {
+							// failed to delete the bucket
+						}
 					}
-					catch (Exception e) {
-						// failed to delete the bucket
-					}
-				}
-			});
+				});
+		}
 	}
 	
 	/** Deletes the data in all data services

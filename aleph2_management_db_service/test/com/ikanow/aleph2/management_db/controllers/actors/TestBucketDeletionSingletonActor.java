@@ -126,6 +126,8 @@ public class TestBucketDeletionSingletonActor {
 		
 		//(delete queue)
 		final ICrudService<BucketDeletionMessage> delete_queue = _core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class);
+		delete_queue.deleteDatastore().get();
+		assertEquals(0, delete_queue.countObjects().get().intValue());
 
 		//(delete bus)
 		final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> delete_bus = _actor_context.getDeletionMgmtBus();
@@ -159,7 +161,7 @@ public class TestBucketDeletionSingletonActor {
 					BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test/delete/" + i).done().get()
 					,
 					(i < 10) ? new Date() : new Date(new Date().getTime() + 10*3600000L)))
-					.map(bucket_date -> new BucketDeletionMessage(bucket_date._1(), bucket_date._2()))
+					.map(bucket_date -> new BucketDeletionMessage(bucket_date._1(), bucket_date._2(), false))
 					.collect(Collectors.toList())
 					;
 		
