@@ -126,8 +126,6 @@ public class TestBucketDeletionSingletonActor {
 		
 		//(delete queue)
 		final ICrudService<BucketDeletionMessage> delete_queue = _core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class);
-		delete_queue.deleteDatastore().get();
-		assertEquals(0, delete_queue.countObjects().get().intValue());
 
 		//(delete bus)
 		final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> delete_bus = _actor_context.getDeletionMgmtBus();
@@ -152,6 +150,9 @@ public class TestBucketDeletionSingletonActor {
 		
 		assertEquals(true, delete_queue.deregisterOptimizedQuery(Arrays.asList("delete_on")));
 		assertEquals(true, delete_queue.deregisterOptimizedQuery(Arrays.asList("bucket.full_name")));
+		delete_queue.deleteDatastore().get();
+		assertEquals(0, delete_queue.countObjects().get().intValue());
+		
 		delete_queue.optimizeQuery(Arrays.asList("delete_on")).get();
 		delete_queue.optimizeQuery(Arrays.asList("bucket.full_name")).get();		
 		
