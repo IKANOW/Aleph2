@@ -1138,11 +1138,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param to_delete
 	 * @param storage_service
 	 */
-	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception
+	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service, Optional<String> extra_path) throws Exception
 	{ 
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
-		dfs.delete(new Path(bucket_root), true);
+		dfs.delete(new Path(bucket_root + extra_path.map(s -> "/" + s).orElse("")), true);
 	}
 	
 	/** Check if bucket exists (or the path within the bucket if "file" optional specified

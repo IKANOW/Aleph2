@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,10 +38,13 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
@@ -51,6 +55,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 
+	protected final IServiceContext _service_context;
 	protected final IManagementDbService _underlying_management_db;	
 	protected final DataBucketCrudService _data_bucket_service;
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
@@ -72,6 +77,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			)
 	{
 		//(just return null here if underlying management not present, things will fail catastrophically unless this is a test)
+		_service_context = service_context;
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).orElse(null);
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
@@ -94,10 +100,12 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @param auth
 	 * @param project
 	 */
-	public CoreManagementDbService(final IManagementDbService underlying_management_db,
+	public CoreManagementDbService(final IServiceContext service_context,
+			final IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
 			final SharedLibraryCrudService shared_library_service,		
 			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project, boolean read_only) {
+		_service_context = service_context;
 		_underlying_management_db = underlying_management_db;
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
@@ -115,7 +123,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth)
 	{
-		return new CoreManagementDbService(_underlying_management_db, 
+		return new CoreManagementDbService(_service_context, _underlying_management_db, 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
 				client_auth, project_auth, _read_only);
 	}
@@ -250,7 +258,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public IManagementDbService readOnlyVersion() {
-		return new CoreManagementDbService(_underlying_management_db, 
+		return new CoreManagementDbService(_service_context, _underlying_management_db, 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
 				_auth, _project, true);
 	}
@@ -258,8 +266,17 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge,
 			Optional<Duration> in) {
-		// TODO Auto-generated method stub
-		return null;
+		
+		//TODO (ALEPH-25): decide .. only allow this if bucket is suspended?
+		
+		//TODO (ALEPH-25): support non-empty "in" with an executor (or put on delete Q?)
+		
+		final CompletableFuture<Collection<BasicMessageBean>> res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
+		
+		return FutureUtils.createManagementFuture(
+				res.thenApply(msgs -> msgs.stream().allMatch(m -> m.success()))
+				, 
+				res);
 	}
 
 	@Override

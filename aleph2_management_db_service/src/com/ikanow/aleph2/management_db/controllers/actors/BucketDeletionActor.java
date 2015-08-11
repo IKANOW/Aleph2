@@ -15,14 +15,27 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.Optional;
 
 
 
 
 
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
+
+
+
+
+
 
 
 
@@ -35,11 +48,20 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+
+
+
+
+
+
+
 
 
 
@@ -109,11 +131,11 @@ public class BucketDeletionActor extends UntypedActor {
 					states.deleteDatastore();
 					
 					// Delete data in all data services
-					deleteAllDataStoresForBucket(msg.bucket());
+					deleteAllDataStoresForBucket(msg.bucket(), _context, true);
 					
 					// Delete the HDFS data (includes all the archived/stored data)
 					try {
-						DataBucketCrudService.removeBucketPath(msg.bucket(), _storage_service);
+						DataBucketCrudService.removeBucketPath(msg.bucket(), _storage_service, Optional.empty());
 						
 						// If we got this far then delete the bucket forever
 						sender_closure.tell(msg, self_closure);
@@ -130,14 +152,33 @@ public class BucketDeletionActor extends UntypedActor {
 	 *  TODO: assume default ones for now 
 	 * @param bucket - the bucket to cleanse
 	 */
-	protected void deleteAllDataStoresForBucket(final DataBucketBean bucket) {
+	public static CompletableFuture<Collection<BasicMessageBean>> deleteAllDataStoresForBucket(final DataBucketBean bucket, final IServiceContext service_context, boolean delete_bucket) {
 		
 		// Currently the only supported data service is the search index
 		
-		final Optional<ISearchIndexService> search_index = _context.getSearchIndexService();
+		final Optional<ISearchIndexService> search_index = service_context.getSearchIndexService();
 	
+		final LinkedList<CompletableFuture<BasicMessageBean>> vals = new LinkedList<>();
+		
 		search_index.ifPresent(index -> {
-			index.handleBucketDeletionRequest(bucket, true);
+			vals.add(index.handleBucketDeletionRequest(bucket, delete_bucket));
 		});
+		
+		if (!delete_bucket) { // (Else will be deleted in the main actor fn)
+			try {
+				DataBucketCrudService.removeBucketPath(bucket, service_context.getStorageService(), 
+						Optional.of("TODO"));
+			}
+			catch (Exception e) {
+				vals.add(CompletableFuture.completedFuture(
+							new BasicMessageBean(new Date(), false, "BucketDeletionActor", "deleteAllDataStoresForBucket", null, ErrorUtils.getLongForm("{0}", e), null)
+						));
+			}
+		}		
+		
+		return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))
+				.thenApply(__ -> {
+					return vals.stream().map(x -> x.join()).collect(Collectors.toList());
+				});
 	}
 }
