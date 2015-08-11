@@ -1158,10 +1158,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		try {
 			dfs.getFileStatus(new Path(bucket_root + file.map(s -> "/" + s).orElse("")));
-			return false;
+			return true;
 		}
 		catch (FileNotFoundException fe) {
-			return true;
+			return false;
 		} 
 		
 	}	
