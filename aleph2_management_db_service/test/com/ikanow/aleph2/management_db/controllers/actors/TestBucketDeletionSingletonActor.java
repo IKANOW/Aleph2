@@ -135,8 +135,14 @@ public class TestBucketDeletionSingletonActor {
 		// Ugh because our akka implementation doesn't support injection we have to remove the existing system generated deletor (vs change its type to the TestActor)
 		scala.concurrent.Future<ActorRef> system_deleter_f = _cds.getAkkaSystem().actorSelection("akka://default/user/" + ActorUtils.BUCKET_DELETION_WORKER_ACTOR).resolveOne(Duration.create(10, TimeUnit.SECONDS));
 		CompletableFuture<ActorRef> system_deleter_f_cf = FutureUtils.efficientWrap(system_deleter_f, _cds.getAkkaSystem().dispatcher());
-		final ActorRef system_deleter = system_deleter_f_cf.get();
-		delete_bus.unsubscribe(system_deleter);		
+		try {
+			final ActorRef system_deleter = system_deleter_f_cf.get();
+			delete_bus.unsubscribe(system_deleter);
+		}
+		catch (Exception e) {
+			_logger.warn("For some reason /user/deletion_worker not found hence doesn't need to unsubscribe");
+		}
+		
 		
 		//(check if the fields are optimized - can only do that by 
 		//DBCollection test_db = (DBCollection) delete_queue.getUnderlyingPlatformDriver(DBCollection.class, Optional.empty()).get();
