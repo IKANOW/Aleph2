@@ -1119,6 +1119,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	public static final String DELETE_TOUCH_FILE = ".DELETED";
 	
+	/** Utility to add ".DELETED" to the designated bucket
+	 * @param to_delete
+	 * @param storage_service
+	 * @throws Exception
+	 */
 	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		
@@ -1128,6 +1133,38 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
 		{} //(ie close after creating)
 	}
+
+	/** Deletes the entire bucket, ie data and 
+	 * @param to_delete
+	 * @param storage_service
+	 */
+	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception
+	{ 
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
+		dfs.delete(new Path(bucket_root), true);
+	}
+	
+	/** Check if bucket exists (or the path within the bucket if "file" optional specified
+	 * @param to_check
+	 * @param storage_service
+	 * @param file - the file path in the bucket (checks bucket root path if left blank)
+	 * @return
+	 * @throws Exception
+	 */
+	public static boolean doesBucketPathExist(final DataBucketBean to_check, final IStorageService storage_service, final Optional<String> file) throws Exception {
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_check.full_name();
+		
+		try {
+			dfs.getFileStatus(new Path(bucket_root + file.map(s -> "/" + s).orElse("")));
+			return false;
+		}
+		catch (FileNotFoundException fe) {
+			return true;
+		} 
+		
+	}	
 	
 	/** Bucket valdiation rules:
 	 *  in the format /path/to/<etc>/here where:
@@ -1150,14 +1187,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
-		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();		
 		
 		// Check if a "delete touch file is present, bail if so"
-		try {
-			dfs.getFileStatus(new Path(bucket_root + "/" + DELETE_TOUCH_FILE));
-			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.DELETE_TOUCH_FILE_PRESENT, bucket.full_name()));
+		if (doesBucketPathExist(bucket, storage_service, Optional.of(DELETE_TOUCH_FILE))) {
+			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.DELETE_TOUCH_FILE_PRESENT, bucket.full_name()));			
 		}
-		catch (FileNotFoundException fe) {} // (fine just carry on)
 		
 		Arrays.asList(
 				bucket_root + "/managed_bucket",

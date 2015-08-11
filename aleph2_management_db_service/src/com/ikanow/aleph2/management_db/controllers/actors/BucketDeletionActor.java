@@ -19,12 +19,18 @@ import java.util.Optional;
 
 
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
 
+
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -34,6 +40,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEv
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+
+
 
 
 
@@ -53,7 +61,8 @@ public class BucketDeletionActor extends UntypedActor {
 	protected final IServiceContext _context;
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	protected final IManagementDbService _core_management_db_service;
-	protected final DataBucketCrudService _bucket_crud_proxy; //TODO: if we can move tihs to being  a pure ICrudService even better (ie using static functions)
+	protected final IStorageService _storage_service;
+	protected final ICrudService<DataBucketBean> _bucket_crud_proxy;
 	
 	public BucketDeletionActor() {
 		// Attach self to round robin bus:
@@ -62,7 +71,8 @@ public class BucketDeletionActor extends UntypedActor {
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();		
 		_bucket_deletion_bus.subscribe(this.self(), ActorUtils.BUCKET_DELETION_BUS);
 		_core_management_db_service = _context.getCoreManagementDbService();
-		_bucket_crud_proxy = (DataBucketCrudService) _core_management_db_service.getDataBucketStore();
+		_storage_service = _context.getStorageService();
+		_bucket_crud_proxy = _core_management_db_service.getDataBucketStore();
 	}
 	@Override
 	public void onReceive(Object arg0) throws Exception {		
@@ -77,13 +87,12 @@ public class BucketDeletionActor extends UntypedActor {
 		
 		// 1) Before we do anything at all, has this bucket already been deleted somehow?
 		
-		//TODO: static function in DataBucketCrudService?
-		if (false) {
+		if (DataBucketCrudService.doesBucketPathExist(msg.bucket(), _storage_service, Optional.empty())) {
 			sender_closure.tell(msg, self_closure);
 			return;
 		}
 		
-		// 2) OK check for the rare but unpleasant case where it's been deleted		
+		// 2) OK check for the rare but unpleasant case where the bucket wasn't deleted
 		
 		_bucket_crud_proxy.getObjectById(msg.bucket().full_name())
 			.thenAccept(bucket_opt -> {
@@ -92,7 +101,7 @@ public class BucketDeletionActor extends UntypedActor {
 					_bucket_crud_proxy.deleteObjectById(msg.bucket().full_name());
 					//(see you in an hour!)
 				}
-				else { //TODO: what are the success/fail deps on each of these jobs
+				else { 
 					// (put them in functions to make this code more readable?)
 					
 					// Delete the state directories					
@@ -103,14 +112,18 @@ public class BucketDeletionActor extends UntypedActor {
 					deleteAllDataStoresForBucket(msg.bucket());
 					
 					// Delete the HDFS data (includes all the archived/stored data)
+					try {
+						DataBucketCrudService.removeBucketPath(msg.bucket(), _storage_service);
+						
+						// If we got this far then delete the bucket forever
+						sender_closure.tell(msg, self_closure);
+						return;
+					}
+					catch (Exception e) {
+						// failed to delete the bucket
+					}
 				}
 			});
-		
-		//TODO: delete all the data services
-		
-		//TODO: delete the HDFS (containing both data and bucket)
-		
-		//TODO: return the message on success (or if failure indicates that bucket already deleted)
 	}
 	
 	/** Deletes the data in all data services
@@ -118,6 +131,13 @@ public class BucketDeletionActor extends UntypedActor {
 	 * @param bucket - the bucket to cleanse
 	 */
 	protected void deleteAllDataStoresForBucket(final DataBucketBean bucket) {
-		//TODO
+		
+		// Currently the only supported data service is the search index
+		
+		final Optional<ISearchIndexService> search_index = _context.getSearchIndexService();
+	
+		search_index.ifPresent(index -> {
+			index.handleBucketDeletionRequest(bucket, true);
+		});
 	}
 }
