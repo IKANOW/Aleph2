@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
 
 public class SampleSecurityService implements ISecurityService {
@@ -87,5 +88,23 @@ public class SampleSecurityService implements ISecurityService {
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
 			Optional<String> driver_options) {
 		return null;
+	}
+
+	@Override
+	public ISubject getSubject() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void login(ISubject subject, Object credentials) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean hasRole(ISubject subject, String role) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 }

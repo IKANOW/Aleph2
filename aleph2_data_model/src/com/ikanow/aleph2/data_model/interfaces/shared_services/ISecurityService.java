@@ -29,6 +29,8 @@ import java.util.Map;
  */
 public interface ISecurityService extends IUnderlyingService {
 	
+	
+	public ISubject getSubject();
 	/**
 	 * Checks if the given identifier has permission to access the given resource/resource_id and perform the
 	 * specific operation (typically one of CRUD).
@@ -121,4 +123,7 @@ public interface ISecurityService extends IUnderlyingService {
 	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
 	 */
 	public void clearPermission(String resourceName, String resourceIdentifier);
+
+	public void login(ISubject subject, Object credentials);
+	public boolean hasRole(ISubject subject, String role);
 }
