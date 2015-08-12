@@ -102,7 +102,9 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
 			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
 			this.context().system().scheduler()
-			.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+				.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+			
+			_logger.info("BucketDeletionSingletonActor has started on this node.");						
 		}		
 	}
 	
@@ -123,8 +125,6 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 						BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
 						+ "." +
 						BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
-
-		_logger.info("BucketDeletionSingletonActor has started on this node.");			
 	}
 	
 	/* (non-Javadoc)
