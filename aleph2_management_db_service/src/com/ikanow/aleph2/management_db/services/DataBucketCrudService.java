@@ -16,11 +16,15 @@
 package com.ikanow.aleph2.management_db.services;
 
 import java.io.FileNotFoundException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -84,6 +88,7 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
@@ -106,6 +111,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
 	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_status_db;
 	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
+	protected final ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
 	
 	protected final ManagementDbActorContext _actor_context;
 	protected final IServiceContext _service_context;
@@ -120,6 +126,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
 		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
+		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);
 		
 		_storage_service = service_context.getStorageService();
 		
@@ -147,6 +154,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_data_bucket_db = underlying_data_bucket_db;
 		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
 		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
+		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);		
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -206,6 +214,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					FutureUtils.returnError(e));			
 		}
 	}
+	/** Worker function for storeObject
+	 * @param new_object - the bucket to create
+	 * @param old_bucket - the version of the bucket being overwritte, if an update
+	 * @param validation_info - validation info to be presented to the user
+	 * @param replace_if_present - update move
+	 * @return - the user return value
+	 * @throws Exception
+	 */
 	public ManagementFuture<Supplier<Object>> storeValidatedObject(
 			final DataBucketBean new_object, final Optional<DataBucketBean> old_bucket, 
 			final Collection<BasicMessageBean> validation_info, boolean replace_if_present) throws Exception
@@ -442,10 +458,15 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
 			deleteFilePath(to_delete, _storage_service);
 			
-			final CompletableFuture<Boolean> delete_reply = _underlying_data_bucket_db.deleteObjectById(to_delete._id());
+			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
+			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));
+			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.storeObject(new BucketDeletionMessage(to_delete, to_delete_date, false));
+			
+			final CompletableFuture<Boolean> delete_reply = enqueue_delete
+																.thenCompose(__ -> _underlying_data_bucket_db.deleteObjectById(to_delete._id()));
 
 			return FutureUtils.denestManagementFuture(delete_reply
-				.thenCompose(del_reply -> {			
+				.thenCompose(del_reply -> {		
 					if (!del_reply) { // Didn't find an object to delete, just return that information to the user
 						return CompletableFuture.completedFuture(Optional.empty());
 					}
@@ -1098,6 +1119,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	public static final String DELETE_TOUCH_FILE = ".DELETED";
 	
+	/** Utility to add ".DELETED" to the designated bucket
+	 * @param to_delete
+	 * @param storage_service
+	 * @throws Exception
+	 */
 	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		
@@ -1107,6 +1133,38 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
 		{} //(ie close after creating)
 	}
+
+	/** Deletes the entire bucket, ie data and 
+	 * @param to_delete
+	 * @param storage_service
+	 */
+	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service, Optional<String> extra_path) throws Exception
+	{ 
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
+		dfs.delete(new Path(bucket_root + extra_path.map(s -> "/" + s).orElse("")), true);
+	}
+	
+	/** Check if bucket exists (or the path within the bucket if "file" optional specified
+	 * @param to_check
+	 * @param storage_service
+	 * @param file - the file path in the bucket (checks bucket root path if left blank)
+	 * @return
+	 * @throws Exception
+	 */
+	public static boolean doesBucketPathExist(final DataBucketBean to_check, final IStorageService storage_service, final Optional<String> file) throws Exception {
+		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_check.full_name();
+		
+		try {
+			dfs.getFileStatus(new Path(bucket_root + file.map(s -> "/" + s).orElse("")));
+			return true;
+		}
+		catch (FileNotFoundException fe) {
+			return false;
+		} 
+		
+	}	
 	
 	/** Bucket valdiation rules:
 	 *  in the format /path/to/<etc>/here where:
@@ -1129,14 +1187,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
-		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();		
 		
 		// Check if a "delete touch file is present, bail if so"
-		try {
-			dfs.getFileStatus(new Path(bucket_root + "/" + DELETE_TOUCH_FILE));
-			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.DELETE_TOUCH_FILE_PRESENT, bucket.full_name()));
+		if (doesBucketPathExist(bucket, storage_service, Optional.of(DELETE_TOUCH_FILE))) {
+			throw new RuntimeException(ErrorUtils.get(ManagementDbErrorUtils.DELETE_TOUCH_FILE_PRESENT, bucket.full_name()));			
 		}
-		catch (FileNotFoundException fe) {} // (fine just carry on)
 		
 		Arrays.asList(
 				bucket_root + "/managed_bucket",
