@@ -31,8 +31,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -49,6 +51,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
@@ -63,10 +66,10 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 
 
+
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
-import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 import akka.event.japi.LookupEventBus;
 
@@ -81,12 +84,10 @@ import akka.event.japi.LookupEventBus;
 public class BucketDeletionSingletonActor extends UntypedActor {
 	private static final Logger _logger = LogManager.getLogger();	
 
-	protected final Cancellable _ticker; //(just in case we want it later)
-	
 	protected final ManagementDbActorContext _actor_context;
 	protected final IServiceContext _context;
 	protected final IManagementDbService _core_management_db;
-	protected final ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
+	protected final SetOnce<ICrudService<BucketDeletionMessage>> _bucket_deletion_queue = new SetOnce<>();
 	
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	
@@ -95,31 +96,32 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();
 		
 		_context = _actor_context.getServiceContext();
-		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });
-		_bucket_deletion_queue = (null != _core_management_db) 
-									? _core_management_db.getBucketDeletionQueue(BucketDeletionMessage.class)
-									: null;
-		
-		if (null != _bucket_deletion_queue) {
-			// ensure bucket deletion queue is optimized:
-			_bucket_deletion_queue.optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
-			// (this optimization lets deletion messages be manipulated 
-			_bucket_deletion_queue.optimizeQuery(
-					Arrays.asList(
-							BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
-							+ "." +
-							BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
-			
-			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
-			_ticker = this.context().system().scheduler()
-				.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
-			
-			_logger.info("BucketDeletionSingletonActor has started on this node.");			
-		}	
-		else { // (all this null checking is grovelling because in some tests ManagementDbActorContext may be set but not CoreManagementDbService)
-			_ticker = null;
+		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });		
+	}
+	
+	/** For some reason can run into guice problems with doing this in the c'tor
+	 *  so do it here instead
+	 */
+	protected void setup() {
+		if ((null == _core_management_db) || (_bucket_deletion_queue.isSet())) {
+			return;
 		}
-		
+		_bucket_deletion_queue.set(_core_management_db.getBucketDeletionQueue(BucketDeletionMessage.class));
+
+		// ensure bucket deletion queue is optimized:
+		_bucket_deletion_queue.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::delete_on)));
+		// (this optimization lets deletion messages be manipulated 
+		_bucket_deletion_queue.get().optimizeQuery(
+				Arrays.asList(
+						BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
+						+ "." +
+						BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
+
+		final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
+		this.context().system().scheduler()
+		.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+
+		_logger.info("BucketDeletionSingletonActor has started on this node.");			
 	}
 	
 	/* (non-Javadoc)
@@ -127,6 +129,8 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	 */
 	@Override
 	public void onReceive(Object message) throws Exception {
+		setup();
+		
 		final ActorRef self = this.self();
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
 			
@@ -134,7 +138,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 			final QueryComponent<BucketDeletionMessage> recent_messages = 
 					CrudUtils.allOf(BucketDeletionMessage.class).rangeBelow(BucketDeletionMessage::delete_on, now, false);
 
-			CompletableFuture<ICrudService.Cursor<BucketDeletionMessage>> matches = _bucket_deletion_queue.getObjectsBySpec(recent_messages);
+			CompletableFuture<ICrudService.Cursor<BucketDeletionMessage>> matches = _bucket_deletion_queue.get().getObjectsBySpec(recent_messages);
 			
 			matches.thenAccept(m -> {
 				
@@ -151,7 +155,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 							;
 					
 					// Update the buckets' times - will try again in an hour if the delete fails for any reason
-					_bucket_deletion_queue.updateObjectsBySpec(recent_msg_ids, Optional.of(false), update_time);
+					_bucket_deletion_queue.get().updateObjectsBySpec(recent_msg_ids, Optional.of(false), update_time);
 					
 					// Send out the buckets for proper deletion
 					msgs.forEach(msg -> {
@@ -164,7 +168,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		else if (BucketDeletionMessage.class.isAssignableFrom(message.getClass())) { // deletion was successful
 			final BucketDeletionMessage msg = (BucketDeletionMessage)message;
 			_logger.info("Confirmed deletion of bucket: " + msg.bucket().full_name());
-			_bucket_deletion_queue.deleteObjectById(msg._id());
+			_bucket_deletion_queue.get().deleteObjectById(msg._id());
 		}
 	}
 }
