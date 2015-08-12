@@ -96,7 +96,14 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();
 		
 		_context = _actor_context.getServiceContext();
-		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });		
+		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });
+
+		if (null != _core_management_db) {
+			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
+			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
+			this.context().system().scheduler()
+			.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+		}		
 	}
 	
 	/** For some reason can run into guice problems with doing this in the c'tor
@@ -116,10 +123,6 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 						BeanTemplateUtils.from(BucketDeletionMessage.class).field(BucketDeletionMessage::bucket)
 						+ "." +
 						BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
-
-		final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
-		this.context().system().scheduler()
-		.schedule(poll_frequency, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
 
 		_logger.info("BucketDeletionSingletonActor has started on this node.");			
 	}
