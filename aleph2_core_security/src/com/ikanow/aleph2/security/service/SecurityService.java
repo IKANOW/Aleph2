@@ -4,31 +4,42 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationToken;
-import org.apache.shiro.config.IniSecurityManagerFactory;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
-import org.apache.shiro.util.Factory;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
+import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService {
 
 	protected ISubject currentSubject = null;
+	private static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
 	public SecurityService() {
-        Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");
-        SecurityManager securityManager = factory.getInstance();
-        SecurityUtils.setSecurityManager(securityManager);
+		try {
+			Injector injector = Guice.createInjector(new CoreSecurityModule());
+		    SecurityManager securityManager = injector.getInstance(SecurityManager.class);
+//		    SecurityUtils.setSecurityManager(securityManager);Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");
+//	        SecurityManager securityManager = factory.getInstance();
+	        SecurityUtils.setSecurityManager(securityManager);
 
 
-        // get the currently executing user:
-        Subject currentUser = SecurityUtils.getSubject();
-        currentSubject = new SubjectWrapper(currentUser);
-        // Do some stuff with a Session (no need for a web or EJB container!!!)
+	        // get the currently executing user:
+	        Subject currentUser = SecurityUtils.getSubject();
+	        currentSubject = new SubjectWrapper(currentUser);
+	        // Do some stuff with a Session (no need for a web or EJB container!!!)
+			
+		} catch (Throwable e) {
+			logger.error("Caught exception",e);
+		}
 	}
 	
 	@Override

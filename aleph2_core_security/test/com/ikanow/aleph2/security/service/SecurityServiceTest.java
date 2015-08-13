@@ -77,4 +77,17 @@ public class SecurityServiceTest {
 		assertEquals(true,securityService.hasRole(subject,role));
 		
 	}
+
+	@Test
+	public void testSecondRealm(){
+		ISubject subject = securityService.getSubject();
+		assertNotNull(subject);
+		String role = "admin";
+		assertEquals(false,securityService.hasRole(subject,role));
+        UsernamePasswordToken token = new UsernamePasswordToken("trojan", "none");
+        token.setRememberMe(true);
+		securityService.login(subject,token);
+		assertEquals(true,securityService.hasRole(subject,role));
+		
+	}
 }
