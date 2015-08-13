@@ -48,6 +48,11 @@ import akka.event.japi.LookupEventBus;
  */
 public class ManagementDbActorContext {
 	
+	// Some mutable state just used for cleaning up in tests
+	private Optional<ActorRef> _delete_singleton = Optional.empty();
+	private Optional<ActorRef> _delete_worker = Optional.empty();
+	private Optional<ActorRef> _test_singleton = Optional.empty();
+	
 	/** Creates a new actor context
 	 */
 	@Inject
@@ -61,19 +66,27 @@ public class ManagementDbActorContext {
 			.filter(name -> name.equals(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()))
 			.ifPresent(__ -> {
 				_distributed_services.runOnAkkaJoin(() -> {
-					_distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
+					_delete_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketTestCycleSingletonActor.class));
-					_distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
+					_test_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketDeletionSingletonActor.class));
 		
 					// subscriber one worker per node
-					_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR);
+					_delete_worker = Optional.of(_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR));
 			});
 		});
 	}
 
+	/** Intended for testing: removes the singleton actors before the test/session shutsdown
+	 */
+	public void onTestComplete() {
+		_delete_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+		_test_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+		_delete_worker.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+	}
+	
 	/** Returns the global service context
 	 * @return the global service context
 	 */

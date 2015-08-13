@@ -91,6 +91,8 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	
+	/** Akka c'tor
+	 */
 	public BucketDeletionSingletonActor() {		
 		_actor_context = ManagementDbActorContext.get();
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();
@@ -173,5 +175,13 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 			_logger.info("Confirmed deletion of bucket: " + msg.bucket().full_name());
 			_bucket_deletion_queue.get().deleteObjectById(msg._id());
 		}
+	}
+	
+	/* (non-Javadoc)
+	 * @see akka.actor.UntypedActor#postStop()
+	 */
+	@Override
+	public void postStop() {
+		_logger.info("BucketDeletionSingletonActor has stopped on this node.");								
 	}
 }
