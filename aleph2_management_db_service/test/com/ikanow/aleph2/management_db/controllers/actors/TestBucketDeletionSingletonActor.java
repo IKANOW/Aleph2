@@ -31,6 +31,7 @@ import java.util.stream.IntStream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -206,4 +207,8 @@ public class TestBucketDeletionSingletonActor {
 				.get().intValue());
 	}
 	
+	@After
+	public void cleanupTest() {
+		_actor_context.onTestComplete();
+	}
 }

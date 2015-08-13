@@ -42,6 +42,7 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -57,6 +58,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEv
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+
 
 
 
@@ -196,5 +198,13 @@ public class BucketDeletionActor extends UntypedActor {
 				.thenApply(__ -> {
 					return vals.stream().map(x -> x.join()).collect(Collectors.toList());
 				});
+	}
+	/* (non-Javadoc)
+	 * @see akka.actor.UntypedActor#postStop()
+	 */
+	@Override
+	public void postStop() {
+		_bucket_deletion_bus.unsubscribe(this.self(), ActorUtils.BUCKET_DELETION_BUS);		
+		_logger.info("BucketDeletionActor has stopped.");								
 	}
 }
