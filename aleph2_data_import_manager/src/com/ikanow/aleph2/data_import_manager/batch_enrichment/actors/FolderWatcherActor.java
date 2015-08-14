@@ -90,7 +90,7 @@ public class FolderWatcherActor extends UntypedActor {
 
 	@Override
 	public void onReceive(Object message) throws Exception {
-		if ("start".equals(message)) {
+		if (MSG_START.equals(message)) {
 			logger.debug("Start message received");
 			folderWatch = getContext()
 			.system()
