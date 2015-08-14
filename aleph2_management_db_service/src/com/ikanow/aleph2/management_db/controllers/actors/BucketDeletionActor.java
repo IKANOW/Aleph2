@@ -16,33 +16,16 @@
 package com.ikanow.aleph2.management_db.controllers.actors;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.Optional;
-
-
-
-
-
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -51,26 +34,15 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
@@ -107,7 +79,7 @@ public class BucketDeletionActor extends UntypedActor {
 		}
 		//_logger.info("REAL ACTOR Received message from singleton! " + arg0.getClass().toString());
 		if (!BucketDeletionMessage.class.isAssignableFrom(arg0.getClass())) { // not for me
-			_logger.warn("Unexpected message: " + arg0.getClass());
+			_logger.debug("Unexpected message: " + arg0.getClass());
 			return;
 		}
 		final ActorRef self_closure = this.self();		
@@ -116,16 +88,14 @@ public class BucketDeletionActor extends UntypedActor {
 
 		// 1) Before we do anything at all, has this bucket already been deleted somehow?
 		
-		if (DataBucketCrudService.doesBucketPathExist(msg.bucket(), _storage_service, Optional.empty())) {
+		if (!DataBucketCrudService.doesBucketPathExist(msg.bucket(), _storage_service, Optional.empty())) {			
 			sender_closure.tell(msg, self_closure);
 			return;
 		}
 		
 		if (msg.data_only()) { // 2) purge is a bit simpler
 			
-			// 2a) Delete the state directories					
-			final ICrudService<AssetStateDirectoryBean> states = _core_management_db_service.getStateDirectory(Optional.of(msg.bucket()), Optional.empty());
-			states.deleteDatastore();
+			// 2a) DON'T Delete the state stores (this has to be done by hand by the harvester if desired)			
 			
 			// 2b) Delete data in all data services
 			deleteAllDataStoresForBucket(msg.bucket(), _context, false);
@@ -134,19 +104,18 @@ public class BucketDeletionActor extends UntypedActor {
 			sender_closure.tell(msg, self_closure);
 		}
 		else { // 3) OK check for the rare but unpleasant case where the bucket wasn't deleted
-		
-			_bucket_crud_proxy.get().getObjectById(msg.bucket().full_name())
+			
+			final QueryComponent<DataBucketBean> bucket_selector = CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, msg.bucket().full_name());
+			_bucket_crud_proxy.get().getObjectBySpec(bucket_selector)
 				.thenAccept(bucket_opt -> {
 					if (bucket_opt.isPresent()) {
 						// Hasn't been deleted yet - try to delete async and then just exit out
-						_bucket_crud_proxy.get().deleteObjectById(msg.bucket().full_name());
+						_bucket_crud_proxy.get().deleteObjectBySpec(bucket_selector);
 						//(see you in an hour!)
 					}
-					else { 
-						
+					else { 						
 						// 3a) Delete the state directories					
-						final ICrudService<AssetStateDirectoryBean> states = _core_management_db_service.getStateDirectory(Optional.of(msg.bucket()), Optional.empty());
-						states.deleteDatastore();
+						deleteAllStateObjectsForBucket(msg.bucket(), _core_management_db_service, false);
 						
 						// 3b) Delete data in all data services
 						deleteAllDataStoresForBucket(msg.bucket(), _context, true);
@@ -166,6 +135,32 @@ public class BucketDeletionActor extends UntypedActor {
 		}
 	}
 	
+	/** Removes all "user" state related to the bucket being deleted/purged
+	 * @param bucket
+	 * @param core_management_db_service
+	 */
+	public static void deleteAllStateObjectsForBucket(final DataBucketBean bucket, final IManagementDbService core_management_db_service, boolean delete_bucket) {
+		final ICrudService<AssetStateDirectoryBean> states = core_management_db_service.getStateDirectory(Optional.of(bucket), Optional.empty());
+		
+		states.getObjectsBySpec(CrudUtils.allOf(AssetStateDirectoryBean.class)).thenAccept(cursor -> {
+			StreamSupport.stream(cursor.spliterator(), true).forEach(bean -> {
+				
+				Optional.ofNullable( 
+						Patterns.match(bean.state_type()).<ICrudService<JsonNode>>andReturn()
+							.when(t -> AssetStateDirectoryBean.StateDirectoryType.analytic_thread == t, 
+										__ -> core_management_db_service.getBucketAnalyticThreadState(JsonNode.class, bucket, Optional.of(bean.collection_name())))
+							.when(t -> AssetStateDirectoryBean.StateDirectoryType.harvest == t, 
+										__ -> core_management_db_service.getBucketHarvestState(JsonNode.class, bucket, Optional.of(bean.collection_name())))
+							.when(t -> AssetStateDirectoryBean.StateDirectoryType.enrichment == t, 
+										__ -> core_management_db_service.getBucketEnrichmentState(JsonNode.class, bucket, Optional.of(bean.collection_name())))
+							.otherwise(__ -> null)
+					)
+					.ifPresent(to_delete -> to_delete.deleteDatastore());					
+			});
+		});
+		
+	}
+	
 	/** Deletes the data in all data services
 	 *  TODO: assume default ones for now 
 	 * @param bucket - the bucket to cleanse
@@ -183,15 +178,7 @@ public class BucketDeletionActor extends UntypedActor {
 		});
 		
 		if (!delete_bucket) { // (Else will be deleted in the main actor fn)
-			try {
-				DataBucketCrudService.removeBucketPath(bucket, service_context.getStorageService(), 
-						Optional.of("TODO"));
-			}
-			catch (Exception e) {
-				vals.add(CompletableFuture.completedFuture(
-							new BasicMessageBean(new Date(), false, "BucketDeletionActor", "deleteAllDataStoresForBucket", null, ErrorUtils.getLongForm("{0}", e), null)
-						));
-			}
+			vals.add(service_context.getStorageService().handleBucketDeletionRequest(bucket, false));
 		}		
 		
 		return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))

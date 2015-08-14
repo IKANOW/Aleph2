@@ -1184,7 +1184,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.count();
 	}
 	
-	protected static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
+	public static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
 		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();		

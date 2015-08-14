@@ -273,6 +273,10 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
 		
+		//TODO (ALEPH-23): also want to route to a harvester to let it know (eg give it the option of deleting storage) 
+
+		//(longer term I wonder if should allow the harvester reply to dictate the level of deletion, eg could return an _id and then only delete up to that id?)
+		
 		if (in.isPresent()) { // perform scheduled purge
 			
 			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			

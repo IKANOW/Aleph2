@@ -32,8 +32,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -67,9 +69,11 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 
 
+
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
+import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 import akka.event.japi.LookupEventBus;
 
@@ -88,6 +92,7 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	protected final IServiceContext _context;
 	protected final IManagementDbService _core_management_db;
 	protected final SetOnce<ICrudService<BucketDeletionMessage>> _bucket_deletion_queue = new SetOnce<>();
+	protected final SetOnce<Cancellable> _ticker = new SetOnce<>();
 	
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
 	
@@ -103,8 +108,8 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 		if (null != _core_management_db) {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
 			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
-			this.context().system().scheduler()
-				.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null);
+			_ticker.set(this.context().system().scheduler()
+						.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
 			
 			_logger.info("BucketDeletionSingletonActor has started on this node.");						
 		}		
@@ -182,6 +187,9 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 	 */
 	@Override
 	public void postStop() {
+		if (_ticker.isSet()) {
+			_ticker.get().cancel();
+		}
 		_logger.info("BucketDeletionSingletonActor has stopped on this node.");								
 	}
 }

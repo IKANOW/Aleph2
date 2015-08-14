@@ -79,7 +79,8 @@ public class ManagementDbActorContext {
 		});
 	}
 
-	/** Intended for testing: removes the singleton actors before the test/session shutsdown
+	/** Intended for testing: removes the singleton actors before the test/session shuts down
+	 *  (note will only work with MCDS because true singletons don't currently return an addressable ActorRef)
 	 */
 	public void onTestComplete() {
 		_delete_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
