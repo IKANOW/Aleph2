@@ -20,6 +20,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+
 import org.apache.hadoop.conf.Configuration;
 
 public class BatchEnrichmentJob{
@@ -44,11 +45,11 @@ public class BatchEnrichmentJob{
 
 		protected IEnrichmentModuleContext enrichmentContext = null;
 
-		private int batchSize = 1;
+		private int batchSize = 100;
 		protected BeJobBean beJob = null;;
 		protected EnrichmentControlMetadataBean ecMetadata = null;
 		protected SharedLibraryBean beSharedLibrary = null;
-			
+		List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();
 		
 		public BatchErichmentMapper(){
 			super();
@@ -82,8 +83,11 @@ public class BatchEnrichmentJob{
 				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob map");
 			System.out.println("BatchEnrichmentJob map");
-			List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();			
-			enrichmentBatchModule.onObjectBatch(batch);
+			batch.add(value);
+			if(batch.size()>=batchSize){	
+				enrichmentBatchModule.onObjectBatch(batch);
+				batch.clear();
+			}
 			
 		} // map
 
@@ -109,6 +113,14 @@ public class BatchEnrichmentJob{
 			this.enrichmentContext = enrichmentContext;
 		}
 		
+		@Override
+		protected void cleanup(
+				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context)
+				throws IOException, InterruptedException {
+			    //send out the rest of the batch
+				enrichmentBatchModule.onObjectBatch(batch);
+				batch.clear();
+		}
 		
 	} //BatchErichmentMapper
 
