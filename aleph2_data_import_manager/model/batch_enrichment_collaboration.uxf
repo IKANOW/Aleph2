@@ -92,7 +92,7 @@ bg=green</panel_attributes>
       <h>80</h>
     </coordinates>
     <panel_attributes>lt=&lt;.
-MSG_START,MSG_STOP</panel_attributes>
+BucketEnrichmentMessage</panel_attributes>
     <additional_attributes>10.0;60.0;700.0;10.0</additional_attributes>
   </element>
   <element>
