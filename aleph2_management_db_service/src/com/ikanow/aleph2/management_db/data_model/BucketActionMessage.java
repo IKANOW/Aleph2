@@ -142,6 +142,22 @@ public class BucketActionMessage implements Serializable {
 		public Boolean is_suspended() { return is_suspended; }
 		protected Boolean is_suspended;
 	}
+
+	/** Send a purge bucket action message with a set of hosts on which the harvester is believed to be running
+	 * @author acp
+	 */
+	public static class PurgeBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = 5993529005523980284L;
+		protected PurgeBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to delete a bucket
+		 * @param bucket - the bucket to delete
+		 * @param handling_clients - the nodes handling this bucket
+		 */
+		public PurgeBucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) {
+			super(bucket, handling_clients);
+		}
+	}
+	
 	
 	/** Send a delete bucket action message with a set of hosts on which the harvester is believed to be running
 	 * @author acp

@@ -15,7 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.services;
 
-import java.sql.Timestamp;
+import java.sql.Timestamp; //(provides a short cut for some datetime manipulation that doesn't confusingly refer to timezones)
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +26,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,6 +51,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
+import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
@@ -272,11 +275,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
-		
-		//TODO (ALEPH-23): also want to route to a harvester to let it know (eg give it the option of deleting storage) 
-
-		//(longer term I wonder if should allow the harvester reply to dictate the level of deletion, eg could return an _id and then only delete up to that id?)
-		
+				
 		if (in.isPresent()) { // perform scheduled purge
 			
 			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			
@@ -288,12 +287,19 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		}
 		else { // purge now...
 		
-			final CompletableFuture<Collection<BasicMessageBean>> res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
+			final CompletableFuture<Collection<BasicMessageBean>> sys_res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
+			
+			final CompletableFuture<Collection<BasicMessageBean>> user_res = BucketDeletionActor.notifyHarvesterOfPurge(to_purge, this.getDataBucketStatusStore(), this.getRetryStore(BucketActionRetryMessage.class));
+			//(longer term I wonder if should allow the harvester reply to dictate the level of deletion, eg could return an _id and then only delete up to that id?)
+
+			final CompletableFuture<Collection<BasicMessageBean>> combined_res = sys_res.thenCombine(user_res, (a, b) -> {
+				return Stream.concat(a.stream(), b.stream()).collect(Collectors.toList());
+			});
 			
 			return FutureUtils.createManagementFuture(
-					res.thenApply(msgs -> msgs.stream().allMatch(m -> m.success()))
+					combined_res.thenApply(msgs -> msgs.stream().allMatch(m -> m.success()))
 					, 
-					res);
+					combined_res);
 		}
 	}
 

@@ -270,6 +270,11 @@ public class DataBucketChangeActor extends AbstractActor {
 							return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), Optional.empty(), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
+						.when(BucketActionMessage.PurgeBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return tech_module.onPurge(msg.bucket(), context)
+									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+						})
 						.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
 							tech_module.onInit(context);
 							return (msg.is_suspended()

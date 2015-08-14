@@ -21,19 +21,27 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import scala.Tuple2;
 import scala.concurrent.duration.Duration;
+import akka.actor.ActorRef;
 import akka.actor.Inbox;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -42,21 +50,28 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class TestBucketDeletionActor {
+	private static final Logger _logger = LogManager.getLogger();		
 
 	@Inject 
 	protected IServiceContext _service_context = null;	
@@ -66,6 +81,44 @@ public class TestBucketDeletionActor {
 	protected ManagementDbActorContext _actor_context = null;
 
 	protected MockSearchIndexService _mock_index = null;
+	
+	/////////////////////////
+	
+	// SETUP
+	
+	protected static String _check_actor_called = null;
+	
+	// This one always accepts, and returns a message
+	public static class TestActor_Accepter extends UntypedActor {
+		public TestActor_Accepter(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Accept MESSAGE from: " + uuid);
+				_check_actor_called = uuid;
+				
+				this.sender().tell(
+						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+								new BasicMessageBean(
+										new Date(),
+										true,
+										uuid + "replaceme", // (this gets replaced by the bucket)
+										arg0.getClass().getSimpleName(),
+										null,
+										"handled",
+										null									
+										)),
+						this.self());
+			}
+		}		
+	}	
 	
 	@Before
 	public void testSetup() throws Exception {
@@ -99,51 +152,10 @@ public class TestBucketDeletionActor {
 		
 	public static class TestBean {};
 	
-	public DataBucketBean createBucketInfrastructure(final String path, boolean create_file_path) throws Exception {
-		System.out.println("CREATING BUCKET: " + path);
-		
-		// delete the existing path if present:
-		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + path));
-		}
-		catch (Exception e) {} // (fine, dir prob dones't delete)
-		
-		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", path).done().get();
-		
-		// Then create it:
-		
-		if (create_file_path) {
-			DataBucketCrudService.createFilePaths(bucket, _service_context.getStorageService());
-			final String bucket_path = System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name();
-			assertTrue("The file path has been created", new File(bucket_path + "/managed_bucket").exists());
-			FileUtils.writeStringToFile(new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test"), "");
-			assertTrue("The extra file path has been created", new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
-		}
-		
-		// Also create a state directory object so we can check that gets deleted
-		ICrudService<?> top_level_state_directory = _core_mgmt_db.getStateDirectory(Optional.empty(), Optional.empty());
-		top_level_state_directory.deleteDatastore().get();
-		assertEquals(0, top_level_state_directory.countObjects().get().intValue());
-		ICrudService<TestBean> harvest_state = _core_mgmt_db.getBucketHarvestState(TestBean.class, bucket, Optional.of("test1"));
-		harvest_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
-		assertEquals(0, harvest_state.countObjects().get().intValue());
-		ICrudService<TestBean> enrich_state = _core_mgmt_db.getBucketEnrichmentState(TestBean.class, bucket, Optional.of("test2"));
-		enrich_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
-		assertEquals(0, enrich_state.countObjects().get().intValue());
-		ICrudService<TestBean> analytics_state = _core_mgmt_db.getBucketAnalyticThreadState(TestBean.class, bucket, Optional.of("test3"));
-		analytics_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
-		assertEquals(0, analytics_state.countObjects().get().intValue());
-		assertEquals(3, top_level_state_directory.countObjects().get().intValue());
-		harvest_state.storeObject(new TestBean()).get();
-		enrich_state.storeObject(new TestBean()).get();
-		analytics_state.storeObject(new TestBean()).get();
-		assertEquals(1, harvest_state.countObjects().get().intValue());
-		assertEquals(1, enrich_state.countObjects().get().intValue());
-		assertEquals(1, analytics_state.countObjects().get().intValue());
-		
-		return bucket;
-	}
-
+	/////////////////////////
+	
+	// TEST
+	
 	@Test
 	public void test_bucketDeletionActor_fullDelete() throws Exception {
 		
@@ -204,17 +216,7 @@ public class TestBucketDeletionActor {
 	public void test_bucketDeletionActor_fullDelete_beanStillPresent() throws Exception {
 		final DataBucketBean bucket = createBucketInfrastructure("/test/full/delete/fail_bean_present", true);
 		
-		//final IManagementDbService underlying_mgmt_db = _core_mgmt_db.getUnderlyingPlatformDriver(IManagementDbService.class, Optional.empty()).get();
-				//_service_context.getService(IManagementDbService.class, Optional.empty()).get();
-		
-		@SuppressWarnings("unchecked")
-		final ICrudService<DataBucketBean> underlying_crud = (
-				ICrudService<DataBucketBean>) this._core_mgmt_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-		
-		underlying_crud.deleteDatastore().get();
-		assertEquals(0, underlying_crud.countObjects().get().intValue());
-		underlying_crud.storeObject(bucket).get();
-		assertEquals(1, underlying_crud.countObjects().get().intValue());
+		final ICrudService<DataBucketBean> underlying_crud = storeBucketAndStatus(bucket, false, null);
 		
 		final BucketDeletionMessage msg = new BucketDeletionMessage(bucket, new Date(), false);
 		
@@ -252,19 +254,17 @@ public class TestBucketDeletionActor {
 	
 	@Test
 	public void test_bucketDeletionActor_purge_immediate() throws Exception {
+		final String host = insertActor(TestActor_Accepter.class);
+		
 		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/immediate", true);
 		
-		final IManagementDbService underlying_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
-		underlying_mgmt_db.getDataBucketStore().deleteDatastore().get();
-		assertEquals(0, underlying_mgmt_db.getDataBucketStore().countObjects().get().intValue());
-		underlying_mgmt_db.getDataBucketStore().storeObject(bucket).get();
-		assertEquals(1, underlying_mgmt_db.getDataBucketStore().countObjects().get().intValue());
+		storeBucketAndStatus(bucket, true, host);
 		
 		final ManagementFuture<Boolean> res = _core_mgmt_db.purgeBucket(bucket, Optional.empty());
 		
 		// check result
-		assertTrue("Purge called succeeded", res.get());
-		assertEquals(2, res.getManagementResults().get().size());
+		assertTrue("Purge called succeeded: " + res.getManagementResults().get().stream().map(msg->msg.message()).collect(Collectors.joining(";")), res.get());
+		assertEquals(3, res.getManagementResults().get().size());
 		
 		//check system state afterwards
 		
@@ -287,12 +287,27 @@ public class TestBucketDeletionActor {
 	}
 
 	@Test
-	public void test_bucketDeletionActor_purge_delayed() throws Exception {
-		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/delayed", true);
+	public void test_bucketDeletionActor_purge_immediate_noStatus() throws Exception {
+		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/immediate/nostatus", true);
 		
+		storeBucketAndStatus(bucket, false, null);		
+		
+		final ManagementFuture<Boolean> res = _core_mgmt_db.purgeBucket(bucket, Optional.empty());
+		
+		// check result
+		assertFalse("Purge called failed: " + res.getManagementResults().get().stream().map(msg->msg.message()).collect(Collectors.joining(";")), res.get());
+		assertEquals(3, res.getManagementResults().get().size());
+	}
+
+	@Test
+	public void test_bucketDeletionActor_purge_delayed() throws Exception {
+		String host = insertActor(TestActor_Accepter.class);
+		
+		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/delayed", true);
+
 		final IManagementDbService underlying_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
-		underlying_mgmt_db.getDataBucketStore().storeObject(bucket).get();
-		assertEquals(1, underlying_mgmt_db.getDataBucketStore().countObjects().get().intValue());
+
+		storeBucketAndStatus(bucket, true, host);
 		
 		underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).deleteDatastore().get();
 		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
@@ -327,6 +342,8 @@ public class TestBucketDeletionActor {
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
 
+		assertEquals(_check_actor_called, host);
+		
 		// check mock index deleted:
 		assertEquals(1, _mock_index._handleBucketDeletionRequests.size());
 		final Collection<Tuple2<String, Object>> deletions = _mock_index._handleBucketDeletionRequests.get("handleBucketDeletionRequest");
@@ -339,6 +356,22 @@ public class TestBucketDeletionActor {
 	@After
 	public void cleanupTest() {
 		_actor_context.onTestComplete();
+	}
+	
+	/////////////////////////
+	
+	// UTILITY
+	
+	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+		String uuid = UuidUtils.get().getRandomUuid();
+		ManagementDbActorContext.get().getDistributedServices()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
+			.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+		
+		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
+		ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+
+		return uuid;
 	}
 	
 	protected void checkStateDirectoriesCleaned(DataBucketBean bucket) throws InterruptedException, ExecutionException {
@@ -361,4 +394,78 @@ public class TestBucketDeletionActor {
 		ICrudService<TestBean> analytics_state = _core_mgmt_db.getBucketAnalyticThreadState(TestBean.class, bucket, Optional.of("test3"));
 		assertEquals(1, analytics_state.countObjects().get().intValue());		
 	}
+
+	protected ICrudService<DataBucketBean> storeBucketAndStatus(final DataBucketBean bucket, boolean store_status, String host) throws InterruptedException, ExecutionException {
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> underlying_crud = (
+				ICrudService<DataBucketBean>) this._core_mgmt_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketStatusBean> underlying_crud_status = (
+				ICrudService<DataBucketStatusBean>) this._core_mgmt_db.getDataBucketStatusStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();		
+		underlying_crud.deleteDatastore().get();
+		underlying_crud_status.deleteDatastore().get();
+		assertEquals(0, underlying_crud.countObjects().get().intValue());
+		assertEquals(0, underlying_crud_status.countObjects().get().intValue());
+		underlying_crud.storeObject(bucket).get();
+		if (store_status) {
+			DataBucketStatusBean status_bean = BeanTemplateUtils.build(DataBucketStatusBean.class)
+														.with(DataBucketStatusBean::bucket_path, bucket.full_name())
+														.with(DataBucketStatusBean::node_affinity, null == host ? Collections.emptyList() : Arrays.asList(host))
+														.done().get();
+			underlying_crud_status.storeObject(status_bean).get();
+			assertEquals(1, underlying_crud_status.countObjects().get().intValue());
+		}
+		assertEquals(1, underlying_crud.countObjects().get().intValue());
+		
+		return underlying_crud;
+	}
+	
+	public DataBucketBean createBucketInfrastructure(final String path, boolean create_file_path) throws Exception {
+		_logger.info("CREATING BUCKET: " + path);
+		
+		// delete the existing path if present:
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + path));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
+										.with("full_name", path)
+										.with("harvest_technology_name_or_id", "test")
+										.done().get();
+		
+		// Then create it:
+		
+		if (create_file_path) {
+			DataBucketCrudService.createFilePaths(bucket, _service_context.getStorageService());
+			final String bucket_path = System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name();
+			assertTrue("The file path has been created", new File(bucket_path + "/managed_bucket").exists());
+			FileUtils.writeStringToFile(new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test"), "");
+			assertTrue("The extra file path has been created", new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+		}
+		
+		// Also create a state directory object so we can check that gets deleted
+		ICrudService<?> top_level_state_directory = _core_mgmt_db.getStateDirectory(Optional.empty(), Optional.empty());
+		top_level_state_directory.deleteDatastore().get();
+		assertEquals(0, top_level_state_directory.countObjects().get().intValue());
+		ICrudService<TestBean> harvest_state = _core_mgmt_db.getBucketHarvestState(TestBean.class, bucket, Optional.of("test1"));
+		harvest_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
+		assertEquals(0, harvest_state.countObjects().get().intValue());
+		ICrudService<TestBean> enrich_state = _core_mgmt_db.getBucketEnrichmentState(TestBean.class, bucket, Optional.of("test2"));
+		enrich_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
+		assertEquals(0, enrich_state.countObjects().get().intValue());
+		ICrudService<TestBean> analytics_state = _core_mgmt_db.getBucketAnalyticThreadState(TestBean.class, bucket, Optional.of("test3"));
+		analytics_state.deleteObjectsBySpec(CrudUtils.allOf(TestBean.class)).get();
+		assertEquals(0, analytics_state.countObjects().get().intValue());
+		assertEquals(3, top_level_state_directory.countObjects().get().intValue());
+		harvest_state.storeObject(new TestBean()).get();
+		enrich_state.storeObject(new TestBean()).get();
+		analytics_state.storeObject(new TestBean()).get();
+		assertEquals(1, harvest_state.countObjects().get().intValue());
+		assertEquals(1, enrich_state.countObjects().get().intValue());
+		assertEquals(1, analytics_state.countObjects().get().intValue());
+		
+		return bucket;
+	}
+
 }

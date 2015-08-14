@@ -70,6 +70,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.PurgeBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
@@ -326,119 +327,116 @@ public class TestDataBucketChangeActor {
 		final IHarvestTechnologyModule harvest_tech = ret_val.success();
 		
 		// Test 1: pass along errors:
-		
-		final BasicMessageBean error = HarvestErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
-		
-		final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToHarvester(
-				bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 
-				Validation.fail(error));
-
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
-		assertEquals(false, test1err.reply().success());
-		assertEquals("test_source", test1err.reply().source());
-		assertEquals("test_message", test1err.reply().command());
-		assertEquals("test_error", test1err.reply().message());
-
-		
+		{
+			final BasicMessageBean error = HarvestErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+			
+			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToHarvester(
+					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 
+					Validation.fail(error));
+	
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
+			assertEquals(false, test1err.reply().success());
+			assertEquals("test_source", test1err.reply().source());
+			assertEquals("test_message", test1err.reply().command());
+			assertEquals("test_error", test1err.reply().message());
+		}		
 		// Test 2: offer
-		
-		final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket);
-		
-		final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketChangeActor.talkToHarvester(
-				bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
-		final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
-		assertEquals("test2", test2_reply.source());
-		
+		{
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket);
+			
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketChangeActor.talkToHarvester(
+					bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
+			final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
+			assertEquals("test2", test2_reply.source());
+		}		
 		// Test 3: delete
-		
-		final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
-		
-		final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketChangeActor.talkToHarvester(
-				bucket, delete, "test3", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
-		assertEquals("test3", test3_reply.source());
-		assertEquals("called onDelete", test3_reply.reply().message());
-		assertEquals(true, test3_reply.reply().success());
-		
+		{
+			final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketChangeActor.talkToHarvester(
+					bucket, delete, "test3", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
+			assertEquals("test3", test3_reply.source());
+			assertEquals("called onDelete", test3_reply.reply().message());
+			assertEquals(true, test3_reply.reply().success());
+		}
 		// Test 4: new
-		
-		final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
-		
-		final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToHarvester(
-				bucket, create, "test4", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
-		assertEquals("test4", test4_reply.source());
-		assertEquals("called onNewSource: false", test4_reply.reply().message());
-		assertEquals(true, test4_reply.reply().success());
-		
+		{
+			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
+			
+			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToHarvester(
+					bucket, create, "test4", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
+			assertEquals("test4", test4_reply.source());
+			assertEquals("called onNewSource: false", test4_reply.reply().message());
+			assertEquals(true, test4_reply.reply().success());
+		}		
 		// Test 5: update
-		
-		final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
-		
-		final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToHarvester(
-				bucket, update, "test5", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
-		assertEquals("test5", test5_reply.source());
-		assertEquals("called onUpdatedSource true", test5_reply.reply().message());
-		assertEquals(true, test5_reply.reply().success());
-		
+		{
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToHarvester(
+					bucket, update, "test5", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
+			assertEquals("test5", test5_reply.source());
+			assertEquals("called onUpdatedSource true", test5_reply.reply().message());
+			assertEquals(true, test5_reply.reply().success());
+		}		
 		// Test 6: update state - (a) resume, (b) suspend
-		
-		final BucketActionMessage.UpdateBucketStateActionMessage update_state = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, Collections.emptySet());
-		
-		final CompletableFuture<BucketActionReplyMessage> test6 = DataBucketChangeActor.talkToHarvester(
-				bucket, update_state, "test6", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test6_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6.get();
-		assertEquals("test6", test6_reply.source());
-		assertEquals("called onSuspend", test6_reply.reply().message());
-		assertEquals(true, test6_reply.reply().success());
-
-		final BucketActionMessage.UpdateBucketStateActionMessage update_stateb = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, false, Collections.emptySet());
-		
-		final CompletableFuture<BucketActionReplyMessage> test6b = DataBucketChangeActor.talkToHarvester(
-				bucket, update_stateb, "test6b", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6b.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test6b_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6b.get();
-		assertEquals("test6b", test6b_reply.source());
-		assertEquals("called onResume", test6b_reply.reply().message());
-		assertEquals(true, test6b_reply.reply().success());
-		
-		// Test 7: unrecognized
-		
-		// Use reflection to create a "raw" BucketActionMessage
-		final Constructor<BucketActionMessage> contructor = (Constructor<BucketActionMessage>) BucketActionMessage.class.getDeclaredConstructor(DataBucketBean.class);
-		contructor.setAccessible(true);
-		BucketActionMessage bad_msg = contructor.newInstance(bucket);
-
-		final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketChangeActor.talkToHarvester(
-				bucket, bad_msg, "test7", _actor_context.getNewHarvestContext(), 
-				Validation.success(harvest_tech));		
-		
-		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
-		final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();
-		assertEquals(false, test7_reply.reply().success());
-		assertEquals("test7", test7_reply.source());
-		assertEquals("Message type BucketActionMessage not recognized for bucket /test/path/", test7_reply.reply().message());
-		
+		{
+			final BucketActionMessage.UpdateBucketStateActionMessage update_state = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test6 = DataBucketChangeActor.talkToHarvester(
+					bucket, update_state, "test6", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test6_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6.get();
+			assertEquals("test6", test6_reply.source());
+			assertEquals("called onSuspend", test6_reply.reply().message());
+			assertEquals(true, test6_reply.reply().success());
+	
+			final BucketActionMessage.UpdateBucketStateActionMessage update_stateb = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, false, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test6b = DataBucketChangeActor.talkToHarvester(
+					bucket, update_stateb, "test6b", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6b.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test6b_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6b.get();
+			assertEquals("test6b", test6b_reply.source());
+			assertEquals("called onResume", test6b_reply.reply().message());
+			assertEquals(true, test6b_reply.reply().success());
+		}		
+		// Test 7: purge
+		{
+			final PurgeBucketActionMessage purge_msg = new PurgeBucketActionMessage(bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketChangeActor.talkToHarvester(
+					bucket, purge_msg, "test7", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+	
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();		
+			
+			assertEquals("test7", test7_reply.source());
+			assertEquals("called onPurge", test7_reply.reply().message());
+		}		
 		// Test 8: test
+		{
 		//TODO check this in when I have my test code put together
 //		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
 //		final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
@@ -452,6 +450,24 @@ public class TestDataBucketChangeActor {
 //		assertEquals("test8", test8_reply.source());
 //		assertEquals("10 / 1", test8_reply.reply().message());
 //		assertEquals(true, test8_reply.reply().success());
+		}
+		// Test X: unrecognized
+		{
+			// Use reflection to create a "raw" BucketActionMessage
+			final Constructor<BucketActionMessage> contructor = (Constructor<BucketActionMessage>) BucketActionMessage.class.getDeclaredConstructor(DataBucketBean.class);
+			contructor.setAccessible(true);
+			BucketActionMessage bad_msg = contructor.newInstance(bucket);
+	
+			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketChangeActor.talkToHarvester(
+					bucket, bad_msg, "testX", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, testX.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage testX_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) testX.get();
+			assertEquals(false, testX_reply.reply().success());
+			assertEquals("testX", testX_reply.source());
+			assertEquals("Message type BucketActionMessage not recognized for bucket /test/path/", testX_reply.reply().message());
+		}		
 	}
 	
 	@Test 

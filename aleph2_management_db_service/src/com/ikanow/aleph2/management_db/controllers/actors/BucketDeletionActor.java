@@ -15,7 +15,10 @@
 ******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -32,17 +35,21 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
@@ -59,7 +66,7 @@ public class BucketDeletionActor extends UntypedActor {
 	protected final ManagementDbActorContext _actor_context;
 	protected final IServiceContext _context;
 	protected final LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String> _bucket_deletion_bus;
-	protected final IManagementDbService _core_management_db_service;
+	protected final IManagementDbService _core_mgmt_db;
 	protected final IStorageService _storage_service;
 	protected final SetOnce<ICrudService<DataBucketBean>> _bucket_crud_proxy = new SetOnce<>();
 	
@@ -69,13 +76,13 @@ public class BucketDeletionActor extends UntypedActor {
 		_context = _actor_context.getServiceContext();
 		_bucket_deletion_bus = _actor_context.getDeletionMgmtBus();		
 		_bucket_deletion_bus.subscribe(this.self(), ActorUtils.BUCKET_DELETION_BUS);
-		_core_management_db_service = _context.getCoreManagementDbService();
+		_core_mgmt_db = _context.getCoreManagementDbService();
 		_storage_service = _context.getStorageService();
 	}
 	@Override
 	public void onReceive(Object arg0) throws Exception {
 		if (!_bucket_crud_proxy.isSet()) { // (for some reason, core_mdb.anything() can fail in the c'tor)
-			_bucket_crud_proxy.set(_core_management_db_service.getDataBucketStore());
+			_bucket_crud_proxy.set(_core_mgmt_db.getDataBucketStore());
 		}
 		//_logger.info("REAL ACTOR Received message from singleton! " + arg0.getClass().toString());
 		if (!BucketDeletionMessage.class.isAssignableFrom(arg0.getClass())) { // not for me
@@ -100,6 +107,8 @@ public class BucketDeletionActor extends UntypedActor {
 			// 2b) Delete data in all data services
 			deleteAllDataStoresForBucket(msg.bucket(), _context, false);
 			
+			notifyHarvesterOfPurge(msg.bucket(), _core_mgmt_db.getDataBucketStatusStore(), _core_mgmt_db.getRetryStore(BucketActionRetryMessage.class));
+			
 			// If we got this far then remove from the queue
 			sender_closure.tell(msg, self_closure);
 		}
@@ -115,7 +124,7 @@ public class BucketDeletionActor extends UntypedActor {
 					}
 					else { 						
 						// 3a) Delete the state directories					
-						deleteAllStateObjectsForBucket(msg.bucket(), _core_management_db_service, false);
+						deleteAllStateObjectsForBucket(msg.bucket(), _core_mgmt_db, false);
 						
 						// 3b) Delete data in all data services
 						deleteAllDataStoresForBucket(msg.bucket(), _context, true);
@@ -159,6 +168,30 @@ public class BucketDeletionActor extends UntypedActor {
 			});
 		});
 		
+	}
+	
+	/** Notifies the external harvester of the purge operation
+	 * @param bucket
+	 * @param retry_store
+	 * @return
+	 */
+	public static CompletableFuture<Collection<BasicMessageBean>> notifyHarvesterOfPurge(final DataBucketBean to_purge, final ICrudService<DataBucketStatusBean> status_store, final ICrudService<BucketActionRetryMessage> retry_store)
+	{
+		return status_store.getObjectBySpec(CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, to_purge.full_name()))
+			.thenCompose(status -> {
+				if (status.isPresent()) {
+					final BucketActionMessage.PurgeBucketActionMessage purge_msg = new BucketActionMessage.PurgeBucketActionMessage(to_purge, new HashSet<String>(status.get().node_affinity()));
+					final CompletableFuture<Collection<BasicMessageBean>> management_results =
+							MgmtCrudUtils.applyRetriableManagementOperation(to_purge, 
+									ManagementDbActorContext.get(), retry_store, purge_msg,
+									source -> new BucketActionMessage.PurgeBucketActionMessage(to_purge, new HashSet<String>(Arrays.asList(source))));
+					return management_results;
+				}
+				else {
+					return CompletableFuture.completedFuture(
+							Arrays.asList(new BasicMessageBean(new Date(), false, "CoreManagementDbService", "purgeBucket", null, "No bucket status for " + to_purge.full_name(), null)));
+				}
+			});		
 	}
 	
 	/** Deletes the data in all data services
