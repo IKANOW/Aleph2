@@ -49,9 +49,14 @@
 		<version>0.7.2.201409121644</version>
 		<configuration>
 			<excludes>
+				<!--  some places suggest this is right... -->
 				<exclude>**backtype.storm**</exclude>
 				<exclude>**com.ikanow.aleph2.data_import_manager.harvest.modules**</exclude>
 				<exclude>**com.ikanow.aleph2.data_import_manager.batch_enrichment.module**</exclude>
+				<!--  other places here: -->
+				<exclude>**/backtype/storm/*</exclude>
+				<exclude>**/com/ikanow/aleph2/data_import_manager/harvest/modules/*</exclude>
+				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/module/*</exclude>
 			</excludes>
 		</configuration>
 		<executions>
