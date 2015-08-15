@@ -217,6 +217,8 @@ public class TestBucketDeletionActor {
 		final DataBucketBean bucket = createBucketInfrastructure("/test/full/delete/fail_bean_present", true);
 		
 		final ICrudService<DataBucketBean> underlying_crud = storeBucketAndStatus(bucket, false, null);
+		_core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).deleteDatastore().get();
+		assertEquals(0, _core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
 		
 		final BucketDeletionMessage msg = new BucketDeletionMessage(bucket, new Date(), false);
 		

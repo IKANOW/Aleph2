@@ -69,6 +69,11 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
 	protected final SharedLibraryCrudService _shared_library_service;
 	
+	/** DON'T USE THIS DIRECTLY, ONLY VIA getBucketDeletionQueue
+	 * (lazily constructed) 
+	 */
+	protected ICrudService<?> _bucket_deletion_q = null;
+	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
 	
@@ -232,12 +237,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getBucketDeletionQueue(java.lang.Class)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> ICrudService<T> getBucketDeletionQueue(
 			Class<T> deletion_queue_clazz) {
 		if (!_read_only)
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
-		return _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only);
+		if (null == _bucket_deletion_q) {
+			_bucket_deletion_q = _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only);
+		}
+		return (ICrudService<T>) _bucket_deletion_q;
 	}
 
 	/* (non-Javadoc)
@@ -275,7 +284,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
-				
+		
 		if (in.isPresent()) { // perform scheduled purge
 			
 			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			
