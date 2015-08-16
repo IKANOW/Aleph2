@@ -1127,21 +1127,21 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		
-		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
 		
 		try (final FSDataOutputStream out = 
 				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
 		{} //(ie close after creating)
 	}
 
-	/** Deletes the entire bucket, ie data and 
+	/** Deletes the entire bucket, ie data and state
 	 * @param to_delete
 	 * @param storage_service
 	 */
 	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service, Optional<String> extra_path) throws Exception
 	{ 
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
 		dfs.delete(new Path(bucket_root + extra_path.map(s -> "/" + s).orElse("")), true);
 	}
 	
@@ -1154,7 +1154,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	public static boolean doesBucketPathExist(final DataBucketBean to_check, final IStorageService storage_service, final Optional<String> file) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-		final String bucket_root = storage_service.getRootPath() + "/" + to_check.full_name();
+		final String bucket_root = storage_service.getRootPath() + "/" + to_check.full_name() + IStorageService.BUCKET_SUFFIX;
 		
 		try {
 			dfs.getFileStatus(new Path(bucket_root + file.map(s -> "/" + s).orElse("")));
@@ -1195,22 +1195,22 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		}
 		
 		Arrays.asList(
-				bucket_root + "/managed_bucket",
-				bucket_root + "/managed_bucket/logs",
-				bucket_root + "/managed_bucket/logs/harvest",
-				bucket_root + "/managed_bucket/logs/enrichment",
-				bucket_root + "/managed_bucket/logs/storage",
-				bucket_root + "/managed_bucket/assets",
-				bucket_root + "/managed_bucket/import",
-				bucket_root + "/managed_bucket/temp",
-				bucket_root + "/managed_bucket/stored",
-				bucket_root + "/managed_bucket/stored/raw",
-				bucket_root + "/managed_bucket/stored/json",
-				bucket_root + "/managed_bucket/stored/processed",
-				bucket_root + "/managed_bucket/ready"
+				"",
+				"logs",
+				"logs/harvest",
+				"logs/enrichment",
+				"logs/storage",
+				"assets",
+				"import",
+				"temp",
+				"stored",
+				"stored/raw",
+				"stored/json",
+				"stored/processed",
+				"ready"
 				)
 				.stream()
-				.map(s -> new Path(s))
+				.map(s -> new Path(bucket_root + IStorageService.BUCKET_SUFFIX + s))
 				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
 	}
 	

@@ -884,11 +884,11 @@ public class TestDataBucketCrudService_Create {
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + ".DELETED").createNewFile();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").createNewFile();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 
-		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + ".DELETED").exists());
+		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").exists());
 		
 		// OK now try inserting the bucket, should error:
 		

@@ -210,11 +210,11 @@ public class TestDataBucketCrudService_Delete {
 		
 		//(create a file path also)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + IStorageService.BUCKET_SUFFIX));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator +  bucket.full_name()).mkdirs();
+			new File(System.getProperty("java.io.tmpdir") + File.separator +  bucket.full_name() + IStorageService.BUCKET_SUFFIX).mkdirs();
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
@@ -293,7 +293,7 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(1L, _bucket_deletion_queue.countObjects().get().intValue());
 		final BucketDeletionMessage deletion_msg = _bucket_deletion_queue.getObjectById("/bucket/path/here/1").get().get();
 		assertEquals(deletion_msg._id(), deletion_msg.bucket().full_name());
-		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 5.0*1000.0); // ie within 5s of when it was added)		
+		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 10.0*1000.0); // ie within 10s of when it was added)		
 	}
 
 	@Test
@@ -395,7 +395,7 @@ public class TestDataBucketCrudService_Delete {
 		assertEquals(1L, _bucket_deletion_queue.countObjects().get().intValue());
 		final BucketDeletionMessage deletion_msg = _bucket_deletion_queue.getObjectById("/bucket/path/here/1").get().get();
 		assertEquals(deletion_msg._id(), deletion_msg.bucket().full_name());
-		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 5.0*1000.0); // ie within 5s of when it was added)		
+		assertEquals(Long.valueOf(deletion_msg.delete_on().getTime()).doubleValue(), Long.valueOf(approx_now.getTime() + 60L*1000L), 10.0*1000.0); // ie within 10s of when it was added)		
 	}
 	
 	@Test
