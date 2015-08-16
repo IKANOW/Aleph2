@@ -44,9 +44,22 @@ import akka.actor.Props;
 import akka.event.japi.LookupEventBus;
 
 /** Possibly temporary class to provide minimal actor context, pending moving to Guice
+ *  (Note: has some ugly singleton/mutable code in here - because it's not part of Guice it gets constructed (currently) 3 times:
+ *   - manually from V1SyncModule (?! need to address that at some point), and from the DataBucketCrud(status)Service objects via guice injection
+ *   This class is a good illustration of why we need to inject guice into Akka! 
  * @author acp
  */
 public class ManagementDbActorContext {
+	
+	protected static final SetOnce<ActorRef> _bucket_action_supervisor = new SetOnce<>();
+	protected static final SetOnce<ManagementDbActorContext> _singleton = new SetOnce<>();
+	
+	protected final IServiceContext _service_context;
+	protected final ICoreDistributedServices _distributed_services;
+	
+	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus;
+	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _streaming_enrichment_bus;
+	protected final SetOnce<LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String>> _delete_round_robin_bus;
 	
 	// Some mutable state just used for cleaning up in tests
 	private Optional<ActorRef> _delete_singleton = Optional.empty();
@@ -58,11 +71,22 @@ public class ManagementDbActorContext {
 	@Inject
 	public ManagementDbActorContext(final IServiceContext service_context)
 	{
-		_service_context = service_context;
-		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		_singleton = this;
-		
-		_distributed_services.getApplicationName()
+		boolean first_time = false; //(WARNING: internal mutable state, v briefly used because of sync clause)
+		synchronized (_singleton) {
+			if (!_singleton.isSet()) {
+				first_time = true;
+				_singleton.set(this);
+			}
+		}
+		if (first_time) { // First time - actually create the object			
+			_service_context = service_context;
+			_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+			
+			_bucket_action_bus = new SetOnce<>();
+			_streaming_enrichment_bus = new SetOnce<>();
+			_delete_round_robin_bus = new SetOnce<>();
+			
+			_distributed_services.getApplicationName()
 			.filter(name -> name.equals(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()))
 			.ifPresent(__ -> {
 				_distributed_services.runOnAkkaJoin(() -> {
@@ -75,8 +99,17 @@ public class ManagementDbActorContext {
 		
 					// subscriber one worker per node
 					_delete_worker = Optional.of(_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR));
+				});
 			});
-		});
+		}
+		else { // Just a copy of the object (note only mutable state are the Optionals, only used for tests, these can be ignored):
+			_service_context = _singleton.get()._service_context;
+			_distributed_services = _singleton.get()._distributed_services;
+			
+			_bucket_action_bus = _singleton.get()._bucket_action_bus;
+			_streaming_enrichment_bus = _singleton.get()._streaming_enrichment_bus;
+			_delete_round_robin_bus = _singleton.get()._delete_round_robin_bus;			
+		}		
 	}
 
 	/** Intended for testing: removes the singleton actors before the test/session shuts down
@@ -103,10 +136,12 @@ public class ManagementDbActorContext {
 	}
 	
 	public synchronized ActorRef getBucketActionSupervisor() {
-		if (null == _bucket_action_supervisor) {
-			_bucket_action_supervisor = _distributed_services.getAkkaSystem().actorOf(Props.create(BucketActionSupervisor.class), ActorUtils.BUCKET_ACTION_SUPERVISOR);
+		synchronized (_singleton) {
+			if (!_bucket_action_supervisor.isSet()) {
+				_bucket_action_supervisor.set(_distributed_services.getAkkaSystem().actorOf(Props.create(BucketActionSupervisor.class), ActorUtils.BUCKET_ACTION_SUPERVISOR));
+			}
+			return _bucket_action_supervisor.get();
 		}
-		return _bucket_action_supervisor;
 	}
 
 	/** Returns a static accessor to the bucket action message bus
@@ -165,14 +200,6 @@ public class ManagementDbActorContext {
 	 */
 	public static ManagementDbActorContext get() {
 		// (This will only not be set if guice injection has failed, in which case there are deeper problems...)
-		return _singleton;		
+		return _singleton.get();		
 	}
-	
-	protected static ActorRef _bucket_action_supervisor;
-	protected static ManagementDbActorContext _singleton = null;
-	protected final ICoreDistributedServices _distributed_services;
-	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus = new SetOnce<>();
-	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _streaming_enrichment_bus = new SetOnce<>();
-	protected final SetOnce<LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String>> _delete_round_robin_bus = new SetOnce<>();
-	protected final IServiceContext _service_context;
 }
