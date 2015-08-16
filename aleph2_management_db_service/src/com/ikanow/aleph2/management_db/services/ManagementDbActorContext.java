@@ -66,14 +66,20 @@ public class ManagementDbActorContext {
 	private Optional<ActorRef> _delete_worker = Optional.empty();
 	private Optional<ActorRef> _test_singleton = Optional.empty();
 	
-	/** Creates a new actor context
+	/** Creates a new actor context (production manual, or guice) 
 	 */
 	@Inject
-	public ManagementDbActorContext(final IServiceContext service_context)
+	public ManagementDbActorContext(final IServiceContext service_context) {
+		this(service_context, false);
+	}
+	
+	/** Creates a new actor context (for tests - creates a new instance every time)
+	 */
+	public ManagementDbActorContext(final IServiceContext service_context, boolean override_singleton)
 	{
 		boolean first_time = false; //(WARNING: internal mutable state, v briefly used because of sync clause)
 		synchronized (_singleton) {
-			if (!_singleton.isSet()) {
+			if (override_singleton || !_singleton.isSet()) {
 				first_time = true;
 				_singleton.set(this);
 			}

@@ -144,7 +144,7 @@ public class TestBucketActionChooseActor {
 		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), mock_core_distributed_services);
 		
 		@SuppressWarnings("unused")
-		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context);		
+		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context, true);		
 	}
 	
 	@Test

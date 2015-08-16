@@ -143,7 +143,7 @@ public class TestBucketDeletionActor {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		new ManagementDbActorContext(_service_context);		
+		new ManagementDbActorContext(_service_context, true);		
 		_actor_context = ManagementDbActorContext.get();
 		
 		_mock_index = (MockSearchIndexService) _service_context.getSearchIndexService().get();

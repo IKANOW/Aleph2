@@ -114,7 +114,7 @@ public class TestBucketDeletionSingletonActor {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		new ManagementDbActorContext(_service_context);		
+		new ManagementDbActorContext(_service_context, true);		
 		_actor_context = ManagementDbActorContext.get();
 		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		

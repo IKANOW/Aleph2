@@ -79,7 +79,7 @@ public class TestCoreManagementDbModule {
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
 		_cds = new MockCoreDistributedServices();
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _cds);
-		_actor_context = new ManagementDbActorContext(_mock_service_context);
+		_actor_context = new ManagementDbActorContext(_mock_service_context, true);
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _actor_context);
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _actor_context); 
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);		

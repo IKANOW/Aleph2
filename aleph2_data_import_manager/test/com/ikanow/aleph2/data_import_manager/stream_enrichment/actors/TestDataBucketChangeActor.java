@@ -108,7 +108,7 @@ public class TestDataBucketChangeActor {
 		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 		
-		_db_actor_context = new ManagementDbActorContext(_service_context);				
+		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
 		
 		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null); //TODO
 		app_injector.injectMembers(_actor_context);

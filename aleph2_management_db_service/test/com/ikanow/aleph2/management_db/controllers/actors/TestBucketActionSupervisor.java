@@ -181,7 +181,7 @@ public class TestBucketActionSupervisor {
 		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), mock_core_distributed_services);
 		
 		@SuppressWarnings("unused")
-		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context);		
+		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context, true);		
 	}
 	
 	public DataBucketBean getBucket(String id, boolean stream, boolean harvest) {
