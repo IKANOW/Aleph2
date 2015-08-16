@@ -40,6 +40,7 @@ import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
@@ -118,9 +119,19 @@ public class BucketDeletionActor extends UntypedActor {
 			_bucket_crud_proxy.get().getObjectBySpec(bucket_selector)
 				.thenAccept(bucket_opt -> {
 					if (bucket_opt.isPresent()) {
+						
 						// Hasn't been deleted yet - try to delete async and then just exit out
-						_bucket_crud_proxy.get().deleteObjectBySpec(bucket_selector);
+						CompletableFuture<Boolean> deleted = _bucket_crud_proxy.get().deleteObjectBySpec(bucket_selector);
 						//(see you in an hour!)
+						
+						//(some logging)
+						deleted.thenAccept(b -> {
+							_logger.warn(ErrorUtils.get("Problem: deleting bucket {0} not yet removed from bucket store: retrying delete: {1}", msg.bucket().full_name(), b));							
+						})
+						.exceptionally(t -> {
+							_logger.error(ErrorUtils.get("Problem: deleting bucket {1} not yet removed from bucket store: retrying delete failed: {0}", t, msg.bucket().full_name()));
+							return null;
+						});						
 					}
 					else { 						
 						// 3a) Delete the state directories					
