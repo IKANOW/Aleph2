@@ -50,10 +50,12 @@
 		<configuration>
 			<excludes>
 				<!--  some places suggest this is right... -->
+				<!-- (note the first line appeared to fix a bamboo issue, the second two lines appear to do nothing) -->
 				<exclude>**backtype.storm**</exclude>
 				<exclude>**com.ikanow.aleph2.data_import_manager.harvest.modules**</exclude>
 				<exclude>**com.ikanow.aleph2.data_import_manager.batch_enrichment.module**</exclude>
 				<!--  other places here: -->
+				<!--  (note that the second two lines definitely excluded that code from coveralls) -->
 				<exclude>**/backtype/storm/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/harvest/modules/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/module/*</exclude>

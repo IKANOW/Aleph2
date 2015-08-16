@@ -54,6 +54,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -256,11 +257,11 @@ public class TestBucketDeletionActor {
 	
 	@Test
 	public void test_bucketDeletionActor_purge_immediate() throws Exception {
-		final String host = insertActor(TestActor_Accepter.class);
+		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		
 		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/immediate", true);
 		
-		storeBucketAndStatus(bucket, true, host);
+		storeBucketAndStatus(bucket, true, host_actor._1());
 		
 		final ManagementFuture<Boolean> res = _core_mgmt_db.purgeBucket(bucket, Optional.empty());
 		
@@ -286,6 +287,8 @@ public class TestBucketDeletionActor {
 		assertEquals("/test/purge/immediate", deletions.iterator().next()._1());
 		assertEquals(false, deletions.iterator().next()._2());
 		_mock_index._handleBucketDeletionRequests.clear();
+		
+		shutdownActor(host_actor._2());
 	}
 
 	@Test
@@ -303,13 +306,13 @@ public class TestBucketDeletionActor {
 
 	@Test
 	public void test_bucketDeletionActor_purge_delayed() throws Exception {
-		String host = insertActor(TestActor_Accepter.class);
+		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		
 		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/delayed", true);
 
 		final IManagementDbService underlying_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 
-		storeBucketAndStatus(bucket, true, host);
+		storeBucketAndStatus(bucket, true, host_actor._1());
 		
 		underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).deleteDatastore().get();
 		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
@@ -344,7 +347,7 @@ public class TestBucketDeletionActor {
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
 
-		assertEquals(_check_actor_called, host);
+		assertEquals(_check_actor_called, host_actor._1());
 		
 		// check mock index deleted:
 		assertEquals(1, _mock_index._handleBucketDeletionRequests.size());
@@ -353,6 +356,8 @@ public class TestBucketDeletionActor {
 		assertEquals("/test/purge/delayed", deletions.iterator().next()._1());
 		assertEquals(false, deletions.iterator().next()._2());
 		_mock_index._handleBucketDeletionRequests.clear();
+		
+		shutdownActor(host_actor._2());		
 	}
 	
 	@After
@@ -364,7 +369,7 @@ public class TestBucketDeletionActor {
 	
 	// UTILITY
 	
-	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+	public Tuple2<String,ActorRef> insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
 			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -373,7 +378,11 @@ public class TestBucketDeletionActor {
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
 		ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 
-		return uuid;
+		return Tuples._2T(uuid, handler);
+	}
+	
+	public void shutdownActor(ActorRef to_remove) {
+		ManagementDbActorContext.get().getBucketActionMessageBus().unsubscribe(to_remove);
 	}
 	
 	protected void checkStateDirectoriesCleaned(DataBucketBean bucket) throws InterruptedException, ExecutionException {

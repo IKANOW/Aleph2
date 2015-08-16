@@ -205,6 +205,9 @@ public class TestBucketDeletionSingletonActor {
 					.when(BucketDeletionMessage::deletion_attempts, 0)
 				) 
 				.get().intValue());
+		
+		// Tidy up for this test:
+		delete_bus.unsubscribe(test_deleter);
 	}
 	
 	@After
