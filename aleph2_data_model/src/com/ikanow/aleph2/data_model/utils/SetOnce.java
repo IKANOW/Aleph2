@@ -59,4 +59,14 @@ public class SetOnce<T> {
 	public boolean isSet() {
 		return _t != null;
 	}
+	
+	/** Force override the current value - SHOULD BE USED WITH EXTREME CARE - EG ONLY IN TESTS
+	 * @param t - the value to set
+	 * @return the value just set
+	 */
+	@Deprecated
+	public T forceSet(T t) {
+		_t = t;
+		return t;
+	}
 }

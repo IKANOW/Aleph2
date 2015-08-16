@@ -11,6 +11,7 @@ import java.util.Optional;
 
 
 
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -28,6 +29,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
 
 
 
@@ -75,11 +77,16 @@ public class ManagementDbActorContext {
 	
 	/** Creates a new actor context (for tests - creates a new instance every time)
 	 */
+	@SuppressWarnings("deprecation")
 	public ManagementDbActorContext(final IServiceContext service_context, boolean override_singleton)
 	{
 		boolean first_time = false; //(WARNING: internal mutable state, v briefly used because of sync clause)
 		synchronized (_singleton) {
-			if (override_singleton || !_singleton.isSet()) {
+			if (override_singleton) {
+				first_time = true;
+				_singleton.forceSet(this);				
+			}
+			else if (!_singleton.isSet()) {
 				first_time = true;
 				_singleton.set(this);
 			}
