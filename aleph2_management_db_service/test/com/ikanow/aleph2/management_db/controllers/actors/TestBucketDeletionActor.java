@@ -121,6 +121,7 @@ public class TestBucketDeletionActor {
 		}		
 	}	
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void testSetup() throws Exception {
 		

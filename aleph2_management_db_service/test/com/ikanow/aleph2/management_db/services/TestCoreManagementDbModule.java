@@ -65,6 +65,7 @@ public class TestCoreManagementDbModule {
 	private MockCoreDistributedServices _cds;
 	private ManagementDbActorContext _actor_context;
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void testSetup() throws Exception {
 		

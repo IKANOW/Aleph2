@@ -104,7 +104,7 @@ public class TestBucketActionDistributionActor {
 		MockCoreDistributedServices mock_core_distributed_services = new MockCoreDistributedServices();
 		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), mock_core_distributed_services);
 		
-		@SuppressWarnings("unused")
+		@SuppressWarnings({ "unused", "deprecation" })
 		ManagementDbActorContext singleton = new ManagementDbActorContext(mock_service_context, true);		
 	}
 	

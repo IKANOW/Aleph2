@@ -88,6 +88,7 @@ public class TestDataBucketCrudService_Delete {
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	public ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void setup() throws Exception {
 		

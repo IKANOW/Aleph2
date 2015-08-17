@@ -89,6 +89,7 @@ public class TestDataBucketChangeActor {
 	protected DataImportActorContext _actor_context;
 	protected ManagementDbActorContext _db_actor_context;
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void setupDependencies() throws Exception {
 		if (null != _service_context) {

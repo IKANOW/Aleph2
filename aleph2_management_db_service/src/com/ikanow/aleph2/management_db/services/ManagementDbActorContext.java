@@ -78,7 +78,7 @@ public class ManagementDbActorContext {
 	/** Creates a new actor context (for tests - creates a new instance every time)
 	 *  DON'T CALL EXCEPT IN TESTS
 	 */
-	@SuppressWarnings("deprecation")
+	@Deprecated
 	public ManagementDbActorContext(final IServiceContext service_context, boolean override_singleton)
 	{
 		boolean first_time = false; //(WARNING: internal mutable state, v briefly used because of sync clause)

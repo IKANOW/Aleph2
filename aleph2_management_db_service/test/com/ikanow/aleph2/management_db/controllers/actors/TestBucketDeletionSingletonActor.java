@@ -92,6 +92,7 @@ public class TestBucketDeletionSingletonActor {
 		}
 	};
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void testSetup() throws Exception {
 		

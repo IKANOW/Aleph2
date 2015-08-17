@@ -111,6 +111,7 @@ public class TestDataBucketCrudService_Create {
 	public ICrudService<DataBucketStatusBean> _underlying_bucket_status_crud;
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	
+	@SuppressWarnings("deprecation")
 	@Before
 	public void setup() throws Exception {
 		
