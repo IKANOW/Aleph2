@@ -25,6 +25,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
+import com.ikanow.aleph2.data_model.objects.shared.AuthenticationBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -178,4 +179,10 @@ public interface IManagementDbService extends IUnderlyingService {
 	 * @return the implementation of the CRUD service 
 	 */
 	ICrudService<AssetStateDirectoryBean> getStateDirectory(final Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter);
+	
+	/** Gets the store of data buckets
+	 * @return  the CRUD service for the bucket store
+	 */
+	IManagementCrudService<AuthenticationBean> getAuthenticationStore();
+
 }
