@@ -282,6 +282,11 @@ public class DataBucketChangeActor extends AbstractActor {
 									: tech_module.onResume(bucket, context))
 										.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
+						.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							return tech_module.onTestSource(bucket, msg.get_test_spec(), context)
+									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+						})
 						.otherwise(msg -> { // return "command not recognized" error
 							tech_module.onInit(context);
 							return CompletableFuture.completedFuture(

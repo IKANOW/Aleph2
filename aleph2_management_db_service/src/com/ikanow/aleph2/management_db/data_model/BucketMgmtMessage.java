@@ -88,5 +88,22 @@ public class BucketMgmtMessage implements Serializable {
 		private Date delete_on;
 		private Integer deletion_attempts;
 		private Boolean data_only;
-	}	
+	}
+	
+	public static class BucketTimeoutMessage extends BucketMgmtMessage implements Serializable {
+		private static final long serialVersionUID = -1141752282442676055L;
+		private DataBucketBean bucket;
+		private long utc_timeout;
+		
+		protected BucketTimeoutMessage() { super(null); }
+		
+		public BucketTimeoutMessage(final DataBucketBean bucket, final long utc_timeout) {
+			super(bucket);
+			this.bucket = bucket;
+			this.utc_timeout = utc_timeout;
+		}
+		
+		public DataBucketBean bucket() { return bucket; }
+		public long utc_timeout() { return utc_timeout; }
+	}
 }

@@ -108,7 +108,7 @@ public class TestDataBucketCrudService_Delete {
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _db_actor_context);
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _db_actor_context);
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);
-		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud);
+		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud, _db_actor_context);
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
 		
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;

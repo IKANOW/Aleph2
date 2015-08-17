@@ -48,11 +48,17 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
@@ -68,6 +74,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final DataBucketCrudService _data_bucket_service;
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
 	protected final SharedLibraryCrudService _shared_library_service;
+	protected final ManagementDbActorContext _actor_context;
 	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
@@ -81,7 +88,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Inject
 	public CoreManagementDbService(final IServiceContext service_context,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
-			final SharedLibraryCrudService shared_library_service
+			final SharedLibraryCrudService shared_library_service, final ManagementDbActorContext actor_context
 			)
 	{
 		//(just return null here if underlying management not present, things will fail catastrophically unless this is a test)
@@ -90,6 +97,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;
+		_actor_context = actor_context;
 		
 		_auth = Optional.empty();
 		_project = Optional.empty();
@@ -111,13 +119,14 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public CoreManagementDbService(final IServiceContext service_context,
 			final IManagementDbService underlying_management_db,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
-			final SharedLibraryCrudService shared_library_service,		
+			final SharedLibraryCrudService shared_library_service, final ManagementDbActorContext actor_context,		
 			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project, boolean read_only) {
 		_service_context = service_context;
 		_underlying_management_db = underlying_management_db;
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;
+		_actor_context = actor_context;
 		
 		_auth = auth;
 		_project = project;		
@@ -132,7 +141,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth)
 	{
 		return new CoreManagementDbService(_service_context, _underlying_management_db, 
-				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
+				_data_bucket_service, _data_bucket_status_service, _shared_library_service, _actor_context,
 				client_auth, project_auth, _read_only);
 	}
 	
@@ -268,7 +277,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public IManagementDbService readOnlyVersion() {
 		return new CoreManagementDbService(_service_context, _underlying_management_db, 
-				_data_bucket_service, _data_bucket_status_service, _shared_library_service,
+				_data_bucket_service, _data_bucket_status_service, _shared_library_service, _actor_context,
 				_auth, _project, true);
 	}
 
@@ -306,18 +315,49 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 
 	@Override
 	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {
-		// TODO Auto-generated method stub
+		CompletableFuture<Boolean> base_future = new CompletableFuture<Boolean>();
+		//create a test bucket to put data into instead of the specified bucket
+		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());
 		
 		//TODO: delegate straight over to DataBucketCrudService to avoid putting bucket specific logic here
 		// maybe something like (in DBCS):
 		// - validate the bucket 
+		DataBucketBean validated_test_bucket = validateBucket(test_bucket);
 		// - is there any test data already present for this user, delete if so (?)
-		//   (I'm writing deletion logic atm so may need to TODO that out for now until I'm done)
+		if ( test_spec.overwrite_existing_data() ) {
+			//TODO delete test data, wait for completion
+			//   (I'm writing deletion logic atm so may need to TODO that out for now until I'm done)
+		}
+		
 		// - send messages to start the test (ie like other messages, via the BucketActionSupervisor)
+		final BucketActionMessage.TestBucketActionMessage test_message = 
+				new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec);
+		CompletableFuture<BucketActionCollectedRepliesMessage> test_future = BucketActionSupervisor.askDistributionActor(
+				_actor_context.getBucketActionSupervisor(), 
+				_actor_context.getActorSystem(), 
+				test_message, 
+				Optional.empty());
+		
 		// - add to the test queue
+		//TODO put an entry in the test queue w/ test_spec.timeout
+		ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
+		test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, System.currentTimeMillis() + test_spec.max_run_time_secs()));
+		
+		// - add to the delete queue
+		//TODO put an entry in the delete queue w/ test_spec.data_timeout
+		final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
+		delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
+		
 		// anything else?
 		
-		return null;
+		base_future.complete(true);
+		return FutureUtils.createManagementFuture(base_future, test_future.thenApply(msg -> msg.replies()));
+	}
+
+	private DataBucketBean validateBucket(DataBucketBean data_bucket) {
+		// TODO Auto-generated method stub
+		return BeanTemplateUtils.clone(data_bucket)
+				.done();
 	}
 
 	@Override

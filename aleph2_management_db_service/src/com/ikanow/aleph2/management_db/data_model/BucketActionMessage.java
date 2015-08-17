@@ -17,12 +17,12 @@ package com.ikanow.aleph2.management_db.data_model;
 
 import java.io.Serializable;
 import java.util.Collections;
-
 import java.util.Set;
 
 import akka.actor.ActorRef;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 
 /** Just a top level message type for handling bucket actions 
@@ -172,5 +172,24 @@ public class BucketActionMessage implements Serializable {
 		public DeleteBucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) {
 			super(bucket, handling_clients);
 		}
+	}
+	
+	/** Send a test bucket action message to one (single node) or many (distributed node) buckets
+	 * @author burch
+	 */
+	public static class TestBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = 1018365226626559444L;
+		protected TestBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to create a bucket
+		 * @param bucket - the bucket to create
+		 */
+		public TestBucketActionMessage(final DataBucketBean bucket, final ProcessingTestSpecBean test_spec) {
+			super(bucket);
+			this.test_spec = test_spec;
+		}
+		public ProcessingTestSpecBean get_test_spec() {
+			return test_spec;
+		}
+		protected ProcessingTestSpecBean test_spec;
 	}
 }

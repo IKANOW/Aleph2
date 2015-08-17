@@ -22,8 +22,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -37,15 +39,19 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
@@ -86,7 +92,7 @@ public class TestCoreManagementDbModule {
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);		
 		
 		_core_db_service = new CoreManagementDbService(_mock_service_context, 
-				_bucket_crud, _bucket_status_crud, _shared_library_crud);
+				_bucket_crud, _bucket_status_crud, _shared_library_crud, _actor_context);
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
 	}
 	
@@ -240,5 +246,35 @@ public class TestCoreManagementDbModule {
 			}
 			per_library.countObjects(); // (just check doesn't thrown)
 		}		
-	}	
+	}
+	
+	@Ignore
+	@Test
+	public void testTestBucket() throws InterruptedException, ExecutionException {
+		final DataBucketBean to_test = createBucket("test_tech_id");
+//		ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 10L);
+//		ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
+//		assertTrue(future.get());
+		
+		//TOTEST:
+		//1. Test Queue populated
+		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);
+		test_queue.storeObject(new BucketTimeoutMessage(to_test, 1000)).get();
+		assertEquals(test_queue.countObjects().get().longValue(),1);		
+		
+		//2. Delete queue populated
+//		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
+//		assertEquals(delete_queue.countObjects().get().longValue(),1);
+		
+		//3. Actor received test message
+	}
+	
+	protected DataBucketBean createBucket(final String harvest_tech_id) {
+		return BeanTemplateUtils.build(DataBucketBean.class)
+							.with(DataBucketBean::_id, "test1")
+							.with(DataBucketBean::full_name, "/test/path/")
+							.with(DataBucketBean::harvest_technology_name_or_id, harvest_tech_id)
+							.with(DataBucketBean::owner_id, "test_owner_id")
+							.done().get();
+	}
 }

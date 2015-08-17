@@ -276,6 +276,9 @@ public class DataBucketChangeActor extends AbstractActor {
 									else
 										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
 								})
+								.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {																		
+									return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);									
+								})
 								.otherwise(msg -> {
 									return CompletableFuture.completedFuture(
 											new BucketActionHandlerMessage(source, new BasicMessageBean(new Date(), false, null, "Unknown message", 0, "Unknown message", null)));
