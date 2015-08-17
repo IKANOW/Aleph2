@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
 /** A very important bean that describes how a bucket gets and stores its data
@@ -111,31 +112,6 @@ public class DataBucketBean implements Serializable {
 	private String poll_frequency;
 
 	////////////////////////////////////////
-
-	// Distribution across nodes in the cluster
-	
-	// There is quite a lot of flexibility in exactly where the harvester associated with a bucket can run, and on how many nodes
-	
-	/** Determines whether the harvester associated with this bucket should run on a single node, or multiples nodes
-	 *  - regardless, will only run on nodes meeting the rules specified in node_list_rules()
-	 *  If not set then defaults to single node
-	 * @return whether the harvester associated with this bucket should run on a single node, or multiples nodes
-	 */
-	public Boolean multi_node_enabled() {
-		return multi_node_enabled;
-	}
-	/** Each item is either a glob or regex (format: /regex/flags) which is compared against the nodes' hostnames to determine whether the associated bucket can run on that hostname
-	 * If a string is prefaced with the '-' then it is an exclude rule; if there is no prefix, or the prefix is '+' then it is an include rule. 
-	 * @return the node list rules
-	 */
-	public List<String> node_list_rules() {
-		return node_list_rules == null ? node_list_rules : Collections.unmodifiableList(node_list_rules);
-	}
-	
-	private Boolean multi_node_enabled;
-	private List<String> node_list_rules;
-	
-	////////////////////////////////////////
 	
 	// Multi buckets
 	
@@ -155,8 +131,20 @@ public class DataBucketBean implements Serializable {
 	public Set<String> multi_bucket_children() {
 		return multi_bucket_children == null ? multi_bucket_children : Collections.unmodifiableSet(multi_bucket_children);
 	}
+	
+	/** It is possible for a single bucket to write to multiple "collections" using sub_buckets
+	 *  All non-explicitly-specified attributes (apart from full_name) are inherited from the parent
+	 *  full_name must be exactly one path below the parent's full_name, and mustn't "collide" with any existinb buckets
+	 *  Nesting within sub_buckets is not (currently) supported 
+	 * @return the list of sub buckets
+	 */
+	public List<DataBucketBean> sub_buckets() {
+		return null == sub_buckets ? sub_buckets : Collections.unmodifiableList(sub_buckets);
+	}
+	
 	private Set<String> multi_bucket_children;
 	private Set<String> aliases;
+	private List<DataBucketBean> sub_buckets;	
 	
 	////////////////////////////////////////
 	
@@ -179,6 +167,33 @@ public class DataBucketBean implements Serializable {
 	private String harvest_technology_name_or_id;
 	
 	private List<HarvestControlMetadataBean> harvest_configs;
+	
+	////////////////////////////////////////
+
+	// Distribution across nodes in the cluster (applies to harvest only)
+	
+	// There is quite a lot of flexibility in exactly where the harvester associated with a bucket can run, and on how many nodes
+	
+	/** Determines whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 *  - regardless, will only run on nodes meeting the rules specified in node_list_rules()
+	 *  If not set then defaults to single node
+	 *  NOTE: that inherently distributed harvesters (eg Storm/Hadoop/Spark) are set to false, since they only need be started from a single node
+	 *  This is for single-node technologies (eg a random external process) that you can "auto distribute" across multiple nodes (and feed via round-robin)
+	 * @return whether the harvester associated with this bucket should run on a single node, or multiples nodes
+	 */
+	public Boolean multi_node_enabled() {
+		return multi_node_enabled;
+	}
+	/** Each item is either a glob or regex (format: /regex/flags) which is compared against the nodes' hostnames to determine whether the associated bucket can run on that hostname
+	 * If a string is prefaced with the '-' then it is an exclude rule; if there is no prefix, or the prefix is '+' then it is an include rule. 
+	 * @return the node list rules
+	 */
+	public List<String> node_list_rules() {
+		return node_list_rules == null ? node_list_rules : Collections.unmodifiableList(node_list_rules);
+	}
+	
+	private Boolean multi_node_enabled;
+	private List<String> node_list_rules;
 	
 	////////////////////////////////////////
 	
@@ -233,6 +248,16 @@ public class DataBucketBean implements Serializable {
 	
 	public enum MasterEnrichmentType { none, streaming, batch, streaming_and_batch }
 	private MasterEnrichmentType master_enrichment_type;
+	
+	////////////////////////////////////////
+	
+	// Analytics specific information
+	
+	/** If this is specified, then the bucket is an analytic thread (it can also import/enrich data, though that's less usual)
+	 * @return the specification of the analytic thread
+	 */
+	public AnalyticThreadBean analytic_thread() { return analytic_thread; }
+	private AnalyticThreadBean analytic_thread;
 	
 	////////////////////////////////////////
 	

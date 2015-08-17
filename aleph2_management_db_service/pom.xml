@@ -49,6 +49,7 @@
 		<version>0.7.2.201409121644</version>
 		<configuration>
 			<excludes>
+				<!-- (note that this appeared to fix a bamboo issue, but otherwise that "." construct appears to do nothing) -->
 				<exclude>**backtype.storm**</exclude>
 			</excludes>
 		</configuration>

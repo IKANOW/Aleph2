@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +30,7 @@ public class HarvestControlMetadataBean implements Serializable {
 	protected HarvestControlMetadataBean() {}
 	
 	public HarvestControlMetadataBean(final String name, final Boolean enabled, final List<String> library_ids_or_names,
-			final Map<String, Object> config) {
+			final LinkedHashMap<String, Object> config) {
 		this.name = name;
 		this.enabled = enabled;
 		this.library_ids_or_names = library_ids_or_names;
@@ -65,5 +66,5 @@ public class HarvestControlMetadataBean implements Serializable {
 	private String name;
 	private Boolean enabled;
 	private List<String> library_ids_or_names;
-	private Map<String, Object> config;
+	private LinkedHashMap<String, Object> config;
 }	

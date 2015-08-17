@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -259,7 +260,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), Collections.emptyMap());
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), new LinkedHashMap<>());
 			
 			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
@@ -285,7 +286,7 @@ public class TestDataBucketChangeActor {
 			// 3) Couple of error cases:
 			
 			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id", "failtest"), Collections.emptyMap());
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id", "failtest"), new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)

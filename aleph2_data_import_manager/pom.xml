@@ -49,13 +49,9 @@
 		<version>0.7.2.201409121644</version>
 		<configuration>
 			<excludes>
-				<!--  some places suggest this is right... -->
-				<!-- (note the first line appeared to fix a bamboo issue, the second two lines appear to do nothing) -->
+				<!-- (note that this appeared to fix a bamboo issue, but otherwise that "." construct appears to do nothing) -->
 				<exclude>**backtype.storm**</exclude>
-				<exclude>**com.ikanow.aleph2.data_import_manager.harvest.modules**</exclude>
-				<exclude>**com.ikanow.aleph2.data_import_manager.batch_enrichment.module**</exclude>
-				<!--  other places here: -->
-				<!--  (note that the second two lines definitely excluded that code from coveralls) -->
+				<!--  This actually removes code from coveralls.io -->
 				<exclude>**/backtype/storm/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/harvest/modules/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/module/*</exclude>

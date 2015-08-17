@@ -42,7 +42,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -307,12 +306,6 @@ public class TestContextUtils {
 				Optional<AnalyticThreadBean> analytic_thread,
 				Optional<String> sub_collection,
 				boolean auto_apply_prefix) {
-			return null;
-		}
-
-		@Override
-		public CompletableFuture<AnalyticThreadStatusBean> getThreadStatus(
-				Optional<AnalyticThreadBean> analytic_thread) {
 			return null;
 		}
 

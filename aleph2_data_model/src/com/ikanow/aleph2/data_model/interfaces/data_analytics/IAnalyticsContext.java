@@ -27,9 +27,10 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+
+//TODO (ALEPH-12): this needs a pretty hefty rework
 
 /** A context library that is always passed to the IAnalyticsTechnology module and can also be 
  *  passed to the analytics library processing (TODO (ALEPH-12): need to document how, ie copy JARs into external classpath and call ContextUtils.getAnalyticsContext)
@@ -122,13 +123,7 @@ public interface IAnalyticsContext {
 	 * @return a generic object repository
 	 */
 	<S> ICrudService<S> getThreadObjectStore(final Class<S> clazz, final Optional<AnalyticThreadBean> analytic_thread, final Optional<String> sub_collection, final boolean auto_apply_prefix);
-	
-	/** (AnalyticsTechnology/Analytics Module) Returns the status bean for the specified analytic thread
-	 * @param analytic_thread An optional analytic thread - if there is no ambiguity in the analytic thread then Optional.empty() can be passed (Note that the behavior of the context if called on another analytic thread than the one currently being processed is undefined) 
-	 * @return A Future containing a bean containing the analytics' state and status
-	 */
-	CompletableFuture<AnalyticThreadStatusBean> getThreadStatus(final Optional<AnalyticThreadBean> analytic_thread);
-	
+		
 	/** (AnalyticsTechnology/Analytics Module) Calling this function logs a status message into he AnalyticThreadStatusBean that is visible to the user
 	 * Note that the behavior of the context if called on another analytic thread than the one
 	 * currently being processed is undefined
