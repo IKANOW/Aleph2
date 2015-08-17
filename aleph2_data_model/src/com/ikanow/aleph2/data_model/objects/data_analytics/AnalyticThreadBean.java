@@ -16,31 +16,37 @@
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
 import java.io.Serializable;
+import java.util.List;
 
+import java.util.Collections;
+
+/** This class defines an analytic thread within a bucket
+ * @author Alex
+ */
 public class AnalyticThreadBean implements Serializable {
 	private static final long serialVersionUID = -1884220783549625389L;
 
-	/** The path name of this analytic thread
-	 * @return
+	protected AnalyticThreadBean() {}
+	
+	/** User c'tor
+	 * @param trigger_config - Either a specific trigger instance, or a boolean grouping of trigger instances (can nest indefinitely)
+	 * @param jobs - The list of configurations of individual jobs within the larger analytic thread
 	 */
-	public String path_name() { return path_name; }
+	public AnalyticThreadBean(final AnalyticThreadTriggerBean trigger_config, final List<AnalyticThreadJobBean> jobs) {
+		this.trigger_config = trigger_config;
+		this.jobs = jobs;
+	}
 	
-	private String path_name;
+	/** Either a specific trigger instance, or a boolean grouping of trigger instances (can nest indefinitely)
+	 * @return the trigger configuration
+	 */
+	public AnalyticThreadTriggerBean trigger_config() { return trigger_config; }
 	
-	//TODO (ALEPH-12): so the thread looks like
-	// analytic engine (MapReduce/Spark/Storm) -> module (eg sliding window aggregation) -> thread (set of modules within an engine + config)
-	// (Compare to import .. analytic engine <-> ?? / analytic module <-> harvester / bucket <->  analytic thread
+	/** The list of configurations of individual jobs within the larger analytic thread
+	 * @return the list of jobs
+	 */
+	public  List<AnalyticThreadJobBean> jobs() { return null == jobs ? jobs : Collections.unmodifiableList(jobs); }
 	
-	//TODO (ALEPH-12): hmm suppose I want to run Flume as the overall technology, but I want to run different 
-	// java within my different flume instances? i need some way to manage my "JAR" files
-	
-	// Each analytic has a bunch of generic parameters:
-	// - The layer on which to run
-	// - The analytic module
-	// - Start conditions (permanent/periodic/dependent on another job)
-	// - Exit conditions
-	
-	//TODO (ALEPH-12): list/graph of analytics with some sort og exit criteria
-	
-	//TODO (ALEPH-12): want an associated bucket 
+	private AnalyticThreadTriggerBean trigger_config;
+	private List<AnalyticThreadJobBean> jobs;	
 }

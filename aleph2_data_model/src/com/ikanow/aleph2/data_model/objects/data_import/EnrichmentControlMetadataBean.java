@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	 */
 	public EnrichmentControlMetadataBean(final String name,
 			final List<String> dependencies, Boolean enabled,
-			final List<String> library_ids_or_names, Map<String, Object> config) {
+			final List<String> library_ids_or_names, LinkedHashMap<String, Object> config) {
 		super();
 		this.name = name;
 		this.dependencies = dependencies;
@@ -75,5 +76,5 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	private List<String> dependencies;
 	private Boolean enabled;
 	private List<String> library_ids_or_names;
-	private Map<String, Object> config;
+	private LinkedHashMap<String, Object> config;
 }	

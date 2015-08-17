@@ -36,7 +36,6 @@ public class BatchEnrichmentJob{
 		
 	}
 	
-	@SuppressWarnings("unused")
 	public static class BatchErichmentMapper extends Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>		
 	implements IBeJobConfigurable {
 

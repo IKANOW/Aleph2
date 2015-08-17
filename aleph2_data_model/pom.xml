@@ -30,8 +30,12 @@
 		<groupId>org.jacoco</groupId>
 		<artifactId>jacoco-maven-plugin</artifactId>
 		<version>0.7.2.201409121644</version>
-	    <configuration>
-	    </configuration>
+		<configuration>
+			<excludes>
+				<!--  At some point want to move this back in again and actually have test coverage for beans, but it's quite low priority atm -->
+				<exclude>**/com/ikanow/aleph2/data_model/objects/**/*</exclude>
+			</excludes>
+		</configuration>
 		<executions>
 			<execution>
 				<id>prepare-agent</id>
