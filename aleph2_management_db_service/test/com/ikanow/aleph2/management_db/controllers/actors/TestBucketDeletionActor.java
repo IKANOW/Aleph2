@@ -125,6 +125,7 @@ public class TestBucketDeletionActor {
 	public void testSetup() throws Exception {
 		
 		if (null != _service_context) {
+			_logger.info("(Skipping setup, already initialized");
 			return;
 		}
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
@@ -143,12 +144,14 @@ public class TestBucketDeletionActor {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		new ManagementDbActorContext(_service_context, true);		
-		_actor_context = ManagementDbActorContext.get();
+		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 		
 		_mock_index = (MockSearchIndexService) _service_context.getSearchIndexService().get();
 		
-		_core_mgmt_db = _service_context.getCoreManagementDbService();		
+		new ManagementDbActorContext(_service_context, true);		
+		_actor_context = ManagementDbActorContext.get();
+		
+		_logger.info("(Setup complete: " + _core_mgmt_db.getClass() + " / " + _mock_index.getClass() + ")");		
 	}	
 		
 	public static class TestBean {};
