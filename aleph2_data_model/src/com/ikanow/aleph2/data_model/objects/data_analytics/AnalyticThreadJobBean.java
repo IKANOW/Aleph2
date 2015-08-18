@@ -103,8 +103,6 @@ public class AnalyticThreadJobBean implements Serializable {
 	 */
 	public List<String> module_names_or_ids() { return null == module_names_or_ids ? module_names_or_ids : Collections.unmodifiableList(module_names_or_ids); }
 	
-	//TODO (ALEPH-12): Shouldn't this be more like the harvest metadata config bean??
-	
 	/** The analytic technology specific module configuration JSON
 	 * @return The analytic technology specific module configuration JSON
 	 */
@@ -160,24 +158,41 @@ public class AnalyticThreadJobBean implements Serializable {
 		protected AnalyticThreadJobInputBean() {}
 		
 		/** User c'tor
-		 * @param resource_name_or_id
-		 * @param data_service
-		 * @param filter
-		 * @param config
+		 * @param resource_name_or_id - The resource name of the input (bucket path, bucket queue, or internal job "name")
+		 * @param data_service - For bucket data access, the data service from which to retrieve the data
+		 * @param filter - the filter to apply to the incoming data (CRUD or file-specific)
+		 * @param config - Generic configuration for input data
 		 */
 		protected AnalyticThreadJobInputBean(final String resource_name_or_id, final String data_service, 
 											final LinkedHashMap<String, Object> filter,
 											final AnalyticThreadJobInputConfigBean config 
 											)
 		{
-			//TODO
+			this.resource_name_or_id = resource_name_or_id;
+			this.data_service = data_service;
+			this.filter = filter;
+			this.config = config;
 		}
 		
-		/** The resource name of the input: one of the bucket path/id, the "name" 
-		 * @return
+		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc 
+		 * @return The resource name of the input
 		 */
 		public String resource_name_or_id() { return resource_name_or_id; }
 		
+		/** For bucket data access, the data service from which to retrieve the data (search_index_service, storage_service, etc)
+		 * @return For bucket data access, the data service from which to retrieve the data
+		 */
+		public String data_service() { return data_service; } 
+		
+		/** For bucket data access, an optional CRUD filter to apply to incoming data; for file access will be a file-specific JSON object
+		 * @return the filter to apply to the incoming data (CRUD or file-specific)
+		 */
+		public Map<String, Object> filter() { return null == filter ? filter : Collections.unmodifiableMap(filter); }
+		
+		/** Generic configuration for input data
+		 * @return Generic configuration for input data
+		 */
+		public AnalyticThreadJobInputConfigBean config() { return config; }
 		
 		private String resource_name_or_id; 
 		private String data_service;	
@@ -187,20 +202,53 @@ public class AnalyticThreadJobBean implements Serializable {
 		/** Defines batching/streaming properties of the input (where applicable)
 		 * @author Alex
 		 */
-		private static class AnalyticThreadJobInputConfigBean implements Serializable {
+		public static class AnalyticThreadJobInputConfigBean implements Serializable {
 			private static final long serialVersionUID = -5506063365294565996L;
 			
+			protected AnalyticThreadJobInputConfigBean() {}
+			
+			/** User c'tor
+			 * @param new_data_only - Whether only new data is served to the job each time it runs
+			 * @param timed_batch_ms - When converting from streaming data to batch data, the max time period over which to collect batches
+			 * @param size_batch_records - When converting from streaming data to batch data, the max number of records in each batch
+			 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
+			 */
+			public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
+			{
+				this.new_data_only = new_data_only;
+				this.timed_batch_ms = timed_batch_ms;
+				this.size_batch_records = size_batch_records;
+				this.size_batch_kb = size_batch_kb;
+			}
+			
+			/** If true (defaults: false) then only new data is served to the job each time it runs (otherwise all data from the input matching the filter is served)
+			 * @return Whether only new data is served to the job each time it runs
+			 */
+			public Boolean new_data_only() { return new_data_only; }
+			
+			/** When converting from streaming data to batch data, the max time period over which to collect batches
+			 * @return the max time period over which to collect batches
+			 */
+			public Long timed_batch_ms() { return timed_batch_ms; }
+			
+			/** When converting from streaming data to batch data, the max number of records in each batch
+			 * @return the max number of records in each batch
+			 */
+			public Long size_batch_records() { return size_batch_records; }
+			
+			/** When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
+			 * @return the max size of each batch in KBytes of record JSON string
+			 */
+			public Long size_batch_kb() { return size_batch_kb; }
+			
 			private Boolean new_data_only;
-
-			// Streaming -> batch
 			private Long timed_batch_ms;
 			private Long size_batch_records;
 			private Long size_batch_kb;
 		}
 	}
 	
-	private List<String> dependencies;		
-	
+	private List<String> dependencies;			
 	private List<AnalyticThreadJobInputBean> inputs; 
 	
 	////////////////////////////////////////
@@ -218,9 +266,37 @@ public class AnalyticThreadJobBean implements Serializable {
 	public static class AnalyticThreadJobOutputBean implements Serializable {
 		private static final long serialVersionUID = 179619492596670425L;
 		
+		protected AnalyticThreadJobOutputBean() {}
+		
+		/** User c'tor
+		 * @param is_transient - Whether the output data is written to a transient file store (default) or whether it's used as the output for this bucket (or a sub-bucket)
+		 * @param sub_bucket_path - the optional sub-bucket to which to write bucket output data
+		 * @param transient_type - the type (streaming/batch/both) of the transient output
+		 */
+		public AnalyticThreadJobOutputBean(final Boolean is_transient, final String sub_bucket_path, final DataBucketBean.MasterEnrichmentType transient_type) {
+			this.is_transient = is_transient;
+			this.sub_bucket_path = sub_bucket_path;
+			this.transient_type = transient_type;
+		}
+		
+		/** Whether the output data is written to a transient file store (default) or whether it's used as the output for this bucket (or a sub-bucket) 
+		 * @return - whether the output data is transient or persisted in a bucket
+		 */
+		public Boolean is_transient() { return is_transient; }
+		
+		/** Optional - if writing the output to a bucket then by default it goes to the main bucket, this can optionally be set to a sub bucket 
+		 * @return - the optional sub-bucket to which to write bucket output data
+		 */
+		public String sub_bucket_path() { return sub_bucket_path; }
+		
+		/** By default transient data is written to file - if this is set to "streaming" then it is instead written to a system queue  
+		 * @return - the type (streaming/batch/both) of the transient output
+		 */
+		public DataBucketBean.MasterEnrichmentType transient_type() { return transient_type; }
+		
 		private Boolean is_transient;
+		private String sub_bucket_path;
 		private DataBucketBean.MasterEnrichmentType transient_type;		
 	}
-	private AnalyticThreadJobOutputBean output;
-	
+	private AnalyticThreadJobOutputBean output;	
 }
