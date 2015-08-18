@@ -47,11 +47,19 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 */
 	Optional<String> getApplicationName();
 	
+	/////////////////////////////////////////////////////////////////////////
+	
+	// ZOOKEEPER/CURATOR SERVICES
+	
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
 	CuratorFramework getCuratorFramework();
 		
+	/////////////////////////////////////////////////////////////////////////
+	
+	// AKKA SERVICES
+	
 	/** Waits for the node to become part of the Akka cluster - until then, no management db operations should be performed
 	 * @param timeout - optional timeout, if left blank, will generate exception after 60s 
 	 * @return true if joined, false otherwise
@@ -93,6 +101,15 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 * @return
 	 */
 	<U extends Serializable, M extends IRoundRobinEventBusWrapper<U>> LookupEventBus<M, ActorRef, String> getRoundRobinMessageBus(final Class<M> wrapper_clazz, final Class<U> base_message_clazz, final String topic);
+	
+	/////////////////////////////////////////////////////////////////////////
+	
+	// KAFKA SERVICES
+	
+	/** Pre-creates a topic
+	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
+	 */
+	void createTopic(String topic); 
 	
 	/** Writes a JSON string to the designated message queue
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)

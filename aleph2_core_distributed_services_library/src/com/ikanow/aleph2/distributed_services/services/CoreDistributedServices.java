@@ -377,18 +377,30 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	}
 	
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#createTopic(java.lang.String)
+	 */
+	@Override
+	public 	void createTopic(String topic) {
+		if (_initializing_kafka) { //(wait for async to complete)
+			_initialized_kafka.join();
+		}		
+		logger.debug("CREATING " + topic);
+		KafkaUtils.createTopic(topic);				
+	}
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */
 	@Override
 	public void produce(String topic, String message) {
-		if (_initializing_kafka) { //(wait for async to complete)
-			_initialized_kafka.join();
-		}		
-		KafkaUtils.createTopic(topic);		
+		this.createTopic(topic);
+		
 		logger.debug("PRODUCING");
-		final Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
+		final Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		
 		logger.debug("SENDING");
 		producer.send(new KeyedMessage<String, String>(topic, message));
+		
 		logger.debug("DONE SENDING");
 	}
 	

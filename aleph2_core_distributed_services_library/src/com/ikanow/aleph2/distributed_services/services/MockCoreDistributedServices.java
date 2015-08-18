@@ -190,14 +190,23 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	public CompletableFuture<Void> runOnAkkaJoin(Runnable task) {
 		return CompletableFuture.runAsync(task);
 	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#createTopic(java.lang.String)
+	 */
+	@Override
+	public 	void createTopic(String topic) {
+		setupKafka();
+		logger.debug("CREATING " + topic);
+		KafkaUtils.createTopic(topic);
+	}
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */
 	@Override
 	public void produce(String topic, String message) {
-		setupKafka();
-		KafkaUtils.createTopic(topic);
+		this.createTopic(topic);
 		
 		logger.debug("PRODUCING");
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	

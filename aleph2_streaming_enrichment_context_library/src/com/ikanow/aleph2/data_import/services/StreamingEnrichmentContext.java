@@ -316,12 +316,12 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
-		if (_state_name == State.IN_TECHNOLOGY) {			
+		if (_state_name == State.IN_TECHNOLOGY) {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
 			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
 			final String topic_name = KafkaUtils.bucketPathToTopicName(my_bucket.full_name());
-			KafkaUtils.createTopic(topic_name);	
+			_distributed_services.createTopic(topic_name);
 			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, my_bucket._id()); 
 			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
 			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);

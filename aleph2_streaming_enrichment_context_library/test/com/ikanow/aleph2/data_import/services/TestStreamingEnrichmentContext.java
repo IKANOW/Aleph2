@@ -82,7 +82,7 @@ public class TestStreamingEnrichmentContext {
 	}
 	
 	@Test
-	public void basicContextCreation() {
+	public void test_basicContextCreation() {
 		try {
 			assertTrue("Injector created", _app_injector != null);
 		
@@ -154,7 +154,7 @@ public class TestStreamingEnrichmentContext {
 	}
 	
 	@Test
-	public void testExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+	public void test_ExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
 			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
