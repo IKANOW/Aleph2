@@ -21,6 +21,7 @@ import org.junit.Test;
 
 public class TestSetOnce {
 
+	@SuppressWarnings("deprecation")
 	@Test
 	public void testSetOnce() {
 		
@@ -46,10 +47,33 @@ public class TestSetOnce {
 
 		assertEquals((int)1, (int)set_once.get());
 		
+		assertEquals("override works", (int)2, (int)set_once.forceSet(2));
+		
+		assertEquals((int)2, (int)set_once.get());
+		
+		try {
+			set_once.trySet(3);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals((int)2, (int)set_once.get());			
+		}
+		
 		SetOnce<Integer> set_once_2 = new SetOnce<Integer>(2);
 		
 		assertTrue("Starts set", set_once_2.isSet());
 		
 		assertEquals((int)2, (int)set_once_2.get());
+		
+		// Check the two other set methods work when used first
+		
+		SetOnce<Integer> set_once_3 = new SetOnce<Integer>();
+		
+		assertEquals((int)3, (int)set_once_3.trySet(3));
+		
+		SetOnce<Integer> set_once_4 = new SetOnce<Integer>();
+		
+		assertEquals((int)4, (int)set_once_4.forceSet(4));
+		
 	}
 }
