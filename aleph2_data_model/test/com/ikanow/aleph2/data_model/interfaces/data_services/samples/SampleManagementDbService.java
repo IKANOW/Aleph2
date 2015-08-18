@@ -26,7 +26,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
-import com.ikanow.aleph2.data_model.objects.shared.AuthenticationBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -136,10 +135,5 @@ public class SampleManagementDbService implements IManagementDbService {
 		return null;
 	}
 
-	@Override
-	public IManagementCrudService<AuthenticationBean> getAuthenticationStore() {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 }

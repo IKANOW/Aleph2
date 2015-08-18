@@ -43,7 +43,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
-import com.ikanow.aleph2.data_model.objects.shared.AuthenticationBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
@@ -376,12 +375,5 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAuthenticationStore()
-	 */
-	@Override
-	public IManagementCrudService<AuthenticationBean> getAuthenticationStore() {
-		return _underlying_management_db.getAuthenticationStore().readOnlyVersion(_read_only);
-	}
 
 }
