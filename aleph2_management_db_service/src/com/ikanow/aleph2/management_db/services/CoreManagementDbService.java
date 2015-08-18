@@ -282,6 +282,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				_auth, _project, true);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#purgeBucket(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional)
+	 */
 	@Override
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
 		
@@ -355,21 +358,30 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		return FutureUtils.createManagementFuture(base_future, test_future.thenApply(msg -> msg.replies()));
 	}
 
+	/** TODO
+	 * @param data_bucket
+	 * @return
+	 */
 	private DataBucketBean validateBucket(DataBucketBean data_bucket) {
 		// TODO Auto-generated method stub
 		return BeanTemplateUtils.clone(data_bucket)
 				.done();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getBucketTestQueue(java.lang.Class)
+	 */
 	@Override
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
 		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAuthenticationStore()
+	 */
 	@Override
 	public IManagementCrudService<AuthenticationBean> getAuthenticationStore() {
-		// TODO Auto-generated method stub
-		return null;
+		return _underlying_management_db.getAuthenticationStore().readOnlyVersion(_read_only);
 	}
 
 }
