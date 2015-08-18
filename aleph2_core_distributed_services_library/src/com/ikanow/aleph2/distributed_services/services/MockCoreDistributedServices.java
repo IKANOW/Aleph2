@@ -77,7 +77,9 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @throws Exception 
 	 */
 	@Inject
-	public MockCoreDistributedServices() throws Exception {		
+	public MockCoreDistributedServices() throws Exception {
+		setupKafka(); // (also sets up curator) lazy initialization didn't seem to work - maybe MockKafkaBroker takes a few seconds to become available, not worth worrying about for now 
+		
 		_akka_system = ActorSystem.create("default");		
 	}	
 	 
