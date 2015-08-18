@@ -120,7 +120,7 @@ public class TestDataBucketChangeActor {
 	}
 	
 	@Test
-	public void testSetup() {
+	public void test_setup() {
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
 		assertTrue("setup completed - service context", _service_context != null);
