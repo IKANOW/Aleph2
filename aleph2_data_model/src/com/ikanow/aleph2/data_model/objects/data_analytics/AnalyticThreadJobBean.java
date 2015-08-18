@@ -199,7 +199,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		private LinkedHashMap<String, Object> filter;
 		private AnalyticThreadJobInputConfigBean config;
 		
-		/** Defines batching/streaming properties of the input (where applicable)
+		/** Defines generic properties of the input (where applicable) - eg batching/streaming 
 		 * @author Alex
 		 */
 		public static class AnalyticThreadJobInputConfigBean implements Serializable {
@@ -209,13 +209,21 @@ public class AnalyticThreadJobBean implements Serializable {
 			
 			/** User c'tor
 			 * @param new_data_only - Whether only new data is served to the job each time it runs
+			 * @param self_join - Whether the existing output data from this job's previous run should be used as an extra input to the new job
+			 * @param time_min - human readable string that applies an "oldest" time filter to the input data
+			 * @param time_max -  human readable string that applies a "newest" time filter to the input data
 			 * @param timed_batch_ms - When converting from streaming data to batch data, the max time period over which to collect batches
 			 * @param size_batch_records - When converting from streaming data to batch data, the max number of records in each batch
 			 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
 			 */
-			public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
+			public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Boolean self_join, 
+					final String time_min, final String time_max,
+					final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
 			{
 				this.new_data_only = new_data_only;
+				this.self_join = self_join;
+				this.time_min = time_min;
+				this.time_max = time_max;
 				this.timed_batch_ms = timed_batch_ms;
 				this.size_batch_records = size_batch_records;
 				this.size_batch_kb = size_batch_kb;
@@ -225,6 +233,21 @@ public class AnalyticThreadJobBean implements Serializable {
 			 * @return Whether only new data is served to the job each time it runs
 			 */
 			public Boolean new_data_only() { return new_data_only; }
+			
+			/** If true (defaults: false) the existing output data from this job's previous run is used as an extra input to the new job
+			 * @return Whether the existing output data from this job's previous run should be used as an extra input to the new job 
+			 */
+			public Boolean self_join() { return self_join; }
+			
+			/** An optional human readable string that applies a time filter (lower bound) to the input data
+			 * @return - human readable string that applies an "oldest" time filter to the input data
+			 */
+			public String time_min() { return time_min; }
+			
+			/** An optional human readable string that applies a time filter (upper bound) to the input data
+			 * @return - human readable string that applies a "newest" time filter to the input data
+			 */
+			public String time_max() { return time_max; }
 			
 			/** When converting from streaming data to batch data, the max time period over which to collect batches
 			 * @return the max time period over which to collect batches
@@ -242,6 +265,9 @@ public class AnalyticThreadJobBean implements Serializable {
 			public Long size_batch_kb() { return size_batch_kb; }
 			
 			private Boolean new_data_only;
+			private Boolean self_join;
+			private String time_min;
+			private String time_max;
 			private Long timed_batch_ms;
 			private Long size_batch_records;
 			private Long size_batch_kb;
