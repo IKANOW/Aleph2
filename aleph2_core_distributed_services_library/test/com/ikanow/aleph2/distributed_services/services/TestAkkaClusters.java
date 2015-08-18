@@ -68,7 +68,7 @@ public class TestAkkaClusters {
 	}
 	
 	public void setup(final String application_name, final String test_name) throws Exception {
-		_connect_string = _mock_core_distributed_services._test_server.getConnectString();
+		_connect_string = _mock_core_distributed_services.getConnectString();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, _connect_string);
@@ -151,7 +151,7 @@ public class TestAkkaClusters {
 	public void test_waitForLock() throws Exception {
 		final String app_name = "test_application";
 		
-		String connection_string = _mock_core_distributed_services._test_server.getConnectString();
+		String connection_string = _mock_core_distributed_services.getConnectString();
 		final RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
 		CuratorFramework _curator_framework = CuratorFrameworkFactory.newClient(connection_string, retry_policy);
 		_curator_framework.start();		

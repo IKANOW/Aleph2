@@ -114,7 +114,7 @@ public class TestAkkaMessageBuses {
 	@Before
 	public void setup() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
-		_connect_string = temp._test_server.getConnectString();
+		_connect_string = temp.getConnectString();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, _connect_string);

@@ -44,6 +44,7 @@ import akka.event.japi.LookupEventBus;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
@@ -57,10 +58,10 @@ import com.typesafe.config.ConfigFactory;
  */
 public class MockCoreDistributedServices implements ICoreDistributedServices {
 
-	protected final TestingServer _test_server;
-	protected final CuratorFramework _curator_framework;
+	protected final SetOnce<TestingServer> _test_server = new SetOnce<>();
+	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
 	protected final ActorSystem _akka_system;
-	private final MockKafkaBroker _kafka_broker;
+	private final SetOnce<MockKafkaBroker> _kafka_broker = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
 	private final static Logger logger = LogManager.getLogger();
 	
 	protected String _mock_application_name = null;
@@ -76,30 +77,66 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @throws Exception 
 	 */
 	@Inject
-	public MockCoreDistributedServices() throws Exception {
-		_test_server = new TestingServer();
-		_test_server.start();
-		RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
-		_curator_framework = CuratorFrameworkFactory.newClient(_test_server.getConnectString(), retry_policy);
-		_curator_framework.start();		
-		
-		_akka_system = ActorSystem.create("default");
-		_kafka_broker = new MockKafkaBroker(_test_server.getConnectString());
-		
-		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
-				.put("zookeeper.connect", _test_server.getConnectString())
-				.put("zookeeper.session.timeout.ms", "1200") //(overwrite this from default to make tests more robust)
-				.build();	
-		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
-		
+	public MockCoreDistributedServices() throws Exception {		
+		_akka_system = ActorSystem.create("default");		
 	}	
 	 
+	/** Lazy initialization for Kafka
+	 */
+	private void setupKafka() {
+		setupCurator();
+		synchronized (this) {
+			if (!_kafka_broker.isSet()) {
+				try {
+					_kafka_broker.set(new MockKafkaBroker(_test_server.get().getConnectString()));
+					
+					final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+							.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
+							.put("zookeeper.connect", _test_server.get().getConnectString())
+							.put("zookeeper.session.timeout.ms", "1200") //(overwrite this from default to make tests more robust)
+							.build();	
+					KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
+				}
+				catch (Exception e) { // (just make unchecked)
+					throw new RuntimeException(e);
+				}
+			}
+		}
+	}
+
+	/** Lazy initialization for Curator/zookeeper
+	 */
+	private void setupCurator() {
+		synchronized (this) {
+			try {
+				if (!_test_server.isSet()) {
+					_test_server.set(new TestingServer());
+					_test_server.get().start();
+					RetryPolicy retry_policy = new ExponentialBackoffRetry(1000, 3);
+					_curator_framework.set(CuratorFrameworkFactory.newClient(_test_server.get().getConnectString(), retry_policy));
+					_curator_framework.get().start();
+				}
+			}
+			catch (Exception e) { // (just make unchecked)
+				throw new RuntimeException(e);
+			}
+		}
+	}
+	
+	/** Test function to enable tests to find out where the "mock" ZK server is running
+	 * @return
+	 */
+	public String getConnectString() {
+		setupCurator();
+		return _test_server.get().getConnectString();
+	}
+	
 	/** Returns a connection to the Curator server
 	 * @return
 	 */
 	public CuratorFramework getCuratorFramework() {
-		return _curator_framework;
+		this.setupCurator();
+		return _curator_framework.get();
 	}
 	
 	/* (non-Javadoc)
@@ -159,6 +196,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public void produce(String topic, String message) {
+		setupKafka();
 		KafkaUtils.createTopic(topic);
 		
 		logger.debug("PRODUCING");
@@ -173,6 +211,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public Iterator<String> consume(String topic) {
+		setupKafka();
 		logger.debug("CONSUMING");
 		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
 		return new WrappedConsumerIterator(consumer, topic);
@@ -205,7 +244,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @return
 	 */
 	public MockKafkaBroker getKafkaBroker() {
-		return _kafka_broker;
+		setupKafka();
+		return _kafka_broker.get();
 	}
 
 	/* (non-Javadoc)

@@ -145,7 +145,7 @@ public class TestSingletonActor {
 	@Before
 	public void setup() throws Exception {
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();		
-		_connect_string = temp._test_server.getConnectString();
+		_connect_string = temp.getConnectString();
 				
 	}
 	

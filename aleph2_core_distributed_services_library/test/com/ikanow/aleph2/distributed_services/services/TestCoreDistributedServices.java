@@ -73,7 +73,7 @@ public class TestCoreDistributedServices {
 		System.out.println("TEST WITH AUTO_CONFIG = " + auto_configure);
 		
 		MockCoreDistributedServices temp = new MockCoreDistributedServices();	
-		String connect_string = temp._test_server.getConnectString();
+		String connect_string = temp.getConnectString();
 		String broker_list_string = "localhost:" + temp.getKafkaBroker().getBrokerPort();
 				
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
