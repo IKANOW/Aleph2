@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import org.apache.shiro.authc.UsernamePasswordToken;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Inject;
@@ -79,6 +80,7 @@ public class SecurityServiceTest {
 	}
 
 	@Test
+	@Ignore
 	public void testSecondRealm(){
 		ISubject subject = securityService.getSubject();
 		assertNotNull(subject);

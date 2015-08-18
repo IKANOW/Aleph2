@@ -436,10 +436,19 @@ public class ModuleUtils {
 	 * @throws Exception
 	 */
 	public static Injector createInjector(List<Module> modules, Optional<Config> config) throws Exception {		
+			
+		try {
 		if ( parent_injector == null && !config.isPresent() )
 			config = Optional.of(ConfigFactory.load());
 		if ( config.isPresent() )
 			initialize(config.get());
+		
+		} catch (Throwable e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+			throw e;
+			
+		}
 		return parent_injector.createChildInjector(modules);
 	}
 	
