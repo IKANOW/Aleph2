@@ -31,6 +31,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
+import com.ikanow.aleph2.data_model.objects.shared.AuthenticationBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -160,6 +161,11 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 
 	@Override
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
+		return null;
+	}
+
+	@Override
+	public IManagementCrudService<AuthenticationBean> getAuthenticationStore() {
 		return null;
 	}
 
