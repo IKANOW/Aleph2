@@ -235,8 +235,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();
-		
+		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
 		try {			
 			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>validation(
 				//Error:
@@ -274,13 +273,6 @@ public class DataBucketChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 							return tech_module.onPurge(msg.bucket(), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
-						})
-						.when(BucketActionMessage.UpdateBucketStateActionMessage.class, msg -> {
-							tech_module.onInit(context);
-							return (msg.is_suspended()
-									? tech_module.onSuspend(bucket, context)
-									: tech_module.onResume(bucket, context))
-										.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {
 							tech_module.onInit(context);

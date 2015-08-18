@@ -184,12 +184,6 @@ public class LocalHarvestTestModule {
 				else if (command.equals("onPurge")) {
 					harvest_result = harvester.onPurge(bucket, context);
 				}
-				else if (command.equals("onResume")) {
-					harvest_result = harvester.onResume(bucket, context);
-				}
-				else if (command.equals("onSuspend")) {
-					harvest_result = harvester.onSuspend(bucket, context);
-				}
 				else if (command.equals("onTestSource")) {
 					harvest_result = harvester.onTestSource(bucket, null, context);
 				}

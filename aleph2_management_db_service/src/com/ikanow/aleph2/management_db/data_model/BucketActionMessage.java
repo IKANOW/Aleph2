@@ -122,27 +122,6 @@ public class BucketActionMessage implements Serializable {
 		protected Boolean is_enabled;		
 	}
 
-	/** Updates the state of an existing bucket
-	 * @author acp
-	 */
-	public static class UpdateBucketStateActionMessage extends BucketActionMessage implements Serializable {
-		private static final long serialVersionUID = -3881647647983800930L;
-		protected UpdateBucketStateActionMessage() { super(null, null); }
-		/** User c'tor for creating a message to update a bucket's state
-		 * @param bucket - the bucket whose state is being changed
-		 * @param is_suspended - the suspension state
-		 * @param handling_clients - the nodes handling this bucket
-		 */
-		public UpdateBucketStateActionMessage(final DataBucketBean bucket, 
-				final boolean is_suspended, final Set<String> handling_clients)
-		{
-			super(bucket, handling_clients);
-			this.is_suspended = is_suspended;
-		}
-		public Boolean is_suspended() { return is_suspended; }
-		protected Boolean is_suspended;
-	}
-
 	/** Send a purge bucket action message with a set of hosts on which the harvester is believed to be running
 	 * @author acp
 	 */

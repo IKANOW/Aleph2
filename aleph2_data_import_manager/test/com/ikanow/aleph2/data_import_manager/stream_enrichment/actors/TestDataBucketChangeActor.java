@@ -202,10 +202,10 @@ public class TestDataBucketChangeActor {
 		
 		// 3) Send a message
 		{
-			final BucketActionMessage.UpdateBucketStateActionMessage suspend =
-					new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
+			final BucketActionMessage.UpdateBucketActionMessage update =
+					new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
 			
-			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, suspend, 5000L), _db_actor_context.getActorSystem().dispatcher());
+			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, update, 5000L), _db_actor_context.getActorSystem().dispatcher());
 			@SuppressWarnings("unused")
 			final BucketActionReplyMessage msg4 = reply4.get();
 		
@@ -222,7 +222,7 @@ public class TestDataBucketChangeActor {
 			// Preamble:
 			// 0) Insert 2 library beans into the management db
 			
-			final DataBucketBean bucket = createBucket("test_tech_id");		
+			final DataBucketBean bucket = createBucket("test_tech_id_stream");		
 			
 			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -260,7 +260,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id"), new LinkedHashMap<>());
 			
 			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
@@ -286,7 +286,7 @@ public class TestDataBucketChangeActor {
 			// 3) Couple of error cases:
 			
 			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id", "failtest"), new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)
@@ -308,7 +308,7 @@ public class TestDataBucketChangeActor {
 	
 	@Test
 	public void test_getStreamingTopology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
-		final DataBucketBean bucket = createBucket("test_tech_id");		
+		final DataBucketBean bucket = createBucket("test_tech_id_stream");		
 		
 		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-topology-example.jar";
 		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -337,12 +337,12 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test2_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id_2b", Tuples._2T(null, null))
+					.put("test_tech_id_stream_2b", Tuples._2T(null, null))
 					.build();
 
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2a = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_2a"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_2a"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
 				Validation.success(test2_input));
@@ -355,7 +355,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2b = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_2b"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_2b"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
 				Validation.success(test2_input));
@@ -370,7 +370,7 @@ public class TestDataBucketChangeActor {
 
 		// 3) OK now it will actually do something 
 		
-		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id.cache.jar";
+		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id_stream.cache.jar";
 		
 		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
 		
@@ -390,14 +390,14 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id", Tuples._2T(
+					.put("test_tech_id_stream", Tuples._2T(
 							lib_elements.get(0),
 							cached_file.success()))
 					.build();		
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3 = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3_input));
@@ -413,14 +413,14 @@ public class TestDataBucketChangeActor {
 
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3a_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id_fail", Tuples._2T(
+					.put("test_tech_id_stream_fail", Tuples._2T(
 							lib_elements.get(3),
 							cached_file.success()))
 					.build();		
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3a = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_fail"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_fail"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3a_input));
@@ -448,7 +448,7 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3b_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id", Tuples._2T(
+					.put("test_tech_id_stream", Tuples._2T(
 							lib_elements.get(0),
 							cached_file.success()))
 					.put("test_module_id", Tuples._2T(
@@ -457,7 +457,7 @@ public class TestDataBucketChangeActor {
 					.build();		
 		
 		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-				"test_tech_name", Collections.emptyList(), true, Arrays.asList("test_tech_id", "test_module_id"), null
+				"test_tech_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id"), null
 				);
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3b = DataBucketChangeActor.getStreamingTopology(
@@ -490,7 +490,7 @@ public class TestDataBucketChangeActor {
 	
 	protected List<SharedLibraryBean> createSharedLibraryBeans(Path path1, Path path2) {
 		final SharedLibraryBean lib_element = BeanTemplateUtils.build(SharedLibraryBean.class)
-			.with(SharedLibraryBean::_id, "test_tech_id")
+			.with(SharedLibraryBean::_id, "test_tech_id_stream")
 			.with(SharedLibraryBean::path_name, path1.toString())
 			.with(SharedLibraryBean::misc_entry_point, "com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology")
 			.done().get();
@@ -507,7 +507,7 @@ public class TestDataBucketChangeActor {
 
 		// (result in classloader error)
 		final SharedLibraryBean lib_element4 = BeanTemplateUtils.build(SharedLibraryBean.class)
-				.with(SharedLibraryBean::_id, "test_tech_id_fail")
+				.with(SharedLibraryBean::_id, "test_tech_id_stream_fail")
 				.with(SharedLibraryBean::path_name, path1.toString())
 				.with(SharedLibraryBean::streaming_enrichment_entry_point, "com.ikanow.aleph2.test.example.ExampleStreamTopology")
 				.done().get();

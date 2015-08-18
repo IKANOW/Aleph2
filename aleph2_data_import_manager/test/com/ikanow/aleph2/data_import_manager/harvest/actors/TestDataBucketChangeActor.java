@@ -142,7 +142,7 @@ public class TestDataBucketChangeActor {
 
 	protected List<SharedLibraryBean> createSharedLibraryBeans(Path path1, Path path2) {
 		final SharedLibraryBean lib_element = BeanTemplateUtils.build(SharedLibraryBean.class)
-				.with(SharedLibraryBean::_id, "test_tech_id")
+				.with(SharedLibraryBean::_id, "test_tech_id_harvest")
 				.with(SharedLibraryBean::path_name, path1.toString())
 				.with(SharedLibraryBean::misc_entry_point, "com.ikanow.aleph2.test.example.ExampleHarvestTechnology")
 				.done().get();
@@ -162,7 +162,7 @@ public class TestDataBucketChangeActor {
 	
 	@Test
 	public void test_getHarvestTechnology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
-		final DataBucketBean bucket = createBucket("test_tech_id");		
+		final DataBucketBean bucket = createBucket("test_tech_id_harvest");		
 		
 		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -191,11 +191,11 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test2_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id_2b", Tuples._2T(null, null))
+					.put("test_tech_id_harvest_2b", Tuples._2T(null, null))
 					.build();
 
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketChangeActor.getHarvestTechnology(
-				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2a").done(), 
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2a").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
 				Validation.success(test2_input));
@@ -203,11 +203,11 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2a.isFail());
 		assertEquals("test_source2a", test2a.fail().source());
 		assertEquals("BucketActionOfferMessage", test2a.fail().command());
-		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketChangeActor.getHarvestTechnology(
-				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_2b").done(), 
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2b").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
 				Validation.success(test2_input));
@@ -215,14 +215,14 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2b.isFail());
 		assertEquals("test_source2b", test2b.fail().source());
 		assertEquals("BucketActionOfferMessage", test2b.fail().command());
-		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_2a"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		//////////////////////////////////////////////////////
 
 		// 3) OK now it will actually do something 
 		
-		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id.cache.jar";
+		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id_harvest.cache.jar";
 		
 		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
 		
@@ -242,13 +242,13 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id", Tuples._2T(
+					.put("test_tech_id_harvest", Tuples._2T(
 							lib_elements.get(0),
 							cached_file.success()))
 					.build();		
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketChangeActor.getHarvestTechnology(
-				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id").done(), 
+				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3_input));
@@ -280,7 +280,7 @@ public class TestDataBucketChangeActor {
 		
 		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3b_input = 
 				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
-					.put("test_tech_id", Tuples._2T(
+					.put("test_tech_id_harvest", Tuples._2T(
 							lib_elements.get(0),
 							cached_file.success()))
 					.put("test_module_id", Tuples._2T(
@@ -294,7 +294,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket)
-					.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id")
+					.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
 					.done(), 
 				false, 
@@ -311,7 +311,7 @@ public class TestDataBucketChangeActor {
 	
 	@Test
 	public void test_talkToHarvester() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-		final DataBucketBean bucket = createBucket("test_tech_id");		
+		final DataBucketBean bucket = createBucket("test_tech_id_harvest");		
 		
 		// Get the harvest tech module standalone ("in app" way is covered above)
 		
@@ -399,29 +399,7 @@ public class TestDataBucketChangeActor {
 		}		
 		// Test 6: update state - (a) resume, (b) suspend
 		{
-			final BucketActionMessage.UpdateBucketStateActionMessage update_state = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, Collections.emptySet());
-			
-			final CompletableFuture<BucketActionReplyMessage> test6 = DataBucketChangeActor.talkToHarvester(
-					bucket, update_state, "test6", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech));		
-			
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test6_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6.get();
-			assertEquals("test6", test6_reply.source());
-			assertEquals("called onSuspend", test6_reply.reply().message());
-			assertEquals(true, test6_reply.reply().success());
-	
-			final BucketActionMessage.UpdateBucketStateActionMessage update_stateb = new BucketActionMessage.UpdateBucketStateActionMessage(bucket, false, Collections.emptySet());
-			
-			final CompletableFuture<BucketActionReplyMessage> test6b = DataBucketChangeActor.talkToHarvester(
-					bucket, update_stateb, "test6b", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech));		
-			
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test6b.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test6b_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test6b.get();
-			assertEquals("test6b", test6b_reply.source());
-			assertEquals("called onResume", test6b_reply.reply().message());
-			assertEquals(true, test6b_reply.reply().success());
+			//(REMOVED NOW SUSPEND/RESUME ARE HANDLED BY UPDATE WITH THE APPROPRIATE DIFF SENT)
 		}		
 		// Test 7: purge
 		{
@@ -473,7 +451,7 @@ public class TestDataBucketChangeActor {
 	
 	@Test 
 	public void test_harvesterTalkWrap() throws InterruptedException, ExecutionException {
-		final DataBucketBean bucket = createBucket("test_tech_id");
+		final DataBucketBean bucket = createBucket("test_tech_id_harvest");
 		
 		// Get the harvest tech module standalone ("in app" way is covered above)
 		
@@ -515,7 +493,7 @@ public class TestDataBucketChangeActor {
 			// Preamble:
 			// 0) Insert 2 library beans into the management db
 			
-			final DataBucketBean bucket = createBucket("test_tech_id");		
+			final DataBucketBean bucket = createBucket("test_tech_id_harvest");		
 			
 			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -539,7 +517,7 @@ public class TestDataBucketChangeActor {
 					"test_tech_name", true, Arrays.asList("test_module_id"), null
 					);
 			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
-								.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id")
+								.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest")
 								.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
 								.done();
 			
@@ -601,7 +579,7 @@ public class TestDataBucketChangeActor {
 		// Preamble:
 		// 0) Insert 2 library beans into the management db
 		
-		final DataBucketBean bucket = createBucket("test_tech_id");		
+		final DataBucketBean bucket = createBucket("test_tech_id_harvest");		
 		
 		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -668,16 +646,16 @@ public class TestDataBucketChangeActor {
 		
 		// 4) A message that it will process because it's for this actor
 		
-		final BucketActionMessage.UpdateBucketStateActionMessage suspend =
-				new BucketActionMessage.UpdateBucketStateActionMessage(bucket, true, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
+		final BucketActionMessage.UpdateBucketActionMessage update =
+				new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
 		
-		final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, suspend, 5000L), _db_actor_context.getActorSystem().dispatcher());
+		final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, update, 5000L), _db_actor_context.getActorSystem().dispatcher());
 		final BucketActionReplyMessage msg4 = reply4.get();
 	
 		assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, msg4.getClass());
 		final BucketActionReplyMessage.BucketActionHandlerMessage msg4b =  (BucketActionReplyMessage.BucketActionHandlerMessage) msg4;
 		
 		assertEquals(true, msg4b.reply().success());
-		assertEquals("called onSuspend", msg4b.reply().message());
+		assertEquals("called onUpdatedSource true", msg4b.reply().message());
 	}
 }
