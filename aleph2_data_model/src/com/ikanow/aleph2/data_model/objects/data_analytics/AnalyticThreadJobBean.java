@@ -269,15 +269,23 @@ public class AnalyticThreadJobBean implements Serializable {
 		protected AnalyticThreadJobOutputBean() {}
 		
 		/** User c'tor
+		 * @param preserve_existing_data - Whether to preserve existing data before adding the output of the new job
 		 * @param is_transient - Whether the output data is written to a transient file store (default) or whether it's used as the output for this bucket (or a sub-bucket)
 		 * @param sub_bucket_path - the optional sub-bucket to which to write bucket output data
 		 * @param transient_type - the type (streaming/batch/both) of the transient output
 		 */
-		public AnalyticThreadJobOutputBean(final Boolean is_transient, final String sub_bucket_path, final DataBucketBean.MasterEnrichmentType transient_type) {
+		public AnalyticThreadJobOutputBean(final Boolean preserve_existing_data, final Boolean is_transient, 
+				final String sub_bucket_path, final DataBucketBean.MasterEnrichmentType transient_type) {
+			this.preserve_existing_data = preserve_existing_data;
 			this.is_transient = is_transient;
 			this.sub_bucket_path = sub_bucket_path;
 			this.transient_type = transient_type;
 		}
+		
+		/** If false (default) then delete any existing data before writing the output from the new job (if true then append/merge/deduplicate based on document_schema)   
+		 * @return - Whether to preserve existing data before adding the output of the new job
+		 */
+		public Boolean preserve_existing_data() { return preserve_existing_data; }
 		
 		/** Whether the output data is written to a transient file store (default) or whether it's used as the output for this bucket (or a sub-bucket) 
 		 * @return - whether the output data is transient or persisted in a bucket
@@ -294,6 +302,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public DataBucketBean.MasterEnrichmentType transient_type() { return transient_type; }
 		
+		private Boolean preserve_existing_data;
 		private Boolean is_transient;
 		private String sub_bucket_path;
 		private DataBucketBean.MasterEnrichmentType transient_type;		
