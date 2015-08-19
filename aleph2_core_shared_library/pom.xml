@@ -122,7 +122,7 @@
 	</dependency>
   	<dependency>
   		<groupId>org.apache.hadoop</groupId>
-  		<artifactId>hadoop-hdfs</artifactId>
+  		<artifactId>hadoop-common</artifactId>
   		<version>2.7.0</version>
   		<scope>provided</scope>
   	</dependency>
