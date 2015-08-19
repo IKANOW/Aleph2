@@ -31,6 +31,9 @@
 		<version>0.7.2.201409121644</version>
 		<configuration>
 			<excludes>
+				<!--  This actually removes code from coveralls.io -->
+				<!-- This is external code pasted into aleph2 -->
+				<exclude>**/com/ikanow/aleph2/**/utils/LiveInjector*</exclude>
 			</excludes>
 		</configuration>
 		<executions>

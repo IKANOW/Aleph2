@@ -75,7 +75,7 @@ public class TestJarCacheUtils {
 	public static class TestMessageBean {};
 	
 	@Test
-	public void testSetup() {
+	public void test_setup() {
 		if (File.separator.equals("\\")) { // windows mode!
 			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
 			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
@@ -83,7 +83,7 @@ public class TestJarCacheUtils {
 	}
 	
 	@Test
-	public void testLocalFileNotPresent() throws InterruptedException, ExecutionException, UnsupportedFileSystemException {
+	public void test_localFileNotPresent() throws InterruptedException, ExecutionException, UnsupportedFileSystemException {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
 		
@@ -118,7 +118,7 @@ public class TestJarCacheUtils {
 	}
 	
 	@Test
-	public void testLocalFilePresentButOld() throws InterruptedException, ExecutionException, AccessControlException, FileAlreadyExistsException, FileNotFoundException, ParentNotDirectoryException, IOException {
+	public void test_localFilePresentButOld() throws InterruptedException, ExecutionException, AccessControlException, FileAlreadyExistsException, FileNotFoundException, ParentNotDirectoryException, IOException {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
 		
@@ -167,7 +167,7 @@ public class TestJarCacheUtils {
 	}
 	
 	@Test
-	public void testLocalFilePresentAndNew() throws InterruptedException, ExecutionException, AccessControlException, FileAlreadyExistsException, FileNotFoundException, ParentNotDirectoryException, IOException {
+	public void test_localFilePresentAndNew() throws InterruptedException, ExecutionException, AccessControlException, FileAlreadyExistsException, FileNotFoundException, ParentNotDirectoryException, IOException {
 		
 		final FileContext localfs = FileContext.getLocalFSFileContext(new Configuration());
 		
@@ -211,7 +211,7 @@ public class TestJarCacheUtils {
 
 	
 	@Test
-	public void testRemoteFileNotPresent() throws InterruptedException, ExecutionException, UnsupportedFileSystemException {
+	public void test_remoteFileNotPresent() throws InterruptedException, ExecutionException, UnsupportedFileSystemException {
 		
 		assertFalse("Remote file exists", new File(_test_file_path + "x").exists());
 		

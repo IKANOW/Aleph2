@@ -46,7 +46,7 @@ public class DirUtilsTest {
 }
 	
 	@Test
-	public void testFindOneSubdirectory(){
+	public void test_findOneSubdirectory(){
 		Path start = new Path(_temp_dir+"/data/");
 		Path p = DirUtils.findOneSubdirectory(fileContext, start, "managed_bucket");
 		assertNotNull(p);
@@ -54,7 +54,7 @@ public class DirUtilsTest {
 	}
 
 	@Test
-	public void testFindAllSubdirectory(){
+	public void test_findAllSubdirectory(){
 		Path start = new Path(_temp_dir+"/data/");
 		
 		List<Path> paths = new ArrayList<Path>();

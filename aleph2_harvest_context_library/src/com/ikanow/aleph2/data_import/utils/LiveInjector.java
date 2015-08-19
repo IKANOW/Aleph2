@@ -27,6 +27,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 
+/** External Code from Project Lombok.
+ *  NOTE: NOT COVERED BY TEST CODE SO DO NOT CHANGE WITHOUT ADDING SOME TEST CASES
+ */
 public class LiveInjector {
 
 	/**

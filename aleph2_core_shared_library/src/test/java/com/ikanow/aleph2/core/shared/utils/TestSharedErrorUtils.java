@@ -29,7 +29,7 @@ public class TestSharedErrorUtils {
 	};	
 	
 	@Test
-	public void testGenerateMessageBean() {
+	public void test_generateMessageBean() {
 
 		final String ref_name = "test";
 		
