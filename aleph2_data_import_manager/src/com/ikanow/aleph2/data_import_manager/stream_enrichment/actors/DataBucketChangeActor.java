@@ -276,7 +276,8 @@ public class DataBucketChangeActor extends AbstractActor {
 									else
 										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
 								})
-								.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {																		
+								.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {		
+									//TODO in the future run this test with local storm rather than remote storm_controller
 									return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);									
 								})
 								.otherwise(msg -> {
