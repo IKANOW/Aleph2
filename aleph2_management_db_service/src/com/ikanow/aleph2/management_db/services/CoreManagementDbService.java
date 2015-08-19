@@ -185,6 +185,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketHarvestState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -193,6 +194,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketEnrichmentState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -201,6 +203,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -256,6 +259,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
 			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only);
 	}
 	
@@ -286,6 +290,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
 		
@@ -318,6 +324,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 
 	@Override
 	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
+		
 		CompletableFuture<Boolean> base_future = new CompletableFuture<Boolean>();
 		//create a test bucket to put data into instead of the specified bucket
 		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());
@@ -372,6 +381,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
+		
 		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
 
