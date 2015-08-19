@@ -12,8 +12,10 @@ import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
 
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
@@ -22,12 +24,19 @@ public class SecurityService implements ISecurityService {
 
 	protected ISubject currentSubject = null;
 	private static final Logger logger = LogManager.getLogger(SecurityService.class);
-	
-	public SecurityService() {
+	@Inject
+	protected IServiceContext serviceContext;
+
+	@Inject
+	public SecurityService(IServiceContext serviceContext) {
+		this.serviceContext = serviceContext;
+	}
+
+
+	protected void init(){
 		try {
-			Injector injector = Guice.createInjector(new CoreSecurityModule());
-		    SecurityManager securityManager = injector.getInstance(SecurityManager.class);
-//		    SecurityUtils.setSecurityManager(securityManager);Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");
+		    SecurityManager securityManager = getInjector().getInstance(SecurityManager.class);
+//		    SecurityUtils.setSecurityManager(securityManager);Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");    
 //	        SecurityManager securityManager = factory.getInstance();
 	        SecurityUtils.setSecurityManager(securityManager);
 
@@ -40,6 +49,15 @@ public class SecurityService implements ISecurityService {
 		} catch (Throwable e) {
 			logger.error("Caught exception",e);
 		}
+
+	}
+	/**
+	 * Placeholder metgod for derived security services.
+	 * @return
+	 */
+	protected Injector getInjector(){
+		Injector injector = Guice.createInjector(new CoreSecurityModule());
+		return injector;
 	}
 	
 	@Override
@@ -110,18 +128,22 @@ public class SecurityService implements ISecurityService {
 
 	@Override
 	public ISubject getSubject() {
+		if(currentSubject == null){
+			init();
+		}
 		return currentSubject;
 	}
 
 	@Override
 	public void login(ISubject subject, Object token) {
-		((Subject)currentSubject.getSubject()).login((AuthenticationToken)token);
+		
+		((Subject)getSubject().getSubject()).login((AuthenticationToken)token);
 		
 	}
 
 	@Override
 	public boolean hasRole(ISubject subject, String roleIdentifier) {
-		boolean ret = ((Subject)currentSubject.getSubject()).hasRole(roleIdentifier);
+		boolean ret = ((Subject)getSubject().getSubject()).hasRole(roleIdentifier);
 		return ret;
 	}
 

@@ -59,6 +59,16 @@ public class SetOnce<T> {
 	public boolean isSet() {
 		return _t != null;
 	}
+
+	/** A version of "set" that throws an exception if the value is already set instead of failing silently and returning false
+	 * @param t - the value to set
+	 * @return the value just set
+	 */
+	public T trySet(T t) {
+		if (null != _t) throw new RuntimeException("SetOnce<>: can only set once");
+		_t = t;
+		return _t;
+	}
 	
 	/** Force override the current value - SHOULD BE USED WITH EXTREME CARE - EG ONLY IN TESTS
 	 * @param t - the value to set

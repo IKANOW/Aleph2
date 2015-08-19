@@ -518,7 +518,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 										new Date(), // date
 										false, // success
 										IManagementDbService.CORE_MANAGEMENT_DB.get(),
-										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
+										BucketActionMessage.UpdateBucketActionMessage.class.getSimpleName(),
 										null, // message code
 										ErrorUtils.get(ManagementDbErrorUtils.ILLEGAL_UPDATE_COMMAND, kv.getKey(), kv.getValue()._1()),
 										null); // details						
@@ -559,7 +559,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 										new Date(), // date
 										false, // success
 										IManagementDbService.CORE_MANAGEMENT_DB.get(),
-										BucketActionMessage.UpdateBucketStateActionMessage.class.getSimpleName(),
+										BucketActionMessage.UpdateBucketActionMessage.class.getSimpleName(),
 										null, // message code
 										ErrorUtils.get(ManagementDbErrorUtils.MISSING_STATUS_BEAN_OR_BUCKET, 
 												update_reply.join().map(s -> s._id()).orElse("(unknown)")),
@@ -571,9 +571,10 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 							// (as above, if we're here then must exist)
 						
 						// Once we have the bucket, issue the update command
-						final BucketActionMessage.UpdateBucketStateActionMessage update_message = new
-									BucketActionMessage.UpdateBucketStateActionMessage(bucket.get(), 
+						final BucketActionMessage.UpdateBucketActionMessage update_message = new
+									BucketActionMessage.UpdateBucketActionMessage(bucket.get(), 
 											suspended_predicate.test(status_bean), // (ie user picks whether to suspend or unsuspend here)
+											bucket.get(),
 											new HashSet<String>(
 													Optional.ofNullable(status_bean.node_affinity())
 													.orElse(Collections.emptyList())
@@ -585,8 +586,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 							MgmtCrudUtils.applyRetriableManagementOperation(bucket.get(), 
 									actor_context, retry_store, 
 									update_message, source -> {
-										return new BucketActionMessage.UpdateBucketStateActionMessage(
-												update_message.bucket(), status_bean.suspended(),
+										return new BucketActionMessage.UpdateBucketActionMessage(
+												update_message.bucket(), status_bean.suspended(), update_message.bucket(),
 												new HashSet<String>(Arrays.asList(source)));	
 									});
 							

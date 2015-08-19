@@ -36,7 +36,6 @@ public interface IHarvestTechnologyModule {
 	/** This function is guaranteed to always be called before any callback is called, and can therefore be used to store the context
 	 *  It can be used to store the context (which is always passed in anyway) and therefore set up any code that needs to be run.
 	 *  It should return as quickly as possible, eg not block on any lengthy operations.
-	 * @param bucket - the bucket for which an instance of this module has been created
 	 * @param context - the context for which an instance of this module has been created
 	 */
 	void onInit(final IHarvestContext context);
@@ -65,30 +64,12 @@ public interface IHarvestTechnologyModule {
 	 * 
 	 * @param old_bucket - the updated bucket
 	 * @param new_bucket - the updated bucket
-	 * @param is_enabled - whether the bucket is currently enabled (note - you cannot infer anything about the previous enabled/suspended state)
+	 * @param is_enabled - whether the bucket is currently enabled (note - you cannot infer anything about the previous enabled/suspended state unless the diff optional is present)
 	 * @param diff - optionally what information has changed (including changes to shared library beans). If this is not present (it will not be in early versions of the platform), developers must assume everything has changed, eg restarting the external service. 
 	 * @param context - the context available to this harvester
 	 * @return A future for the response
 	 */
 	CompletableFuture<BasicMessageBean> onUpdatedSource(final DataBucketBean old_bucket, final DataBucketBean new_bucket, final boolean is_enabled, final Optional<BucketDiffBean> diff, final IHarvestContext context);
-	
-	/**
-	 * Instruction to suspend the bucket processing
-	 * 
-	 * @param suspended - the bucket that needs to be suspended
-	 * @param context - the context available to this harvester
-	 * @return A future for the response
-	 */
-	CompletableFuture<BasicMessageBean> onSuspend(final DataBucketBean to_suspend, final IHarvestContext context);
-	
-	/**
-	 * Instruction to re-activate a previously suspended bucket
-	 * 
-	 * @param to_resume - the bucket that needs to be re-activated
-	 * @param context - the context available to this harvester
-	 * @return A future for the response
-	 */
-	CompletableFuture<BasicMessageBean> onResume(final DataBucketBean to_resume, final IHarvestContext context);
 	
 	/**
 	 * Notification that all data for this bucket is to be purged
