@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.harvest.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import static org.junit.Assert.*;
 
@@ -21,35 +21,20 @@ import java.util.Date;
 
 import org.junit.Test;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
-public class TestHarvestErrorUtils {
+public class TestSharedErrorUtils {
 
-	static class TestActor extends UntypedActor {
-		@Override
-		public void onReceive(Object arg0) throws Exception {
-		}		
-	}
-	
 	public static class TestMessage {		
-	};
-	
-	static ActorSystem _akka = ActorSystem.create();
-	
+	};	
 	
 	@Test
 	public void testGenerateMessageBean() {
 
-		final ActorRef ref = _akka.actorOf(Props.create(TestActor.class));
-		final String ref_name = ref.toString();
+		final String ref_name = "test";
 		
 		final BasicMessageBean test1 = 
-				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), "TEST ERROR NO PARAMS {0}");
+				SharedErrorUtils.buildErrorMessage(ref_name, new TestMessage(), "TEST ERROR NO PARAMS {0}");
 		
 		assertEquals(test1.command(), "TestMessage");
 		assertEquals((double)test1.date().getTime(), (double)((new Date()).getTime()), 1000.0);
@@ -60,23 +45,23 @@ public class TestHarvestErrorUtils {
 		assertEquals(test1.success(), false);
 		
 		final BasicMessageBean test2 = 
-				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), HarvestErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, 2L);
+				SharedErrorUtils.buildErrorMessage(ref_name, new TestMessage(), SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, 2L);
 		
 		assertEquals(test2.command(), "TestMessage");
 		assertEquals((double)test2.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(test2.details(), null);
-		assertEquals(test2.message(), "No harvest technology name or id in bucket 2");
+		assertEquals(test2.message(), "Shared library {1} not found: 2");
 		assertEquals(test2.message_code(), null);
 		assertEquals(test2.source(), ref_name);
 		assertEquals(test2.success(), false);
 		
 		final BasicMessageBean test3 = 
-				HarvestErrorUtils.buildErrorMessage(ref.toString(), new TestMessage(), HarvestErrorUtils.HARVEST_TECHNOLOGY_NAME_NOT_FOUND, "3a", "3b");
+				SharedErrorUtils.buildErrorMessage(ref_name, new TestMessage(), SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, "3a", "3b");
 		
 		assertEquals(test3.command(), "TestMessage");
 		assertEquals((double)test3.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(test3.details(), null);
-		assertEquals(test3.message(), "No valid harvest technology 3a found for bucket 3b");
+		assertEquals(test3.message(), "Shared library 3b not found: 3a");
 		assertEquals(test3.message_code(), null);
 		assertEquals(test3.source(), ref_name);
 		assertEquals(test3.success(), false);

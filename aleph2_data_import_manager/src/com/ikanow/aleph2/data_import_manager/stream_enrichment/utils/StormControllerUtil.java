@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -41,12 +42,13 @@ import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
 import com.google.common.collect.Sets;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.RemoteStormController;
-import com.ikanow.aleph2.data_import_manager.utils.JarBuilderUtil;
-import com.ikanow.aleph2.data_import_manager.utils.LiveInjector;
+import com.ikanow.aleph2.core.shared.utils.JarBuilderUtil;
+import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -209,7 +211,7 @@ public class StormControllerUtil {
 		if (null == topology) {
 			start_future.complete(
 					new BucketActionReplyMessage.BucketActionHandlerMessage("start",
-							StreamErrorUtils.buildErrorMessage
+							SharedErrorUtils.buildErrorMessage
 								("startJob", "IStormController.startJob", StreamErrorUtils.TOPOLOGY_NULL_ERROR, enrichment_toplogy.getClass().getName(), bucket.full_name()))
 					 );
 			return start_future;
@@ -251,13 +253,13 @@ public class StormControllerUtil {
 				}						
 			} catch (Exception ex ) {
 				start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob",
-								StreamErrorUtils.buildErrorMessage
+						SharedErrorUtils.buildErrorMessage
 									("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
 						 ));
 			}
 		} catch ( Exception ex ) {
 			start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob",
-					StreamErrorUtils.buildErrorMessage
+					SharedErrorUtils.buildErrorMessage
 						("startJob", "IStormController.startJob", ErrorUtils.getLongForm("Error starting storm job: {0}", ex))
 			 ));
 		}

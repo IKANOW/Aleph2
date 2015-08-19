@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 
 import java.nio.CharBuffer;

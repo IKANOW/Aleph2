@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
-import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
+import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;

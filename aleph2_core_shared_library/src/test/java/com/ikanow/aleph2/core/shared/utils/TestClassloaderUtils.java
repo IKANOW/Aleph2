@@ -1,4 +1,4 @@
-package com.ikanow.aleph2.data_import_manager.harvest.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import static org.junit.Assert.*;
 
@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
 
-import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;

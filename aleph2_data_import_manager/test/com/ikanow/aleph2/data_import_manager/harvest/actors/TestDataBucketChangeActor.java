@@ -49,11 +49,11 @@ import akka.pattern.Patterns;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
-import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
-import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
+import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -175,7 +175,7 @@ public class TestDataBucketChangeActor {
 
 		// 1) Check - if called with an error, then just passes that error along
 		
-		final BasicMessageBean error = HarvestErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketChangeActor.getHarvestTechnology(bucket, true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
@@ -203,7 +203,7 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2a.isFail());
 		assertEquals("test_source2a", test2a.fail().source());
 		assertEquals("BucketActionOfferMessage", test2a.fail().command());
-		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketChangeActor.getHarvestTechnology(
@@ -215,7 +215,7 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2b.isFail());
 		assertEquals("test_source2b", test2b.fail().source());
 		assertEquals("BucketActionOfferMessage", test2b.fail().command());
-		assertEquals(ErrorUtils.get(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		//////////////////////////////////////////////////////
@@ -330,7 +330,7 @@ public class TestDataBucketChangeActor {
 		
 		// Test 1: pass along errors:
 		{
-			final BasicMessageBean error = HarvestErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToHarvester(
 					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 

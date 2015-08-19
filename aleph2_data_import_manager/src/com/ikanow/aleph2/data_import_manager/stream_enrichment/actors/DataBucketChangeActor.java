@@ -34,8 +34,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -57,14 +59,16 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
-import com.ikanow.aleph2.data_import_manager.utils.ClassloaderUtils;
-import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
+import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
@@ -196,7 +200,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    						_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
 	    						
 			    				final BasicMessageBean error_bean = 
-			    						StreamErrorUtils.buildErrorMessage(hostname, m,
+			    						SharedErrorUtils.buildErrorMessage(hostname, m,
 			    								ErrorUtils.getLongForm(StreamErrorUtils.STREAM_UNKNOWN_ERROR, e, m.bucket().full_name())
 			    								);
 			    				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
@@ -325,8 +329,8 @@ public class DataBucketChangeActor extends AbstractActor {
 						
 						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
 							return Validation.fail(
-									StreamErrorUtils.buildErrorMessage(source, m,
-											StreamErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"));
+									SharedErrorUtils.buildErrorMessage(source, m,
+											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"));
 						}
 						
 						final Validation<BasicMessageBean, IEnrichmentStreamingTopology> ret_val = 
@@ -341,8 +345,8 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 		catch (Throwable t) {
 			return Validation.fail(
-					StreamErrorUtils.buildErrorMessage(source, m,
-						ErrorUtils.getLongForm(StreamErrorUtils.ERROR_LOADING_CLASS, t, bucket.harvest_technology_name_or_id())));  
+					SharedErrorUtils.buildErrorMessage(source, m,
+						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, t, bucket.harvest_technology_name_or_id())));  
 			
 		}
 	}
@@ -432,7 +436,7 @@ public class DataBucketChangeActor extends AbstractActor {
 							}
 							catch (Exception e) { // handle the exception thrown above containing the message bean from whatever the original error was!
 								return Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>fail(
-										StreamErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
+										SharedErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
 												e.getMessage()));
 							}
 						});
@@ -440,8 +444,8 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 		catch (Throwable e) { // (can only occur if the DB call errors)
 			return CompletableFuture.completedFuture(
-				Validation.fail(StreamErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
-					ErrorUtils.getLongForm(StreamErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
+				Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
+					ErrorUtils.getLongForm(SharedErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
 					)));
 		}
 	}

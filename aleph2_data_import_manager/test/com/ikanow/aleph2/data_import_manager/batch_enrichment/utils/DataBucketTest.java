@@ -22,7 +22,7 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentModule;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
-import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
+import com.ikanow.aleph2.core.shared.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;

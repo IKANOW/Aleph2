@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.harvest.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import static org.junit.Assert.*;
 
@@ -36,7 +36,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;

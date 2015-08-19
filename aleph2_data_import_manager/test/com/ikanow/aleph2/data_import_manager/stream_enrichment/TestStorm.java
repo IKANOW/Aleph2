@@ -60,7 +60,7 @@ import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalSto
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.storm_samples.SampleWebReaderSpout;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.storm_samples.SampleWordParserBolt;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
-import com.ikanow.aleph2.data_import_manager.utils.JarBuilderUtil;
+import com.ikanow.aleph2.core.shared.utils.JarBuilderUtil;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaBolt;
 //import com.ikanow.aleph2.storm.samples.bolts.SampleKafkaOutputFileBolt;

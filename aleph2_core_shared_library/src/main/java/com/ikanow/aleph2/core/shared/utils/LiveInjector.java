@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE
  */
 
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;

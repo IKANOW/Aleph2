@@ -50,11 +50,11 @@ import akka.pattern.Patterns;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
-import com.ikanow.aleph2.data_import_manager.utils.JarCacheUtils;
+import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -321,7 +321,7 @@ public class TestDataBucketChangeActor {
 
 		// 1) Check - if called with an error, then just passes that error along
 		
-		final BasicMessageBean error = StreamErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test1 = DataBucketChangeActor.getStreamingTopology(bucket,  
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
@@ -350,7 +350,7 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2a.isFail());
 		assertEquals("test_source2a", test2a.fail().source());
 		assertEquals("BucketActionOfferMessage", test2a.fail().command());
-		assertEquals(ErrorUtils.get(StreamErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2b = DataBucketChangeActor.getStreamingTopology(
@@ -363,7 +363,7 @@ public class TestDataBucketChangeActor {
 		assertTrue("Got error back", test2b.isFail());
 		assertEquals("test_source2b", test2b.fail().source());
 		assertEquals("BucketActionOfferMessage", test2b.fail().command());
-		assertEquals(ErrorUtils.get(StreamErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"), // (cloned bucket above)
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"), // (cloned bucket above)
 						test2a.fail().message());
 		
 		//////////////////////////////////////////////////////

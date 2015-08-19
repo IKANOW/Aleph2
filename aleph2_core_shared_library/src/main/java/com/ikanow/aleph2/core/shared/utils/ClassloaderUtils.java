@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import java.net.URL;
 import java.util.List;
@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
-import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
@@ -63,9 +62,9 @@ public class ClassloaderUtils {
 				throw new RuntimeException("Unknown error");
 			}
 			else if (!interface_clazz.isAssignableFrom(ret_val.getClass())) {
-				return Validation.fail(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+				return Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors, 
 						msg_for_errors, 
-						ErrorUtils.get(HarvestErrorUtils.ERROR_CLASS_NOT_SUPERCLASS, implementation_classname, interface_clazz) 
+						ErrorUtils.get(SharedErrorUtils.ERROR_CLASS_NOT_SUPERCLASS, implementation_classname, interface_clazz) 
 						));				
 			}
 			else return Validation.success(ret_val);
@@ -75,9 +74,9 @@ public class ClassloaderUtils {
 			System.out.println("----------------- " + primary_lib + " ... " + secondary_libs.stream().collect(Collectors.joining(",")));
 			e.printStackTrace();
 			
-			return Validation.fail(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+			return Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
-							ErrorUtils.getLongForm(HarvestErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 
+							ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 
 							));
 		}
 	}	

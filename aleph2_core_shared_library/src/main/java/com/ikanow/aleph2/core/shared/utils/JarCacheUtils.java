@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import java.io.FileNotFoundException;
 import java.util.Optional;
@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -75,9 +74,9 @@ public class JarCacheUtils {
 			
 		} catch (Throwable e) {
 			return CompletableFuture.completedFuture(Validation.fail
-					(HarvestErrorUtils.buildErrorMessage(handler_for_errors, 
+					(SharedErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
-							HarvestErrorUtils.getLongForm(HarvestErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, e, library_bean.path_name()) 
+							SharedErrorUtils.getLongForm(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, e, library_bean.path_name()) 
 							)));
 		}
 	}

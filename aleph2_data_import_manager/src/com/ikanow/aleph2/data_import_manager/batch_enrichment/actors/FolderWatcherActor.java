@@ -35,7 +35,7 @@ import akka.actor.UntypedActor;
 
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.utils.DirUtils;
+import com.ikanow.aleph2.core.shared.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
