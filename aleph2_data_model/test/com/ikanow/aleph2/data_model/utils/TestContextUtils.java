@@ -243,12 +243,6 @@ public class TestContextUtils {
 		String dummySignature = null;
 
 		@Override
-		public <I> Optional<I> getService(Class<I> service_clazz,
-				Optional<String> service_name) {
-			return null;
-		}
-
-		@Override
 		public CompletableFuture<BasicMessageBean> subscribeToBucket(
 				DataBucketBean bucket,
 				Optional<String> stage,
@@ -335,6 +329,11 @@ public class TestContextUtils {
 		@Override
 		public void initializeNewContext(String signature) {
 			dummySignature = signature;			
+		}
+
+		@Override
+		public IServiceContext getServiceContext() {
+			return null;
 		}
 	}
 	
