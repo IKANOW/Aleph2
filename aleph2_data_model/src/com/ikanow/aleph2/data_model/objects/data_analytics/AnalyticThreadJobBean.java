@@ -179,7 +179,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public String resource_name_or_id() { return resource_name_or_id; }
 		
-		/** For bucket data access, the data service from which to retrieve the data (search_index_service, storage_service, etc)
+		/** For bucket data access, the data service from which to retrieve the data (search_index_service, storage_service, etc). If set to "stream" then requests data from a streaming queue.
 		 * @return For bucket data access, the data service from which to retrieve the data
 		 */
 		public String data_service() { return data_service; } 

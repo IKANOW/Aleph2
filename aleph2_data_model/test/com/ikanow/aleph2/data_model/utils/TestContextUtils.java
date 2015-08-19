@@ -39,6 +39,8 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -327,6 +329,51 @@ public class TestContextUtils {
 		public void emergencyQuarantineBucket(Optional<DataBucketBean> bucket,
 				String quarantine_duration) {
 			
+		}
+
+		@Override
+		public void sendObjectToStreamingPipeline(
+				Optional<DataBucketBean> bucket, Optional<String> stage,
+				JsonNode object) {			
+		}
+
+		@Override
+		public void sendObjectToStreamingPipeline(
+				Optional<DataBucketBean> bucket, Optional<String> stage,
+				Map<String, Object> object) {
+		}
+
+		@Override
+		public Optional<Tuple2<String, Optional<String>>> getOutputPath(
+				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+			return null;
+		}
+
+		@Override
+		public Optional<List<String>> getInputPaths(
+				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
+				AnalyticThreadJobInputBean job_input) {
+			return null;
+		}
+
+		@Override
+		public <T> Optional<T> getServiceInput(Class<T> clazz,
+				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
+				AnalyticThreadJobInputBean job_input) {
+			return null;
+		}
+
+		@Override
+		public <T> Optional<T> getServiceOutput(Class<T> clazz,
+				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
+				String data_service) {
+			return null;
+		}
+
+		@Override
+		public boolean checkForListeners(Optional<DataBucketBean> bucket,
+				Optional<String> stage) {
+			return false;
 		}
 	}
 	
