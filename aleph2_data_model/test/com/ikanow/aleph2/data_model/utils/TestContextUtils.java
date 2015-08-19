@@ -24,8 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,10 +39,10 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
@@ -158,12 +156,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket)
-		{
-			return null;
-		}
-
-		@Override
 		public CompletableFuture<Map<String, String>> getHarvestLibraries(
 				Optional<DataBucketBean> bucket) {
 			return null;
@@ -220,8 +212,81 @@ public class TestContextUtils {
 		}
 
 		@Override
+		public Optional<DataBucketBean> getBucket() {
+			return null;
+		}
+
+		@Override
+		public SharedLibraryBean getLibraryConfig() {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(
+				Class<S> clazz, Optional<String> collection) {
+			return null;
+		}
+
+		@Override
 		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
-				Optional<DataBucketBean> bucket, Optional<String> sub_collection, boolean auto_prepend_prefix) {
+				Optional<DataBucketBean> bucket, Optional<String> collection,
+				Optional<StateDirectoryType> type) {
+			return null;
+		}
+		
+	}
+	public static class MockAnalyticsContext implements IAnalyticsContext {
+		
+		public MockAnalyticsContext() {}
+		
+		String dummySignature = null;
+
+
+		@Override
+		public void initializeNewContext(String signature) {
+			dummySignature = signature;			
+		}
+
+		@Override
+		public IServiceContext getServiceContext() {
+			return null;
+		}
+
+		@Override
+		public String subscribeToBucket(DataBucketBean bucket,
+				Optional<String> stage) {
+			return null;
+		}
+
+		@Override
+		public List<String> getAnalyticsContextLibraries(
+				Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+			return null;
+		}
+
+		@Override
+		public String getAnalyticsContextSignature(
+				Optional<DataBucketBean> bucket,
+				Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+			return null;
+		}
+
+		@Override
+		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
+				Optional<DataBucketBean> bucket) {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getGlobalAnalyticTechnologyObjectStore(
+				Class<S> clazz, Optional<String> collection) {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
+				Optional<DataBucketBean> bucket, Optional<String> collection,
+				Optional<StateDirectoryType> type) {
 			return null;
 		}
 
@@ -234,106 +299,34 @@ public class TestContextUtils {
 		public SharedLibraryBean getLibraryConfig() {
 			return null;
 		}
-		
-	}
-	public static class MockAnalyticsContext implements IAnalyticsContext {
-		
-		public MockAnalyticsContext() {}
-		
-		String dummySignature = null;
 
 		@Override
-		public CompletableFuture<BasicMessageBean> subscribeToBucket(
-				DataBucketBean bucket,
-				Optional<String> stage,
-				Consumer<JsonNode> on_new_object_callback) {
+		public CompletableFuture<DataBucketStatusBean> getBucketStatus(
+				Optional<DataBucketBean> bucket) {
 			return null;
 		}
 
 		@Override
-		public CompletableFuture<BasicMessageBean> subscribeToAnalyticThread(
-				AnalyticThreadBean analytic_thread,
-				Optional<String> stage,
-				Consumer<JsonNode> on_new_object_callback) {
-			return null;
-		}
-
-		@Override
-		public CompletableFuture<Stream<JsonNode>> getObjectStreamFromBucket(
-				DataBucketBean bucket, Optional<String> stage) {
-			return null;
-		}
-
-		@Override
-		public Stream<JsonNode> getObjectStreamFromAnalyticThread(
-				AnalyticThreadBean analytic_thread,
-				Optional<String> stage) {
-			return null;
-		}
-
-		@Override
-		public List<String> getAnalyticsContextLibraries(
-				Optional<Set<Class<?>>> services) {
-			return null;
-		}
-
-		@Override
-		public String getAnalyticsContextSignature(
-				Optional<AnalyticThreadBean> analytic_thread) {
-			return null;
-		}
-
-		@Override
-		public CompletableFuture<JsonNode> getGlobalAnalyticsTechnologyConfiguration() {
-			return null;
-		}
-
-		@Override
-		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
-				Optional<AnalyticThreadBean> analytic_thread) {
-			return null;
-		}
-
-		@Override
-		public <S> ICrudService<S> getThreadObjectStore(
-				Class<S> clazz,
-				Optional<AnalyticThreadBean> analytic_thread,
-				Optional<String> sub_collection,
-				boolean auto_apply_prefix) {
-			return null;
-		}
-
-		@Override
-		public void logStatusForThreadOwner(
-				Optional<AnalyticThreadBean> analytic_thread,
+		public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
 				BasicMessageBean message, boolean roll_up_duplicates) {
+			
 		}
 
 		@Override
-		public void logStatusForThreadOwner(
-				Optional<AnalyticThreadBean> analytic_thread,
+		public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
 				BasicMessageBean message) {
+			
 		}
 
 		@Override
-		public void emergencyDisableThread(
-				Optional<AnalyticThreadBean> analytic_thread) {
+		public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
+			
 		}
 
 		@Override
-		public void emergencyQuarantineThread(
-				Optional<AnalyticThreadBean> analytic_thread,
+		public void emergencyQuarantineBucket(Optional<DataBucketBean> bucket,
 				String quarantine_duration) {
-		}
-
-		@Override
-		public void initializeNewContext(String signature) {
-			dummySignature = signature;			
-		}
-
-		@Override
-		public IServiceContext getServiceContext() {
-			return null;
+			
 		}
 	}
 	

@@ -47,6 +47,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -58,12 +59,14 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
+import com.sun.xml.internal.rngom.binary.Pattern;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -331,10 +334,9 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getGlobalHarvestTechnologyObjectStore()
 	 */
 	@Override
-	public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket)
+	public <S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<String> collection)
 	{
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		return this.getBucketObjectStore(clazz, Optional.empty(), collection, Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
 	}
 
 	/* (non-Javadoc)
@@ -389,12 +391,25 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, boolean)
 	 */
 	@Override
-	public <S> ICrudService<S> getBucketObjectStore(
-			Class<S> clazz, Optional<DataBucketBean> bucket,
-			Optional<String> sub_collection, boolean auto_apply_prefix)
-	{
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	public <S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> collection, final Optional<AssetStateDirectoryBean.StateDirectoryType> type)
+	{		
+		final Optional<DataBucketBean> this_bucket = 
+				bucket
+					.map(x -> Optional.of(x))
+					.orElseGet(() -> _mutable_state.bucket.isSet() 
+										? Optional.of(_mutable_state.bucket.get()) 
+										: Optional.empty());
+		
+		return Patterns.match(type).<ICrudService<S>>andReturn()
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.analytic_thread == t.get(), 
+						__ -> _core_management_db.getBucketAnalyticThreadState(clazz, this_bucket.get(), collection))
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.enrichment == t.get(), 
+						__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
+						__ -> _core_management_db.getPerLibraryState(clazz, this.getLibraryConfig(), collection))
+				// default: harvest or not specified: harvest
+				.otherwise(__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
+				;
 	}
 
 	/* (non-Javadoc)
