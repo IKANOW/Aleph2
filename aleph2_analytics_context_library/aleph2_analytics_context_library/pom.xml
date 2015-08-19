@@ -1,25 +1,125 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>com.ikanow.aleph2</groupId>
   <artifactId>aleph2_analytics_context_library</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
-
-  <name>aleph2_analytics_context_library</name>
-  <url>http://maven.apache.org</url>
-
+  <version>${aleph2.version}</version>
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+	<aleph2.scope>compile</aleph2.scope>
   </properties>
-
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+      	<groupId>org.eluder.coveralls</groupId>
+      	<artifactId>coveralls-maven-plugin</artifactId>
+      	<version>3.1.0</version>
+	    <configuration>
+	        <sourceEncoding>UTF-8</sourceEncoding>
+	    </configuration>
+      </plugin>
+	  <plugin>
+		<groupId>org.jacoco</groupId>
+		<artifactId>jacoco-maven-plugin</artifactId>
+		<version>0.7.2.201409121644</version>
+		<configuration>
+			<excludes>
+				<!--  This actually removes code from coveralls.io -->
+				<!-- Example:
+				<exclude>**/path/to/package/*</exclude>
+				-->
+			</excludes>
+		</configuration>
+		<executions>
+			<execution>
+				<id>prepare-agent</id>
+				<goals>
+					<goal>prepare-agent</goal>
+				</goals>
+			</execution>
+		</executions>
+	  </plugin>
+	      <plugin>
+	      	<!--  execute using: mvn -e clean package shade:shade -Dmaven.test.skip=true -->
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-shade-plugin</artifactId>
+	        <version>2.3</version>
+	        <executions>
+	          <execution>
+	            <phase>package</phase>
+	            <goals>
+	              <goal>shade</goal>
+	            </goals>
+				<configuration>
+		          <shadedArtifactAttached>true</shadedArtifactAttached>
+		        </configuration>
+	          </execution>
+	        </executions>
+	      </plugin>
+    
+	</plugins>
+    <pluginManagement>
+    	<plugins>
+    		<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+    		<plugin>
+    			<groupId>org.eclipse.m2e</groupId>
+    			<artifactId>lifecycle-mapping</artifactId>
+    			<version>1.0.0</version>
+    			<configuration>
+    				<lifecycleMappingMetadata>
+    					<pluginExecutions>
+    						<pluginExecution>
+    							<pluginExecutionFilter>
+    								<groupId>org.jacoco</groupId>
+    								<artifactId>
+    									jacoco-maven-plugin
+    								</artifactId>
+    								<versionRange>
+    									[0.7.2.201409121644,)
+    								</versionRange>
+    								<goals>
+    									<goal>prepare-agent</goal>
+    								</goals>
+    							</pluginExecutionFilter>
+    							<action>
+    								<ignore></ignore>
+    							</action>
+    						</pluginExecution>
+    					</pluginExecutions>
+    				</lifecycleMappingMetadata>
+    			</configuration>
+    		</plugin>    		
+    	</plugins>
+    </pluginManagement>
+  </build>
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
-    </dependency>
+	<dependency>
+	    <groupId>jdk.tools</groupId>
+	    <artifactId>jdk.tools</artifactId>
+	    <version>${java.version}</version>
+	    <scope>system</scope>
+	    <systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>
+	</dependency>
+  	<dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.12</version>
+  		<scope>test</scope>
+  	</dependency>
+  	<!-- Example of internal dependency (always need data model anyway) -->
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_data_model</artifactId>
+  		<version>${aleph2.version}</version>
+		<scope>${aleph2.scope}</scope>
+	</dependency>
+	<!-- Other external dependencies here -->
   </dependencies>
 </project>
