@@ -11,8 +11,9 @@
     <modules>
         <module>aleph2_data_model</module>
         <module>aleph2_object_import_library</module>
-        <module>aleph2_access_manager</module>
+        <module>aleph2_core_shared_library</module>
         <module>aleph2_core_distributed_services_library</module>
+        <module>aleph2_access_manager</module>
         <module>aleph2_harvest_context_library</module>
         <module>aleph2_streaming_enrichment_context_library</module>
         <module>aleph2_data_analytics_manager</module>
