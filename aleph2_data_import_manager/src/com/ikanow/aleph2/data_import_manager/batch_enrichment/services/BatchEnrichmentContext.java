@@ -310,8 +310,11 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	
 	// OVERRIDES
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getTopologyEntryPoints(java.lang.Class, java.util.Optional)
+	 */
 	@Override
-	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
+	public <T> Collection<Tuple2<T, String>> getTopologyEntryPoints(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
 		throw new RuntimeException(ErrorUtils.NOT_SUPPORTED_IN_BATCH_ENRICHMENT);						
 	}
 

@@ -137,15 +137,15 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.of(test_bucket)));
 			//Other topology call
 			try {
-				test_context2.getTopologyEntryPoint(Object.class, Optional.empty());
+				test_context2.getTopologyEntryPoints(Object.class, Optional.empty());
 				fail("Should have errored");
 			}
 			catch(Exception e) {
 			}
 			test_context2.setUserTopologyEntryPoint("test");
 			test_context2.setBucket(test_bucket);
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.empty()));
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.of(test_bucket)));
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoints(Object.class, Optional.empty()));
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoints(Object.class, Optional.of(test_bucket)));
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -286,7 +286,7 @@ public class TestStreamingEnrichmentContext {
 				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
 			}
 			try {
-				test_external2b.getTopologyEntryPoint(null, null);
+				test_external2b.getTopologyEntryPoints(null, null);
 				fail("Should have errored");
 			}
 			catch (Exception e) {

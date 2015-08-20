@@ -402,8 +402,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <T> T getTopologyEntryPoint(Class<T> clazz,
-				Optional<DataBucketBean> bucket) {
+		public <T> Collection<Tuple2<T, String>> getTopologyEntryPoints(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
 			return null;
 		}
 

@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import.services;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -315,7 +316,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T getTopologyEntryPoint(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
+	public <T> Collection<Tuple2<T, String>> getTopologyEntryPoints(final Class<T> clazz, final Optional<DataBucketBean> bucket) {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
@@ -325,7 +326,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, my_bucket._id()); 
 			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
 			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
-			return (T) kafka_spout;			
+			return Arrays.asList(Tuples._2T((T) kafka_spout, topic_name));			
 		}
 		else {
 			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);						
