@@ -471,13 +471,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
-				Optional<DataBucketBean> bucket,
-				Optional<String> sub_collection, boolean auto_apply_prefix) {
-			return null;
-		}
-
-		@Override
 		public Future<DataBucketStatusBean> getBucketStatus(
 				Optional<DataBucketBean> bucket) {
 			return null;
@@ -515,6 +508,19 @@ public class TestContextUtils {
 
 		@Override
 		public SharedLibraryBean getLibraryConfig() {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(
+				Class<S> clazz, Optional<String> collection) {
+			return null;
+		}
+
+		@Override
+		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
+				Optional<DataBucketBean> bucket, Optional<String> collection,
+				Optional<StateDirectoryType> type) {
 			return null;
 		}
 		

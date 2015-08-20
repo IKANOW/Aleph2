@@ -54,12 +54,15 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -422,9 +425,41 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		return _service_context;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getGlobalEnrichmentModuleObjectStore(java.lang.Class, java.util.Optional)
+	 */
 	@Override
-	public <S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> sub_collection, final boolean auto_apply_prefix) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	public <S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(
+								final Class<S> clazz, final Optional<String> collection)
+	{
+		return this.getBucketObjectStore(clazz, Optional.empty(), collection, Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
+	 */
+	@Override
+	public <S> ICrudService<S> getBucketObjectStore(final Class<S> clazz,
+													final Optional<DataBucketBean> bucket, Optional<String> collection,
+													final Optional<StateDirectoryType> type)
+	{
+		final Optional<DataBucketBean> this_bucket = 
+				bucket
+					.map(x -> Optional.of(x))
+					.orElseGet(() -> _mutable_state.bucket.isSet() 
+										? Optional.of(_mutable_state.bucket.get()) 
+										: Optional.empty());
+		
+		return Patterns.match(type).<ICrudService<S>>andReturn()
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.analytic_thread == t.get(), 
+						__ -> _core_management_db.getBucketAnalyticThreadState(clazz, this_bucket.get(), collection))
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.harvest == t.get(), 
+						__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
+				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
+						__ -> _core_management_db.getPerLibraryState(clazz, this.getLibraryConfig(), collection))
+				// default: harvest or not specified: harvest
+				.otherwise(__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
+				;
 	}
 
 	/* (non-Javadoc)

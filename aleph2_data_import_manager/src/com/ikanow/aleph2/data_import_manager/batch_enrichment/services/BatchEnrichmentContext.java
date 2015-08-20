@@ -49,6 +49,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -394,11 +395,6 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 		return _service_context;
 	}
 
-	@Override
-	public <S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> sub_collection, final boolean auto_apply_prefix) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-	}
-
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getBucket()
 	 */
@@ -455,5 +451,24 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	@Override
 	public SharedLibraryBean getLibraryConfig() {
 		return _mutable_state.library_config.get();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getGlobalEnrichmentModuleObjectStore(java.lang.Class, java.util.Optional)
+	 */
+	@Override
+	public <S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(
+			Class<S> clazz, Optional<String> collection) {
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
+	 */
+	@Override
+	public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
+			Optional<DataBucketBean> bucket, Optional<String> collection,
+			Optional<StateDirectoryType> type) {
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 }
