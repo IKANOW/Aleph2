@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.BucketDiffBean;
@@ -168,7 +167,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context - the context available to this analytic thread
 	 * @return A future for the response (only completes when the test is complete)
 	 */
-	CompletableFuture<BasicMessageBean> onTestThread(final AnalyticThreadBean test_bucket, final Collection<AnalyticThreadJobBean> jobs, final ProcessingTestSpecBean test_spec, final IAnalyticsContext context);			
+	CompletableFuture<BasicMessageBean> onTestThread(final DataBucketBean test_bucket, final Collection<AnalyticThreadJobBean> jobs, final ProcessingTestSpecBean test_spec, final IAnalyticsContext context);			
 	
 	//////////////////////////////////////////////////////////
 	
