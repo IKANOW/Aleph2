@@ -211,20 +211,20 @@
   		<scope>test</scope>
   	</dependency>
 	<dependency>
-  <groupId>org.apache.storm</groupId>
-  <artifactId>storm-core</artifactId>
-  <version>0.9.3</version>
-</dependency>
-<dependency>
-	<groupId>org.apache.storm</groupId>
-	<artifactId>storm-kafka</artifactId>
-	<version>0.9.5</version>
-</dependency>
-<dependency>
-	<groupId>org.yaml</groupId>
-	<artifactId>snakeyaml</artifactId>
-	<version>1.15</version>
-</dependency>
+		<groupId>org.apache.storm</groupId>
+		<artifactId>storm-core</artifactId>
+		<version>0.9.3</version>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.storm</groupId>
+		<artifactId>storm-kafka</artifactId>
+		<version>0.9.5</version>
+	</dependency>
+	<dependency>
+		<groupId>org.yaml</groupId>
+		<artifactId>snakeyaml</artifactId>
+		<version>1.15</version>
+	</dependency>
   </dependencies>
   
 </project>

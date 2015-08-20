@@ -31,7 +31,7 @@ public class TestErrorUtils {
 	}
 	
 	@Test
-	public void testErrorUtils() {
+	public void test_errorUtils() {
 
 		// Standard test
 		
@@ -109,7 +109,7 @@ public class TestErrorUtils {
 	}
 	
 	@Test
-	public void testLongErrorDuringLambda() {
+	public void test_longErrorDuringLambda() {
 		List<String> output = new ArrayList<String>();
 		List<Object> list = Arrays.asList("some item");
 		list.stream().forEach(item -> {
@@ -122,8 +122,10 @@ public class TestErrorUtils {
 		assertTrue(output.get(0).startsWith("Test: [Exception in Lambda: Exception]:"));		
 	}
 	
+	public static class TestBean {}
+	
 	@Test
-	public void testBasicMessageException() {
+	public void test_basicMessageException() {
 		final BasicMessageBean test = new BasicMessageBean(
 				new Date(), false, "testsrc", "testcmd", null, "testmsg", null
 				);
@@ -136,6 +138,31 @@ public class TestErrorUtils {
 			assertEquals("testmsg", me.getLocalizedMessage());
 			assertEquals("testmsg", me.getMessageBean().message());
 			assertEquals("testsrc", me.getMessageBean().source());
+		}
+	}
+	
+	@Test
+	public void test_basicMessageBeanBuilding() {		
+		{
+			final BasicMessageBean bean = ErrorUtils.buildErrorMessage(TestBean.class, "test_msg", "test_message {0}", "test1");
+			assertEquals(false, bean.success());
+			assertEquals("TestBean", bean.source());
+			assertEquals("test_msg", bean.command());
+			assertEquals("test_message test1", bean.message());
+		}
+		{
+			final BasicMessageBean bean = ErrorUtils.buildSuccessMessage("test_src", new TestBean(), "test_message test2");
+			assertEquals(true, bean.success());
+			assertEquals("test_src", bean.source());
+			assertEquals("TestBean", bean.command());
+			assertEquals("test_message test2", bean.message());
+		}
+		{
+			final BasicMessageBean bean = ErrorUtils.buildMessage(true, new TestBean(), String.class, "test_message {0}{1}", "test", 3);
+			assertEquals(true, bean.success());
+			assertEquals("TestBean", bean.source());
+			assertEquals("String", bean.command());
+			assertEquals("test_message test3", bean.message());
 		}
 	}
 }
