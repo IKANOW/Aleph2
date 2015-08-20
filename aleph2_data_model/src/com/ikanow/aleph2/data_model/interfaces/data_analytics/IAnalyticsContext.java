@@ -132,7 +132,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	String getAnalyticsContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
 
-	/** (AnalyticsTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
+	/** (AnalyticsTechnology only) For each library defined by the thread.module_names_or_ids/thread.analytic_name_or_id, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
 	 */
