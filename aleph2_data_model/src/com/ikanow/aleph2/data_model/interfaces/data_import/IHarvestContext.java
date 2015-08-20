@@ -37,7 +37,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
  *  passed to the harvest library processing (TODO (ALEPH-4): need to document how, ie copy JARs into external classpath and call ContextUtils.getHarvestContext)
  * @author acp
  */
-public interface IHarvestContext {
+public interface IHarvestContext extends IUnderlyingService {
 
 	//////////////////////////////////////////////////////
 	
@@ -98,7 +98,7 @@ public interface IHarvestContext {
 	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
-	String getHarvestContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
+	String getHarvestContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

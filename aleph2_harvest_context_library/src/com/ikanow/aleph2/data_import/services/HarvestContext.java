@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import.services;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.LinkedList;
@@ -85,6 +86,7 @@ public class HarvestContext implements IHarvestContext {
 		//TODO (ALEPH-19) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<>();
 		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
+		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -268,7 +270,7 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public String getHarvestContextSignature(final Optional<DataBucketBean> bucket, 
-			final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services)
+			final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services)
 	{		
 		if (_state_name == State.IN_TECHNOLOGY) {
 			// Returns a config object containing:
@@ -283,8 +285,8 @@ public class HarvestContext implements IHarvestContext {
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
-			final ImmutableSet<Tuple2<Class<?>, Optional<String>>> complete_services_set = 
-					ImmutableSet.<Tuple2<Class<?>, Optional<String>>>builder()
+			final ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> complete_services_set = 
+					ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
 							.addAll(services.orElse(Collections.emptySet()))
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
@@ -293,6 +295,15 @@ public class HarvestContext implements IHarvestContext {
 							.build();
 			
 			final Config config_no_services = full_config.withoutPath("service");
+			
+			if (_mutable_state.service_manifest_override.isSet()) {
+				if (!complete_services_set.equals(_mutable_state.service_manifest_override.get())) {
+					throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
+				}
+			}
+			else {
+				_mutable_state.service_manifest_override.set(complete_services_set);
+			}			
 			
 			// Ugh need to add: core deps, core + underlying management db to this list
 			
@@ -501,6 +512,38 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public SharedLibraryBean getLibraryConfig() {
 		return _mutable_state.library_config.get();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
+	 */
+	@Override
+	public Collection<Object> getUnderlyingArtefacts() {
+		if (_state_name == State.IN_TECHNOLOGY) {
+			if (!_mutable_state.service_manifest_override.isSet()) {
+				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);				
+			}
+			return Stream.concat(
+				Stream.of(this, _service_context)
+				,
+				_mutable_state.service_manifest_override.get().stream()
+					.map(t2 -> _service_context.getService(t2._1(), t2._2()))
+					.filter(service -> service.isPresent())
+					.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
+			)
+			.collect(Collectors.toList());
+		}
+		else {
+			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);			
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
+	 */
+	@Override
+	public <T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options) {
+		return Optional.empty();
 	}
 
 }

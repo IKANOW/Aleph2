@@ -143,7 +143,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
+		public String getHarvestContextSignature(Optional<DataBucketBean> bucket, Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 			return null;
 		}
 
@@ -233,6 +233,17 @@ public class TestContextUtils {
 		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
 				Optional<DataBucketBean> bucket, Optional<String> collection,
 				Optional<StateDirectoryType> type) {
+			return null;
+		}
+
+		@Override
+		public Collection<Object> getUnderlyingArtefacts() {
+			return null;
+		}
+
+		@Override
+		public <T> Optional<T> getUnderlyingPlatformDriver(
+				Class<T> driver_class, Optional<String> driver_options) {
 			return null;
 		}
 		
@@ -374,6 +385,17 @@ public class TestContextUtils {
 		public boolean checkForListeners(Optional<DataBucketBean> bucket,
 				Optional<String> stage) {
 			return false;
+		}
+
+		@Override
+		public Collection<Object> getUnderlyingArtefacts() {
+			return null;
+		}
+
+		@Override
+		public <T> Optional<T> getUnderlyingPlatformDriver(
+				Class<T> driver_class, Optional<String> driver_options) {
+			return null;
 		}
 	}
 	

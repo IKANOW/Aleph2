@@ -38,7 +38,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
  *  passed to the analytics library processing 
  * @author acp
  */
-public interface IAnalyticsContext {
+public interface IAnalyticsContext extends IUnderlyingService {
 
 	//////////////////////////////////////////////////////
 	
