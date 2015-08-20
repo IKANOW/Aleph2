@@ -278,13 +278,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String getAnalyticsContextSignature(
-				Optional<DataBucketBean> bucket,
-				Optional<Set<Tuple2<Class<?>, Optional<String>>>> services) {
-			return null;
-		}
-
-		@Override
 		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
 				Optional<DataBucketBean> bucket) {
 			return null;
@@ -395,6 +388,13 @@ public class TestContextUtils {
 		@Override
 		public <T> Optional<T> getUnderlyingPlatformDriver(
 				Class<T> driver_class, Optional<String> driver_options) {
+			return null;
+		}
+
+		@Override
+		public String getAnalyticsContextSignature(
+				Optional<DataBucketBean> bucket,
+				Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 			return null;
 		}
 	}

@@ -130,7 +130,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getAnalyticsContext
 	 */
-	String getAnalyticsContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
+	String getAnalyticsContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 
 	/** (AnalyticsTechnology only) For each library defined by the thread.module_names_or_ids/thread.analytic_name_or_id, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
