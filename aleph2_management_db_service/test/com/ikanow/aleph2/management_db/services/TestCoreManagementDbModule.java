@@ -310,6 +310,12 @@ protected static String _check_actor_called = null;
 		
 	@Test
 	public void testTestBucket() throws Exception {
+		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
+		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
+		//clear queues before starting
+		test_queue.deleteDatastore();
+		delete_queue.deleteDatastore();
+		
 		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		final DataBucketBean to_test = createBucket("test_tech_id");
 		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 10L);
@@ -317,12 +323,11 @@ protected static String _check_actor_called = null;
 		assertTrue(future.get());
 		
 		//TOTEST:
-		//1. Test Queue populated
-		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
+		//1. Test Queue populated		
 		assertEquals(test_queue.countObjects().get().longValue(),1);		
 		
 		//2. Delete queue populated
-		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
+		
 		assertEquals(delete_queue.countObjects().get().longValue(),1);
 		
 		//3. Actor received test message
