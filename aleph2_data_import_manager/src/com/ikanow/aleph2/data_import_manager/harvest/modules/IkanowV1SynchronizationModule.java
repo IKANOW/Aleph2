@@ -50,6 +50,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 /** Main module for V1 synchronization service
+ *  THIS CLASS HAS NO COVERAGE SO NEED TO HANDLE TEST ON MODIFICATION
  * @author acp
  */
 public class IkanowV1SynchronizationModule {
