@@ -55,6 +55,8 @@
 				<exclude>**/backtype/storm/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/harvest/modules/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/module/*</exclude>
+				<!--  Somewhat temporary, this code is going to be refactored into DAM/hadoop_analytic_services -->
+				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/**/*</exclude>
 			</excludes>
 		</configuration>
 		<executions>
@@ -185,7 +187,6 @@
   		<groupId>org.apache.hadoop</groupId>
   		<artifactId>hadoop-mapreduce-client-core</artifactId>
   		<version>2.7.0</version>
-  		<scope>provided</scope>
   	</dependency>
 	<dependency>
 		<groupId>org.apache.hadoop</groupId>
@@ -197,6 +198,7 @@
   		<groupId>org.apache.hadoop</groupId>
   		<artifactId>hadoop-client</artifactId>
   		<version>2.7.0</version>
+  		<scope>provided</scope>
   	</dependency>
 	<dependency>
 		<groupId>org.mockito</groupId>
@@ -211,20 +213,20 @@
   		<scope>test</scope>
   	</dependency>
 	<dependency>
-  <groupId>org.apache.storm</groupId>
-  <artifactId>storm-core</artifactId>
-  <version>0.9.3</version>
-</dependency>
-<dependency>
-	<groupId>org.apache.storm</groupId>
-	<artifactId>storm-kafka</artifactId>
-	<version>0.9.5</version>
-</dependency>
-<dependency>
-	<groupId>org.yaml</groupId>
-	<artifactId>snakeyaml</artifactId>
-	<version>1.15</version>
-</dependency>
+		<groupId>org.apache.storm</groupId>
+		<artifactId>storm-core</artifactId>
+		<version>0.9.3</version>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.storm</groupId>
+		<artifactId>storm-kafka</artifactId>
+		<version>0.9.5</version>
+	</dependency>
+	<dependency>
+		<groupId>org.yaml</groupId>
+		<artifactId>snakeyaml</artifactId>
+		<version>1.15</version>
+	</dependency>
   </dependencies>
   
 </project>

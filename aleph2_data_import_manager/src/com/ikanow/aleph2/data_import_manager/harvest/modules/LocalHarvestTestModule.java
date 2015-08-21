@@ -55,6 +55,11 @@ import com.typesafe.config.ConfigFactory;
 
 import fj.data.Validation;
 
+/** A test module for developing harvesters (not maintained - was mainly written for early development and 
+ *  at some point either needs to be made useful for standalone testing by 3rd party devs or removed)
+ *  THIS CLASS HAS NO COVERAGE SO NEED TO HANDLE TEST ON MODIFICATION
+ * @author Alex
+ */
 public class LocalHarvestTestModule {
 
 	protected final IServiceContext _context;

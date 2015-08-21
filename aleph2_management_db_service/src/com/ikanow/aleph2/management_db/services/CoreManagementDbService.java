@@ -60,13 +60,13 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
  *  and performs control activities (launching into Akka) and an additional layer of validation
  * @author acp
  */
 public class CoreManagementDbService implements IManagementDbService, IExtraDependencyLoader {
-	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IServiceContext _service_context;
@@ -185,6 +185,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketHarvestState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -193,6 +194,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketEnrichmentState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -201,6 +203,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
 	}
 
@@ -256,6 +259,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
 			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
+		// (note: don't need to join the akka cluster in order to use the state objects)
 		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only);
 	}
 	
@@ -286,6 +290,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
+		if (!_read_only)
+			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
 		
@@ -317,15 +323,12 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	}
 
 	@Override
-	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {
-		CompletableFuture<Boolean> base_future = new CompletableFuture<Boolean>();
+	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {		
 		//create a test bucket to put data into instead of the specified bucket
-		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());
-		
-		//TODO: delegate straight over to DataBucketCrudService to avoid putting bucket specific logic here
-		// maybe something like (in DBCS):
+		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());		
 		// - validate the bucket 
 		DataBucketBean validated_test_bucket = validateBucket(test_bucket);
+		
 		// - is there any test data already present for this user, delete if so (?)
 		if ( test_spec.overwrite_existing_data() ) {
 			//TODO delete test data, wait for completion
@@ -340,20 +343,33 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				_actor_context.getActorSystem(), 
 				test_message, 
 				Optional.empty());
+				
+		//get the hostnames of the actor nodes so we can process our timeout message
+		CompletableFuture<Boolean> base_future = MgmtCrudUtils.getSuccessfulNodes(test_future.thenApply(msg -> msg.replies()))
+				.thenApply(hostnames -> {
+					//make sure there is at least 1 hostname result, otherwise throw error
+					if ( !hostnames.isEmpty() ) {					
+						// - add to the test queue
+						ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
+						test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), hostnames));
+						
+						// - add to the delete queue
+						final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
+						delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
+						
+						_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
+						return true;
+					} else {
+						_logger.error("Error, hostnames was empty");
+						return false;
+					}					
+				})
+				.exceptionally(t -> {
+					//return error
+					_logger.error("Error getting hostnames", t);
+					return false;
+				});
 		
-		// - add to the test queue
-		//TODO put an entry in the test queue w/ test_spec.timeout
-		ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
-		test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, System.currentTimeMillis() + test_spec.max_run_time_secs()));
-		
-		// - add to the delete queue
-		//TODO put an entry in the delete queue w/ test_spec.data_timeout
-		final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
-		delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
-		
-		// anything else?
-		
-		base_future.complete(true);
 		return FutureUtils.createManagementFuture(base_future, test_future.thenApply(msg -> msg.replies()));
 	}
 
@@ -374,6 +390,4 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
 		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
-
-
 }

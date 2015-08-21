@@ -47,6 +47,7 @@ public class AnalyticThreadJobBean implements Serializable {
 	public AnalyticThreadJobBean(final String name, final Boolean enabled, 
 									final String analytic_technology_name_or_id, final List<String> module_names_or_ids, 
 									final LinkedHashMap<String, Object> config,
+									final String entry_point,
 									final DataBucketBean.MasterEnrichmentType analytic_type,
 									final List<String> node_list_rules, final Boolean multi_node_enabled,
 									final List<String> dependencies,
@@ -59,6 +60,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		this.analytic_technology_name_or_id = analytic_technology_name_or_id;
 		this.module_names_or_ids = module_names_or_ids;
 		this.config = config;
+		this.entry_point = entry_point;
 		this.node_list_rules = node_list_rules;
 		this.multi_node_enabled = multi_node_enabled;
 		this.dependencies = dependencies;
@@ -108,9 +110,16 @@ public class AnalyticThreadJobBean implements Serializable {
 	 */
 	public Map<String, Object> config() { return null == config ? config : Collections.unmodifiableMap(config); }
 	
+	/** The "entry point class" that is on the module+technology's classpath. If left blank, the system will try to fill it in if possible (eg there is only one option.
+	 *  In many (simpler) cases it is not necessary, eg the technology + config is sufficient to define the job 
+	 * @return (optional) the entry point class to run the module that defines the job
+	 */
+	public String entry_point() { return entry_point; }
+	
 	private String analytic_technology_name_or_id;
 	private List<String> module_names_or_ids;
-	private LinkedHashMap<String, Object> config;	
+	private LinkedHashMap<String, Object> config;
+	private String entry_point;
 	
 	////////////////////////////////////////
 	
@@ -174,12 +183,14 @@ public class AnalyticThreadJobBean implements Serializable {
 			this.config = config;
 		}
 		
-		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc 
+		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc
+		 *  If it's a bucket path with data_service:stream then ":" can optionally be added to the end to stream from a stage (ie "/bucket/path" is the final state of the object before the output,
+		 *  "/bucket/path:" is the initial state of the object before any analytics/enrichment has occurred, "/bucket/path:<name>" is an intermediate state)
 		 * @return The resource name of the input
 		 */
 		public String resource_name_or_id() { return resource_name_or_id; }
 		
-		/** For bucket data access, the data service from which to retrieve the data (search_index_service, storage_service, etc)
+		/** For bucket data access, the data service from which to retrieve the data (search_index_service, storage_service, etc). If set to "stream" then requests data from a streaming queue.
 		 * @return For bucket data access, the data service from which to retrieve the data
 		 */
 		public String data_service() { return data_service; } 

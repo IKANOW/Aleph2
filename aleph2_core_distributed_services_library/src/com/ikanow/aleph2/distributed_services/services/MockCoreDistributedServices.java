@@ -95,7 +95,6 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 					final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 							.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
 							.put("zookeeper.connect", _test_server.get().getConnectString())
-							.put("zookeeper.session.timeout.ms", "1200") //(overwrite this from default to make tests more robust)
 							.build();	
 					KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
 				}

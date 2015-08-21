@@ -3,6 +3,7 @@ package com.ikanow.aleph2.management_db.data_model;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 
 import akka.actor.ActorRef;
 
@@ -92,18 +93,24 @@ public class BucketMgmtMessage implements Serializable {
 	
 	public static class BucketTimeoutMessage extends BucketMgmtMessage implements Serializable {
 		private static final long serialVersionUID = -1141752282442676055L;
+		private Object _id; // (read-only used for deletion)
 		private DataBucketBean bucket;
-		private long utc_timeout;
+		private Date timeout_on;
+		private Set<String> handling_clients;
 		
 		protected BucketTimeoutMessage() { super(null); }
 		
-		public BucketTimeoutMessage(final DataBucketBean bucket, final long utc_timeout) {
+		public BucketTimeoutMessage(final DataBucketBean bucket, final Date timeout_on, final Set<String> handling_clients) {
 			super(bucket);
 			this.bucket = bucket;
-			this.utc_timeout = utc_timeout;
+			_id = bucket.full_name();
+			this.timeout_on = timeout_on;
+			this.handling_clients = handling_clients;
 		}
 		
+		public Object _id() { return _id; }
 		public DataBucketBean bucket() { return bucket; }
-		public long utc_timeout() { return utc_timeout; }
+		public Date timeout_on() { return timeout_on; }
+		public Set<String> handling_clients() { return handling_clients; }
 	}
 }

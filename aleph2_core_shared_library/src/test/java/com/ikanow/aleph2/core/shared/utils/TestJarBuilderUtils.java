@@ -32,7 +32,7 @@ public class TestJarBuilderUtils {
 	}
 
 	@Test
-	public void testHash() {		
+	public void test_hash() {		
 		final String input_jar_location = System.getProperty("java.io.tmpdir");
 		String hash1 = JarBuilderUtil.getHashedJarName(Arrays.asList("a","b","c"), input_jar_location);
 		String hash2 = JarBuilderUtil.getHashedJarName(Arrays.asList("c","b","a"), input_jar_location);
@@ -43,7 +43,7 @@ public class TestJarBuilderUtils {
 	}
 	
 	@Test
-	public void testGetMostRecentDate() throws IOException, InterruptedException {
+	public void test_getMostRecentDate() throws IOException, InterruptedException {
 		//create some fake files				
 		File file1 = File.createTempFile("recent_date_test_", null);
 		Thread.sleep(1);

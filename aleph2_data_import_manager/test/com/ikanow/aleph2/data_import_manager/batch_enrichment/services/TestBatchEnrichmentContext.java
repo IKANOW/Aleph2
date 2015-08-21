@@ -354,7 +354,14 @@ public class TestBatchEnrichmentContext {
 //			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 //		}
 		try {
-			test_context.getBucketObjectStore(null, null, null, false);
+			test_context.getBucketObjectStore(null, null, null, null);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+		try {
+			test_context.getGlobalEnrichmentModuleObjectStore(null, null);
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {

@@ -29,6 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
@@ -36,7 +37,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
  *  passed to the harvest library processing (TODO (ALEPH-4): need to document how, ie copy JARs into external classpath and call ContextUtils.getHarvestContext)
  * @author acp
  */
-public interface IHarvestContext {
+public interface IHarvestContext extends IUnderlyingService {
 
 	//////////////////////////////////////////////////////
 	
@@ -47,6 +48,8 @@ public interface IHarvestContext {
 	 * @return the service context
 	 */
 	IServiceContext getServiceContext();
+	
+	/////////////////////////////////////////////////////////////
 	
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
@@ -64,6 +67,24 @@ public interface IHarvestContext {
 
 	//////////////////////////////////////////////////////
 	
+	// BOTH HARVEST TECHNOLOGY AND HARVEST MODULE - DATA INPUT/OUPUT
+	
+	/** (HarvestTechnology/HarvestModule) A safe location into which temp data can be written without being accessed by the data import manager 
+	 *  It is the responsibility of the harvest technology module to keep this area clean however.
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+	 * @return the location in a string format that makes sense to the IAccessService
+	 */
+	String getTempOutputLocation(final Optional<DataBucketBean> bucket);
+	
+	/** (HarvestTechnology/HarvestModule) Once files are moved/written (preferably atomically) into this path, they become owned by the import manager
+	 *  and should no longer be modified by the harvest module 
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+	 * @return the location in a string format that makes sense to the IStorageService
+	 */
+	String getFinalOutputLocation(final Optional<DataBucketBean> bucket);	
+	
+	//////////////////////////////////////////////////////
+	
 	// HARVESTER TECHNOLOGY ONLY 
 	
 	/** (HarvesterTechnology only) A list of JARs that can be copied to an external process (eg Hadoop job) to provide the result client access to this context (and other services)
@@ -77,15 +98,8 @@ public interface IHarvestContext {
 	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
-	String getHarvestContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<?>, Optional<String>>>> services);
+	String getHarvestContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 
-	/** (HarvesterTechnology only) Get the global (ie harvest technology-specific _not_ bucket-specific) object data store
-	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @return a generic object repository visible to all users of this harvest technology
-	 */
-	<S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket);
-	
 	/** (HarvesterTechnology only) For each library defined by the bucket.harvest_configs, returns a FileSystem path 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
 	 * @return A Future containing a map of filesystem paths with key both the name and id of the library 
@@ -94,16 +108,23 @@ public interface IHarvestContext {
 	
 	//////////////////////////////////////////////////////
 	
-	// BOTH HARVEST TECHNOLOGY AND HARVEST MODULE 
+	// BOTH HARVEST TECHNOLOGY AND HARVEST MODULE - ADMIN
 	
-	/** (HarvestTechnology/HarvestModule) Returns an object repository that the harvester/module can use to store arbitrary internal state
+	/** (HarvestTechnology/HarvestModule) Get the global (ie harvest technology-specific _not_ bucket-specific) object data store
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then returns a directory of existing collections (clazz has to be AssetStateDirectoryBean.class)
+	 * @return a generic object repository visible to all users of this harvest technology
+	 */
+	<S> ICrudService<S> getGlobalHarvestTechnologyObjectStore(final Class<S> clazz, final Optional<String> collection);
+	
+	/** (HarvestTechnology/HarvestModule) Returns an object repository that the harvester/module can use to store arbitrary internal state. 
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param sub_collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then defaults to "harvest". It is recommended to prefix with "harvest_" (or leave auto_apply_prefix true) to avoid collisions with enrichment/analytic modules.
-	 * @param auto_apply_prefix - if true then auto applies the prefix "harvest_" to the supplied sub-collection 
+	 * @param collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then returns a directory of existing collections (clazz has to be AssetStateDirectoryBean.class)
+	 * @param type - if left blank then points to the harvest type, else can retrieve other types of object store (shared_library - bucket is then ignored, enrichment, or analytics)
 	 * @return a generic object repository
 	 */
-	<S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> sub_collection, final boolean auto_apply_prefix);
+	<S> ICrudService<S> getBucketObjectStore(final Class<S> clazz, final Optional<DataBucketBean> bucket, final Optional<String> collection, final Optional<AssetStateDirectoryBean.StateDirectoryType> type);
 	
 	/** (HarvestTechnology/HarvestModule) Returns the specified bucket
 	 * @return The bucket that this job is running for, or Optional.empty() if that is ambiguous
@@ -137,20 +158,6 @@ public interface IHarvestContext {
 	 * @param The message to log (duplicates are "rolled up")
 	 */
 	void logStatusForBucketOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message);
-	
-	/** (HarvestTechnology/HarvestModule) A safe location into which temp data can be written without being accessed by the data import manager 
-	 *  It is the responsibility of the harvest technology module to keep this area clean however.
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @return the location in a string format that makes sense to the IAccessService
-	 */
-	String getTempOutputLocation(final Optional<DataBucketBean> bucket);
-	
-	/** (HarvestTechnology/HarvestModule) Once files are moved/written (preferably atomically) into this path, they become owned by the import manager
-	 *  and should no longer be modified by the harvest module 
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @return the location in a string format that makes sense to the IStorageService
-	 */
-	String getFinalOutputLocation(final Optional<DataBucketBean> bucket);	
 	
 	/** (HarvestTechnology/HarvestModule) Requests that the bucket be suspended - in addition to changing the bucket state, this will result in a call to IHarvestTechnologyModule.onSuspend
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

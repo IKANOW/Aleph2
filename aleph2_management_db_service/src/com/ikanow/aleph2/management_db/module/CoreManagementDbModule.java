@@ -50,6 +50,7 @@ public class CoreManagementDbModule extends AbstractModule {
 	/* (non-Javadoc)
 	 * @see com.google.inject.AbstractModule#configure()
 	 */
+	@Override
 	public void configure() {
 		this.bind(DataBucketCrudService.class).in(Scopes.SINGLETON);		
 		this.bind(DataBucketStatusCrudService.class).in(Scopes.SINGLETON);		

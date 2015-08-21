@@ -37,6 +37,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -80,6 +82,7 @@ import com.typesafe.config.ConfigValueFactory;
 import fj.data.Validation;
 
 public class TestDataBucketChangeActor {
+	private static final Logger _logger = LogManager.getLogger();	
 
 	////////////////////////////////////////////////////////////////////////////////////
 	
@@ -200,19 +203,14 @@ public class TestDataBucketChangeActor {
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg.getClass());
 		}
 		
-		// 3) Send a message
+		// 3) Send a message, currently just check it arrives back
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update =
-					new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
+					new BucketActionMessage.UpdateBucketActionMessage(bucket, false, bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
 			
 			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, update, 5000L), _db_actor_context.getActorSystem().dispatcher());
 			@SuppressWarnings("unused")
 			final BucketActionReplyMessage msg4 = reply4.get();
-		
-			//DEBUG
-			//System.out.println(BeanTemplateUtils.toJson(msg4));
-
-			//TODO do something with it?
 		}		
 	}	
 
@@ -372,7 +370,7 @@ public class TestDataBucketChangeActor {
 		
 		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id_stream.cache.jar";
 		
-		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
+		_logger.info("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
 		
 		// Requires that the file has already been cached:
 		final Validation<BasicMessageBean, String> cached_file = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
@@ -432,7 +430,7 @@ public class TestDataBucketChangeActor {
 		
 		final String java_name2 = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_module_id.cache.jar";
 		
-		System.out.println("Needed to delete locally cached file? " + java_name2 + ": " + new File(java_name2).delete());		
+		_logger.info("Needed to delete locally cached file? " + java_name2 + ": " + new File(java_name2).delete());		
 		
 		// Requires that the file has already been cached:
 		final Validation<BasicMessageBean, String> cached_file2 = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 

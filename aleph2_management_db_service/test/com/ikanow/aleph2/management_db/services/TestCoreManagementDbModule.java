@@ -22,11 +22,16 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import scala.Tuple2;
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedActor;
 
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -38,27 +43,32 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
 public class TestCoreManagementDbModule {
-
+	private static final Logger _logger = LogManager.getLogger();
+	
 	// This is everything DI normally does for you!
 	private MockMongoDbManagementDbService _underlying_db_service;
 	private CoreManagementDbService _core_db_service;
@@ -94,6 +104,56 @@ public class TestCoreManagementDbModule {
 		_core_db_service = new CoreManagementDbService(_mock_service_context, 
 				_bucket_crud, _bucket_status_crud, _shared_library_crud, _actor_context);
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
+	}
+	
+protected static String _check_actor_called = null;
+	
+	// This one always accepts, and returns a message
+	public static class TestActor_Accepter extends UntypedActor {
+		public TestActor_Accepter(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER from: " + uuid);
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+			}
+			else {
+				_logger.info("Accept MESSAGE from: " + uuid);
+				_check_actor_called = uuid;
+				
+				this.sender().tell(
+						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+								new BasicMessageBean(
+										new Date(),
+										true,
+										uuid + "replaceme", // (this gets replaced by the bucket)
+										arg0.getClass().getSimpleName(),
+										null,
+										"handled",
+										null									
+										)),
+						this.self());
+			}
+		}		
+	}	
+	
+	public Tuple2<String,ActorRef> insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+		String uuid = UuidUtils.get().getRandomUuid();
+		ManagementDbActorContext.get().getDistributedServices()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
+			.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+		
+		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
+		ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+
+		return Tuples._2T(uuid, handler);
+	}
+	
+	public void shutdownActor(ActorRef to_remove) {
+		ManagementDbActorContext.get().getBucketActionMessageBus().unsubscribe(to_remove);
 	}
 	
 	@Test
@@ -247,26 +307,36 @@ public class TestCoreManagementDbModule {
 			per_library.countObjects(); // (just check doesn't thrown)
 		}		
 	}
-	
-	@Ignore
+		
 	@Test
-	public void testTestBucket() throws InterruptedException, ExecutionException {
+	public void testTestBucket() throws Exception {
+		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
+		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
+		//clear queues before starting
+		test_queue.deleteDatastore();
+		delete_queue.deleteDatastore();
+		
+		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		final DataBucketBean to_test = createBucket("test_tech_id");
-//		ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 10L);
-//		ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
-//		assertTrue(future.get());
+		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 10L);
+		final ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
+		assertTrue(future.get());
 		
 		//TOTEST:
-		//1. Test Queue populated
-		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);
-		test_queue.storeObject(new BucketTimeoutMessage(to_test, 1000)).get();
+		//1. Test Queue populated		
 		assertEquals(test_queue.countObjects().get().longValue(),1);		
 		
 		//2. Delete queue populated
-//		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
-//		assertEquals(delete_queue.countObjects().get().longValue(),1);
+		
+		assertEquals(delete_queue.countObjects().get().longValue(),1);
 		
 		//3. Actor received test message
+		assertEquals(_check_actor_called, host_actor._1());
+		//3a. harvest actor
+		//3b. stream actor
+		
+		//cleanup
+		shutdownActor(host_actor._2());		
 	}
 	
 	protected DataBucketBean createBucket(final String harvest_tech_id) {

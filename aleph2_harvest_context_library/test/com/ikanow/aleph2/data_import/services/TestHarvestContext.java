@@ -20,12 +20,15 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -37,15 +40,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.typesafe.config.Config;
@@ -73,7 +80,7 @@ public class TestHarvestContext {
 	}
 	
 	@Test
-	public void basicContextCreation() {
+	public void test_basicContextCreation() {
 		try {
 			assertTrue("Injector created", _app_injector != null);
 		
@@ -103,7 +110,7 @@ public class TestHarvestContext {
 	}
 	
 	@Test
-	public void testExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+	public void test_externalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
 			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
@@ -128,9 +135,11 @@ public class TestHarvestContext {
 			
 			// Additionals service set:
 
-			final String signature2 = test_context.getHarvestContextSignature(Optional.of(test_bucket),
+			final HarvestContext test_context2 = _app_injector.getInstance(HarvestContext.class);
+			test_context2.setLibraryConfig(library);
+			final String signature2 = test_context2.getHarvestContextSignature(Optional.of(test_bucket),
 												Optional.of(
-														ImmutableSet.<Tuple2<Class<?>, Optional<String>>>builder()
+														ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
 															.add(Tuples._2T(IStorageService.class, Optional.empty()))
 															.add(Tuples._2T(IManagementDbService.class, Optional.of("test")))
 															.build()																
@@ -193,6 +202,22 @@ public class TestHarvestContext {
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IManagementDbService.class, Optional.of("test")));
 		
 			assertTrue("New set of services", test_external2b._distributed_services != test_external1b._distributed_services);
+			
+			//Check some "won't work in module" calls:
+			try {
+				test_external2b.getHarvestContextSignature(null, null);
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}
+			try {
+				test_external2b.getUnderlyingArtefacts();
+				fail("Should have errored");
+			}
+			catch (Exception e) {
+				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
+			}			
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -201,7 +226,7 @@ public class TestHarvestContext {
 	}
 	
 	@Test
-	public void testFileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+	public void test_fileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		try {
 			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 
@@ -273,7 +298,7 @@ public class TestHarvestContext {
 	}
 	
 	@Test
-	public void testProduceConsume() throws JsonProcessingException, IOException {
+	public void test_produceConsume() throws JsonProcessingException, IOException {
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
@@ -311,4 +336,121 @@ public class TestHarvestContext {
 		assertEquals(4,count);
 	}
 		
+	public static class TestBean {}
+	
+	@Test
+	public void test_objectStateRetrieval() throws InterruptedException, ExecutionException {
+		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
+
+		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_HARVEST_CONTEXT").done().get();
+		test_context.setLibraryConfig(lib_bean);
+		
+		ICrudService<AssetStateDirectoryBean> dir_a = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
+		ICrudService<AssetStateDirectoryBean> dir_e = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
+		ICrudService<AssetStateDirectoryBean> dir_h = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.harvest));
+		ICrudService<AssetStateDirectoryBean> dir_s = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
+
+		dir_a.deleteDatastore().get();
+		dir_e.deleteDatastore().get();
+		dir_h.deleteDatastore().get();
+		dir_s.deleteDatastore().get();
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(0, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(0, dir_s.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> s1 = test_context.getGlobalHarvestTechnologyObjectStore(TestBean.class, Optional.of("test"));
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(0, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> e1 = test_context.getBucketObjectStore(TestBean.class, Optional.of(bucket), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+		
+		test_context.setBucket(bucket);
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> a1 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> h1 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.harvest));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(1, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());		
+
+		ICrudService<AssetStateDirectoryBean> dir_h_2 = test_context.getBucketObjectStore(AssetStateDirectoryBean.class, Optional.empty(), Optional.empty(), Optional.empty());
+		assertEquals(1, dir_h_2.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> h2 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test_2"), Optional.empty());
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(2, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());		
+		assertEquals(2, dir_h_2.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> s2 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test_2"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(2, dir_h.countObjects().get().intValue());
+		assertEquals(2, dir_s.countObjects().get().intValue());
+		
+	}
+	
+	@Test
+	public void test_misc() {
+		assertTrue("Injector created", _app_injector != null);		
+		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));		
+	}
+
+	@Test
+	public void test_getUnderlyingArtefacts() {
+		
+		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		
+		// (interlude: check errors if called before getSignature
+		try {
+			test_context.getUnderlyingArtefacts();
+			fail("Should have errored");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.SERVICE_RESTRICTIONS, e.getMessage());
+		}
+		
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+												.with(DataBucketBean::_id, "test")
+												.with(DataBucketBean::full_name, "/test/get_underlying/artefacts")
+												.with(DataBucketBean::modified, new Date())
+												.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+														.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+																.done().get())
+														.done().get())
+												.done().get();
+		
+		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::path_name, "/test/lib")
+				.done().get();
+		test_context.setLibraryConfig(library);		
+		
+		// Empty service set:
+		test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());		
+		final Collection<Object> res1 = test_context.getUnderlyingArtefacts();
+		final String exp1 = "class com.ikanow.aleph2.data_import.services.HarvestContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory";
+		assertEquals(exp1, res1.stream().map(o -> o.getClass().toString()).collect(Collectors.joining(":")));
+	}
+	
 }

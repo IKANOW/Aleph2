@@ -24,7 +24,7 @@ public class TestClassloaderUtils {
 	public static class TestMessageBean {}
 	
 	@Test
-	public void testClassLoading_primaryLib() throws UnsupportedFileSystemException {
+	public void test_classLoading_primaryLib() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -59,7 +59,7 @@ public class TestClassloaderUtils {
 	}
 	
 	@Test
-	public void testClassLoading_secondaryLib() throws UnsupportedFileSystemException {
+	public void test_classLoading_secondaryLib() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -95,7 +95,7 @@ public class TestClassloaderUtils {
 	}
 	
 	@Test
-	public void testClassLoading_fails() throws UnsupportedFileSystemException {
+	public void test_classLoading_fails() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
@@ -134,7 +134,7 @@ public class TestClassloaderUtils {
 	}
 	
 	@Test
-	public void testClassLoading_wrongInterface() throws UnsupportedFileSystemException {
+	public void test_classLoading_wrongInterface() throws UnsupportedFileSystemException {
 
 		try {
 			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");

@@ -25,8 +25,14 @@ public class DataImportConfigurationBean {
 	
 	protected DataImportConfigurationBean() {}
 	
-	public DataImportConfigurationBean(Boolean v1_sync_service_enabled, Boolean streaming_enrichment_enabled, Boolean batch_enrichment_enabled, Boolean storm_debug_mode) {
-		this.harvest_enabled = v1_sync_service_enabled;
+	/** User c'tor
+	 * @param harvest_enabled
+	 * @param streaming_enrichment_enabled
+	 * @param batch_enrichment_enabled
+	 * @param storm_debug_mode
+	 */
+	public DataImportConfigurationBean(Boolean harvest_enabled, Boolean streaming_enrichment_enabled, Boolean batch_enrichment_enabled, Boolean storm_debug_mode) {
+		this.harvest_enabled = harvest_enabled;
 		this.streaming_enrichment_enabled = streaming_enrichment_enabled;
 		this.batch_enrichment_enabled = batch_enrichment_enabled;
 		this.storm_debug_mode = storm_debug_mode;

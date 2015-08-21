@@ -36,6 +36,8 @@ import java.util.function.Supplier;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,6 +85,8 @@ import com.typesafe.config.ConfigValueFactory;
 import fj.data.Validation;
 
 public class TestDataBucketChangeActor {
+	@SuppressWarnings("unused")
+	private static final Logger _logger = LogManager.getLogger();	
 
 	@Inject 
 	protected IServiceContext _service_context = null;

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 import java.util.Collection;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.Logger;
@@ -266,4 +267,55 @@ public class ErrorUtils {
 		}			
 	}
 	
+	/** Builds a fairly generic error message to return 
+	 * @param error - the error string
+	 * @param handler - the actor handling this error
+	 * @param message - the original message that spawned this error
+	 * @return
+	 */
+	public static <SRC, CMD> BasicMessageBean buildErrorMessage(final SRC source, final CMD message,
+			final String error, final Object... params)
+	{
+		return buildMessage(false, source, message, error, params);
+	}
+	
+	/** Builds a fairly generic success message to return 
+	 * @param error - the success string
+	 * @param handler - the actor handling this status
+	 * @param message - the original message that spawned this status
+	 * @return
+	 */
+	public static <SRC, CMD> BasicMessageBean buildSuccessMessage(final SRC source, final CMD message,
+			final String error, final Object... params)
+	{
+		return buildMessage(true, source, message, error, params);
+	}
+	
+	/** Builds a fairly generic message to return 
+	 * @param error - the success.error string
+	 * @param handler - the actor handling this status/error
+	 * @param message - the original message that spawned this status/error
+	 * @return
+	 */
+	public static <SRC, CMD> BasicMessageBean buildMessage(boolean success, final SRC source, final CMD message,
+			final String error, final Object... params)
+	{
+		return new BasicMessageBean(
+					new Date(), // date
+					success, // success
+					source instanceof String 
+						? source.toString() 
+						: source instanceof Class<?>
+							? ((Class<?>)source).getSimpleName()
+							: source.getClass().getSimpleName(), // command
+					message instanceof String 
+						? message.toString() 
+						: message instanceof Class<?>
+							? ((Class<?>)message).getSimpleName()
+							: message.getClass().getSimpleName(), // command
+					null, // message code
+					params.length == 0 ? error : ErrorUtils.get(error, params), // error message, with optional formatting
+					null // details
+					);
+	}
 }

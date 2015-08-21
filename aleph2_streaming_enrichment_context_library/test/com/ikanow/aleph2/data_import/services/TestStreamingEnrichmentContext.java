@@ -49,6 +49,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
@@ -137,15 +138,15 @@ public class TestStreamingEnrichmentContext {
 			assertTrue("getTopologyStorageEndpoint call succeeded", null != test_context.getTopologyStorageEndpoint(Object.class, Optional.of(test_bucket)));
 			//Other topology call
 			try {
-				test_context2.getTopologyEntryPoint(Object.class, Optional.empty());
+				test_context2.getTopologyEntryPoints(Object.class, Optional.empty());
 				fail("Should have errored");
 			}
 			catch(Exception e) {
 			}
 			test_context2.setUserTopologyEntryPoint("test");
 			test_context2.setBucket(test_bucket);
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.empty()));
-			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoint(Object.class, Optional.of(test_bucket)));
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoints(Object.class, Optional.empty()));
+			assertTrue("getTopologyEntryPoint call succeeded", null != test_context2.getTopologyEntryPoints(Object.class, Optional.of(test_bucket)));
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -286,7 +287,7 @@ public class TestStreamingEnrichmentContext {
 				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
 			}
 			try {
-				test_external2b.getTopologyEntryPoint(null, null);
+				test_external2b.getTopologyEntryPoints(null, null);
 				fail("Should have errored");
 			}
 			catch (Exception e) {
@@ -396,13 +397,6 @@ public class TestStreamingEnrichmentContext {
 //			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 //		}
 		try {
-			test_context.getBucketObjectStore(null, null, null, false);
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-		}
-		try {
 			test_context.getNextUnusedId();
 			fail("Should have thrown exception");
 		}
@@ -509,6 +503,80 @@ public class TestStreamingEnrichmentContext {
 		assertEquals(3, crud_check_index.countObjects().get().intValue());
 		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
 				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
+		
+	}
+
+	public static class TestBean {}	
+	
+	@Test
+	public void test_objectStateRetrieval() throws InterruptedException, ExecutionException {
+		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
+
+		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_HARVEST_CONTEXT").done().get();
+		test_context.setLibraryConfig(lib_bean);
+		
+		ICrudService<AssetStateDirectoryBean> dir_a = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
+		ICrudService<AssetStateDirectoryBean> dir_e = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
+		ICrudService<AssetStateDirectoryBean> dir_h = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.harvest));
+		ICrudService<AssetStateDirectoryBean> dir_s = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
+
+		dir_a.deleteDatastore().get();
+		dir_e.deleteDatastore().get();
+		dir_h.deleteDatastore().get();
+		dir_s.deleteDatastore().get();
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(0, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(0, dir_s.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> s1 = test_context.getGlobalEnrichmentModuleObjectStore(TestBean.class, Optional.of("test"));
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(0, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> e1 = test_context.getBucketObjectStore(TestBean.class, Optional.of(bucket), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
+		assertEquals(0, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+		
+		test_context.setBucket(bucket);
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> a1 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(0, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> h1 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.harvest));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(1, dir_e.countObjects().get().intValue());
+		assertEquals(1, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());		
+
+		ICrudService<AssetStateDirectoryBean> dir_e_2 = test_context.getBucketObjectStore(AssetStateDirectoryBean.class, Optional.empty(), Optional.empty(), Optional.empty());
+		assertEquals(1, dir_e_2.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> h2 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test_2"), Optional.empty());
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(2, dir_e.countObjects().get().intValue());
+		assertEquals(1, dir_h.countObjects().get().intValue());
+		assertEquals(1, dir_s.countObjects().get().intValue());		
+		assertEquals(2, dir_e_2.countObjects().get().intValue());
+		
+		@SuppressWarnings("unused")
+		ICrudService<TestBean> s2 = test_context.getBucketObjectStore(TestBean.class, Optional.empty(), Optional.of("test_2"), Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
+		assertEquals(1, dir_a.countObjects().get().intValue());
+		assertEquals(2, dir_e.countObjects().get().intValue());
+		assertEquals(1, dir_h.countObjects().get().intValue());
+		assertEquals(2, dir_s.countObjects().get().intValue());
 		
 	}
 }

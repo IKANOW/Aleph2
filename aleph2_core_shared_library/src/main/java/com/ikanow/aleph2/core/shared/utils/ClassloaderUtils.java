@@ -18,7 +18,6 @@ package com.ikanow.aleph2.core.shared.utils;
 import java.net.URL;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
@@ -70,10 +69,6 @@ public class ClassloaderUtils {
 			else return Validation.success(ret_val);
 		}
 		catch (Throwable e) {
-			/**/
-			System.out.println("----------------- " + primary_lib + " ... " + secondary_libs.stream().collect(Collectors.joining(",")));
-			e.printStackTrace();
-			
 			return Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors, 
 							msg_for_errors, 
 							ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, e, implementation_classname) 

@@ -123,10 +123,17 @@ public class KafkaUtils {
 				.put("group.id", "somegroup_1")
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
-				.put("zookeeper.session.timeout.ms", "400")
 				.put("consumer.timeout.ms", "3000")
-				.put("zookeeper.sync.time.ms", "200")
-		        .put("auto.commit.interval.ms", "1000")			
+		        .put("auto.commit.interval.ms", "1000")
+		        // Not sure which of these 2 sets is correct, so will list them both!
+		        // these are listed here: https://kafka.apache.org/08/configuration.html
+				.put("zookeeper.session.timeout.ms", "6000")
+				.put("zookeeper.connection.timeout.ms", "6000")
+				.put("zookeeper.sync.time.ms", "2000")
+				// these are listed here: http://kafka.apache.org/07/configuration.html
+				.put("zk.connectiontimeout.ms", "6000")
+				.put("zk.sessiontimeout.ms", "6000")
+				.put("zk.synctime.ms", "2000")
 				.build();	
 		
 		final Config fullConfig = parseMap.withFallback(ConfigFactory.parseMap(config_map_kafka));
