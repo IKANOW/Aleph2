@@ -35,6 +35,7 @@ import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
 import backtype.storm.generated.Nimbus.Client;
 import backtype.storm.generated.ClusterSummary;
+import backtype.storm.generated.KillOptions;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 import backtype.storm.generated.TopologySummary;
@@ -143,6 +144,9 @@ public class RemoteStormController implements IStormController  {
 			String actual_job_name = getJobTopologySummaryFromJobPrefix(job_name).get_name();
 			if ( actual_job_name != null ) { 
 				synchronized (client) {
+					KillOptions ko = new KillOptions();
+					ko.set_wait_secs(0);
+					client.killTopologyWithOpts(actual_job_name, ko);
 					client.killTopology(actual_job_name);
 				}
 			}

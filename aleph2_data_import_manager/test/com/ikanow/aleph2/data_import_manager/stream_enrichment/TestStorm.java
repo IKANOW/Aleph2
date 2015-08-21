@@ -80,10 +80,9 @@ public class TestStorm {
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		//storm_cluster = StormControllerUtil.getLocalStormController();
+		storm_cluster = StormControllerUtil.getLocalStormController();
 	}
 	
-	protected ICoreDistributedServices _core_distributed_services;
 	@Before
 	public void setupCoreDistributedServices() throws Exception {
 		
@@ -190,7 +189,7 @@ public class TestStorm {
 //		Thread.sleep(10000);
 //		
 //		assertTrue(true);
-//	}
+//	}		
 	
 	@Test
 	public void testCache() throws IOException, InterruptedException, ExecutionException {

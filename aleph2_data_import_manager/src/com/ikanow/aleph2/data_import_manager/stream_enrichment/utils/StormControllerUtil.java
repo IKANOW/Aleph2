@@ -28,9 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +36,7 @@ import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
 import scala.Tuple2;
+import backtype.storm.generated.AlreadyAliveException;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.generated.TopologyInfo;
 
@@ -65,9 +64,10 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
  *
  */
 public class StormControllerUtil {
-	private static final Logger logger = LogManager.getLogger();
+	private static final Logger _logger = LogManager.getLogger();
 	private final static Set<String> dirs_to_ignore = Sets.newHashSet("org/slf4j", "org/apache/log4j");
 	protected final static ConcurrentHashMap<String, Date> storm_topology_jars_cache = new ConcurrentHashMap<>();
+	protected final static long MAX_RETRIES = 60; //60 retries at 1s == 1m max retry time
 	
 	/**
 	 * Returns an instance of a local storm controller.
@@ -159,12 +159,12 @@ public class StormControllerUtil {
 	 */
 	public static boolean buildStormTopologyJar(final List<String> jars_to_merge, final String input_jar_location) {
 		try {				
-			logger.debug("creating jar to submit at: " + input_jar_location);
+			_logger.debug("creating jar to submit at: " + input_jar_location);
 			//final String input_jar_location = System.getProperty("java.io.tmpdir") + File.separator + UuidUtils.get().getTimeBasedUuid() + ".jar";
 			JarBuilderUtil.mergeJars(jars_to_merge, input_jar_location, dirs_to_ignore);
 			return true;
 		} catch (Exception e) {
-			logger.error(ErrorUtils.getLongForm("Error building storm jar {0}", e));
+			_logger.error(ErrorUtils.getLongForm("Error building storm jar {0}", e));
 			return false;
 		}			
 	}
@@ -199,25 +199,26 @@ public class StormControllerUtil {
 	 * @param context
 	 * @param yarn_config_dir
 	 * @param user_lib_paths
-	 * @param enrichment_toplogy
+	 * @param enrichment_topology
 	 * @return
 	 */
-	public static CompletableFuture<BucketActionReplyMessage> startJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy, final String cached_jar_dir) {
+	public static CompletableFuture<BucketActionReplyMessage> startJob(IStormController storm_controller, DataBucketBean bucket, 
+			StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_topology, final String cached_jar_dir) {
 		final CompletableFuture<BucketActionReplyMessage> start_future = new CompletableFuture<BucketActionReplyMessage>();
 
 		//Get topology from user
-		final Tuple2<Object, Map<String, String>> top_ret_val = enrichment_toplogy.getTopologyAndConfiguration(bucket, context);
+		final Tuple2<Object, Map<String, String>> top_ret_val = enrichment_topology.getTopologyAndConfiguration(bucket, context);
 		final StormTopology topology = (StormTopology) top_ret_val._1;
 		if (null == topology) {
 			start_future.complete(
 					new BucketActionReplyMessage.BucketActionHandlerMessage("start",
 							SharedErrorUtils.buildErrorMessage
-								("startJob", "IStormController.startJob", StreamErrorUtils.TOPOLOGY_NULL_ERROR, enrichment_toplogy.getClass().getName(), bucket.full_name()))
+								("startJob", "IStormController.startJob", StreamErrorUtils.TOPOLOGY_NULL_ERROR, enrichment_topology.getClass().getName(), bucket.full_name()))
 					 );
 			return start_future;
 		}
 		
-		logger.info("Retrieved user Storm config topology: spouts=" + topology.get_spouts_size() + " bolts=" + topology.get_bolts_size() + " configs=" + top_ret_val._2().toString());
+		_logger.info("Retrieved user Storm config topology: spouts=" + topology.get_spouts_size() + " bolts=" + topology.get_bolts_size() + " configs=" + top_ret_val._2().toString());
 		
 		final List<String> jars_to_merge = new LinkedList<String>();
 		
@@ -242,9 +243,25 @@ public class StormControllerUtil {
 		//create jar
 		final CompletableFuture<String> jar_future = buildOrReturnCachedStormTopologyJar(jars_to_merge, cached_jar_dir);
 		try {
+			long retries = 0;
 			final String jar_file_location = jar_future.get();
-			//submit to storm		
-			final CompletableFuture<BasicMessageBean> submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
+			//submit to storm	
+			CompletableFuture<BasicMessageBean> submit_future = null;
+			while ( retries < MAX_RETRIES ) {				
+				try {
+					_logger.debug("Trying to submit job, try: " + retries + " of " + MAX_RETRIES);
+					submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
+					retries = MAX_RETRIES; //if we got here, we didn't throw an exception, so we completed successfully
+				} catch ( Exception ex) {
+					if ( ex instanceof AlreadyAliveException ) {
+						retries++;
+						Thread.sleep(1000); //sleep 1s, was seeing about 2s of sleep required before job successfully submitted on restart
+					} else {
+						retries = MAX_RETRIES; //we threw some other exception, bail out
+						submit_future.completeExceptionally(ex);
+					}
+				}
+			}
 			try { 
 				if ( submit_future.get().success() ) {
 					start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
@@ -287,21 +304,21 @@ public class StormControllerUtil {
 			//if the cache is more recent than any of the files, we assume nothing has been updated
 			if ( storm_topology_jars_cache.get(hashed_jar_name).getTime() > most_recent_update.getTime() ) {
 				//RETURN return cached jar file path
-				logger.debug("Returning a cached copy of the jar");
+				_logger.debug("Returning a cached copy of the jar");
 				//update the cache copy to set its modified time to now so we don't clean it up
 				JarBuilderUtil.updateJarModifiedTime(hashed_jar_name);				
 				future.complete(hashed_jar_name);
 				return future;
 			} else {
 				//delete cache copy
-				logger.debug("Removing an expired cached copy of the jar");
+				_logger.debug("Removing an expired cached copy of the jar");
 				removeCachedJar(hashed_jar_name);
 			}
 		}
 				
 		//if we fall through
 		//3. create jar
-		logger.debug("Fell through or cache copy is old, have to create a new version");
+		_logger.debug("Fell through or cache copy is old, have to create a new version");
 		if ( buildStormTopologyJar(jars_to_merge, hashed_jar_name) ) {	//TODO do I need to set the jar name to the hash so we can always find it?	
 			//4. add jar to cache w/ current/newest file timestamp		
 			storm_topology_jars_cache.put(hashed_jar_name, new Date());
@@ -351,20 +368,55 @@ public class StormControllerUtil {
 	 * @param context
 	 * @param yarn_config_dir
 	 * @param user_lib_paths
-	 * @param enrichment_toplogy
+	 * @param enrichment_topology
 	 * @return
 	 */
-	public static CompletableFuture<BucketActionReplyMessage> restartJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_toplogy, final String cached_jar_dir) {
+	public static CompletableFuture<BucketActionReplyMessage> restartJob(IStormController storm_controller, DataBucketBean bucket, StreamingEnrichmentContext context, List<String> user_lib_paths, IEnrichmentStreamingTopology enrichment_topology, final String cached_jar_dir) {
 		CompletableFuture<BucketActionReplyMessage> stop_future = stopJob(storm_controller, bucket);
 		try {
 			stop_future.get(5, TimeUnit.SECONDS);
-		} catch (InterruptedException | ExecutionException | TimeoutException e) {
+			//check job status, spend up to 5 seconds waiting for it to die
+			//it normally takes about that long
+			waitForJobToDie(storm_controller, bucket, 15L);
+		} catch ( Exception e) {
+			_logger.error("Error stopping storm job", e);
 			CompletableFuture<BucketActionReplyMessage> error_future = new CompletableFuture<BucketActionReplyMessage>();
 			error_future.complete(new BucketActionReplyMessage.BucketActionTimeoutMessage(ErrorUtils.getLongForm("Error stopping storm job: {0}", e)));
+			return error_future;
 		}
-		return startJob(storm_controller, bucket, context, user_lib_paths, enrichment_toplogy, cached_jar_dir);
+		return startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jar_dir);
 	}
 	
+	/**
+	 * Continually checks if job has died, returns true if it has, or throws an exception if
+	 * timeout occurs (seconds_to_wait elaspses).
+	 * 
+	 * @param storm_controller
+	 * @param bucket
+	 * @param l
+	 * @return
+	 * @throws Exception 
+	 */
+	private static void waitForJobToDie(
+			IStormController storm_controller, DataBucketBean bucket, long seconds_to_wait) throws Exception {
+		long start_time = System.currentTimeMillis();
+		long num_tries = 0;
+		long expire_time = System.currentTimeMillis() + (seconds_to_wait*1000);
+		while ( System.currentTimeMillis() < expire_time ) {
+			TopologyInfo info = null;
+			try {
+				info = getJobStats(storm_controller, bucketPathToTopologyName(bucket.full_name()));
+			} catch (Exception ex) {}
+			if ( null == info ) {				
+				_logger.debug("JOB_STATUS: no longer exists, assuming that job is dead and gone, spent: " + (System.currentTimeMillis()-start_time) + "ms waiting");				
+				return;
+			}
+			num_tries++;
+			_logger.debug("Waiting for job status to go away, try number: " + num_tries);
+			Thread.sleep(2000); //wait 2s between checks, in tests it was taking 8s to clear
+		}		
+	}
+
 	/**
 	 * Converts a buckets path to a use-able topology name
 	 * 1 way conversion, ie can't convert back
