@@ -87,9 +87,9 @@ public class TestDataSchemaBean {
 		DataSchemaBean.WriteSettings empty_write_settings =  new DataSchemaBean.WriteSettings();
 		assertEquals("Empty Search Index Bean", empty_write_settings.target_write_concurrency(), null);		
 		
-		DataSchemaBean.WriteSettings write_settings =  new DataSchemaBean.WriteSettings(1, 10, 100, 1000);
+		DataSchemaBean.WriteSettings write_settings =  new DataSchemaBean.WriteSettings(1, 10L, 100, 1000);
 		assertEquals(1, (int)write_settings.batch_max_objects());
-		assertEquals(10, (int)write_settings.batch_max_size_kb());
+		assertEquals(10, write_settings.batch_max_size_kb().longValue());
 		assertEquals(100, (int)write_settings.batch_flush_interval());
 		assertEquals(1000, (int)write_settings.target_write_concurrency());
 		

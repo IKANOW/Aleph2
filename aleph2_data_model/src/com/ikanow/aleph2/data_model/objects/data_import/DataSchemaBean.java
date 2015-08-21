@@ -608,7 +608,7 @@ public class DataSchemaBean implements Serializable {
 		 * @param batch_flush_interval
 		 * @param target_write_concurrency
 		 */
-		public WriteSettings(final Integer batch_max_objects, final Integer batch_max_size_kb, final Integer batch_flush_interval, final Integer target_write_concurrency)
+		public WriteSettings(final Integer batch_max_objects, final Long batch_max_size_kb, final Integer batch_flush_interval, final Integer target_write_concurrency)
 		{
 			this.batch_max_objects = batch_max_objects;
 			this.batch_max_size_kb = batch_max_size_kb;
@@ -626,7 +626,7 @@ public class DataSchemaBean implements Serializable {
 		/** (OPTIONAL) When writing data out in batches, the (ideal) max size per batch write (in KB)
 		 * @return the (ideal) max size per batch write (in KB)
 		 */
-		public Integer batch_max_size_kb() {
+		public Long batch_max_size_kb() {
 			return batch_max_size_kb;
 		}
 		
@@ -645,7 +645,7 @@ public class DataSchemaBean implements Serializable {
 		}
 		private Integer target_write_concurrency;
 		private Integer batch_max_objects;
-		private Integer batch_max_size_kb;
+		private Long batch_max_size_kb;
 		private Integer batch_flush_interval;
 	}
 }
