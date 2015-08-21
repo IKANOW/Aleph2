@@ -273,14 +273,18 @@ public class TestRemoteRoundRobinMessageBus {
 			}
 			try { Thread.sleep(1000); } catch (Exception e) {}
 		}
+		_logger.info("Finished waiting for messages, now waiting for the remote process to die");
+		assertTrue("Initial check on message numbers:" + _received_post_bus2, _received_post_bus2 >= MESSAGES_TO_SEND);
 		if (px.isAlive()) {
 			px.destroyForcibly();			
 		}
+		waiting = 0; // (reset the clock to give the process time to die, we know we've received enough messages by now)
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
+			try { px.destroyForcibly(); } catch (Throwable t) {} // (just in case the kill message can be lost somehow?)
 			try { Thread.sleep(1000); } catch (Exception e) {}			
 		}
 		if (waiting >= MAX_WAIT) {
-			fail("Waited for 20s for the child process to finish");
+			fail("Waited for 20s for the child process to finish: " + _received_post_bus2);
 		}		
 		assertTrue(px.exitValue() > 0);
 		
@@ -342,9 +346,12 @@ public class TestRemoteRoundRobinMessageBus {
 					publisher.tell(createMessage(), null);
 				}
 			}
+			_logger.info("Finished sending messages, wait remainder of 10s before exiting");
 		});
 		
+		_logger.info("Main thread: wait 10s for messages to send then exit");
 		try { Thread.sleep(10000); } catch (Exception e) {}
+		_logger.info("Exiting now...");
 		
 		System.exit(0);			
 	}
