@@ -8,6 +8,7 @@ import java.util.function.Function;
 
 import scala.Tuple2;
 import backtype.storm.topology.TopologyBuilder;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -27,7 +28,7 @@ public class SampleStormStreamTopology1 implements IEnrichmentStreamingTopology 
 	@Override
 	public Tuple2<Object, Map<String, String>> getTopologyAndConfiguration(final DataBucketBean bucket, final IEnrichmentModuleContext context) {				
 		final TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("spout1", new SampleWebReaderSpout("http://lifehacker.com/the-best-board-games-for-developing-valuable-real-life-1714642211"));
+		builder.setSpout("spout1", new SampleWebReaderSpout("https://raw.githubusercontent.com/IKANOW/Aleph2/master/README.md"));
 		builder.setBolt("bolt1", new SampleWordParserBolt()).shuffleGrouping("spout1");
 		return Tuples._2T(builder.createTopology(), Collections.emptyMap());
 	}
