@@ -316,13 +316,13 @@ public class DataSchemaBean implements Serializable {
 		/** User constructor
 		 */
 		public SearchIndexSchemaBean(final Boolean enabled,
-				final Integer target_write_concurrency,
+				final WriteSettings target_write_settings,
 				final Long target_index_size_mb,
 				final String service_name,				
 				final Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
-			this.target_write_concurrency = target_write_concurrency;
+			this.target_write_settings = target_write_settings;
 			this.target_index_size_mb = target_index_size_mb;
 			this.service_name = service_name;
 			this.technology_override_schema = technology_override_schema;
@@ -334,13 +334,13 @@ public class DataSchemaBean implements Serializable {
 			return enabled;
 		}
 		
-		/** (OPTIONAL) A user preference for the number of threads that will be used to write data
-		 * @return the user preference for the number of threads that will be used to write data
+		/** (OPTIONAL) A user preference for the various write settings (eg number of threads, flush size)
+		 * @return the user preference for the various write settings (eg number of threads, flush size)
 		 */
-		public Integer target_write_concurrency() {
-			return target_write_concurrency;
+		public WriteSettings target_write_settings() {
+			return target_write_settings;
 		}
-
+		
 		/** (OPTIONAL) A user preference for the maximum size of the index files generated (in Megabytes)
 		 * @return the user preference for the maximum size of the index files generated (in Megabytes)
 		 */
@@ -362,12 +362,10 @@ public class DataSchemaBean implements Serializable {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
-		private Integer target_write_concurrency;
+		private WriteSettings target_write_settings;
 		private Long target_index_size_mb;
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
-		
-		//TODO (ALEPH-14): handle object format collisions - coexist/prevent/block
 	}
 	/** Per bucket schema for the Columnar Service
 	 * @author acp
@@ -595,4 +593,59 @@ public class DataSchemaBean implements Serializable {
 		//private Map<String, Object> technology_override_schema;
 	}
 	
+	////////////////////////////////////////////////////////////////////////////////
+	
+	/** A class shared across multiple schema (currently: search_index_schema) that contains somewhat generic write options
+	 * @author Alex
+	 */
+	public static class WriteSettings implements Serializable {
+		private static final long serialVersionUID = -5900584828103066696L;		
+		protected WriteSettings() {}
+		
+		/** User c'tor
+		 * @param batch_max_objects
+		 * @param batch_max_size_kb
+		 * @param batch_flush_interval
+		 * @param target_write_concurrency
+		 */
+		public WriteSettings(final Integer batch_max_objects, final Integer batch_max_size_kb, final Integer batch_flush_interval, final Integer target_write_concurrency)
+		{
+			this.batch_max_objects = batch_max_objects;
+			this.batch_max_size_kb = batch_max_size_kb;
+			this.batch_flush_interval = batch_flush_interval;
+			this.target_write_concurrency = target_write_concurrency;
+		}
+		
+		/** (OPTIONAL) When writing data out in batches, the (ideal) max number of objects per batch write
+		 * @return the (ideal) max number of objects per batch write
+		 */
+		public Integer batch_max_objects() {
+			return batch_max_objects;
+		}
+		
+		/** (OPTIONAL) When writing data out in batches, the (ideal) max size per batch write (in KB)
+		 * @return the (ideal) max size per batch write (in KB)
+		 */
+		public Integer batch_max_size_kb() {
+			return batch_max_size_kb;
+		}
+		
+		/** (OPTIONAL) When writing data out in batches, the (ideal) max time between batch writes (in seconds)
+		 * @return the (ideal) max time between batch writes (in seconds)
+		 */
+		public Integer batch_flush_interval() {
+			return batch_flush_interval;
+		}
+		
+		/** (OPTIONAL) A user preference for the number of threads that will be used to write data
+		 * @return the user preference for the number of threads that will be used to write data
+		 */
+		public Integer target_write_concurrency() {
+			return target_write_concurrency;
+		}
+		private Integer target_write_concurrency;
+		private Integer batch_max_objects;
+		private Integer batch_max_size_kb;
+		private Integer batch_flush_interval;
+	}
 }

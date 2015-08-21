@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 public class TestDataSchemaBean {
 
 	@Test 
-	public void testAccessors() {
+	public void test_accessors() {
 		
 		// Storage Schema Bean
 		
@@ -82,6 +82,17 @@ public class TestDataSchemaBean {
 		assertEquals("Document bean deduplication_fields", document_bean.deduplication_fields(), Arrays.asList("deduplication_fields"));
 		assertEquals("Document bean technology_override_schema", document_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
+		// WriteSettings (shared across schemas - currenly only search_index_bean though)
+		
+		DataSchemaBean.WriteSettings empty_write_settings =  new DataSchemaBean.WriteSettings();
+		assertEquals("Empty Search Index Bean", empty_write_settings.target_write_concurrency(), null);		
+		
+		DataSchemaBean.WriteSettings write_settings =  new DataSchemaBean.WriteSettings(1, 10, 100, 1000);
+		assertEquals(1, (int)write_settings.batch_max_objects());
+		assertEquals(10, (int)write_settings.batch_max_size_kb());
+		assertEquals(100, (int)write_settings.batch_flush_interval());
+		assertEquals(1000, (int)write_settings.target_write_concurrency());
+		
 		// Search Index Bean
 		
 		DataSchemaBean.SearchIndexSchemaBean empty_search_index_bean = new DataSchemaBean.SearchIndexSchemaBean();
@@ -90,14 +101,14 @@ public class TestDataSchemaBean {
 		DataSchemaBean.SearchIndexSchemaBean search_index_bean =
 				new DataSchemaBean.SearchIndexSchemaBean(
 						true,
-						10, 100L,
+						write_settings, 100L,
 						"service_name",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 
 		assertEquals("Search Index bean enabled", search_index_bean.enabled(), true);
 		assertEquals("Search Index bean service_name", search_index_bean.service_name(), "service_name");
-		assertEquals("Search Index bean concurrency", 10, (int)search_index_bean.target_write_concurrency());
+		assertEquals("Search Index bean concurrency", 1000, (int)search_index_bean.target_write_settings().target_write_concurrency());
 		assertEquals("Search Index bean max size", 100, (long)search_index_bean.target_index_size_mb());
 		assertEquals("Search Index bean technology_override_schema", search_index_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
