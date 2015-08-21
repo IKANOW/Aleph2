@@ -316,10 +316,14 @@ public class DataSchemaBean implements Serializable {
 		/** User constructor
 		 */
 		public SearchIndexSchemaBean(final Boolean enabled,
-				final String service_name,
+				final Integer target_write_concurrency,
+				final Long target_index_size_mb,
+				final String service_name,				
 				final Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
+			this.target_write_concurrency = target_write_concurrency;
+			this.target_index_size_mb = target_index_size_mb;
 			this.service_name = service_name;
 			this.technology_override_schema = technology_override_schema;
 		}
@@ -329,6 +333,21 @@ public class DataSchemaBean implements Serializable {
 		public Boolean enabled() {
 			return enabled;
 		}
+		
+		/** (OPTIONAL) A user preference for the number of threads that will be used to write data
+		 * @return the user preference for the number of threads that will be used to write data
+		 */
+		public Integer target_write_concurrency() {
+			return target_write_concurrency;
+		}
+
+		/** (OPTIONAL) A user preference for the maximum size of the index files generated (in Megabytes)
+		 * @return the user preference for the maximum size of the index files generated (in Megabytes)
+		 */
+		public Long target_index_size_mb() {
+			return target_index_size_mb;
+		}
+		
 		/** (OPTIONAL) Enables a non-default service to be used for this schema
 		 * @return the overriding service_name
 		 */
@@ -343,6 +362,8 @@ public class DataSchemaBean implements Serializable {
 			return technology_override_schema;
 		}
 		private Boolean enabled;
+		private Integer target_write_concurrency;
+		private Long target_index_size_mb;
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
 		

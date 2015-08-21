@@ -90,12 +90,15 @@ public class TestDataSchemaBean {
 		DataSchemaBean.SearchIndexSchemaBean search_index_bean =
 				new DataSchemaBean.SearchIndexSchemaBean(
 						true,
+						10, 100L,
 						"service_name",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 
 		assertEquals("Search Index bean enabled", search_index_bean.enabled(), true);
 		assertEquals("Search Index bean service_name", search_index_bean.service_name(), "service_name");
+		assertEquals("Search Index bean concurrency", 10, (int)search_index_bean.target_write_concurrency());
+		assertEquals("Search Index bean max size", 100, (long)search_index_bean.target_index_size_mb());
 		assertEquals("Search Index bean technology_override_schema", search_index_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Columnar Bean:
