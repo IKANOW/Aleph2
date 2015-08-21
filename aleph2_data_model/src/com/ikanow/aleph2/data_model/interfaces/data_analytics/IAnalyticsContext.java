@@ -106,6 +106,13 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	<T> Optional<T> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
 
+	/** Requests a technology-specific output for the given data service (eg OutputFormat for Hadoop/Bolt for Storm/etc), or an ICrudService (of JsonNode) as a backup
+	 * @param clazz - the requested class, note all CRUD services will always return an ICrudService<JsonNode>, but more useful technology-specific higher-level constructs may also be possible
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param job - the job being run
+	 * @param data_service - the data service to which to write (ie to which the request is being sent) 
+	 * @return an instance of the requested class if available, else empty
+	 */
 	<T> Optional<T> getServiceOutput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final String data_service);
 	
 	/** This checks whether another analytic job has requested a stream of objects - if so then sendObjectToStreamingPipeline can be used to forward them
