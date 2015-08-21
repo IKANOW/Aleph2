@@ -11,6 +11,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import scala.Tuple3;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
@@ -22,6 +23,7 @@ public class BeFileOutputFormat extends FileOutputFormat<String, Tuple3<Long, Js
 	private SharedLibraryBean beSharedLibrary;
 	private DataBucketBean dataBucket;
 	private IEnrichmentModuleContext enrichmentContext;
+	private IEnrichmentBatchModule enrichmentBatchModule = null;			
 
 
 	@Override
@@ -32,7 +34,7 @@ public class BeFileOutputFormat extends FileOutputFormat<String, Tuple3<Long, Js
 		} catch (Exception e) {
 			throw new IOException(e);
 		}
-		return new BeFileOutputWriter(jobContext.getConfiguration(), enrichmentContext,dataBucket,beSharedLibrary,ecMetadata);
+		return new BeFileOutputWriter(jobContext.getConfiguration(), enrichmentContext,enrichmentBatchModule,dataBucket,beSharedLibrary,ecMetadata);
 	}
 
 	@Override
@@ -55,6 +57,18 @@ public class BeFileOutputFormat extends FileOutputFormat<String, Tuple3<Long, Js
 	@Override
 	public void setEnrichmentContext(IEnrichmentModuleContext enrichmentContext) {
 		this.enrichmentContext = enrichmentContext;
+	}
+
+	@Override
+	public void setBatchSize(int int1) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setEnrichmentBatchModule(IEnrichmentBatchModule enrichmentBatchModule) {
+		this.enrichmentBatchModule = enrichmentBatchModule;
+		
 	}
 
 }

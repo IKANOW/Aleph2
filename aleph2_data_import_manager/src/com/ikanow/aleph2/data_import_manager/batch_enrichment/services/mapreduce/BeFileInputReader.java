@@ -25,6 +25,7 @@ import scala.Tuple3;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
@@ -63,6 +64,8 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 	}
 	
 	Date start = null;
+	private int batchSize;
+	private IEnrichmentBatchModule enrichmentBatchModule;
 	
 	public BeFileInputReader(){
 		super();
@@ -235,6 +238,18 @@ public class BeFileInputReader extends  RecordReader<String, Tuple3<Long, JsonNo
 	@Override
 	public void setEnrichmentContext(IEnrichmentModuleContext enrichmentContext) {
 		this.enrichmentContext = enrichmentContext;
+	}
+
+	@Override
+	public void setBatchSize(int size) {
+		this.batchSize = size;
+		
+	}
+
+	@Override
+	public void setEnrichmentBatchModule(IEnrichmentBatchModule beModule) {
+		this.enrichmentBatchModule = beModule;
+		
 	}
 	
 	

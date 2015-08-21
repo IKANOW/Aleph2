@@ -2,10 +2,9 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.logging.log4j.LogManager;
@@ -20,8 +19,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
-
-import org.apache.hadoop.conf.Configuration;
 
 public class BatchEnrichmentJob{
 
@@ -48,7 +45,6 @@ public class BatchEnrichmentJob{
 		protected BeJobBean beJob = null;;
 		protected EnrichmentControlMetadataBean ecMetadata = null;
 		protected SharedLibraryBean beSharedLibrary = null;
-		List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();
 		
 		public BatchErichmentMapper(){
 			super();
@@ -61,13 +57,9 @@ public class BatchEnrichmentJob{
 			try{
 				
 
-			extractBeJobParameters(this,  context.getConfiguration());
+			//extractBeJobParameters(this,  context.getConfiguration());
 			
-			this.batchSize = context.getConfiguration().getInt(BATCH_SIZE_PARAM,1);	
-			this.enrichmentBatchModule = (IEnrichmentBatchModule)Class.forName(beSharedLibrary.batch_enrichment_entry_point()).newInstance();
 			
-			boolean final_stage = true;
-			enrichmentBatchModule.onStageInitialize(enrichmentContext, dataBucket, final_stage);
 			}
 			catch(Exception e){
 				logger.error("Caught Exception",e);
@@ -81,13 +73,9 @@ public class BatchEnrichmentJob{
 		protected void map(String key, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> value,
 				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob map");
-			batch.add(value);
-			if(batch.size()>=batchSize){	
-				enrichmentBatchModule.onObjectBatch(batch);
-				batch.clear();
-			}
-			
+			context.write(key, value);			
 		} // map
+
 
 		@Override
 		public void setEcMetadata(EnrichmentControlMetadataBean ecMetadata) {
@@ -115,9 +103,18 @@ public class BatchEnrichmentJob{
 		protected void cleanup(
 				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context)
 				throws IOException, InterruptedException {
-			    //send out the rest of the batch
-				enrichmentBatchModule.onObjectBatch(batch);
-				batch.clear();
+		}
+
+		@Override
+		public void setBatchSize(int bs) {
+			this.batchSize=bs;
+			
+		}
+
+		@Override
+		public void setEnrichmentBatchModule(IEnrichmentBatchModule ebm) {
+			this.enrichmentBatchModule = ebm;
+			
 		}
 		
 	} //BatchErichmentMapper
@@ -134,8 +131,11 @@ public class BatchEnrichmentJob{
 		beJobConfigurable.setEnrichmentContext(enrichmentContext);
 		DataBucketBean dataBucket = enrichmentContext.getBucket().get();
 		beJobConfigurable.setDataBucket(dataBucket);
-		beJobConfigurable.setBeSharedLibrary(enrichmentContext.getLibraryConfig());		
-		beJobConfigurable.setEcMetadata(BeJobBean.extractEnrichmentControlMetadata(dataBucket, configuration.get(BE_META_BEAN_PARAM)).get());		
+		SharedLibraryBean beSharedLibrary = enrichmentContext.getLibraryConfig();
+		beJobConfigurable.setBeSharedLibrary(beSharedLibrary);		
+		beJobConfigurable.setEcMetadata(BeJobBean.extractEnrichmentControlMetadata(dataBucket, configuration.get(BE_META_BEAN_PARAM)).get());	
+		beJobConfigurable.setBatchSize(configuration.getInt(BATCH_SIZE_PARAM,100));	
+		beJobConfigurable.setEnrichmentBatchModule((IEnrichmentBatchModule)Class.forName(beSharedLibrary.batch_enrichment_entry_point()).newInstance());
 	}
 
 }
