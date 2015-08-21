@@ -1,6 +1,8 @@
 package com.ikanow.aleph2.security.service;
 
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -14,13 +16,15 @@ import org.apache.shiro.subject.Subject;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
-public class SecurityService implements ISecurityService {
+public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
 	protected ISubject currentSubject = null;
 	private static final Logger logger = LogManager.getLogger(SecurityService.class);
@@ -28,22 +32,23 @@ public class SecurityService implements ISecurityService {
 	protected IServiceContext serviceContext;
 
 	@Inject
-	public SecurityService(IServiceContext serviceContext) {
+	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager) {
 		this.serviceContext = serviceContext;
-	}
+		SecurityUtils.setSecurityManager(securityManager);
+		}
 
 
 	protected void init(){
 		try {
-		    SecurityManager securityManager = getInjector().getInstance(SecurityManager.class);
+//		    SecurityManager securityManager = getInjector().getInstance(SecurityManager.class);
 //		    SecurityUtils.setSecurityManager(securityManager);Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");    
 //	        SecurityManager securityManager = factory.getInstance();
-	        SecurityUtils.setSecurityManager(securityManager);
+//	        SecurityUtils.setSecurityManager(securityManager);
 
 
 	        // get the currently executing user:
 	        Subject currentUser = SecurityUtils.getSubject();
-	        currentSubject = new SubjectWrapper(currentUser);
+	        this.currentSubject = new SubjectWrapper(currentUser);
 	        // Do some stuff with a Session (no need for a web or EJB container!!!)
 			
 		} catch (Throwable e) {
@@ -147,4 +152,14 @@ public class SecurityService implements ISecurityService {
 		return ret;
 	}
 
+	public static List<Module> getExtraDependencyModules() {
+		return Arrays.asList((Module)new CoreSecurityModule());
+	}
+
+
+	@Override
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
+		// TODO Auto-generated method stub
+		
+	}
 }

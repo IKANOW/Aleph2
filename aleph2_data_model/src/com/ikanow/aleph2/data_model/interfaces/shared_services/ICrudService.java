@@ -290,10 +290,12 @@ public interface ICrudService<O> {
 	 */
 	public static interface IBatchSubservice<O> {
 		/** Sets the batching parameters
+		 * @param max_objects - the max number of records before a batch is flushed
 		 * @param size_kb - the max size before a batch is flushed
 		 * @param flush_interval - the max time before a batch is flushed
+		 * @param write_threads - the requested number of write threads (this is not guaranteed to be granted, but will be taken into account)
 		 */
-		void setBatchProperties(final Optional<Integer> max_objects, final Optional<Long> size_kb, final Optional<Duration> flush_interval);
+		void setBatchProperties(final Optional<Integer> max_objects, final Optional<Long> size_kb, final Optional<Duration> flush_interval, final Optional<Integer> write_threads);
 		
 		/** Efficiently store the list of objects with the subservice's batching parameters
 		 * @param new_objects - the list of objects to store

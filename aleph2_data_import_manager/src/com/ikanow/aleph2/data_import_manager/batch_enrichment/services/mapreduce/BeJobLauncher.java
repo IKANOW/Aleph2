@@ -104,7 +104,7 @@ public class BeJobLauncher implements IBeJobService{
 			    job.setInputFormatClass(BeFileInputFormat.class);
 
 				// Output format:
-			    job.setOutputFormatClass(TextOutputFormat.class);
+			    job.setOutputFormatClass(BeFileOutputFormat.class);
 	
 
 			    Path inPath = new Path(beJob.getBucketInputPath());

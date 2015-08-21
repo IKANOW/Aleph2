@@ -355,7 +355,6 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 		else if (_crud_index_service.isPresent()){ // (super slow)
 			_crud_index_service.get().storeObject(mutated_json, false);
 		}
-		//TODO 
 		//TODO write one or write multiple?
 		//_hadoopContext.context.write(key, value);
 
