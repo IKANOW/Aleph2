@@ -45,6 +45,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -455,9 +456,12 @@ public class TestStreamingEnrichmentContext {
 		//(internal)
 //		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
 		//(external)
-		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
-		
-		final ICrudService<JsonNode> crud_check_index = check_index.getCrudService(JsonNode.class, test_bucket).get();
+		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
+		final ICrudService<JsonNode> crud_check_index = 
+				check_index.getDataService()
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty()))
+					.flatMap(IDataWriteService::getCrudService)
+					.get();
 		crud_check_index.deleteDatastore();
 		Thread.sleep(2000L); // (wait for datastore deletion to flush)
 		assertEquals(0, crud_check_index.countObjects().get().intValue());

@@ -15,14 +15,10 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
 
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -39,25 +35,4 @@ public interface ISearchIndexService extends IUnderlyingService, IDataServicePro
 	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
 	 */
 	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.SearchIndexSchemaBean schema, final DataBucketBean bucket);	
-
-	/** This is called to offload bucket deletion and purging to the individual data services
-	 * @param bucket - the bucket being deleted
-	 * @param bucket_getting_deleted - true if it's an actual deletion, false is just purging all the data from the bucket
-	 * @return a future containing the results of the deletion request for this service
-	 */
-	CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(final DataBucketBean bucket, boolean bucket_getting_deleted);
-	
-	/** Returns a CRUD service (including simple searching) for the specified bucket or multi-bucket
-	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
-	 * @param bucket The data bucket or multi-bucket
-	 * @return the CRUD service (or empty optional if the service is not applicable to the bucket)
-	 */
-	<O> Optional<ICrudService<O>> getCrudService(final Class<O> clazz, final DataBucketBean bucket);
-	
-	/** Returns a CRUD service (including simple searching) for the specified buckets or multi-buckets
-	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
-	 * @param buckets A collection of bucket paths or aliases (including supporting wildcarding)
-	 * @return the CRUD service (or empty optional if the service is not applicable to the bucket)
-	 */
-	<O> Optional<ICrudService<O>> getCrudService(final Class<O> clazz, final Collection<String> buckets);
 }

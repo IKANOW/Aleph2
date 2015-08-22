@@ -45,6 +45,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -423,7 +424,7 @@ public class TestBatchEnrichmentContext {
 		//(external)
 		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
 		
-		final ICrudService<JsonNode> crud_check_index = check_index.getCrudService(JsonNode.class, test_bucket).get();
+		final IDataWriteService<JsonNode> crud_check_index = check_index.getDataService().flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty())).get();
 		crud_check_index.deleteDatastore();
 		Thread.sleep(2000L); // (wait for datastore deletion to flush)
 		assertEquals(0, crud_check_index.countObjects().get().intValue());
@@ -468,7 +469,7 @@ public class TestBatchEnrichmentContext {
 		
 		assertEquals(3, crud_check_index.countObjects().get().intValue());
 		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
-				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
+				crud_check_index.getCrudService().get().getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
 		
 	}
 }

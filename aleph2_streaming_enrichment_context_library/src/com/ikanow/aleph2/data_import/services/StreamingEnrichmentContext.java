@@ -49,6 +49,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
@@ -107,8 +108,8 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected GlobalPropertiesBean _globals;
 
 	// For writing objects out
-	protected Optional<ICrudService<JsonNode>> _crud_index_service;
-	protected Optional<ICrudService.IBatchSubservice<JsonNode>> _batch_index_service;
+	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
 	
 	private static ConcurrentHashMap<String, StreamingEnrichmentContext> static_instances = new ConcurrentHashMap<>();
 	
@@ -166,7 +167,6 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#initializeNewContext(java.lang.String)
 	 */
-	@SuppressWarnings("unchecked")
 	@Override
 	public void initializeNewContext(final String signature) {
 		try {
@@ -197,8 +197,11 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.library_config.set(retrieve_library.get());
 			
-			_batch_index_service = (_crud_index_service = _index_service.getCrudService(JsonNode.class, retrieve_bucket.get()))
-					.flatMap(cs -> cs.getUnderlyingPlatformDriver(ICrudService.IBatchSubservice.class, Optional.empty()))
+			_batch_index_service = 
+					(_crud_index_service = _index_service.getDataService()
+												.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
+					)
+					.flatMap(IDataWriteService::getBatchWriteSubservice)
 					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
 
 			static_instances.put(signature, this);
@@ -385,10 +388,10 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
 		}
 		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(mutated_json, false);
+			_batch_index_service.get().storeObject(mutated_json);
 		}
 		else if (_crud_index_service.isPresent()){ // (super slow)
-			_crud_index_service.get().storeObject(mutated_json, false);
+			_crud_index_service.get().storeObject(mutated_json);
 		}
 		//(else nothing to do)
 	}

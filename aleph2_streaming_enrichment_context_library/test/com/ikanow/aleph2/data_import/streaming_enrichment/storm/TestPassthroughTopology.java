@@ -35,6 +35,7 @@ import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -114,7 +115,11 @@ public class TestPassthroughTopology {
 		
 		//PHASE 3: CHECK INDEX
 		final ISearchIndexService index_service = test_context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
-		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, test_bucket).get();
+		final ICrudService<JsonNode> crud_service = 
+				index_service.getDataService()
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty()))
+					.flatMap(IDataWriteService::getCrudService)
+					.get();
 		crud_service.deleteDatastore().get();
 		_logger.info("******** Cleansed existing datastore");
 		Thread.sleep(2000L);

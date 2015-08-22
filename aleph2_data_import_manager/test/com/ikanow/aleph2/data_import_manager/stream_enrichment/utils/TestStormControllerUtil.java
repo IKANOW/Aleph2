@@ -42,6 +42,7 @@ import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormContro
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -105,7 +106,11 @@ public class TestStormControllerUtil {
 		final IEnrichmentStreamingTopology enrichment_topology = new SampleStormStreamTopology1();
 		final String cached_jar_dir = System.getProperty("java.io.tmpdir");
 		final ISearchIndexService index_service = context.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();
-		final ICrudService<JsonNode> crud_service = index_service.getCrudService(JsonNode.class, bucket).get();
+		final ICrudService<JsonNode> crud_service = 
+				index_service.getDataService()
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.empty()))
+					.flatMap(IDataWriteService::getCrudService)
+					.get();
 		crud_service.deleteDatastore().get();
 		StormControllerUtil.startJob(storm_cluster, bucket, context, new ArrayList<String>(), enrichment_topology, cached_jar_dir);
 		

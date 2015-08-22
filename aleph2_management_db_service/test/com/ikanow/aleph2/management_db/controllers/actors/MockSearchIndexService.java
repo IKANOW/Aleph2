@@ -27,6 +27,8 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -54,23 +56,50 @@ public class MockSearchIndexService implements ISearchIndexService {
 		return null;
 	}
 
-	@Override
-	public CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(
-			DataBucketBean bucket, boolean bucket_getting_deleted) {
-		_handleBucketDeletionRequests.put("handleBucketDeletionRequest", Tuples._2T(bucket.full_name(), bucket_getting_deleted));
-		return CompletableFuture.completedFuture(new BasicMessageBean(new Date(), true, "MockSearchIndexService", "handleBucketDeletionRequest", null, bucket.full_name() + ":" + bucket_getting_deleted, null));
-	}
+	public class MockElasticsearchDataService implements IDataServiceProvider.IGenericDataService {
 
-	@Override
-	public <O> Optional<ICrudService<O>> getCrudService(Class<O> clazz,
-			DataBucketBean bucket) {
-		return null;
-	}
+		@Override
+		public <O> Optional<IDataWriteService<O>> getWritableDataService(
+				Class<O> clazz, DataBucketBean bucket,
+				Optional<String> options, Optional<String> secondary_buffer) {
+			return null;
+		}
 
-	@Override
-	public <O> Optional<ICrudService<O>> getCrudService(Class<O> clazz,
-			Collection<String> buckets) {
-		return null;
-	}
+		@Override
+		public <O> Optional<ICrudService<O>> getReadableCrudService(
+				Class<O> clazz, Collection<DataBucketBean> buckets,
+				Optional<String> options) {
+			return null;
+		}
 
+		@Override
+		public Collection<String> getSecondaryBufferList(DataBucketBean bucket) {
+			return null;
+		}
+
+		@Override
+		public CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(
+				DataBucketBean bucket, Optional<String> secondary_buffer) {
+			return null;
+		}
+
+		@Override
+		public CompletableFuture<BasicMessageBean> handleAgeOutRequest(
+				DataBucketBean bucket) {
+			return null;
+		}
+
+		@Override
+		public CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(
+				DataBucketBean bucket, Optional<String> secondary_buffer,
+				boolean bucket_getting_deleted) {
+			_handleBucketDeletionRequests.put("handleBucketDeletionRequest", Tuples._2T(bucket.full_name(), bucket_getting_deleted));
+			return CompletableFuture.completedFuture(new BasicMessageBean(new Date(), true, "MockSearchIndexService", "handleBucketDeletionRequest", null, bucket.full_name() + ":" + bucket_getting_deleted, null));
+		}
+		
+	}
+	@Override
+	public Optional<IGenericDataService> getDataService() { 
+		return Optional.of(new MockElasticsearchDataService());
+	}
 }

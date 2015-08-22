@@ -34,6 +34,7 @@ public class ErrorUtils {
 	public static final String INVALID_CONFIG_ERROR = "Invalid configuration for {0}: {1}";
 	public static final String INVALID_DATETIME_FORMAT = "Could not parse human readable datetime string: {0}";
 	public static final String READ_ONLY_CRUD_SERVICE = "Attempted to call a writable method from a read only CRUD service";
+	public static final String NOT_YET_IMPLEMENTED = "Functionality not yet implemented: {0}";
 	
 	// Interface
 	

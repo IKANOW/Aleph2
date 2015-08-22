@@ -217,9 +217,11 @@ public class BucketDeletionActor extends UntypedActor {
 	
 		final LinkedList<CompletableFuture<BasicMessageBean>> vals = new LinkedList<>();
 		
-		search_index.ifPresent(index -> {
-			vals.add(index.handleBucketDeletionRequest(bucket, delete_bucket));
-		});
+		search_index
+			.flatMap(ISearchIndexService::getDataService)
+			.ifPresent(index -> {
+				vals.add(index.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
+			});
 		
 		if (!delete_bucket) { // (Else will be deleted in the main actor fn)
 			vals.add(service_context.getStorageService().handleBucketDeletionRequest(bucket, false));
