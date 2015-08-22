@@ -118,7 +118,7 @@ public class TestDataBucketCrudService_Delete {
 	}	
 	
 	@Test
-	public void testSetup() {
+	public void test_Setup() {
 		if (File.separator.equals("\\")) { // windows mode!
 			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
 			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
@@ -251,7 +251,7 @@ public class TestDataBucketCrudService_Delete {
 	// Check that - 1) a response was retrieved, 2) the underlying DB entry was updated (except possibly where an error occurred)
 	
 	@Test
-	public void testSingleDeleteById_timeout() throws InterruptedException, ExecutionException, ClassNotFoundException {
+	public void test_SingleDeleteById_timeout() throws InterruptedException, ExecutionException, ClassNotFoundException {
 	
 		cleanDatabases();
 		
@@ -298,7 +298,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 
 	@Test
-	public void testSingleDeleteById_partialTimeout() throws Exception {
+	public void test_SingleDeleteById_partialTimeout() throws Exception {
 	
 		String host2 = insertActor(TestActor_Accepter.class);
 		
@@ -347,7 +347,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 	
 	@Test
-	public void testSingleDeleteById() throws Exception {
+	public void test_SingleDeleteById() throws Exception {
 	
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -400,7 +400,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 	
 	@Test
-	public void testSingleDeleteById_partialIgnore() throws Exception {
+	public void test_SingleDeleteById_partialIgnore() throws Exception {
 	
 		String host1 = insertActor(TestActor_Refuser.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -443,7 +443,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 
 	@Test
-	public void testSingleDeleteBySpec() throws Exception {
+	public void test_SingleDeleteBySpec() throws Exception {
 	
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -489,7 +489,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 	
 	@Test
-	public void testSingleDeleteById_wrongId() throws Exception {
+	public void test_SingleDeleteById_wrongId() throws Exception {
 	
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -518,7 +518,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 	
 	@Test
-	public void testSingleDeleteBySpec_wrongQuery() throws Exception {
+	public void test_SingleDeleteBySpec_wrongQuery() throws Exception {
 	
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -553,7 +553,7 @@ public class TestDataBucketCrudService_Delete {
 	// Multi delete
 	
 	@Test
-	public void testMultiDelete_noTimeouts() throws Exception {
+	public void test_MultiDelete_noTimeouts() throws Exception {
 		
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);
@@ -603,7 +603,7 @@ public class TestDataBucketCrudService_Delete {
 	}
 	
 	@Test
-	public void testMultiDelete_2Timeouts() throws Exception {
+	public void test_MultiDelete_2Timeouts() throws Exception {
 		
 		String host1 = insertActor(TestActor_Accepter.class);
 		String host2 = insertActor(TestActor_Accepter.class);

@@ -281,10 +281,10 @@ public class CrudServiceUtils {
 		}
 		/**
 		 * @return
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawCrudService()
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawService()
 		 */
-		public ICrudService<JsonNode> getRawCrudService() {
-			return _delegate.getRawCrudService().readOnlyVersion();
+		public ICrudService<JsonNode> getRawService() {
+			return _delegate.getRawService().readOnlyVersion();
 		}
 		/**
 		 * @return
@@ -303,6 +303,13 @@ public class CrudServiceUtils {
 				Class<X> driver_class, Optional<String> driver_options) {
 			return _delegate.getUnderlyingPlatformDriver(driver_class,
 					driver_options);
+		}
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService#getCrudService()
+		 */
+		@Override
+		public Optional<ICrudService<T>> getCrudService() {
+			return Optional.of(this);
 		}
 	}
 	
@@ -541,10 +548,10 @@ public class CrudServiceUtils {
 		}
 		/**
 		 * @return
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getRawCrudService()
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getRawService()
 		 */
-		public IManagementCrudService<JsonNode> getRawCrudService() {
-			return _delegate.getRawCrudService().readOnlyVersion();
+		public IManagementCrudService<JsonNode> getRawService() {
+			return _delegate.getRawService().readOnlyVersion();
 		}
 		/**
 		 * @return
@@ -563,6 +570,10 @@ public class CrudServiceUtils {
 				Class<X> driver_class, Optional<String> driver_options) {
 			return _delegate.getUnderlyingPlatformDriver(driver_class,
 					driver_options);
+		}
+		@Override
+		public Optional<ICrudService<T>> getCrudService() {
+			return Optional.of(this);
 		}
 	}
 
@@ -621,7 +632,7 @@ public class CrudServiceUtils {
 						else if (extra_query.isPresent() && m.getName().equals("updateObjectById")) { // convert from id to spec and append extra_query
 							return delegate.updateObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), Optional.empty(), (UpdateComponent<T>)args[1]);
 						}
-						else if (m.getName().equals("getRawCrudService")) { // special case....convert the default query to JSON, if present
+						else if (m.getName().equals("getRawService")) { // special case....convert the default query to JSON, if present
 							Object o_internal = m.invoke(delegate, args_with_extra_query);
 							Optional<QueryComponent<JsonNode>> json_extra_query = extra_query.map(qc -> qc.toJson());
 							return intercept(JsonNode.class, (ICrudService<JsonNode>)o_internal, json_extra_query, interceptors, default_interceptor);

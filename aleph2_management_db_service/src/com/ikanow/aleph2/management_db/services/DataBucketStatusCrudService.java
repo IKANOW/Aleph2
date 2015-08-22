@@ -465,11 +465,11 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getRawCrudService()
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getRawService()
 	 */
 	@Override
-	public IManagementCrudService<JsonNode> getRawCrudService() {
-		throw new RuntimeException("DataBucketStatusCrudService.getRawCrudService not supported");
+	public IManagementCrudService<JsonNode> getRawService() {
+		throw new RuntimeException("DataBucketStatusCrudService.getRawService not supported");
 	}
 
 	//////////////////////////////////////////////////////////////////////
@@ -609,6 +609,14 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 				(now.getTime() < Optional.ofNullable(status.quarantined_until()).orElse(now).getTime());
 		
 		return is_suspended; 
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService#getCrudService()
+	 */
+	@Override
+	public Optional<ICrudService<DataBucketStatusBean>> getCrudService() {
+		return Optional.of(this);
 	}
 	
 }

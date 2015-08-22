@@ -259,6 +259,6 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 	 * @return the JsonNode-genericized version of this same CRUD service
 	 */
 	@Override
-	IManagementCrudService<JsonNode> getRawCrudService();
+	IManagementCrudService<JsonNode> getRawService();
 	
 }

@@ -54,7 +54,7 @@ public class TestManagementDbActorContext {
 	
 	@SuppressWarnings("deprecation")
 	@Before
-	public void testSetup() throws Exception {
+	public void test_Setup() throws Exception {
 		
 		// A bunch of DI related setup:
 		// Here's the setup that Guice normally gives you....
@@ -78,7 +78,7 @@ public class TestManagementDbActorContext {
 	}
 	
 	@Test
-	public void test_buses() {
+	public void test__buses() {
 		assertTrue("Lazy initialization: bucket action bus", !_actor_context._bucket_action_bus.isSet());
 		assertTrue("Lazy initialization: streaming action bus", !_actor_context._streaming_enrichment_bus.isSet());
 		

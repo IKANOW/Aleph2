@@ -94,7 +94,7 @@ public class TestBucketDeletionSingletonActor {
 	
 	@SuppressWarnings("deprecation")
 	@Before
-	public void testSetup() throws Exception {
+	public void test_Setup() throws Exception {
 		
 		if (null != _service_context) {
 			return;
@@ -122,7 +122,7 @@ public class TestBucketDeletionSingletonActor {
 	}
 
 	@Test
-	public void test_bucketDeletionSingletonActor() throws InterruptedException, ExecutionException {
+	public void test__bucketDeletionSingletonActor() throws InterruptedException, ExecutionException {
 		_cds.waitForAkkaJoin(Optional.of(Duration.create(10, TimeUnit.SECONDS)));
 		Thread.sleep(2000L);
 		

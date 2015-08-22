@@ -109,7 +109,7 @@ public class TestBucketActionDistributionActor {
 	}
 	
 	@Test
-	public void distributionTest_noActors() throws InterruptedException, ExecutionException {
+	public void test_distributionTest_noActors() throws InterruptedException, ExecutionException {
 		
 		NewBucketActionMessage test_message = new NewBucketActionMessage(
 				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
@@ -137,7 +137,7 @@ public class TestBucketActionDistributionActor {
 	}
 
 	@Test
-	public void distributionTest_noActorsRespond() throws Exception {
+	public void test_distributionTest_noActorsRespond() throws Exception {
 		
 		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
 		
@@ -185,7 +185,7 @@ public class TestBucketActionDistributionActor {
 	}
 
 	@Test
-	public void distributionTest_allActorsIgnore() throws Exception {
+	public void test_distributionTest_allActorsIgnore() throws Exception {
 		
 		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
 		
@@ -228,7 +228,7 @@ public class TestBucketActionDistributionActor {
 	}
 	
 	@Test
-	public void distributionTest_allActorsHandle() throws Exception {
+	public void test_distributionTest_allActorsHandle() throws Exception {
 		
 		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
 		
@@ -283,7 +283,7 @@ public class TestBucketActionDistributionActor {
 	}
 	
 	@Test
-	public void distributionTest_handleIgnoreMix() throws Exception {
+	public void test_distributionTest_handleIgnoreMix() throws Exception {
 		
 		final HashSet<String> accept_uuids = new HashSet<String>();
 		
@@ -349,7 +349,7 @@ public class TestBucketActionDistributionActor {
 	}
 	
 	@Test
-	public void distributionTest_ignoreHandleTimeoutMix() throws Exception {
+	public void test_distributionTest_ignoreHandleTimeoutMix() throws Exception {
 		
 		final HashSet<String> accept_uuids = new HashSet<String>();
 		
@@ -414,7 +414,7 @@ public class TestBucketActionDistributionActor {
 	}
 
 	@Test
-	public void distributionTest_noBroadcast() throws Exception {
+	public void test_distributionTest_noBroadcast() throws Exception {
 		
 		final HashSet<String> accept_uuids = new HashSet<String>();
 		
@@ -490,7 +490,7 @@ public class TestBucketActionDistributionActor {
 	}		
 
 	@Test
-	public void distributionTest_noBroadcast_someNodesNotPresent() throws Exception {
+	public void test_distributionTest_noBroadcast_someNodesNotPresent() throws Exception {
 		
 		final HashSet<String> accept_uuids = new HashSet<String>();
 		

@@ -51,8 +51,6 @@ public class MockUnderlyingManagementDbModule extends AbstractModule {
 	
 	public void configure() {
 		this.bind(IMockUnderlyingCrudServiceFactory.class).to(MockUnderlyingCrudServiceFactory.class).in(Scopes.SINGLETON);
-		
-		/**/
 		this.bind(MockUnderlyingCrudServiceFactory.class);
 	}
 	

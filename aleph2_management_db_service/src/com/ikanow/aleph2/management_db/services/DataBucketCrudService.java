@@ -522,10 +522,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawCrudService()
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getRawService()
 	 */
-	public IManagementCrudService<JsonNode> getRawCrudService() {
-		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
+	public IManagementCrudService<JsonNode> getRawService() {
+		throw new RuntimeException("DataBucketCrudService.getRawService not supported");
 	}
 
 	/* (non-Javadoc)
@@ -1277,5 +1277,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			}
 		}		
 		return errs;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService#getCrudService()
+	 */
+	@Override
+	public Optional<ICrudService<DataBucketBean>> getCrudService() {
+		return Optional.of(this);
 	}
 }

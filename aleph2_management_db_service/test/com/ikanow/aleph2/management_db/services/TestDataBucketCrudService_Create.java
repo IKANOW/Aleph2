@@ -141,7 +141,7 @@ public class TestDataBucketCrudService_Create {
 	}	
 	
 	@Test
-	public void testSetup() {
+	public void test_Setup() {
 		if (File.separator.equals("\\")) { // windows mode!
 			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
 			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
@@ -253,7 +253,7 @@ public class TestDataBucketCrudService_Create {
 	// Store bucket
 
 	@Test 
-	public void testValidateSchemas() {
+	public void test_ValidateSchemas() {
 		// 0) Start with a valid bucket:
 		
 		final DataBucketBean valid_bucket = 
@@ -371,7 +371,7 @@ public class TestDataBucketCrudService_Create {
 	}
 	
 	@Test
-	public void testValidateTimes_pass() throws Exception {
+	public void test_ValidateTimes_pass() throws Exception {
 		cleanDatabases();
 
 		// 0) Start with a valid bucket:
@@ -438,7 +438,7 @@ public class TestDataBucketCrudService_Create {
 	}	
 	
 	@Test
-	public void testValidateTimes_fail() throws Exception {
+	public void test_ValidateTimes_fail() throws Exception {
 		cleanDatabases();
 
 		// 0) Start with a valid bucket:
@@ -504,7 +504,7 @@ public class TestDataBucketCrudService_Create {
 	}	
 	
 	@Test
-	public void testValidateName() throws Exception {
+	public void test_ValidateName() throws Exception {
 		cleanDatabases();
 
 		// 0) Start with a valid bucket:
@@ -551,7 +551,7 @@ public class TestDataBucketCrudService_Create {
 	}	
 	
 	@Test
-	public void testValidateInsert() throws Exception {
+	public void test_ValidateInsert() throws Exception {
 		cleanDatabases();
 
 		// 0) Start with a valid bucket:
@@ -911,7 +911,7 @@ public class TestDataBucketCrudService_Create {
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	@Test
-	public void testAnotherSemiFailedBucketCreation_multiNode() throws Exception {
+	public void test_AnotherSemiFailedBucketCreation_multiNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register a refuse-then-accept
@@ -972,7 +972,7 @@ public class TestDataBucketCrudService_Create {
 	}
 	
 	@Test
-	public void testAnotherSemiFailedBucketCreation_singleNode() throws Exception {
+	public void test_AnotherSemiFailedBucketCreation_singleNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register a refuse-then-accept
@@ -1037,7 +1037,7 @@ public class TestDataBucketCrudService_Create {
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	@Test
-	public void testSuccessfulBucketCreation_singleNode() throws Exception {
+	public void test_SuccessfulBucketCreation_singleNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register an accepting actor to listen:
@@ -1130,7 +1130,7 @@ public class TestDataBucketCrudService_Create {
 }
 
 	@Test
-	public void testSuccessfulBucketCreation_multiNode() throws Exception {
+	public void test_SuccessfulBucketCreation_multiNode() throws Exception {
 		cleanDatabases();
 
 		// Setup: register an accepting actor to listen:
@@ -1197,7 +1197,7 @@ public class TestDataBucketCrudService_Create {
 	}
 
 	@Test
-	public void testSuccessfulBucketCreation_multiNode_streaming() throws Exception {
+	public void test_SuccessfulBucketCreation_multiNode_streaming() throws Exception {
 		cleanDatabases();
 
 		// Setup: register an accepting actor to listen:
@@ -1273,10 +1273,10 @@ public class TestDataBucketCrudService_Create {
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	@Test
-	public void testUpdateValidation() throws Exception {
+	public void test_UpdateValidation() throws Exception {
 		
 		// Insert a bucket:
-		testSuccessfulBucketCreation_multiNode();		
+		test_SuccessfulBucketCreation_multiNode();		
 		
 		// Try to update it
 		

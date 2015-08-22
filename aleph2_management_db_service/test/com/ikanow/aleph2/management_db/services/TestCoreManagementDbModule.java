@@ -83,7 +83,7 @@ public class TestCoreManagementDbModule {
 	
 	@SuppressWarnings("deprecation")
 	@Before
-	public void testSetup() throws Exception {
+	public void test_Setup() throws Exception {
 		
 		// A bunch of DI related setup:
 		// Here's the setup that Guice normally gives you....
@@ -157,7 +157,7 @@ protected static String _check_actor_called = null;
 	}
 	
 	@Test
-	public void testRetryDataStore() throws Exception {
+	public void test_RetryDataStore() throws Exception {
 				
 		ICrudService<BucketActionRetryMessage> retry_service = _core_db_service.getRetryStore(BucketActionRetryMessage.class);
 		
@@ -207,7 +207,7 @@ protected static String _check_actor_called = null;
 	}
 	
 	@Test
-	public void test_readOnly() {
+	public void test__readOnly() {
 		
 		final IManagementDbService read_only_management_db_service = _core_db_service.readOnlyVersion();
 		
@@ -309,7 +309,7 @@ protected static String _check_actor_called = null;
 	}
 		
 	@Test
-	public void testTestBucket() throws Exception {
+	public void test_TestBucket() throws Exception {
 		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
 		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
 		//clear queues before starting

@@ -100,6 +100,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return _underlying_library_db.getSearchService();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
+	 */
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> Optional<T> getUnderlyingPlatformDriver(
@@ -112,6 +115,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getFilteredRepo(java.lang.String, java.util.Optional, java.util.Optional)
+	 */
 	@Override
 	public IManagementCrudService<SharedLibraryBean> getFilteredRepo(
 			String authorization_fieldname,
@@ -122,6 +128,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 				_underlying_library_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#storeObject(java.lang.Object, boolean)
+	 */
 	@Override
 	public ManagementFuture<Supplier<Object>> storeObject(
 			SharedLibraryBean new_object, boolean replace_if_present) {
@@ -129,12 +138,18 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObject(new_object, replace_if_present));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#storeObject(java.lang.Object)
+	 */
 	@Override
 	public ManagementFuture<Supplier<Object>> storeObject(
 			SharedLibraryBean new_object) {
 		return this.storeObject(new_object, false);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#storeObjects(java.util.List, boolean)
+	 */
 	@Override
 	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
 			List<SharedLibraryBean> new_objects,
@@ -145,24 +160,36 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return FutureUtils.createManagementFuture(_underlying_library_db.storeObjects(new_objects, continue_on_error));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#storeObjects(java.util.List)
+	 */
 	@Override
 	public ManagementFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(
 			List<SharedLibraryBean> new_objects) {
 		return this.storeObjects(new_objects, false);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#optimizeQuery(java.util.List)
+	 */
 	@Override
 	public ManagementFuture<Boolean> optimizeQuery(
 			List<String> ordered_field_list) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.optimizeQuery(ordered_field_list));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
+	 */
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
+	 */
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec,
@@ -170,12 +197,18 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec, field_list, include));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectById(java.lang.Object)
+	 */
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
 			Object id) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectById(java.lang.Object, java.util.List, boolean)
+	 */
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
 			Object id, List<String> field_list,
@@ -183,12 +216,18 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id, field_list, include));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
+	 */
 	@Override
 	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.List, boolean)
+	 */
 	@Override
 	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec,
@@ -196,17 +235,26 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec, field_list, include));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#countObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
+	 */
 	@Override
 	public ManagementFuture<Long> countObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
 		return FutureUtils.createManagementFuture(_underlying_library_db.countObjectsBySpec(spec));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#countObjects()
+	 */
 	@Override
 	public ManagementFuture<Long> countObjects() {
 		return FutureUtils.createManagementFuture(_underlying_library_db.countObjects());
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectById(java.lang.Object, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
+	 */
 	@Override
 	public ManagementFuture<Boolean> updateObjectById(
 			Object id,
@@ -215,6 +263,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
+	 */
 	@Override
 	public ManagementFuture<Boolean> updateObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec,
@@ -224,6 +275,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent)
+	 */
 	@Override
 	public ManagementFuture<Long> updateObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec,
@@ -233,6 +287,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#updateAndReturnObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent, java.util.Optional, com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent, java.util.Optional, java.util.List, boolean)
+	 */
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> updateAndReturnObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec,
@@ -244,6 +301,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#deleteObjectById(java.lang.Object)
+	 */
 	@Override
 	public ManagementFuture<Boolean> deleteObjectById(
 			Object id) {		
@@ -251,6 +311,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return deleteObjectBySpec(query);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#deleteObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
+	 */
 	@Override
 	public ManagementFuture<Boolean> deleteObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec) {		
@@ -263,9 +326,8 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 					}
 					catch (Exception e) { // i suppose we don't really care if it fails..
 						// (maybe add a message?)
-						/**/
 						//DEBUG
-						e.printStackTrace();
+						//e.printStackTrace();
 					}
 					return _underlying_library_db.deleteObjectBySpec(unique_spec);
 				}
@@ -275,6 +337,9 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			}));
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#deleteObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
+	 */
 	@Override
 	public ManagementFuture<Long> deleteObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
@@ -282,14 +347,28 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#deleteDatastore()
+	 */
 	@Override
 	public ManagementFuture<Boolean> deleteDatastore() {
 		throw new RuntimeException("This method is not supported");
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getRawService()
+	 */
 	@Override
-	public IManagementCrudService<JsonNode> getRawCrudService() {
-		throw new RuntimeException("DataBucketCrudService.getRawCrudService not supported");
+	public IManagementCrudService<JsonNode> getRawService() {
+		throw new RuntimeException("DataBucketCrudService.getRawService not supported");
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService#getCrudService()
+	 */
+	@Override
+	public Optional<ICrudService<SharedLibraryBean>> getCrudService() {
+		return Optional.of(this);
 	}
 
 }

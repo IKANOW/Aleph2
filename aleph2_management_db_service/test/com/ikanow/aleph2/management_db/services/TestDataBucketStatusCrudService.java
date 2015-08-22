@@ -95,7 +95,7 @@ public class TestDataBucketStatusCrudService {
 	}	
 	
 	@Test
-	public void testSetup() {
+	public void test_Setup() {
 		if (File.separator.equals("\\")) { // windows mode!
 			assertTrue("WINDOWS MODE: hadoop home needs to be set (use -Dhadoop.home.dir={HADOOP_HOME} in JAVA_OPTS)", null != System.getProperty("hadoop.home.dir"));
 			assertTrue("WINDOWS MODE: hadoop home needs to exist: " + System.getProperty("hadoop.home.dir"), null != System.getProperty("hadoop.home.dir"));
@@ -118,7 +118,7 @@ public class TestDataBucketStatusCrudService {
 	// Store bucket
 	
 	@Test
-	public void testValidateInsert() throws Exception {
+	public void test_ValidateInsert() throws Exception {
 		cleanDatabases();
 		
 		final DataBucketStatusBean valid_status = 
@@ -166,7 +166,7 @@ public class TestDataBucketStatusCrudService {
 	}
 	
 	@Test
-	public void testValidateUpdate() throws Exception {
+	public void test_ValidateUpdate() throws Exception {
 		cleanDatabases();
 		
 		final DataBucketStatusBean valid_status = 
