@@ -19,6 +19,7 @@ import java.util.List;
 
 import scala.Tuple2;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -27,7 +28,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the graph service
  * @author alex
  */
-public interface IGraphService extends IUnderlyingService {
+public interface IGraphService extends IUnderlyingService, IDataServiceProvider {
 
 	//TODO (ALEPH-15): implement tinkerpop?
 	

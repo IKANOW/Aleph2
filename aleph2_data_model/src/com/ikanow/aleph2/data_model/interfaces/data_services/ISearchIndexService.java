@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -31,7 +32,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the search index service
  * @author alex
  */
-public interface ISearchIndexService extends IUnderlyingService {
+public interface ISearchIndexService extends IUnderlyingService, IDataServiceProvider {
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate

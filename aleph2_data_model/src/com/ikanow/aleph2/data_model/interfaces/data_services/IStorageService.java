@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -28,7 +29,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the storage service
  * @author alex
  */
-public interface IStorageService extends IUnderlyingService {
+public interface IStorageService extends IUnderlyingService, IDataServiceProvider {
 
 	public static final String BUCKET_SUFFIX = "/managed_bucket/"; 
 	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/"; 

@@ -21,6 +21,7 @@ import java.util.List;
 import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -29,7 +30,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 /** The interface for the data warehouse service
  * @author alex
  */
-public interface IDocumentService extends IUnderlyingService {
+public interface IDocumentService extends IUnderlyingService, IDataServiceProvider {
 
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
