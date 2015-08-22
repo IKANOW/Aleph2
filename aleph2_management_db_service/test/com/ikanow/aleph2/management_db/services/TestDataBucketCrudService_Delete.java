@@ -222,7 +222,7 @@ public class TestDataBucketCrudService_Delete {
 		_underlying_bucket_crud.storeObject(bucket).get(); // (ensure exception on failure)
 		
 		//DEBUG
-		//System.out.println(raw_bucket_crud.getRawCrudService().getObjectBySpec(CrudUtils.anyOf()).get().get());
+		//System.out.println(raw_bucket_crud.getRawService().getObjectBySpec(CrudUtils.anyOf()).get().get());
 		
 		if (null != node_affinity) {
 

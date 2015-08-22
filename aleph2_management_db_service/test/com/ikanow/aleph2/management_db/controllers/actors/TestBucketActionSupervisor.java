@@ -211,6 +211,7 @@ public class TestBucketActionSupervisor {
 	// 1a - streaming fails with no replies
 	@Test
 	public void test_needsStreaming_streamingFails_noReplies() throws Exception {
+		_logger.info("Starting test_needsStreaming_streamingFails_noReplies");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -270,6 +271,7 @@ public class TestBucketActionSupervisor {
 	// 1b - streaming fails with an error
 	@Test
 	public void test_needsStreaming_streamingFails_error() throws Exception {
+		_logger.info("Starting test_needsStreaming_streamingFails_error");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -332,6 +334,7 @@ public class TestBucketActionSupervisor {
 	// 1b - streaming fails with an error
 	@Test
 	public void test_needsStreaming_streamingFails_timeout() throws Exception {
+		_logger.info("Starting test_needsStreaming_streamingFails_timeout");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -392,6 +395,7 @@ public class TestBucketActionSupervisor {
 	// 2) "Stream only, and streaming fails (errors) - check error"
 	@Test
 	public void test_streamingOnly_streamingFails_errors() throws Exception {
+		_logger.info("Starting test_streamingOnly_streamingFails_errors");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -453,6 +457,7 @@ public class TestBucketActionSupervisor {
 	// 3) Stream only, streaming succeeds
 	@Test
 	public void test_streamingOnly_streamingSucceeds() throws Exception {
+		_logger.info("Starting test_streamingOnly_streamingSucceeds");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -519,6 +524,7 @@ public class TestBucketActionSupervisor {
 	// 4) "Stream+harvest, streaming+harvest succeed"
 	@Test
 	public void test_needsSteaming_everythingSucceeds() throws Exception {
+		_logger.info("Starting test_needsSteaming_everythingSucceeds");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -582,6 +588,7 @@ public class TestBucketActionSupervisor {
 	// "5) Stream+harvest, streaming succeeds/harvest fails"
 	@Test
 	public void test_streaming_streamingSucceedsHarvestFails() throws Exception {
+		_logger.info("Starting test_streaming_streamingSucceedsHarvestFails");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
@@ -644,6 +651,7 @@ public class TestBucketActionSupervisor {
 	// 5b) fails with error
 	@Test
 	public void test_streaming_streamingSucceedsHarvestErrors() throws Exception {
+		_logger.info("Starting test_streaming_streamingSucceedsHarvestErrors");
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		

@@ -609,7 +609,7 @@ public class CrudServiceUtils {
 							})
 							.orElse(args);
 				
-				// Special cases for: readOnlyVersion, getFilterdRepo / countObjects / getRawCrudService / *byId
+				// Special cases for: readOnlyVersion, getFilterdRepo / countObjects / getRawService / *byId
 				final Object o = Lambdas.get(() -> {
 					try {
 						if (extra_query.isPresent() && m.getName().equals("countObjects")) { // special case....change method and apply spec
