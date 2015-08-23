@@ -68,13 +68,13 @@ public class BucketUtils {
 		if (1 == components.length) {
 			return tidyUpIndexName(safeTruncate(components[0], MAX_COLL_COMP_LEN)
 										+ addOptionalSubCollection(subcollection, MAX_COLL_COMP_LEN))
-										+ "_" + generateUuidSuffix(path);
+										+ "__" + generateUuidSuffix(path);
 		}
 		else if (2 == components.length) {
 			return tidyUpIndexName(safeTruncate(components[0], MAX_COLL_COMP_LEN) 
 									+ "_" + safeTruncate(components[1], MAX_COLL_COMP_LEN)
 									+ addOptionalSubCollection(subcollection, MAX_COLL_COMP_LEN))
-									+ "_" + generateUuidSuffix(path);
+									+ "__" + generateUuidSuffix(path);
 		}
 		else { // take the first and the last 2
 			final int n = components.length;
@@ -82,7 +82,7 @@ public class BucketUtils {
 									+ "_" + safeTruncate(components[n-2], MAX_COLL_COMP_LEN) 
 									+ "_" + safeTruncate(components[n-1], MAX_COLL_COMP_LEN) 
 									+ addOptionalSubCollection(subcollection, MAX_COLL_COMP_LEN))
-									+ "_" + generateUuidSuffix(path);
+									+ "__" + generateUuidSuffix(path);
 		}
 	}
 	// Utils for getBaseIndexName
