@@ -224,7 +224,7 @@ public class BucketDeletionActor extends UntypedActor {
 			});
 		
 		if (!delete_bucket) { // (Else will be deleted in the main actor fn)
-			vals.add(service_context.getStorageService().handleBucketDeletionRequest(bucket, false));
+			vals.add(service_context.getStorageService().getDataService().get().handleBucketDeletionRequest(bucket, Optional.empty(), false));
 		}		
 		
 		return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))

@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
 
@@ -49,18 +48,6 @@ public class SampleStorageService implements IStorageService {
 
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return null;
-	}
-
-	@Override
-	public CompletableFuture<BasicMessageBean> handleAgeOutRequest(
-			DataBucketBean bucket) {
-		return null;
-	}
-
-	@Override
-	public CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(
-			DataBucketBean bucket, boolean bucket_getting_deleted) {
 		return null;
 	}
 }

@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
 
@@ -39,19 +38,6 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
 	 */
 	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.StorageSchemaBean schema, final DataBucketBean bucket);
-	
-	/** This is called when there is likely data to age out for the service
-	 * @param bucket - the bucket to age out
-	 * @return a future containing the results of the age-out request for this service
-	 */
-	CompletableFuture<BasicMessageBean> handleAgeOutRequest(final DataBucketBean bucket);
-	
-	/** This is called to offload bucket deletion and purging to the individual data services
-	 * @param bucket - the bucket being deleted
-	 * @param bucket_getting_deleted - true if it's an actual deletion, false is just purging all the data from the bucket
-	 * @return a future containing the results of the deletion request for this service
-	 */
-	CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(final DataBucketBean bucket, boolean bucket_getting_deleted);
 	
 	/** Returns the root path for all Aleph2 DB related activities
 	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
