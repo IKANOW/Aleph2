@@ -90,7 +90,10 @@ public class BucketUtils {
 		return subcollection.map(sc -> "_" + safeTruncate(sc, max_len)).orElse("");
 	}
 	private static String tidyUpIndexName(final String in) {
-		return in.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("__+", "_");
+		return Optional.of(in.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("__+", "_"))
+				.map(s -> s.endsWith("_") ? s.substring(0, s.length() - 1) : s)
+				.get()
+				;
 	}
 	private static String generateUuidSuffix(final String in) {
 		return UuidUtils.get().getContentBasedUuid(in.getBytes()).substring(24);
