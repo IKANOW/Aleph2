@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.Optional;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -59,4 +61,20 @@ public class TestBucketUtils {
 		assertTrue(test_bean.full_name().equals("/aleph2_testing/" + user_id + "/" + original_full_name));
 	}
 
+	@Test
+	public void test_getUniqueBucketSignature() {
+		
+		final String path1 = "/test+extra/";
+		final String path2 = "/test+extra/4354____42";
+		final String path3 = "test+extra/4354____42/some/more/COMPONENTS_VERY_VERY_LONG";
+		
+		assertEquals("test_extra__c1651d4c69ed", BucketUtils.getUniqueSignature(path1, Optional.empty()));
+		assertEquals("test_extra_test_12345__c1651d4c69ed", BucketUtils.getUniqueSignature(path1, Optional.of("test+;12345")));
+		assertEquals("test_extra_4354_42__bb8a6a382d7b", BucketUtils.getUniqueSignature(path2, Optional.empty()));
+		assertEquals("test_extra_4354_42_t__bb8a6a382d7b", BucketUtils.getUniqueSignature(path2, Optional.of("t")));
+		assertEquals("test_extra_more_components_very__7768508661fc", BucketUtils.getUniqueSignature(path3, Optional.empty()));
+		assertEquals("test_extra_more_components_very_xx__7768508661fc", BucketUtils.getUniqueSignature(path3, Optional.of("XX__________")));
+	}
+	
+	
 }
