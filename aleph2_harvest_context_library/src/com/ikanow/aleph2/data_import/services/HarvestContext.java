@@ -31,6 +31,9 @@ import java.util.stream.Collector;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -75,6 +78,7 @@ import com.typesafe.config.ConfigValueFactory;
 
 @SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
+	protected static final Logger _logger = LogManager.getLogger();	
 
 	public static final String __MY_BUCKET_ID = "030e2b82-0285-11e5-a322-1697f925ec7b";
 	public static final String __MY_LIBRARY_ID = "030e2b82-0285-11e5-a322-1697f925ec7c";
@@ -208,6 +212,7 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+		
 		// Consists of:
 		// 1) This library 
 		// 2) Libraries that are always needed:		

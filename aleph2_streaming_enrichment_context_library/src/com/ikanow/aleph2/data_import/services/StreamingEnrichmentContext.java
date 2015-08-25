@@ -29,6 +29,9 @@ import java.util.stream.Stream;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 import storm.kafka.BrokerHosts;
 import storm.kafka.KafkaSpout;
@@ -79,6 +82,7 @@ import com.typesafe.config.ConfigValueFactory;
  * @author Alex
  */
 public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
+	protected static final Logger _logger = LogManager.getLogger();	
 
 	////////////////////////////////////////////////////////////////
 	
