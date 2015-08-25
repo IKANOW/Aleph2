@@ -206,7 +206,7 @@ public class TestBucketDeletionActor {
 		_actor_context.getDeletionMgmtBus().publish(new BucketMgmtEventBusWrapper(inbox.getRef(), msg));
 		
 		try {
-			final BucketDeletionMessage reply_msg = (BucketDeletionMessage) inbox.receive(Duration.create(4L, TimeUnit.SECONDS));
+			final BucketDeletionMessage reply_msg = (BucketDeletionMessage) inbox.receive(Duration.create(10L, TimeUnit.SECONDS));
 			assertEquals(reply_msg._id(), "/test/full/delete/missing");
 			
 			// check state directory *NOT* cleansed in this case:
