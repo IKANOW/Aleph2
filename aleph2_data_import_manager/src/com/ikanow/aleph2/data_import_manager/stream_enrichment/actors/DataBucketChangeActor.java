@@ -310,12 +310,16 @@ public class DataBucketChangeActor extends AbstractActor {
 			)
 	{
 		try {
+			
 			return err_or_libs.<Validation<BasicMessageBean, IEnrichmentStreamingTopology>>validation(
 					//Error:
 					error -> Validation.fail(error)
 					,
 					// Normal
 					libs -> {
+						// Easy case, if streaming is turned off, just pass data through this layer
+						if ( !bucket.streaming_enrichment_topology().enabled() )
+							return Validation.success(new PassthroughTopology());
 						// Easy case, if libs is empty then use the default streaming topology
 						if (libs.isEmpty()) {
 							return Validation.success(new PassthroughTopology());
