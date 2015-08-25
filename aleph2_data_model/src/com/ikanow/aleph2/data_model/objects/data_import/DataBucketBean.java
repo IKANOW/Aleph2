@@ -305,7 +305,15 @@ public class DataBucketBean implements Serializable {
 	 * @return
 	 */
 	public List<Template> templates() { return templates == null ? null : Collections.unmodifiableList(templates); }
+
+	/** Serves no functional purpose, just present to copy temporary blocks of JSON around during manual editing of sources eg in the UI
+	 *  (only filled in from JSON serialization)
+	 * @return a temporary map of JSON objects used during manual editing of sources eg in the UI
+	 */
+	public Map<String, Object> comments() { return comments == null ? null : Collections.unmodifiableMap(comments); }
+	
 	private List<Template> templates;
+	private Map<String, Object> comments;
 	
 	////////////////////////////////////////
 	
