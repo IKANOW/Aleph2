@@ -318,7 +318,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					// Normal
 					libs -> {
 						// Easy case, if streaming is turned off, just pass data through this layer
-						if ( !bucket.streaming_enrichment_topology().enabled() )
+						if ( !Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(true) )
 							return Validation.success(new PassthroughTopology());
 						// Easy case, if libs is empty then use the default streaming topology
 						if (libs.isEmpty()) {
