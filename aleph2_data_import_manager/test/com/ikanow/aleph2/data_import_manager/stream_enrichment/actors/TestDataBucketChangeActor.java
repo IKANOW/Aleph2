@@ -470,7 +470,10 @@ public class TestDataBucketChangeActor {
 		}		
 		assertTrue("getStreamingTopology call succeeded", test3b.isSuccess());
 		assertTrue("topology created: ", test3b.success() != null);
-		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());	
+		
+		//TODO add a test for disabled streaming but config given (should default to passthrough top and
+		//ignore given topology
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////
