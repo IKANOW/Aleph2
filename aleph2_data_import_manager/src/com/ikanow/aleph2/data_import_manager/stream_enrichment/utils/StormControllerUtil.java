@@ -243,25 +243,39 @@ public class StormControllerUtil {
 		//create jar
 		final CompletableFuture<String> jar_future = buildOrReturnCachedStormTopologyJar(jars_to_merge, cached_jar_dir);
 		try {
-			long retries = 0;
+			
 			final String jar_file_location = jar_future.get();
 			//submit to storm	
-			CompletableFuture<BasicMessageBean> submit_future = null;
-			while ( retries < MAX_RETRIES ) {				
-				try {
-					_logger.debug("Trying to submit job, try: " + retries + " of " + MAX_RETRIES);
-					submit_future = storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
-					retries = MAX_RETRIES; //if we got here, we didn't throw an exception, so we completed successfully
-				} catch ( Exception ex) {
-					if ( ex instanceof AlreadyAliveException ) {
-						retries++;
-						Thread.sleep(1000); //sleep 1s, was seeing about 2s of sleep required before job successfully submitted on restart
-					} else {
-						retries = MAX_RETRIES; //we threw some other exception, bail out
-						submit_future.completeExceptionally(ex);
+			CompletableFuture<BasicMessageBean> submit_future = Lambdas.get(() -> {
+				long retries = 0;
+				while ( retries < MAX_RETRIES ) {				
+					try {
+						_logger.debug("Trying to submit job, try: " + retries + " of " + MAX_RETRIES);
+						return storm_controller.submitJob(bucketPathToTopologyName(bucket.full_name()), jar_file_location, topology);
+					} catch ( Exception ex) {
+						if ( ex instanceof AlreadyAliveException ) {
+							retries++;
+							//sleep 1s, was seeing about 2s of sleep required before job successfully submitted on restart
+							try {
+								Thread.sleep(1000);
+							} catch (Exception e) {
+								final CompletableFuture<BasicMessageBean> error_future = new CompletableFuture<BasicMessageBean>();
+								error_future.completeExceptionally(e);
+								return error_future;
+							} 
+						} else {
+							retries = MAX_RETRIES; //we threw some other exception, bail out
+							final CompletableFuture<BasicMessageBean> error_future = new CompletableFuture<BasicMessageBean>();
+							error_future.completeExceptionally(ex);
+							return error_future;
+						}
 					}
 				}
-			}
+				//we maxed out our retries, throw failure
+				final CompletableFuture<BasicMessageBean> error_future = new CompletableFuture<BasicMessageBean>();
+				error_future.completeExceptionally(new Exception("Error submitting job, ran out of retries (previous (same name) job is probably still alive)"));
+				return error_future;
+			});
 			try { 
 				if ( submit_future.get().success() ) {
 					start_future.complete(new BucketActionReplyMessage.BucketActionHandlerMessage("startJob", new BasicMessageBean(new Date(), true, null, "startStormJob", 0, "Started storm job succesfully", null)));
