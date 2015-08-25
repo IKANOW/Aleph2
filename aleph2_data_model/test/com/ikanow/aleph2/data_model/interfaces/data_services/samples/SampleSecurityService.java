@@ -107,4 +107,10 @@ public class SampleSecurityService implements ISecurityService {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+	@Override
+	public Object isPermitted(ISubject subject, String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

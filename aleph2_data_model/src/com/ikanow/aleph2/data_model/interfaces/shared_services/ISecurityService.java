@@ -125,5 +125,8 @@ public interface ISecurityService extends IUnderlyingService {
 	public void clearPermission(String resourceName, String resourceIdentifier);
 
 	public void login(ISubject subject, Object credentials);
+
 	public boolean hasRole(ISubject subject, String role);
+	
+	public Object isPermitted(ISubject subject, String string);
 }

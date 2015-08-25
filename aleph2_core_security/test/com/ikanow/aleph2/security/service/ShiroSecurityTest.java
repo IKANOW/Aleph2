@@ -36,6 +36,13 @@ public class ShiroSecurityTest {
         if (value.equals("aValue")) {
             logger.info("Retrieved the correct value! [" + value + "]");
         }
+ 
+        //test a role before login:
+        if (currentUser.hasRole("schwartz")) {
+            logger.info("Role Schwartz before login!");
+        } else {
+            logger.info("No Role before login.");
+        }
 
         // let's login the current user so we can check against roles and permissions:
         if (!currentUser.isAuthenticated()) {

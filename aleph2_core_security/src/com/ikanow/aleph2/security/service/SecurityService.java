@@ -162,4 +162,11 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		// TODO Auto-generated method stub
 		
 	}
+
+
+	@Override
+	public Object isPermitted(ISubject subject, String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
