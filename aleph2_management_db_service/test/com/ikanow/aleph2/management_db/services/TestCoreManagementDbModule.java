@@ -313,8 +313,8 @@ protected static String _check_actor_called = null;
 		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
 		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
 		//clear queues before starting
-		test_queue.deleteDatastore();
-		delete_queue.deleteDatastore();
+		test_queue.deleteDatastore().get();
+		delete_queue.deleteDatastore().get();
 		
 		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		final DataBucketBean to_test = createBucket("test_tech_id");
