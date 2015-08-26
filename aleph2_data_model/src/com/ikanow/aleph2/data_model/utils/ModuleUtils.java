@@ -478,11 +478,10 @@ public class ModuleUtils {
 	private static CompletableFuture<Injector> _app_injector = new CompletableFuture<>();
 	private static CompletableFuture<Boolean> _called_ctor = new CompletableFuture<>();
 	
-	/** APP LEVEL VERSION - ONLY CREATES STUFF ONCE 
-	 * Creates a child injector from our parent configured injector to allow applications to take
-	 * advantage of our injection without having to create a config file.  The typical reason to
-	 * do this is to inject the IServiceContext into your application so you can access the other
-	 * configured services via {@link com.ikanow.aleph2.data_model.interface.data_access.IServiceContext#getService()}
+	/** APP LEVEL VERSION - ONLY CREATES STUFF ONCE. CANNOT NORMALLY BE CALLED FROM JUNIT TESTS - USE createTestInjector for that
+	 * Creates a single application level injector and either injects members into application, or 
+	 * If called multiple times, will wait for the first time to complete before performing the desired action.
+	 * To get the created injector, use getAppInjector
 	 * 
 	 * @param modules Any modules you wanted added to your child injector (put your bindings in these)
 	 * @param config If exists will reset injectors to create defaults via the config
@@ -490,7 +489,7 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static <T> T initializeApplication(List<Module> modules, Optional<Config> config, Either<Class<T>, T> application) throws Exception {
+	public static <T> T initializeApplication(final List<Module> modules, final Optional<Config> config, final Either<Class<T>, T> application) throws Exception {
 		boolean initializing = false;
 		T return_val = null;
 		
