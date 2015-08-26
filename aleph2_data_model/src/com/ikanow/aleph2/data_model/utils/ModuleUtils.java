@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
 import org.apache.logging.log4j.LogManager;
@@ -468,15 +469,20 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {		
-		return createInjector(modules, config);
+	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {
+		_test_mode.set(true); 
+		final Injector i = createInjector(modules, config);
+		_test_injector.obtrudeValue(i);
+		return i;
 	}
 	
 	// Some application level global state
+	private static AtomicBoolean _test_mode = new AtomicBoolean();
 	private enum GlobalGuiceState { idle, initializing, complete };
 	private static GlobalGuiceState _module_state = GlobalGuiceState.idle;
-	private static CompletableFuture<Injector> _app_injector = new CompletableFuture<>();
-	private static CompletableFuture<Boolean> _called_ctor = new CompletableFuture<>();
+	private static final CompletableFuture<Injector> _test_injector = new CompletableFuture<>();
+	private static final CompletableFuture<Injector> _app_injector = new CompletableFuture<>();
+	private static final CompletableFuture<Boolean> _called_ctor = new CompletableFuture<>();
 	
 	/** APP LEVEL VERSION - ONLY CREATES STUFF ONCE. CANNOT NORMALLY BE CALLED FROM JUNIT TESTS - USE createTestInjector for that
 	 * Creates a single application level injector and either injects members into application, or 
@@ -490,6 +496,7 @@ public class ModuleUtils {
 	 * @throws Exception
 	 */
 	public static <T> T initializeApplication(final List<Module> modules, final Optional<Config> config, final Either<Class<T>, T> application) throws Exception {
+		_test_mode.set(false); 
 		boolean initializing = false;
 		T return_val = null;
 		
@@ -545,8 +552,10 @@ public class ModuleUtils {
 	 *  (via at least one call to app initialization)
 	 * @return
 	 */
-	public static CompletableFuture<Injector> getAppInjector() {
-		return _app_injector.thenCombine(_called_ctor, (i, b) -> i);
+	public static CompletableFuture<Injector> getAppInjector() {		
+		return _test_mode.get()
+				? _test_injector
+				: _app_injector.thenCombine(_called_ctor, (i, b) -> i);
 	}
 	
 	/**

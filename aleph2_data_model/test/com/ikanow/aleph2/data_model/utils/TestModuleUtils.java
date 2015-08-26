@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -47,6 +48,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import fj.data.Either;
 
 public class TestModuleUtils {
 
@@ -316,13 +319,12 @@ public class TestModuleUtils {
 	public static class TestAppInjector extends AbstractModule {
 
 		public TestAppInjector() {
-			/**/
-			System.out.println("here " + this);
+			// (Wait to demonstrate the concurrency)
+			try { Thread.sleep(2000L); } catch (Exception e) {}
 		}
 		
 		// User ctor
-		public TestAppInjector(Boolean user_call) {
-			
+		public TestAppInjector(Boolean user_call) {		
 		}
 		
 		@Override
@@ -338,11 +340,40 @@ public class TestModuleUtils {
 	public void test_appInjector() throws Exception {
 		
 		Map<String, Object> configMap = new HashMap<String, Object>();
+
+		//(start with a test injector)
+		ModuleUtils.createTestInjector(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)));		
 		
-//		final Injector i1 = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)));
-//		i1.injectMembers(this);
-//		final Injector i2 = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)));
-//		i2.getInstance(TestAppInjector.class);
+		final CompletableFuture<Injector> app_inj0 = ModuleUtils.getAppInjector(); // (this should point to the test injector)		
+		assertTrue("Test injector insta returns", app_inj0.isDone());
+		TestAppInjector diff_app = app_inj0.get().getInstance(TestAppInjector.class);
+		
+		final CompletableFuture<TestAppInjector> test1 = 		
+				CompletableFuture.supplyAsync(Lambdas.wrap_u(() -> 
+				ModuleUtils.initializeApplication(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)), Either.left(TestAppInjector.class))));
+				
+		Thread.sleep(100L); // (let the app injector take over from the test one)
+		
+		final CompletableFuture<Injector> app_inj1 = ModuleUtils.getAppInjector();
+		assertFalse("App injector only completes when the main job is done", app_inj1.isDone());
+		
+
+		ModuleUtils.initializeApplication(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)), Either.right(this));
+		
+		assertEquals(test_app_injector, test1.get());
+		assertTrue("App injector only completes when the main job is done", app_inj1.isDone());
+		assertEquals(test_app_injector, app_inj1.get().getInstance(TestAppInjector.class));
+		
+		assertFalse("Test and app injectors are diff: ", diff_app.equals(test_app_injector));
+		
+		TestAppInjector test2 = ModuleUtils.initializeApplication(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)), Either.left(TestAppInjector.class));
+		
+		assertEquals(test_app_injector, test2);
+		
+		final CompletableFuture<Injector> app_inj2 = ModuleUtils.getAppInjector();
+		assertTrue("App injector auto completes afterwards", app_inj2.isDone());
+		assertEquals(test_app_injector, app_inj2.get().getInstance(TestAppInjector.class));
+
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////
