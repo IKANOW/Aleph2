@@ -306,14 +306,14 @@ public class DataBucketBean implements Serializable {
 	 */
 	public List<Template> templates() { return templates == null ? null : Collections.unmodifiableList(templates); }
 
-	/** Serves no functional purpose, just present to copy temporary blocks of JSON around during manual editing of sources eg in the UI
-	 *  (only filled in from JSON serialization)
-	 * @return a temporary map of JSON objects used during manual editing of sources eg in the UI
+	/** Serves no functional purpose, just present eg to copy temporary blocks of JSON around during manual editing of sources eg in the UI
+	 *  Can also be used for app-specific attributes that aren't displayed as part of system metadata 
+	 * @return an uninterpreted map of arbitrary JSON
 	 */
-	public Map<String, Object> comments() { return comments == null ? null : Collections.unmodifiableMap(comments); }
+	public Map<String, Object> misc_properties() { return misc_properties == null ? null : Collections.unmodifiableMap(misc_properties); }
 	
 	private List<Template> templates;
-	private Map<String, Object> comments;
+	private Map<String, Object> misc_properties;
 	
 	////////////////////////////////////////
 	
