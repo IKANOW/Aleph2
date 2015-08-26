@@ -12,10 +12,12 @@ import java.util.Optional;
 
 
 
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -29,6 +31,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
 
 
 
@@ -99,11 +102,11 @@ public class ManagementDbActorContext {
 			_bucket_action_bus = new SetOnce<>();
 			_streaming_enrichment_bus = new SetOnce<>();
 			_delete_round_robin_bus = new SetOnce<>();
-			
+						
 			_distributed_services.getApplicationName()
 			.filter(name -> name.equals(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()))
 			.ifPresent(__ -> {
-				_distributed_services.runOnAkkaJoin(() -> {
+				final Runnable on_akka_join = () -> {
 					_delete_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketTestCycleSingletonActor.class));
@@ -113,7 +116,8 @@ public class ManagementDbActorContext {
 		
 					// subscriber one worker per node
 					_delete_worker = Optional.of(_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR));
-				});
+				};
+				_distributed_services.runOnAkkaJoin(() -> ModuleUtils.getAppInjector().thenRun(on_akka_join));
 			});
 		}
 		else { // Just a copy of the object (note only mutable state are the Optionals, only used for tests, these can be ignored):
