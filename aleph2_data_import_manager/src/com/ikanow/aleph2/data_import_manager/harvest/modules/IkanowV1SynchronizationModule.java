@@ -166,7 +166,7 @@ public class IkanowV1SynchronizationModule {
 			System.out.println("Running with command line: " + Arrays.toString(args));
 			final Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			final Injector app_injector = ModuleUtils.createInjector(Arrays.asList(new Module()), Optional.of(config));
+			final Injector app_injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new Module()), Optional.of(config));
 			
 			final IkanowV1SynchronizationModule app = app_injector.getInstance(IkanowV1SynchronizationModule.class);
 			app.start();

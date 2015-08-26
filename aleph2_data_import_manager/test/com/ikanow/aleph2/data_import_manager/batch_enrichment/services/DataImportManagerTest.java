@@ -39,7 +39,7 @@ public class DataImportManagerTest extends DataBucketTest{
 	@Before
 	public void setupDependencies() throws Exception {
 		super.setupDependencies();
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule(){
+		Injector serverInjector = ModuleUtils.createTestInjector(Arrays.asList(new DataImportManagerModule(){
 
 			@Override
 			protected void configureServices() {

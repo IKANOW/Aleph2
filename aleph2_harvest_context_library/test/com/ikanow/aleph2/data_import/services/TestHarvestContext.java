@@ -67,7 +67,7 @@ public class TestHarvestContext {
 		final Config config = ConfigFactory.parseFile(new File("./example_config_files/harvest_local_test.properties"));
 		
 		try {
-			_app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));
+			_app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));
 		}
 		catch (Exception e) {
 			try {

@@ -30,7 +30,7 @@ public class BeJobServiceTest extends DataBucketTest {
 	public void setupDependencies() throws Exception {
 		try{
 		super.setupDependencies();
-		Injector serverInjector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule(){
+		Injector serverInjector = ModuleUtils.createTestInjector(Arrays.asList(new DataImportManagerModule(){
 
 			@Override
 			protected void configureServices() {

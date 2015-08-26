@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -160,7 +161,7 @@ public class ModuleUtils {
 							//replace any existing entries in injectors w/ this new copy
 							for ( Entry<Key, Injector> inj : injectors.entrySet() ) {
 								if ( inj.getValue() == sibling_injector ) {
-									logger.info("replacing previous injector with child");
+									logger.info("replacing previous injector with child (note: this is expected if a single service handles multiple interfaces)");
 									injectors.put(inj.getKey(), injector_entry);
 								}
 							}
@@ -418,13 +419,13 @@ public class ModuleUtils {
 			globals = BeanTemplateUtils.from(subconfig, GlobalPropertiesBean.class);
 		}
 		if ( parent_injector != null)
-			logger.info("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
+			logger.warn("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
 		interfaceHasDefault = new HashSet<Class<?>>();
 		parent_injector = Guice.createInjector(new ServiceModule());		
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
 	}
 	
-	/**
+	/** THIS VERSION IS FOR TESTS - CAN BE RUN MULTIPLE TIMES
 	 * Creates a child injector from our parent configured injector to allow applications to take
 	 * advantage of our injection without having to create a config file.  The typical reason to
 	 * do this is to inject the IServiceContext into your application so you can access the other
@@ -435,7 +436,7 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Injector createInjector(List<Module> modules, Optional<Config> config) throws Exception {		
+	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {		
 			
 		try {
 		if ( parent_injector == null && !config.isPresent() )
@@ -450,6 +451,65 @@ public class ModuleUtils {
 			
 		}
 		return parent_injector.createChildInjector(modules);
+	}
+	
+	// Some application level global state
+	public enum GlobalGuiceState { idle, initializing, complete };
+	private static GlobalGuiceState _module_state = GlobalGuiceState.idle;
+	private static Injector _app_injector = null;
+	private static LinkedList<Runnable> post_initialization_hooks = new LinkedList<>();
+	
+	/** Top level 
+	 * @param modules
+	 * @param config
+	 * @return
+	 * @throws Exception
+	 */
+	public static Injector getOrCreateAppInjector(List<Module> modules, Optional<Config> config) throws Exception {
+		boolean initializing = false;
+		synchronized (ModuleUtils.class) {
+			if (GlobalGuiceState.idle == _module_state) { // winner!
+				_module_state = GlobalGuiceState.initializing; 
+			}
+			else if (GlobalGuiceState.initializing == _module_state) { // wait for the initial guice module to complete
+				initializing = true;
+			}
+			else { // (active)
+				return _app_injector;
+			}
+		}
+		if (initializing) { // if here just wait for it to complete
+			for (;;) {
+				Thread.sleep(1000L);
+				synchronized (ModuleUtils.class) {
+					if (GlobalGuiceState.complete == _module_state) break;
+				}
+			}
+		}
+		else { // this version actually gets to complete it
+			try {
+				// If here then we're the only person that gets to initialize guice
+				_app_injector = createTestInjector(modules, config);
+			}
+			finally {
+				synchronized (ModuleUtils.class) {
+					_module_state = GlobalGuiceState.complete;
+				}			
+			}
+			//TODO post hooks
+		}
+		return _app_injector;
+	}
+	
+	public static void registerPostAppInjectionCallback(final Runnable r) {
+		synchronized (ModuleUtils.class) {
+			if (GlobalGuiceState.complete != _module_state) {
+				post_initialization_hooks.add(r);
+				return;
+			}
+			//else fall through to...
+		}		
+		r.run();
 	}
 	
 	/**

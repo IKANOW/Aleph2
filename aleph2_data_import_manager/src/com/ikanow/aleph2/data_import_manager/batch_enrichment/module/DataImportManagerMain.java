@@ -40,7 +40,7 @@ public class DataImportManagerMain {
 		Injector injector = null;
 		try {
 			Config config = ConfigFactory.parseFile(new File(config_path));
-			injector = ModuleUtils.createInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
+			injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
 		} catch (Exception e) {
 			logger.error("Error creating injector from DataImportManagerModule:",e);	
 		}

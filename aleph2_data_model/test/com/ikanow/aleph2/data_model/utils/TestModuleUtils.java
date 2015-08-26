@@ -214,7 +214,7 @@ public class TestModuleUtils {
 	@Test
 	public void testCreatingInjector() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		Injector injector = ModuleUtils.createTestInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceOne service_one = injector.getInstance(SampleCustomServiceOne.class);
 		assertNotNull(service_one);
 		assertEquals(service_one.dep.getANumber(), 1);
@@ -223,7 +223,7 @@ public class TestModuleUtils {
 	@Test
 	public void testInjectGlobalConfig_defaults() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
-		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		Injector injector = ModuleUtils.createTestInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
 		assertNotNull(service_troi);
 		assertEquals(service_troi._globals.local_cached_jar_dir(), GlobalPropertiesBean.__DEFAULT_LOCAL_CACHED_JARS_DIR);
@@ -237,7 +237,7 @@ public class TestModuleUtils {
 		configMap.put("globals.local_cached_jar_dir", "a");
 		configMap.put("globals.local_root_dir", "b");
 		configMap.put("globals.local_yarn_config_dir", "c");
-		Injector injector = ModuleUtils.createInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
+		Injector injector = ModuleUtils.createTestInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
 		assertNotNull(service_troi);
 		assertEquals(service_troi._globals.local_cached_jar_dir(), "a");

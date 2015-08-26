@@ -164,7 +164,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
 			}
 			else {				
-				final Injector injector = ModuleUtils.createInjector(Collections.emptyList(), Optional.of(parsed_config));
+				final Injector injector = ModuleUtils.getOrCreateAppInjector(Collections.emptyList(), Optional.of(parsed_config));
 				injector.injectMembers(this);			
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();

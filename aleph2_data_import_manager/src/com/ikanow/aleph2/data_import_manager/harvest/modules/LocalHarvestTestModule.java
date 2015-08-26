@@ -111,7 +111,7 @@ public class LocalHarvestTestModule {
 			System.out.println("Running with command line: " + Arrays.toString(args));
 			Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));
+			Injector app_injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(), Optional.of(config));
 			
 			LocalHarvestTestModule app = app_injector.getInstance(LocalHarvestTestModule.class);
 			app.start(args[1], args[2], Arrays.copyOfRange(args, 3, args.length));

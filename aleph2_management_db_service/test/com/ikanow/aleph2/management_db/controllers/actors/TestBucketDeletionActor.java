@@ -138,7 +138,7 @@ public class TestBucketDeletionActor {
 							.withValue("globals.distributed_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
 							.withValue("globals.local_yarn_config_dir", ConfigValueFactory.fromAnyRef(temp_dir));
 		
-		Injector app_injector = ModuleUtils.createInjector(Arrays.asList(), Optional.of(config));	
+		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 		
 		_cds = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
