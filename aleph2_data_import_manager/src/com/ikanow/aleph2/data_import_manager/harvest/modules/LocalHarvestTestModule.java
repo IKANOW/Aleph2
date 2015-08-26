@@ -53,6 +53,7 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import fj.data.Either;
 import fj.data.Validation;
 
 /** A test module for developing harvesters (not maintained - was mainly written for early development and 
@@ -111,9 +112,7 @@ public class LocalHarvestTestModule {
 			System.out.println("Running with command line: " + Arrays.toString(args));
 			Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			Injector app_injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(), Optional.of(config));
-			
-			LocalHarvestTestModule app = app_injector.getInstance(LocalHarvestTestModule.class);
+			LocalHarvestTestModule app = ModuleUtils.initializeApplication(Arrays.asList(), Optional.of(config), Either.left(LocalHarvestTestModule.class));
 			app.start(args[1], args[2], Arrays.copyOfRange(args, 3, args.length));
 		}
 		catch (Exception e) {

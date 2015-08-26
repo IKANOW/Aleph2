@@ -22,59 +22,29 @@ import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import fj.data.Either;
+
 public class DataImportManagerMain {
-
-	private static Logger logger = LogManager.getLogger();	
-	private static Injector serverInjector = null;
+	protected static Logger logger = LogManager.getLogger();
 	
-	public static Injector createInjector(final String config_path) {
-		
-
-		Injector injector = null;
-		try {
-			Config config = ConfigFactory.parseFile(new File(config_path));
-			injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new DataImportManagerModule()), Optional.of(config));
-		} catch (Exception e) {
-			logger.error("Error creating injector from DataImportManagerModule:",e);	
-		}
-		return injector;
-	}
-	
-	public static void start(){
-		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
-		dataImportManager.start();		
-	}
-
-
-	public static void stop(){
-		DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
-		dataImportManager.stop();		
-	}
-
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		if (0 == args.length) {
 			System.out.println("First arg must be config file");
 			System.exit(-1); 
 		}
-		serverInjector = createInjector(args[0]);
+		final Config config = ConfigFactory.parseFile(new File(args[0]));			
+		final DataImportManager dataImportManager = ModuleUtils.initializeApplication(Arrays.asList(new DataImportManagerModule()), Optional.of(config), Either.left(DataImportManager.class));
 		if(args.length>0){
 			if("stop".equalsIgnoreCase(args[1])){
-				Injector serverInjector = Guice.createInjector(new DataImportManagerModule());		
-				DataImportManager dataImportManager =  serverInjector.getInstance(DataImportManager.class);		
-				dataImportManager.stop();		
-				
+				dataImportManager.stop();						
 			}
-			//setConfig(args[0]);
-			// set config if it is ot already set
 		}
-		start();
+		dataImportManager.start();
 	}
 
 }

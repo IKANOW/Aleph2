@@ -30,7 +30,6 @@ import akka.actor.Props;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
@@ -48,6 +47,8 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import fj.data.Either;
 
 /** Main module for V1 synchronization service
  *  THIS CLASS HAS NO COVERAGE SO NEED TO HANDLE TEST ON MODIFICATION
@@ -166,9 +167,7 @@ public class IkanowV1SynchronizationModule {
 			System.out.println("Running with command line: " + Arrays.toString(args));
 			final Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			final Injector app_injector = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new Module()), Optional.of(config));
-			
-			final IkanowV1SynchronizationModule app = app_injector.getInstance(IkanowV1SynchronizationModule.class);
+			final IkanowV1SynchronizationModule app = ModuleUtils.initializeApplication(Arrays.asList(new Module()), Optional.of(config), Either.left(IkanowV1SynchronizationModule.class));
 			app.start();
 		}
 		catch (Throwable e) {

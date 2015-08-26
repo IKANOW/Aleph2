@@ -37,7 +37,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -66,6 +65,8 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValueFactory;
+
+import fj.data.Either;
 
 /** The implementation of the batch  enrichment context
  * @author Joern
@@ -177,8 +178,8 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
 			}
 			else {				
-				final Injector injector = ModuleUtils.getOrCreateAppInjector(Collections.emptyList(), Optional.of(parsed_config));
-				injector.injectMembers(this);			
+				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
+
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();

@@ -50,8 +50,8 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleStora
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleTemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils.ServiceContext;
+import com.ikanow.aleph2.data_model.utils.TestModuleUtils;
 import com.typesafe.config.ConfigFactory;
 
 public class TestIServiceContext {
@@ -98,7 +98,7 @@ public class TestIServiceContext {
 		configMap.put("service.StorageService.service", SampleStorageService.class.getCanonicalName());
 		configMap.put("service.TemporalService.interface", ITemporalService.class.getCanonicalName());
 		configMap.put("service.TemporalService.service", SampleTemporalService.class.getCanonicalName());
-		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
+		TestModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
 		IServiceContext context = new ServiceContext();
 
 		assertNotNull(context.getColumnarService());
@@ -118,7 +118,7 @@ public class TestIServiceContext {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());
-		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
+		TestModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));		
 		IServiceContext context = new ServiceContext();
 		assertNotNull(context.getService(ICustomService.class, Optional.of(SampleCustomServiceOne.class.getSimpleName())));
 	}
@@ -129,7 +129,7 @@ public class TestIServiceContext {
 		configMap.put("service.SampleCustomServiceOne.service", "fake.service.path.DNEService");
 		boolean threwError = false;
 		try {
-			ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
+			TestModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
 		} catch (Exception e) {
 			threwError = true;
 		}	

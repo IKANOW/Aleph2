@@ -21,13 +21,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
@@ -57,8 +57,11 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUuidService;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.utils.Lambdas.ThrowableWrapper.Supplier;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import fj.data.Either;
 
 /**
  * Utility functions for loading modules into the system.  Typically is used
@@ -108,7 +111,7 @@ public class ModuleUtils {
 	 * @param config
 	 * @throws Exception 
 	 */
-	public static void loadModulesFromConfig(Config config) throws Exception {
+	protected static void loadModulesFromConfig(Config config) throws Exception {
 		initialize(config);		
 	}
 	
@@ -351,7 +354,7 @@ public class ModuleUtils {
 	 * @param function
 	 * @return
 	 */
-	public static <T, U, R> BiFunction<T, U, R> memoize(final BiFunction<T, U, R> function) {
+	private static <T, U, R> BiFunction<T, U, R> memoize(final BiFunction<T, U, R> function) {
 		return new BiFunctionMemoize<T, U, R>().doMemoizeIgnoreSecondArg(function);
 	}
 	
@@ -364,7 +367,7 @@ public class ModuleUtils {
 	 * @param <U>
 	 * @param <R>
 	 */
-	public static class BiFunctionMemoize<T, U, R> {
+	private static class BiFunctionMemoize<T, U, R> {
 		protected BiFunctionMemoize() {}
 		private final Map<T, R> instance_cache = new ConcurrentHashMap<T, R>();
 
@@ -425,7 +428,7 @@ public class ModuleUtils {
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
 	}
 	
-	/** THIS VERSION IS FOR TESTS - CAN BE RUN MULTIPLE TIMES
+	/** GENERIC - CALLED BY TEST / APP
 	 * Creates a child injector from our parent configured injector to allow applications to take
 	 * advantage of our injection without having to create a config file.  The typical reason to
 	 * do this is to inject the IServiceContext into your application so you can access the other
@@ -436,7 +439,7 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {		
+	private static Injector createInjector(List<Module> modules, Optional<Config> config) throws Exception {		
 			
 		try {
 		if ( parent_injector == null && !config.isPresent() )
@@ -453,20 +456,51 @@ public class ModuleUtils {
 		return parent_injector.createChildInjector(modules);
 	}
 	
-	// Some application level global state
-	public enum GlobalGuiceState { idle, initializing, complete };
-	private static GlobalGuiceState _module_state = GlobalGuiceState.idle;
-	private static Injector _app_injector = null;
-	private static LinkedList<Runnable> post_initialization_hooks = new LinkedList<>();
-	
-	/** Top level 
-	 * @param modules
-	 * @param config
+
+	/** THIS VERSION IS FOR TESTS - CAN BE RUN MULTIPLE TIMES
+	 * Creates a child injector from our parent configured injector to allow applications to take
+	 * advantage of our injection without having to create a config file.  The typical reason to
+	 * do this is to inject the IServiceContext into your application so you can access the other
+	 * configured services via {@link com.ikanow.aleph2.data_model.interface.data_access.IServiceContext#getService()}
+	 * 
+	 * @param modules Any modules you wanted added to your child injector (put your bindings in these)
+	 * @param config If exists will reset injectors to create defaults via the config
 	 * @return
 	 * @throws Exception
 	 */
-	public static Injector getOrCreateAppInjector(List<Module> modules, Optional<Config> config) throws Exception {
+	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {		
+		return createInjector(modules, config);
+	}
+	
+	// Some application level global state
+	private enum GlobalGuiceState { idle, initializing, complete };
+	private static GlobalGuiceState _module_state = GlobalGuiceState.idle;
+	private static CompletableFuture<Injector> _app_injector = new CompletableFuture<>();
+	private static CompletableFuture<Boolean> _called_ctor = new CompletableFuture<>();
+	
+	/** APP LEVEL VERSION - ONLY CREATES STUFF ONCE 
+	 * Creates a child injector from our parent configured injector to allow applications to take
+	 * advantage of our injection without having to create a config file.  The typical reason to
+	 * do this is to inject the IServiceContext into your application so you can access the other
+	 * configured services via {@link com.ikanow.aleph2.data_model.interface.data_access.IServiceContext#getService()}
+	 * 
+	 * @param modules Any modules you wanted added to your child injector (put your bindings in these)
+	 * @param config If exists will reset injectors to create defaults via the config
+	 * @param application - either a class to create, or an object to inject
+	 * @return
+	 * @throws Exception
+	 */
+	public static <T> T initializeApplication(List<Module> modules, Optional<Config> config, Either<Class<T>, T> application) throws Exception {
 		boolean initializing = false;
+		T return_val = null;
+		
+		final Supplier<T> on_complete = () -> {
+			return application.either(app_clazz -> _app_injector.join().getInstance(app_clazz), app_obj -> {
+				_app_injector.join().injectMembers(app_obj);
+				return app_obj;
+			});
+		};
+		
 		synchronized (ModuleUtils.class) {
 			if (GlobalGuiceState.idle == _module_state) { // winner!
 				_module_state = GlobalGuiceState.initializing; 
@@ -475,41 +509,45 @@ public class ModuleUtils {
 				initializing = true;
 			}
 			else { // (active)
-				return _app_injector;
+				return Lambdas.wrap_u(on_complete).get();
 			}
 		}
 		if (initializing) { // if here just wait for it to complete
 			for (;;) {
-				Thread.sleep(1000L);
+				Thread.sleep(250L);
 				synchronized (ModuleUtils.class) {
 					if (GlobalGuiceState.complete == _module_state) break;
 				}
 			}
+			return_val = Lambdas.wrap_u(on_complete).get();
 		}
 		else { // this version actually gets to complete it
 			try {
 				// If here then we're the only person that gets to initialize guice
-				_app_injector = createTestInjector(modules, config);
+				_app_injector.complete(createInjector(modules, config));
+				return_val = Lambdas.wrap_u(on_complete).get();
+				_called_ctor.complete(true);
+			}
+			catch (Throwable t) {
+				_app_injector.completeExceptionally(t);
+				_called_ctor.completeExceptionally(t);
+				throw t;
 			}
 			finally {
 				synchronized (ModuleUtils.class) {
 					_module_state = GlobalGuiceState.complete;
 				}			
 			}
-			//TODO post hooks
 		}
-		return _app_injector;
+		return return_val;
 	}
 	
-	public static void registerPostAppInjectionCallback(final Runnable r) {
-		synchronized (ModuleUtils.class) {
-			if (GlobalGuiceState.complete != _module_state) {
-				post_initialization_hooks.add(r);
-				return;
-			}
-			//else fall through to...
-		}		
-		r.run();
+	/** Returns a future to an app injector that is only valid after the app injector has been created *and* the app has been initialized
+	 *  (via at least one call to app initialization)
+	 * @return
+	 */
+	public static CompletableFuture<Injector> getAppInjector() {
+		return _app_injector.thenCombine(_called_ctor, (i, b) -> i);
 	}
 	
 	/**

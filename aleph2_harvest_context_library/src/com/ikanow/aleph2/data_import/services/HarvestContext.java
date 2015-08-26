@@ -76,6 +76,8 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValueFactory;
 
+import fj.data.Either;
+
 @SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
 	protected static final Logger _logger = LogManager.getLogger();	
@@ -158,8 +160,7 @@ public class HarvestContext implements IHarvestContext {
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
 			}
 			else {							
-				final Injector injector = ModuleUtils.getOrCreateAppInjector(Collections.emptyList(), Optional.of(parsed_config));
-				injector.injectMembers(this);			
+				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_globals = _service_context.getGlobalProperties();

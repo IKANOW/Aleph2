@@ -28,7 +28,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Scopes;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService1;
 import com.ikanow.aleph2.data_model.interfaces.data_access.samples.ICustomService2;
@@ -42,6 +45,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_access.samples.SampleService
 import com.ikanow.aleph2.data_model.interfaces.data_services.samples.SampleSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 public class TestModuleUtils {
@@ -63,7 +67,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testLoadModulesFromConfig() throws Exception {
+	public void test_LoadModulesFromConfig() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();		
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());			
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
@@ -73,7 +77,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testValidateOnlyOneDefault() {
+	public void test_ValidateOnlyOneDefault() {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());	
@@ -91,7 +95,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testGetExtraDepedencyModules() throws Exception {
+	public void test_GetExtraDepedencyModules() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());	
@@ -103,7 +107,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testNoDefaultAutoSet() throws Exception {
+	public void test_NoDefaultAutoSet() throws Exception {
 		//test that the default services names are set as default unless they get overrode
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SecurityService.interface", ISecurityService.class.getCanonicalName());
@@ -119,7 +123,7 @@ public class TestModuleUtils {
 	 * 
 	 */
 	@Test
-	public void testTwoServicesWithSameInterface() throws Exception {
+	public void test_TwoServicesWithSameInterface() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());			
@@ -137,7 +141,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testDefaultAndNamed() throws Exception {
+	public void test_DefaultAndNamed() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());
@@ -161,7 +165,7 @@ public class TestModuleUtils {
 	 * 
 	 */
 	@Test
-	public void testNestedDependenciesDontCollide() throws Exception {
+	public void test_NestedDependenciesDontCollide() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();		
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());			
@@ -175,7 +179,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testServicesAreSingletons() throws Exception {
+	public void test_ServicesAreSingletons() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());	
@@ -189,7 +193,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testGetServiceWithoutInterface() throws Exception {
+	public void test_GetServiceWithoutInterface() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());	
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
@@ -199,7 +203,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testInjectServiceContext() throws Exception {
+	public void test_InjectServiceContext() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleCustomServiceOne.service", SampleCustomServiceOne.class.getCanonicalName());
 		configMap.put("service.SampleServiceContextService.service", SampleServiceContextService.class.getCanonicalName());	
@@ -212,7 +216,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testCreatingInjector() throws Exception {
+	public void test_CreatingInjector() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		Injector injector = ModuleUtils.createTestInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceOne service_one = injector.getInstance(SampleCustomServiceOne.class);
@@ -221,7 +225,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testInjectGlobalConfig_defaults() throws Exception {
+	public void test_InjectGlobalConfig_defaults() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		Injector injector = ModuleUtils.createTestInjector(Arrays.asList(new SampleModule()), Optional.of(ConfigFactory.parseMap(configMap)));
 		SampleCustomServiceThree service_troi = injector.getInstance(SampleCustomServiceThree.class);
@@ -232,7 +236,7 @@ public class TestModuleUtils {
 	}
 	
 	@Test
-	public void testInjectGlobalConfig_specified() throws Exception {
+	public void test_InjectGlobalConfig_specified() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("globals.local_cached_jar_dir", "a");
 		configMap.put("globals.local_root_dir", "b");
@@ -247,7 +251,7 @@ public class TestModuleUtils {
 	
 	
 	@Test
-	public void testForgotStaticModule() throws Exception {
+	public void test_ForgotStaticModule() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleBadExtraDepedencyService.service", SampleBadExtraDepedencyService.class.getCanonicalName());	
 		boolean threwError = false;
@@ -265,7 +269,7 @@ public class TestModuleUtils {
 	 * @throws Exception
 	 */
 	@Test
-	public void testGettingModuleThatDNE() throws Exception {
+	public void test_GettingModuleThatDNE() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		ModuleUtils.loadModulesFromConfig(ConfigFactory.parseMap(configMap));
 		assertNull(ModuleUtils.getService(SampleCustomServiceOne.class, Optional.empty()));
@@ -277,7 +281,7 @@ public class TestModuleUtils {
 	 * @throws Excpetion
 	 */
 	@Test
-	public void testSameServiceUsesSingleInjector() throws Exception {
+	public void test_SameServiceUsesSingleInjector() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		configMap.put("service.SampleMultipleService1.service", SampleCustomServicePlain.class.getCanonicalName());
 		configMap.put("service.SampleMultipleService1.interface", ICustomService1.class.getCanonicalName());
@@ -290,9 +294,8 @@ public class TestModuleUtils {
 		assertTrue(service1.initialization_id.equals(service2.initialization_id));
 	}
 	
-	//TODO fix this
 	@Test
-	public void testBindingSameThingTwiceDiffAnnotation() throws Exception {
+	public void test_BindingSameThingTwiceDiffAnnotation() throws Exception {
 		Map<String, Object> configMap = new HashMap<String, Object>();
 		
 		configMap.put("service.SampleCustomServiceOne.interface", ICustomService.class.getCanonicalName());
@@ -305,4 +308,49 @@ public class TestModuleUtils {
 		SampleCustomServiceOne service2 = (SampleCustomServiceOne) ModuleUtils.getService(ICustomService.class, Optional.of("SampleCustomServiceTwo"));
 		assertEquals(service1.dep.getANumber(), service2.dep.getANumber());
 	}
+	
+	/////////////////////////////////////////////////////////////////////////////////////
+	
+	// TEST APP INJECTOR	
+	
+	public static class TestAppInjector extends AbstractModule {
+
+		public TestAppInjector() {
+			/**/
+			System.out.println("here " + this);
+		}
+		
+		// User ctor
+		public TestAppInjector(Boolean user_call) {
+			
+		}
+		
+		@Override
+		protected void configure() {
+			this.bind(TestAppInjector.class).in(Scopes.SINGLETON);
+		}
+		
+	}
+	
+	@Inject TestAppInjector test_app_injector;
+	
+	@Test
+	public void test_appInjector() throws Exception {
+		
+		Map<String, Object> configMap = new HashMap<String, Object>();
+		
+//		final Injector i1 = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)));
+//		i1.injectMembers(this);
+//		final Injector i2 = ModuleUtils.getOrCreateAppInjector(Arrays.asList(new TestAppInjector(true)), Optional.of(ConfigFactory.parseMap(configMap)));
+//		i2.getInstance(TestAppInjector.class);
+	}
+
+	/////////////////////////////////////////////////////////////////////////////////////
+	
+	// UTILITY TO HELP SERVICE CONTEXT TESTING
+	
+	public static void loadModulesFromConfig(Config config) throws Exception {
+		ModuleUtils.loadModulesFromConfig(config);
+	}
+
 }
