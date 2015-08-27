@@ -102,18 +102,18 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
 	 * @param job_input - the specific input to check against for the job being run (each job can have multiple inputs)
-	 * @return an instances of the requested class if available, else empty
+	 * @return an instances of the requested class if available - plus any additional configuration (technology specific) that needs to be performed, else empty
 	 */
-	<T> Optional<T> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
+	<T> Optional<Tuple2<T, Map<String, Object>>> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
 
-	/** Requests a technology-specific output for the given data service (eg OutputFormat for Hadoop/Bolt for Storm/etc), or an ICrudService (of JsonNode) as a backup
+	/** Requests a technology-specific output for the given data service (eg OutputFormat for Hadoop/Bolt for Storm/etc), or an IDataWriteService (of JsonNode) as a backup
 	 * @param clazz - the requested class, note all CRUD services will always return an ICrudService<JsonNode>, but more useful technology-specific higher-level constructs may also be possible
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
 	 * @param data_service - the data service to which to write (ie to which the request is being sent) 
 	 * @return an instance of the requested class if available, else empty
 	 */
-	<T> Optional<T> getServiceOutput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final String data_service);
+	<T> Optional<Tuple2<T, Map<String, Object>>> getServiceOutput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final String data_service);
 	
 	/** This checks whether another analytic job has requested a stream of objects - if so then sendObjectToStreamingPipeline can be used to forward them
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
