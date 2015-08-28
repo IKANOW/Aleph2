@@ -30,9 +30,26 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public interface IStorageService extends IUnderlyingService, IDataServiceProvider {
 
-	public static final String BUCKET_SUFFIX = "/managed_bucket/"; 
+	/** The system is only interested in files under this sub-directory of each bucket path
+	 */
+	public static final String BUCKET_SUFFIX = "/managed_bucket/";
+	
+	/** This is the directory into which the harvester pushes files during batch enrichment
+	 */
+	public static final String TO_IMPORT_DATA_SUFFIX = "/managed_bucket/import/ready/"; 
+	/** This is for temp data, eg for spooling
+	 */
+	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";	
+	/** This is the top level directory for data that has actually been processed
+	 */
 	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/"; 
-	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/import/analytics/temp/"; // (then name) 
+	/** This is the directory where the raw data is stored (ie copied from the /ready/ directory without being changed)
+	 */
+	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/"; 
+	public static final String STORED_DATA_SUFFIX_JSON = "/managed_bucket/import/stored/json/"; 
+	public static final String STORED_DATA_SUFFIX_PROCESSED = "/managed_bucket/import/stored/processed/";
+	
+	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/analytics/temp/"; // (then name)
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
