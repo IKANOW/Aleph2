@@ -493,4 +493,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public void emitObject(Optional<DataBucketBean> bucket,
+			AnalyticThreadJobBean job,
+			Either<JsonNode, Map<String, Object>> object) {
+		// TODO Auto-generated method stub
+		
+	}
 }

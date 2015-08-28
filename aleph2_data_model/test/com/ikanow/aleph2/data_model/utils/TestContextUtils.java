@@ -394,6 +394,12 @@ public class TestContextUtils {
 				AnalyticThreadJobBean job, String data_service) {
 			return null;
 		}
+
+		@Override
+		public void emitObject(Optional<DataBucketBean> bucket,
+				AnalyticThreadJobBean job,
+				Either<JsonNode, Map<String, Object>> object) {
+		}
 	}
 	
 	public static class MockEnrichmentContext implements IEnrichmentModuleContext {

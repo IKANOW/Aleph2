@@ -69,9 +69,11 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final Either<JsonNode, Map<String, Object>> object);
 	
-	//TODO: I think want the standard output fns from the enrichment context in here?
-	
-	//void emitObject()
+	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param job - the job for which data is being output
+	 */
+	void emitObject(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final Either<JsonNode, Map<String, Object>> object);
 	
 	//////////////////////////////////////////////////////
 	
