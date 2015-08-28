@@ -1,23 +1,36 @@
+/*******************************************************************************
+* Copyright 2015, The IKANOW Open Source Project.
+* 
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+* 
+* You should have received a copy of the GNU Affero General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Optional;
 
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import scala.Tuple3;
+import scala.Tuple2;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
-public class BeFileOutputFormat extends FileOutputFormat<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> implements IBeJobConfigurable{
+public class BeFileOutputFormat extends FileOutputFormat<String, Tuple2<Long, IBatchRecord>> implements IBeJobConfigurable{
 
 	private EnrichmentControlMetadataBean ecMetadata;
 	private SharedLibraryBean beSharedLibrary;
@@ -27,7 +40,7 @@ public class BeFileOutputFormat extends FileOutputFormat<String, Tuple3<Long, Js
 
 
 	@Override
-	public RecordWriter<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> getRecordWriter(TaskAttemptContext jobContext)
+	public RecordWriter<String, Tuple2<Long, IBatchRecord>> getRecordWriter(TaskAttemptContext jobContext)
 			throws IOException, InterruptedException {
 		try {
 			BatchEnrichmentJob.extractBeJobParameters(this, jobContext.getConfiguration());

@@ -15,14 +15,11 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
-import java.io.ByteArrayOutputStream;
 import java.util.List;
-import java.util.Optional;
 
+import scala.Tuple2;
 
-import scala.Tuple3;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 /** The interface enrichment developers need to implement this interface to use JARs as enrichment modules in batch mode
@@ -40,7 +37,7 @@ public interface IEnrichmentBatchModule {
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a list of (id, object, lazy binary stream) for processing 
 	 */
-	void onObjectBatch(final List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch);
+	void onObjectBatch(final List<Tuple2<Long, IBatchRecord>> batch);
 
 	/** Called when a stage is complete - enables tidying up and similar
 	 */
