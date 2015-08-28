@@ -34,6 +34,8 @@ import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
+import fj.data.Either;
+
 /** A context library that is always passed to the IAnalyticsTechnology module and can also be 
  *  passed to the analytics library processing 
  * @author acp
@@ -65,15 +67,12 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param stage - if set to Optionals.empty() then occurs post enrichment. If set to "" then occurs pre-enrichment. Otherwise should be the name of a module - will listen immediately after that. 
 	 * @param object the object to emit represented by Jackson JsonNode
 	 */
-	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final JsonNode object);
+	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final Either<JsonNode, Map<String, Object>> object);
 	
-	/** (Analytic Module only) If another component is requesting streaming access to the output (use checkForListeners to find out) then this utility function will output the objects
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param stage - if set to Optionals.empty() then occurs post enrichment. If set to "" then occurs pre-enrichment. Otherwise should be the name of a module - will listen immediately after that. 
-	 * @param object the object to emit in (possibly nested) Map<String, Object> format
-	 */
-	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final Map<String, Object> object);
-
+	//TODO: I think want the standard output fns from the enrichment context in here?
+	
+	//void emitObject()
+	
 	//////////////////////////////////////////////////////
 	
 	// BOTH ANALYTICS TECHNOLOGY AND ANALYTICS MODULE - DATA INPUT/OUTPUT 
@@ -102,9 +101,9 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
 	 * @param job_input - the specific input to check against for the job being run (each job can have multiple inputs)
-	 * @return an instances of the requested class if available - plus any additional configuration (technology specific) that needs to be performed, else empty
+	 * @return an instances of the requested class if available
 	 */
-	<T> Optional<Tuple2<T, Map<String, Object>>> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
+	<T extends IAnalyticsAccessContext<?>> Optional<T> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
 
 	/** Requests a technology-specific output for the given data service (eg OutputFormat for Hadoop/Bolt for Storm/etc), or an IDataWriteService (of JsonNode) as a backup
 	 * @param clazz - the requested class, note all CRUD services will always return an ICrudService<JsonNode>, but more useful technology-specific higher-level constructs may also be possible
@@ -113,7 +112,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param data_service - the data service to which to write (ie to which the request is being sent) 
 	 * @return an instance of the requested class if available, else empty
 	 */
-	<T> Optional<Tuple2<T, Map<String, Object>>> getServiceOutput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final String data_service);
+	<T extends IAnalyticsAccessContext<?>> Optional<T> getServiceOutput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final String data_service);
 	
 	/** This checks whether another analytic job has requested a stream of objects - if so then sendObjectToStreamingPipeline can be used to forward them
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)

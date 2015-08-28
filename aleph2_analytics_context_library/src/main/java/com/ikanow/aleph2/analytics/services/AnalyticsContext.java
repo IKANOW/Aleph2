@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -327,20 +328,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	@Override
-	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
-			Optional<String> stage, JsonNode object) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
-			Optional<String> stage, Map<String, Object> object) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public Optional<Tuple2<String, Optional<String>>> getOutputPath(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
 		// TODO Auto-generated method stub
@@ -352,22 +339,14 @@ public class AnalyticsContext implements IAnalyticsContext {
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
 			AnalyticThreadJobInputBean job_input) {
 		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceInput(Class<T> clazz,
-			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
-			AnalyticThreadJobInputBean job_input) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceOutput(Class<T> clazz,
-			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
-			String data_service) {
-		// TODO Auto-generated method stub
+		
+		// Handle diff cases like:
+		// 1) Analytics
+		//final String base_path = storage_service.getRootPath() + bucket.full_name() + IStorageService.ANALYTICS_TEMP_DATA_SUFFIX + input.resource_name_or_id();
+		// 2) Normal storage service input
+		// Like final String base_path = storage_service.getRootPath() + input.resource_name_or_id() + IStorageService.STORED_DATA_SUFFIX;
+		// except I think we need to pick the right sub-dir .. probably need to be able to spec raw/processed/json
+		
 		return null;
 	}
 
@@ -490,5 +469,28 @@ public class AnalyticsContext implements IAnalyticsContext {
 	public void emergencyQuarantineBucket(Optional<DataBucketBean> bucket,
 			String quarantine_duration) {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	}
+
+	@Override
+	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
+			Optional<String> stage, Either<JsonNode, Map<String, Object>> object) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceInput(
+			Class<T> clazz, Optional<DataBucketBean> bucket,
+			AnalyticThreadJobBean job, AnalyticThreadJobInputBean job_input) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceOutput(
+			Class<T> clazz, Optional<DataBucketBean> bucket,
+			AnalyticThreadJobBean job, String data_service) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

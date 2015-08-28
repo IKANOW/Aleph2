@@ -33,6 +33,7 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
@@ -47,6 +48,8 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+
+import fj.data.Either;
 
 public class TestContextUtils {
 
@@ -336,18 +339,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, Optional<String> stage,
-				JsonNode object) {			
-		}
-
-		@Override
-		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, Optional<String> stage,
-				Map<String, Object> object) {
-		}
-
-		@Override
 		public Optional<Tuple2<String, Optional<String>>> getOutputPath(
 				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
 			return null;
@@ -357,20 +348,6 @@ public class TestContextUtils {
 		public Optional<List<String>> getInputPaths(
 				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
 				AnalyticThreadJobInputBean job_input) {
-			return null;
-		}
-
-		@Override
-		public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceInput(Class<T> clazz,
-				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
-				AnalyticThreadJobInputBean job_input) {
-			return null;
-		}
-
-		@Override
-		public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceOutput(Class<T> clazz,
-				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
-				String data_service) {
 			return null;
 		}
 
@@ -395,6 +372,26 @@ public class TestContextUtils {
 		public String getAnalyticsContextSignature(
 				Optional<DataBucketBean> bucket,
 				Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+			return null;
+		}
+
+		@Override
+		public void sendObjectToStreamingPipeline(
+				Optional<DataBucketBean> bucket, Optional<String> stage,
+				Either<JsonNode, Map<String, Object>> object) {
+		}
+
+		@Override
+		public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceInput(
+				Class<T> clazz, Optional<DataBucketBean> bucket,
+				AnalyticThreadJobBean job, AnalyticThreadJobInputBean job_input) {
+			return null;
+		}
+
+		@Override
+		public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceOutput(
+				Class<T> clazz, Optional<DataBucketBean> bucket,
+				AnalyticThreadJobBean job, String data_service) {
 			return null;
 		}
 	}

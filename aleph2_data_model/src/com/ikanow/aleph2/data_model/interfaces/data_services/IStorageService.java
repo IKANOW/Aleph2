@@ -36,19 +36,34 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	
 	/** This is the directory into which the harvester pushes files during batch enrichment
 	 */
-	public static final String TO_IMPORT_DATA_SUFFIX = "/managed_bucket/import/ready/"; 
+	public static final String TO_IMPORT_DATA_SUFFIX = "/managed_bucket/import/ready/";
+	
 	/** This is for temp data, eg for spooling
 	 */
-	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";	
+	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";
+	
 	/** This is the top level directory for data that has actually been processed
 	 */
-	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/"; 
+	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/";
+	
 	/** This is the directory where the raw data is stored (ie copied from the /ready/ directory without being changed)
+	 *  (Batch only)
 	 */
-	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/"; 
-	public static final String STORED_DATA_SUFFIX_JSON = "/managed_bucket/import/stored/json/"; 
+	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/";
+	
+	/** For non JSON input files (CSV/binary), the data immediately after it has been converted to JSON but before any other enrichment has occurred  
+	 *  (It is not expected that this directory will be commonly used)
+	 *  (Batch only)
+	 */
+	public static final String STORED_DATA_SUFFIX_JSON = "/managed_bucket/import/stored/json/";
+	
+	/** Data from batch or streaming data after all enrichment has occurred 
+	 */
 	public static final String STORED_DATA_SUFFIX_PROCESSED = "/managed_bucket/import/stored/processed/";
 	
+	/** For analytics buckets, the output data of intermediate jobs is stored here, under the name of the job
+	 *  (or the content UUID of the job if no name is specified)
+	 */
 	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/analytics/temp/"; // (then name)
 	
 	/** Validate the schema for this service
