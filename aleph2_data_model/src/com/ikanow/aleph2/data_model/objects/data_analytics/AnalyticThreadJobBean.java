@@ -42,6 +42,7 @@ public class AnalyticThreadJobBean implements Serializable {
 	 * @param multi_node_enabled - Determines whether this analytic job should run on a single node, or multiples nodes
 	 * @param dependencies - The list of internal dependencies (ie "name" fields from the job list of this thread) that need to be satisfied before this job is run
 	 * @param inputs - The list of input configurations for this job
+	 * @param global_input_input - A global configuration for the inputs, can be overridden by each job
 	 * @param output - The configuration for the job's output
 	 */
 	public AnalyticThreadJobBean(final String name, final Boolean enabled, 
@@ -52,6 +53,7 @@ public class AnalyticThreadJobBean implements Serializable {
 									final List<String> node_list_rules, final Boolean multi_node_enabled,
 									final List<String> dependencies,
 									final List<AnalyticThreadJobInputBean> inputs,
+									final AnalyticThreadJobInputConfigBean global_input_config,
 									final AnalyticThreadJobOutputBean output
 									)
 	{
@@ -65,6 +67,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		this.multi_node_enabled = multi_node_enabled;
 		this.dependencies = dependencies;
 		this.inputs = inputs;
+		this.global_input_config = global_input_config;
 		this.output = output;
 	}
 										
@@ -158,6 +161,11 @@ public class AnalyticThreadJobBean implements Serializable {
 	 */
 	public List<AnalyticThreadJobInputBean> inputs() { return null == inputs ? inputs : Collections.unmodifiableList(inputs); }
 	
+	/** Returns the global input configuration - this can be overridden on a per input basis (apart from self join)
+	 * @return the global input configuration
+	 */
+	public AnalyticThreadJobInputConfigBean global_input_config() { return global_input_config; } 	
+	
 	/** Defines an input to a job (each job can have multiple inputs)
 	 * @author Alex
 	 */
@@ -172,16 +180,23 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @param filter - the filter to apply to the incoming data (CRUD or file-specific)
 		 * @param config - Generic configuration for input data
 		 */
-		protected AnalyticThreadJobInputBean(final String resource_name_or_id, final String data_service, 
+		protected AnalyticThreadJobInputBean(final Boolean enabled,
+											final String resource_name_or_id, final String data_service, 
 											final LinkedHashMap<String, Object> filter,
 											final AnalyticThreadJobInputConfigBean config 
 											)
 		{
+			this.enabled = enabled;
 			this.resource_name_or_id = resource_name_or_id;
 			this.data_service = data_service;
 			this.filter = filter;
 			this.config = config;
 		}
+		
+		/** Whether the input is currently enabled, defaults to true
+		 * @return Whether the job is currently enabled, defaults to true
+		 */
+		public Boolean enabled() { return enabled; }
 		
 		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc
 		 *  If it's a bucket path with data_service:stream then ":" can optionally be added to the end to stream from a stage (ie "/bucket/path" is the final state of the object before the output,
@@ -205,86 +220,89 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public AnalyticThreadJobInputConfigBean config() { return config; }
 		
+		private Boolean enabled;
 		private String resource_name_or_id; 
 		private String data_service;	
 		private LinkedHashMap<String, Object> filter;
 		private AnalyticThreadJobInputConfigBean config;
 		
-		/** Defines generic properties of the input (where applicable) - eg batching/streaming 
-		 * @author Alex
-		 */
-		public static class AnalyticThreadJobInputConfigBean implements Serializable {
-			private static final long serialVersionUID = -5506063365294565996L;
-			
-			protected AnalyticThreadJobInputConfigBean() {}
-			
-			/** User c'tor
-			 * @param new_data_only - Whether only new data is served to the job each time it runs
-			 * @param self_join - Whether the existing output data from this job's previous run should be used as an extra input to the new job
-			 * @param time_min - human readable string that applies an "oldest" time filter to the input data
-			 * @param time_max -  human readable string that applies a "newest" time filter to the input data
-			 * @param timed_batch_ms - When converting from streaming data to batch data, the max time period over which to collect batches
-			 * @param size_batch_records - When converting from streaming data to batch data, the max number of records in each batch
-			 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
-			 */
-			public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Boolean self_join, 
-					final String time_min, final String time_max,
-					final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
-			{
-				this.new_data_only = new_data_only;
-				this.self_join = self_join;
-				this.time_min = time_min;
-				this.time_max = time_max;
-				this.timed_batch_ms = timed_batch_ms;
-				this.size_batch_records = size_batch_records;
-				this.size_batch_kb = size_batch_kb;
-			}
-			
-			/** If true (defaults: false) then only new data is served to the job each time it runs (otherwise all data from the input matching the filter is served)
-			 * @return Whether only new data is served to the job each time it runs
-			 */
-			public Boolean new_data_only() { return new_data_only; }
-			
-			/** If true (defaults: false) the existing output data from this job's previous run is used as an extra input to the new job
-			 * @return Whether the existing output data from this job's previous run should be used as an extra input to the new job 
-			 */
-			public Boolean self_join() { return self_join; }
-			
-			/** An optional human readable string that applies a time filter (lower bound) to the input data
-			 * @return - human readable string that applies an "oldest" time filter to the input data
-			 */
-			public String time_min() { return time_min; }
-			
-			/** An optional human readable string that applies a time filter (upper bound) to the input data
-			 * @return - human readable string that applies a "newest" time filter to the input data
-			 */
-			public String time_max() { return time_max; }
-			
-			/** When converting from streaming data to batch data, the max time period over which to collect batches
-			 * @return the max time period over which to collect batches
-			 */
-			public Long timed_batch_ms() { return timed_batch_ms; }
-			
-			/** When converting from streaming data to batch data, the max number of records in each batch
-			 * @return the max number of records in each batch
-			 */
-			public Long size_batch_records() { return size_batch_records; }
-			
-			/** When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
-			 * @return the max size of each batch in KBytes of record JSON string
-			 */
-			public Long size_batch_kb() { return size_batch_kb; }
-			
-			private Boolean new_data_only;
-			private Boolean self_join;
-			private String time_min;
-			private String time_max;
-			private Long timed_batch_ms;
-			private Long size_batch_records;
-			private Long size_batch_kb;
-		}
 	}
 	
+	/** Defines generic properties of the input (where applicable) - eg batching/streaming 
+	 * @author Alex
+	 */
+	public static class AnalyticThreadJobInputConfigBean implements Serializable {
+		private static final long serialVersionUID = -5506063365294565996L;
+		
+		protected AnalyticThreadJobInputConfigBean() {}
+		
+		/** User c'tor
+		 * @param new_data_only - Whether only new data is served to the job each time it runs
+		 * @param self_join - Whether the existing output data from this job's previous run should be used as an extra input to the new job (ONLY APPLICABLE TO THE GLOBAL CONFIG, NOT TO PER INPUT)
+		 * @param time_min - human readable string that applies an "oldest" time filter to the input data
+		 * @param time_max -  human readable string that applies a "newest" time filter to the input data
+		 * @param timed_batch_ms - When converting from streaming data to batch data, the max time period over which to collect batches
+		 * @param size_batch_records - When converting from streaming data to batch data, the max number of records in each batch
+		 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
+		 */
+		public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Boolean self_join, 
+				final String time_min, final String time_max,
+				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
+		{
+			this.new_data_only = new_data_only;
+			this.self_join = self_join;
+			this.time_min = time_min;
+			this.time_max = time_max;
+			this.timed_batch_ms = timed_batch_ms;
+			this.size_batch_records = size_batch_records;
+			this.size_batch_kb = size_batch_kb;
+		}
+		
+		/** If true (defaults: false) then only new data is served to the job each time it runs (otherwise all data from the input matching the filter is served)
+		 * @return Whether only new data is served to the job each time it runs
+		 */
+		public Boolean new_data_only() { return new_data_only; }
+		
+		/** If true (defaults: false) the existing output data from this job's previous run is used as an extra input to the new job (ONLY APPLICABLE TO THE GLOBAL CONFIG, NOT TO PER INPUT)
+		 * @return Whether the existing output data from this job's previous run should be used as an extra input to the new job 
+		 */
+		public Boolean self_join() { return self_join; }
+		
+		/** An optional human readable string that applies a time filter (lower bound) to the input data
+		 * @return - human readable string that applies an "oldest" time filter to the input data
+		 */
+		public String time_min() { return time_min; }
+		
+		/** An optional human readable string that applies a time filter (upper bound) to the input data
+		 * @return - human readable string that applies a "newest" time filter to the input data
+		 */
+		public String time_max() { return time_max; }
+		
+		/** When converting from streaming data to batch data, the max time period over which to collect batches
+		 * @return the max time period over which to collect batches
+		 */
+		public Long timed_batch_ms() { return timed_batch_ms; }
+		
+		/** When converting from streaming data to batch data, the max number of records in each batch
+		 * @return the max number of records in each batch
+		 */
+		public Long size_batch_records() { return size_batch_records; }
+		
+		/** When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
+		 * @return the max size of each batch in KBytes of record JSON string
+		 */
+		public Long size_batch_kb() { return size_batch_kb; }
+		
+		private Boolean new_data_only;
+		private Boolean self_join;
+		private String time_min;
+		private String time_max;
+		private Long timed_batch_ms;
+		private Long size_batch_records;
+		private Long size_batch_kb;
+	}
+	
+	private AnalyticThreadJobInputConfigBean global_input_config;
 	private List<String> dependencies;			
 	private List<AnalyticThreadJobInputBean> inputs; 
 	

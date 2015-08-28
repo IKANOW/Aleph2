@@ -356,7 +356,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	@Override
-	public <T> Optional<T> getServiceInput(Class<T> clazz,
+	public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceInput(Class<T> clazz,
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
 			AnalyticThreadJobInputBean job_input) {
 		// TODO Auto-generated method stub
@@ -364,7 +364,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	@Override
-	public <T> Optional<T> getServiceOutput(Class<T> clazz,
+	public <T> Optional<Tuple2<T, Map<String, Object>>> getServiceOutput(Class<T> clazz,
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
 			String data_service) {
 		// TODO Auto-generated method stub

@@ -1,10 +1,23 @@
+/*******************************************************************************
+* Copyright 2015, The IKANOW Open Source Project.
+* 
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+* 
+* You should have received a copy of the GNU Affero General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -12,19 +25,19 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import scala.Tuple3;
+import scala.Tuple2;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
-public class BeFileOutputWriter extends RecordWriter<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>{
+public class BeFileOutputWriter extends RecordWriter<String, Tuple2<Long, IBatchRecord>>{
 
 	static final Logger _logger = LogManager.getLogger(BeFileOutputWriter.class); 
-	List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch = new ArrayList<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>();
+	List<Tuple2<Long, IBatchRecord>> batch = new ArrayList<Tuple2<Long, IBatchRecord>>();
 
 	Configuration configuration = null;
 	IEnrichmentModuleContext enrichmentContext = null;
@@ -50,7 +63,7 @@ public class BeFileOutputWriter extends RecordWriter<String, Tuple3<Long, JsonNo
 	}
 
 	@Override
-	public void write(String key, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> value) throws IOException, InterruptedException {
+	public void write(String key, Tuple2<Long, IBatchRecord> value) throws IOException, InterruptedException {
 				batch.add(value);
 		checkBatch(false);
 	}

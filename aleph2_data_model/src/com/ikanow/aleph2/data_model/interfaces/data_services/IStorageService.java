@@ -32,6 +32,7 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 
 	public static final String BUCKET_SUFFIX = "/managed_bucket/"; 
 	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/"; 
+	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/import/analytics/temp/"; // (then name) 
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate

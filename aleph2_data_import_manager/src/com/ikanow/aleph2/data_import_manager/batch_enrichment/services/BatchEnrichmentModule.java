@@ -15,7 +15,6 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
-import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,10 +22,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import scala.Tuple3;
+import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -58,13 +58,13 @@ public class BatchEnrichmentModule implements IEnrichmentBatchModule {
 	}
 
 	@Override
-	public void onObjectBatch(List<Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>> batch) {
+	public void onObjectBatch(List<Tuple2<Long, IBatchRecord>> batch) {
 		logger.debug("BatchEnrichmentModule.onObjectBatch:" + batch);
-		for (Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> t3 : batch) {
+		for (Tuple2<Long, IBatchRecord> t2 : batch) {
 			// if stream is not present data is inside the json object
-			if (!t3._3().isPresent()) {
+			if (!t2._2().getContent().isPresent()) {
 				if (mutable) {
-					ObjectNode mutableObject = context.convertToMutable(t3._2());
+					ObjectNode mutableObject = context.convertToMutable(t2._2().getJson());
 
 					Long id = probeId(mutableObject);
 					if (id == 0) {
@@ -72,7 +72,7 @@ public class BatchEnrichmentModule implements IEnrichmentBatchModule {
 					}
 					context.emitMutableObject(id, mutableObject, Optional.empty());
 				} else {
-					JsonNode originalJson = t3._2();
+					JsonNode originalJson = t2._2().getJson();
 					Long id = probeId(originalJson);
 					if (id == 0) {
 						id = counter.addAndGet(1);
@@ -83,7 +83,7 @@ public class BatchEnrichmentModule implements IEnrichmentBatchModule {
 			else{
 				// here for simplicity reasons we will just dump the stream into a string and emit it.
 				Long id = counter.addAndGet(1);				
-				context.emitImmutableObject(id, t3._2(), Optional.empty(), Optional.empty());				
+				context.emitImmutableObject(id, t2._2().getJson(), Optional.empty(), Optional.empty());				
 			}
 		} // for 
 	}

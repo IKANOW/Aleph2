@@ -1,4 +1,18 @@
-package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
+/*******************************************************************************
+* Copyright 2015, The IKANOW Open Source Project.
+* 
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Affero General Public License, version 3,
+* as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU Affero General Public License for more details.
+* 
+* You should have received a copy of the GNU Affero General Public License
+* along with this program. If not, see <http://www.gnu.org/licenses/>.
+******************************************************************************/package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -10,9 +24,11 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import scala.Tuple2;
 import scala.Tuple3;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -33,7 +49,7 @@ public class BatchEnrichmentJob{
 		
 	}
 	
-	public static class BatchErichmentMapper extends Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>		
+	public static class BatchErichmentMapper extends Mapper<String, Tuple2<Long, IBatchRecord>, String, Tuple2<Long, IBatchRecord>>		
 	implements IBeJobConfigurable {
 
 		protected DataBucketBean dataBucket = null;
@@ -41,6 +57,7 @@ public class BatchEnrichmentJob{
 
 		protected IEnrichmentModuleContext enrichmentContext = null;
 
+		@SuppressWarnings("unused")
 		private int batchSize = 100;
 		protected BeJobBean beJob = null;;
 		protected EnrichmentControlMetadataBean ecMetadata = null;
@@ -52,7 +69,7 @@ public class BatchEnrichmentJob{
 		}
 		
 		@Override
-		protected void setup(Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
+		protected void setup(Mapper<String, Tuple2<Long, IBatchRecord>, String, Tuple2<Long, IBatchRecord>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob setup");
 			try{
 				
@@ -70,8 +87,8 @@ public class BatchEnrichmentJob{
 		
 
 		@Override
-		protected void map(String key, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>> value,
-				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context) throws IOException, InterruptedException {
+		protected void map(String key, Tuple2<Long, IBatchRecord> value,
+				Mapper<String, Tuple2<Long, IBatchRecord>, String, Tuple2<Long, IBatchRecord>>.Context context) throws IOException, InterruptedException {
 			logger.debug("BatchEnrichmentJob map");
 			context.write(key, value);			
 		} // map
@@ -101,7 +118,7 @@ public class BatchEnrichmentJob{
 		
 		@Override
 		protected void cleanup(
-				Mapper<String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>, String, Tuple3<Long, JsonNode, Optional<ByteArrayOutputStream>>>.Context context)
+				Mapper<String, Tuple2<Long, IBatchRecord>, String, Tuple2<Long, IBatchRecord>>.Context context)
 				throws IOException, InterruptedException {
 		}
 
