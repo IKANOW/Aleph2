@@ -165,4 +165,55 @@ public class TestTimeUtils {
 			assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "1 bananas"), err1.fail());
 		}
 	}
+	
+	@Test
+	public void test_getDateFromSuffix() {
+		{
+			final String suffix = "2012-11-14-13:49:48";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Wed Nov 14 13:49:48 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012-11-14-13:49";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Wed Nov 14 13:49:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012-11-14-13";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Wed Nov 14 13:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012-11-14";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Wed Nov 14 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012.20";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Sun May 13 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012-11";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Thu Nov 01 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "2012";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isSuccess());
+			assertEquals("Sun Jan 01 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
+		}
+		{
+			final String suffix = "fail";
+			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
+			assertTrue("Date was parsed: " + suffix, v.isFail());
+		}
+	}
 }
