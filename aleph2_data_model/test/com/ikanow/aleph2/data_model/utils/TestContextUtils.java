@@ -205,14 +205,7 @@ public class TestContextUtils {
 
 		@Override
 		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, JsonNode object) {
-			
-		}
-
-		@Override
-		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket,
-				Map<String, Object> object) {
+				Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object) {
 			
 		}
 
@@ -248,6 +241,11 @@ public class TestContextUtils {
 		public <T> Optional<T> getUnderlyingPlatformDriver(
 				Class<T> driver_class, Optional<String> driver_options) {
 			return null;
+		}
+
+		@Override
+		public void emitObject(Optional<DataBucketBean> bucket,
+				Either<JsonNode, Map<String, Object>> object) {
 		}
 		
 	}

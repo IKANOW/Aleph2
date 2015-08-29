@@ -58,6 +58,8 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import fj.data.Either;
+
 public class TestHarvestContext {
 
 	protected Injector _app_injector;
@@ -310,16 +312,16 @@ public class TestHarvestContext {
 		Map<String, Object> msg4 = ImmutableMap.<String, Object>builder().put("key", "val4").build();
 		//currently mock cds produce does nothing
 		try {
-			test_context.sendObjectToStreamingPipeline(Optional.empty(), mapper.readTree(message1));
+			test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.left(mapper.readTree(message1)));
 			fail("Should fail, bucket not set and not specified");
 		}
 		catch (Exception e) {}
 		test_context.setBucket(bucket);
 		assertEquals(bucket, test_context.getBucket().get());
-		test_context.sendObjectToStreamingPipeline(Optional.empty(), mapper.readTree(message1));
-		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), mapper.readTree(message2));
-		test_context.sendObjectToStreamingPipeline(Optional.empty(), msg3);
-		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), msg4);
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.left(mapper.readTree(message1)));
+		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.left(mapper.readTree(message2)));
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.right(msg3));
+		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.right(msg4));
 		
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		

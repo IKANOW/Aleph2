@@ -33,6 +33,8 @@ import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
+import fj.data.Either;
+
 /** A context library that is always passed to the IHarvestTechnology module and can also be 
  *  passed to the harvest library processing (TODO (ALEPH-4): need to document how, ie copy JARs into external classpath and call ContextUtils.getHarvestContext)
  * @author acp
@@ -54,16 +56,15 @@ public interface IHarvestContext extends IUnderlyingService {
 	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
 	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit represented by Jackson JsonNode
+	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
-	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final JsonNode object);
+	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Either<JsonNode, Map<String, Object>> object);
 	
-	/** (HarvestModule only) For (near) real time harvests emit the object to the enrichment/alerting pipeline
-	 * If no streaming enrichment pipeline is set up this will broadcast the object to listening streaming analytics/access - if not picked up, it will be dropped
+	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param object the object to emit in (possibly nested) Map<String, Object> format
+	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
-	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Map<String, Object> object);
+	void emitObject(final Optional<DataBucketBean> bucket, final Either<JsonNode, Map<String, Object>> object);
 
 	//////////////////////////////////////////////////////
 	

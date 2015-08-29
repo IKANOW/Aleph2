@@ -195,19 +195,11 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void sendObjectToStreamingPipeline(
-			Optional<DataBucketBean> bucket, JsonNode object) {		
-		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), object.toString());
+			Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object) {		
+		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), 
+				object.either(JsonNode::toString, map -> _mapper.convertValue(map, JsonNode.class).toString()));
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#sendObjectToStreamingPipeline(java.util.Optional, java.util.Map)
-	 */
-	@Override
-	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
-			Map<String, Object> object) {
-		sendObjectToStreamingPipeline(bucket, _mapper.convertValue(object, JsonNode.class));
-	}
-	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
@@ -552,4 +544,10 @@ public class HarvestContext implements IHarvestContext {
 		return Optional.empty();
 	}
 
+	@Override
+	public void emitObject(Optional<DataBucketBean> bucket,
+			Either<JsonNode, Map<String, Object>> object) {
+		//TODO (ALEPH-19): Fill this in later
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	}
 }

@@ -65,13 +65,14 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	/** (Analytic Module only) If another component is requesting streaming access to the output (use checkForListeners to find out) then this utility function will output the objects
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param stage - if set to Optionals.empty() then occurs post enrichment. If set to "" then occurs pre-enrichment. Otherwise should be the name of a module - will listen immediately after that. 
-	 * @param object the object to emit represented by Jackson JsonNode
+	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
 	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final Either<JsonNode, Map<String, Object>> object);
 	
 	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job for which data is being output
+	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
 	void emitObject(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final Either<JsonNode, Map<String, Object>> object);
 	
