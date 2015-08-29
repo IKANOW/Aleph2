@@ -17,12 +17,15 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.util.Date;
 import java.util.Optional;
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.commons.lang.time.DateUtils;
 
 import com.joestelmach.natty.CalendarSource;
 import com.joestelmach.natty.DateGroup;
@@ -110,6 +113,29 @@ public class TimeUtils {
 					);
 	}
 	
+	//TODO: need the opposite of the time-based suffix
+
+	public static String[] SUPPORTED_DATE_SUFFIXES = {
+		"yyyy-MM-dd-HH:mm:ss",
+		"yyyy-MM-dd-HH:mm",
+		"yyyy-MM-dd-HH",
+		"yyyy-MM-dd",
+		"YYYY.ww",
+		"yyyy-MM",
+		"yyyy"
+	};
+	
+	/** Returns the date corresponding to a string in one of the formats returned by getTimeBasedSuffix
+	 * @param suffix - the date string
+	 * @return - either the date, or an error if the string is not correctly formatted
+	 */
+	public static Validation<String, Date> getDateFromSuffix(final String suffix) {
+		try {
+			return Validation.success(DateUtils.parseDateStrictly(suffix, SUPPORTED_DATE_SUFFIXES));
+		} catch (ParseException e) {
+			return Validation.fail(ErrorUtils.getLongForm("getDateFromSuffix {0}", e));
+		}
+	}
 	
 	/** Attempts to parse a (typically recurring) time  
 	 * @param human_readable_duration - Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
