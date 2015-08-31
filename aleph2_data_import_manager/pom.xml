@@ -53,6 +53,7 @@
 				<exclude>**backtype.storm**</exclude>
 				<!--  This actually removes code from coveralls.io -->
 				<exclude>**/backtype/storm/*</exclude>
+				<exclude>**/com/ikanow/aleph2/data_import_manager/modules/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/harvest/modules/*</exclude>
 				<exclude>**/com/ikanow/aleph2/data_import_manager/batch_enrichment/module/*</exclude>
 				<!--  Somewhat temporary, this code is going to be refactored into DAM/hadoop_analytic_services -->

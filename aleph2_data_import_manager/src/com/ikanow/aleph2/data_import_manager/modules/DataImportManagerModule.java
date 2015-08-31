@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.harvest.modules;
+package com.ikanow.aleph2.data_import_manager.modules;
 
 import java.io.File;
 import java.util.Arrays;
@@ -28,9 +28,11 @@ import scala.concurrent.duration.Duration;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
+import com.ikanow.aleph2.data_import_manager.governance.actors.DataAgeOutSupervisor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
@@ -42,6 +44,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
@@ -54,7 +57,7 @@ import fj.data.Either;
  *  THIS CLASS HAS NO COVERAGE SO NEED TO HANDLE TEST ON MODIFICATION
  * @author acp
  */
-public class IkanowV1SynchronizationModule {
+public class DataImportManagerModule {
 	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final DataImportConfigurationBean _service_config;
@@ -70,7 +73,7 @@ public class IkanowV1SynchronizationModule {
 	 * @param context
 	 */
 	@Inject
-	public IkanowV1SynchronizationModule(IServiceContext context, DataImportActorContext local_actor_context, DataImportConfigurationBean service_config) {
+	public DataImportManagerModule(IServiceContext context, DataImportActorContext local_actor_context, DataImportConfigurationBean service_config) {
 		_context = context;
 		_core_management_db = context.getCoreManagementDbService();
 		_underlying_management_db = _context.getService(IManagementDbService.class, Optional.empty()).get();
@@ -149,6 +152,13 @@ public class IkanowV1SynchronizationModule {
 			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=stream_enrichment");
 		}
+		if (_service_config.governance_enabled()) {			
+			_core_distributed_services.createSingletonActor(hostname + ".governance.actors.DataAgeOutSupervisor", 
+					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+					Props.create(DataAgeOutSupervisor.class));
+			
+			_logger.info("Starting IkanowV1SynchronizationModule subservice=governance");
+		}		
 		for (;;) {
 			try { Thread.sleep(10000); } catch (Exception e) {}
 		}
@@ -167,7 +177,7 @@ public class IkanowV1SynchronizationModule {
 			System.out.println("Running with command line: " + Arrays.toString(args));
 			final Config config = ConfigFactory.parseFile(new File(args[0]));
 			
-			final IkanowV1SynchronizationModule app = ModuleUtils.initializeApplication(Arrays.asList(new Module()), Optional.of(config), Either.left(IkanowV1SynchronizationModule.class));
+			final DataImportManagerModule app = ModuleUtils.initializeApplication(Arrays.asList(new Module()), Optional.of(config), Either.left(DataImportManagerModule.class));
 			app.start();
 		}
 		catch (Throwable e) {

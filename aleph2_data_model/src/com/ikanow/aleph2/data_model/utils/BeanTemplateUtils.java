@@ -435,11 +435,19 @@ public class BeanTemplateUtils {
 			}
 			return null;
 		}
-		/**
+		/** Returns the field (in its nested format if obtained from a nested method helper)
 		 * @param getter - the method reference (T::<function>)
 		 * @return
 		 */
 		public String field(final Function<T, ?> getter) {
+			getter.apply(_recorder);
+			return _parent_path.map(s -> s + _name).orElse(_name);
+		}
+		/** Returns the field (in its nested format if obtained from a nested method helper)
+		 * @param getter - the method reference (T::<function>)
+		 * @return
+		 */
+		public String non_nested_field(final Function<T, ?> getter) {
 			getter.apply(_recorder);
 			return _name;
 		}
@@ -458,7 +466,7 @@ public class BeanTemplateUtils {
 		 * @return a MethodNamingHelper for the nested class
 		 */
 		public <U> MethodNamingHelper<U> nested(final Function<T, ?> getter, final Class<U> nested_clazz) {
-			String new_parent_path =  _parent_path.orElse("") + "." + field(getter) + ".";
+			String new_parent_path =  _parent_path.orElse("") + non_nested_field(getter) + ".";
 			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}
 	}

@@ -65,7 +65,7 @@ public interface IDataServiceProvider {
 				
 		/** Indicates that this service should examine the data in this bucket and delete any old data
 		 * @param bucket - the bucket to be checked
-		 * @return a future containing the success/failure of the operation and associated status
+		 * @return a future containing the success/failure of the operation and associated status (if success==true, create a detail called "loggable" in order to log the result)
 		 */
 		CompletableFuture<BasicMessageBean> handleAgeOutRequest(final DataBucketBean bucket);
 		

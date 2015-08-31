@@ -89,9 +89,13 @@ public class TestBeanTemplateUtils {
 	
 	@Test
 	public void testNestedMethodHelper() {
-		String test1 = BeanTemplateUtils.from(NestedTestBean.class).field(NestedTestBean::testField);
+		String test1 = BeanTemplateUtils.from(NestedTestBean.class)
+							.field(NestedTestBean::testField);
+		
 		String test2 = BeanTemplateUtils.from(NestedTestBean.class)
-							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class).field(NestedNestedTestBean::testField);
+							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class)
+							.field(NestedNestedTestBean::testField);
+		
 		String test3 = BeanTemplateUtils.from(NestedTestBean.class)
 							.nested(NestedTestBean::nestedBean, NestedNestedTestBean.class)
 							.nested(NestedNestedTestBean::nestedBean, NestedNestedTestBean.class)
@@ -103,9 +107,9 @@ public class TestBeanTemplateUtils {
 		String test4 = BeanTemplateUtils.from(t1).nested(NestedTestBean::nestedBean, t2).field(NestedNestedTestBean::nestedBean);
 		
 		assertEquals("The type safe reference should resolve correctly (class ref)", "testField", test1);
-		assertEquals("The type safe reference should resolve correctly (nested, class ref)", "testField", test2);
-		assertEquals("The type safe reference should resolve correctly (2x nested, class ref)", "testField", test3);
-		assertEquals("The type safe reference should resolve correctly (nested, object ref)", "nestedBean", test4);		
+		assertEquals("The type safe reference should resolve correctly (nested, class ref)", "nestedBean.testField", test2);
+		assertEquals("The type safe reference should resolve correctly (2x nested, class ref)", "nestedBean.nestedBean.testField", test3);
+		assertEquals("The type safe reference should resolve correctly (nested, object ref)", "nestedBean.nestedBean", test4);		
 	}
 	
 	public static class TestBuildBean {
