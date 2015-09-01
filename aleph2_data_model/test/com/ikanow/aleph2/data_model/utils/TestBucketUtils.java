@@ -46,7 +46,7 @@ public class TestBucketUtils {
 	}
 
 	@Test
-	public void testConvertDataBucketBeanToTest() {
+	public void test_ConvertDataBucketBeanToTest() {
 		String original_full_name = "/my_bean/sample_path";
 		String original_id = "id12345";
 		String user_id = "user12345";
@@ -59,6 +59,9 @@ public class TestBucketUtils {
 		
 		assertTrue(test_bean._id().equals(original_id));
 		assertTrue(test_bean.full_name().equals("/aleph2_testing/" + user_id + "/" + original_full_name));
+		
+		assertTrue(BucketUtils.isTestBucket(test_bean));
+		assertFalse(BucketUtils.isTestBucket(original_bean));		
 	}
 
 	@Test

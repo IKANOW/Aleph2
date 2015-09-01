@@ -26,6 +26,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
  *
  */
 public class BucketUtils {
+	
+	public static final String TEST_BUCKET_PREFIX = "/aleph2_testing/";
+	
 	/**
 	 * Returns a clone of the bean and modifies the full_name field to provide a
 	 * test path instead (by prepending "/alphe2_testing/{user_id}" to the path).
@@ -37,10 +40,18 @@ public class BucketUtils {
 	public static DataBucketBean convertDataBucketBeanToTest(final DataBucketBean original_bean, String user_id) {
 		//TODO when creating a bucket do we need to block any attempt of
 		//users to start with /test?
-		final String new_full_name = "/aleph2_testing/" + user_id + "/" + original_bean.full_name();
+		final String new_full_name = TEST_BUCKET_PREFIX + user_id + "/" + original_bean.full_name();
 		return BeanTemplateUtils.clone(original_bean)
 				.with(DataBucketBean::full_name, new_full_name)
 				.done();
+	}
+	
+	/** Check if a bucket is a test bucket (trivial)
+	 * @param bucket - the bucket to check
+	 * @return
+	 */
+	public static boolean isTestBucket(final DataBucketBean bucket) {
+		return bucket.full_name().startsWith(TEST_BUCKET_PREFIX);
 	}
 	
 	///////////////////////////////////////////////////////////////////////////
