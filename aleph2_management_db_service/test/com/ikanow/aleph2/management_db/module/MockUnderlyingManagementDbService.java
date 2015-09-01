@@ -164,7 +164,7 @@ public class MockUnderlyingManagementDbService implements IManagementDbService, 
 	}
 
 	@Override
-	public IManagementDbService getSecureddDb(AuthorizationBean client_auth, Optional<ProjectBean> project_auth) {		
+	public IManagementDbService getSecuredDb(AuthorizationBean client_auth, Optional<ProjectBean> project_auth) {		
 		return null;
 	}
 

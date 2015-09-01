@@ -150,7 +150,7 @@ public interface IManagementDbService extends IUnderlyingService {
 	 */
 	IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
 		
-	IManagementDbService getSecureddDb(final AuthorizationBean client_auth, final Optional<ProjectBean> project_auth);
+	IManagementDbService getSecuredDb(final AuthorizationBean client_auth, final Optional<ProjectBean> project_auth);
 
 	////////////////////////////////////
 

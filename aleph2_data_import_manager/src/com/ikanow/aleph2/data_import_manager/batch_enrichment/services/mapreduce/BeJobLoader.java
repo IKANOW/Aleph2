@@ -53,10 +53,11 @@ public class BeJobLoader {
 			IManagementCrudService<DataBucketBean> dataBucketStore = managementDbService.getDataBucketStore();
 			SingleQueryComponent<DataBucketBean> querydatBucketFullName = CrudUtils.anyOf(DataBucketBean.class).when("full_name",
 					bucketFullName);
-
 			Optional<DataBucketBean> odb = dataBucketStore.getObjectBySpec(querydatBucketFullName).get();
 			if (odb.isPresent()) {
 				DataBucketBean dataBucketBean = odb.get();
+				// TODO hook in security check
+				String ownerId = dataBucketBean.owner_id();
 
 				List<EnrichmentControlMetadataBean> enrichmentConfigs = dataBucketBean.batch_enrichment_configs();
 				for (EnrichmentControlMetadataBean ec : enrichmentConfigs) {
