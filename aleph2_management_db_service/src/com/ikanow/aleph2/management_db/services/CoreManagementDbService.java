@@ -146,6 +146,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	}
 	
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSecureddDb(java.lang.String, java.util.Optional, java.util.Optional)
+	 */
+	public IManagementDbService getSecureddDb(AuthorizationBean client_auth, final Optional<ProjectBean> project_auth)
+	{
+		return new SecuredCoreManagementDbService(_service_context, _underlying_management_db, 
+				_data_bucket_service, _data_bucket_status_service, _shared_library_service, _actor_context ,client_auth,project_auth);
+		
+	}
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
 	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {

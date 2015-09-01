@@ -24,6 +24,15 @@ import java.util.Map;
  */
 public class AuthorizationBean implements Serializable {
 	private static final long serialVersionUID = 5344494019659648244L;
+	private String principalName;
+	public String getPrincipalName() {
+		return principalName;
+	}
+
+	public void setPrincipalName(String principalName) {
+		this.principalName = principalName;
+	}
+
 	protected AuthorizationBean() {}
 	
 	/** User constructor
@@ -31,6 +40,10 @@ public class AuthorizationBean implements Serializable {
 	 */
 	public AuthorizationBean(final Map<String, String> auth_token_vs_role) {
 		this.auth_token_vs_role = auth_token_vs_role;		
+	}
+
+	public AuthorizationBean(final String principalName) {
+		this.principalName = principalName;		
 	}
 	/** User/group token vs generic role string
 	 * @return

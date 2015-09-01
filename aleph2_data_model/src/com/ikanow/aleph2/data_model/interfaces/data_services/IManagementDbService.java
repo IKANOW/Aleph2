@@ -150,6 +150,8 @@ public interface IManagementDbService extends IUnderlyingService {
 	 */
 	IManagementDbService getFilteredDb(final Optional<AuthorizationBean> client_auth, final Optional<ProjectBean> project_auth);
 		
+	IManagementDbService getSecureddDb(final AuthorizationBean client_auth, final Optional<ProjectBean> project_auth);
+
 	////////////////////////////////////
 
 	// X] Misc/Internals
@@ -178,6 +180,7 @@ public interface IManagementDbService extends IUnderlyingService {
 	 * @return the implementation of the CRUD service 
 	 */
 	ICrudService<AssetStateDirectoryBean> getStateDirectory(final Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter);
+	
 	
 
 }
