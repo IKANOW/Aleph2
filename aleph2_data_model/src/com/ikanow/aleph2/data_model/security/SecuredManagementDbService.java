@@ -1,4 +1,4 @@
-package com.ikanow.aleph2.management_db.services;
+package com.ikanow.aleph2.data_model.security;
 
 import java.util.List;
 import java.util.Optional;

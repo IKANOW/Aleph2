@@ -32,7 +32,7 @@ public class SecuredCoreManagementDbService extends CoreManagementDbService {
 	 */
 	@Override
 	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
-		return super.getSharedLibraryStore();
+		return super.getSharedLibraryStore().secured(authorizationBean);
 	}
 
 
