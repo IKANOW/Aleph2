@@ -25,6 +25,16 @@ import java.util.Map;
 public class AuthorizationBean implements Serializable {
 	private static final long serialVersionUID = 5344494019659648244L;
 	private String principalName;
+	private ProjectBean project;
+	
+	public ProjectBean getProject() {
+		return project;
+	}
+
+	public void setProject(ProjectBean project) {
+		this.project = project;
+	}
+
 	public String getPrincipalName() {
 		return principalName;
 	}
