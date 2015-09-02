@@ -136,7 +136,7 @@ public class SampleManagementDbService implements IManagementDbService {
 	}
 
 	@Override
-	public IManagementDbService getSecuredDb(AuthorizationBean client_auth, Optional<ProjectBean> project_auth) {	
+	public IManagementDbService getSecuredDb(Optional<AuthorizationBean> client_auth, Optional<ProjectBean> project_auth) {	
 		return null;
 	}
 
