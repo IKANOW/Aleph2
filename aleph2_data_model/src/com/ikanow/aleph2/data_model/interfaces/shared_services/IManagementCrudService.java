@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
-import com.ikanow.aleph2.data_model.security.SecuredManagementDbService;
+import com.ikanow.aleph2.data_model.security.SecuredCrudManagementDbService;
 import com.ikanow.aleph2.data_model.utils.CrudServiceUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
@@ -264,14 +264,15 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 	IManagementCrudService<JsonNode> getRawService();
 
 	/** Returns a definitely read only version of the CRUD service. The interface is the same, but writable calls will exception.
+	 * @param _service_context 
 	 * @return the definitely read only version of the CRUD service
 	 */
-	default IManagementCrudService<O> secured(AuthorizationBean authorizationBean) {
+	default IManagementCrudService<O> secured(IServiceContext _service_context, AuthorizationBean authorizationBean) {
 		if (authorizationBean==null) {
 			return this;
 		}
 		else {
-			return new SecuredManagementDbService<O>(this,authorizationBean);
+			return new SecuredCrudManagementDbService<O>(_service_context,this,authorizationBean);
 		}
 	}	
 	
