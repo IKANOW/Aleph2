@@ -117,31 +117,76 @@ public class DataSchemaBean implements Serializable {
 		private static final long serialVersionUID = 6846462609660288814L;
 		protected StorageSchemaBean() {}
 		
+		/** Covers the generic storage parameters for each of the raw/json/processed cases
+		 * @author Alex
+		 */
+		static public class StorageSubSchemaBean implements Serializable {
+			private static final long serialVersionUID = 867619105821121075L;
+			protected StorageSubSchemaBean() {}
+			
+			/** User constructor
+			 */
+			public StorageSubSchemaBean(
+					final Boolean enabled,
+					final String grouping_time_period,
+					final String exist_age_max,
+					final String codec
+					) 
+			{
+				this.enabled = enabled;
+				this.grouping_time_period = grouping_time_period;
+				this.exist_age_max = exist_age_max;
+				this.codec = codec;
+			}
+			
+			/** Describes if the archive service is used for this storage context (Raw/processed/json) in this bucket
+			 * @return the enabled
+			 */
+			public Boolean enabled() {
+				return enabled;
+			}
+			/** A string describing the time period granularity for searches
+			 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
+			 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
+			 * @return the grouping_time_period
+			 */
+			public String grouping_time_period() {
+				return grouping_time_period;
+			}
+			/** A string describing the age at which documents in this bucket are deleted
+			 * (eg "10 days", "864000", "5 years")
+			 * @return the exist_age_max
+			 */
+			public String exist_age_max() {
+				return exist_age_max;
+			}
+			/** Returns the compression/encoding codec to be used for this storage context, defaults to plain
+			 *  Currently supported: gz/gzip, sn/snappy, /frame.snappy 
+			 * @return
+			 */
+			public String codec() {
+				return codec;
+			}
+			
+			private Boolean enabled;
+			private String grouping_time_period;
+			private String exist_age_max;
+			private String codec;			
+		}
+		
 		/** User constructor
 		 */
 		public StorageSchemaBean(final Boolean enabled, 
 				final String service_name,
-				final Boolean raw_enabled,
-				final String raw_grouping_time_period,
-				final String raw_exist_age_max,
-				final Boolean json_enabled,
-				final String json_grouping_time_period,
-				final String json_exist_age_max,
-				final Boolean processed_enabled,
-				final String processed_grouping_time_period,
-				final String processed_exist_age_max,
+				final StorageSubSchemaBean raw,
+				final StorageSubSchemaBean json,
+				final StorageSubSchemaBean processed,
 				final Map<String, Object> technology_override_schema) {
 			this.enabled = enabled;
 			this.service_name = service_name;
-			this.raw_enabled = raw_enabled;
-			this.raw_grouping_time_period = raw_grouping_time_period;
-			this.raw_exist_age_max = raw_exist_age_max;
-			this.json_enabled = json_enabled;
-			this.json_grouping_time_period = json_grouping_time_period;
-			this.json_exist_age_max = json_exist_age_max;
-			this.processed_enabled = processed_enabled;
-			this.processed_grouping_time_period = processed_grouping_time_period;
-			this.processed_exist_age_max = processed_exist_age_max;
+			this.raw = raw;
+			this.json = json;
+			this.processed = processed;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the archive service is used for this bucket
@@ -156,69 +201,21 @@ public class DataSchemaBean implements Serializable {
 		public String service_name() {
 			return service_name;
 		}
-		/** Describes if the archive service is used for raw data in this bucket
-		 * @return the enabled
+		
+		/** The storage sub schema for raw storage (eg the untouched underlying data)
+		 * @return The storage sub schema for raw storage (eg the untouched underlying data)
 		 */
-		public Boolean raw_enabled() {
-			return raw_enabled;
-		}
-		/** A string describing the time period granularity for searches
-		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
-		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
-		 * @return the grouping_time_period
+		public StorageSubSchemaBean raw() { return raw; }
+		/** The storage sub schema for json storage (eg the input data has been serialized into JSON but not enriched)
+		 * @return The storage sub schema for json storage (eg the input data has been serialized into JSON but not enriched)
 		 */
-		public String raw_grouping_time_period() {
-			return raw_grouping_time_period;
-		}
-		/** A string describing the age at which documents in this bucket are deleted
-		 * (eg "10 days", "864000", "5 years")
-		 * @return the exist_age_max
+		public StorageSubSchemaBean json() { return json; }
+		/** The JSON data post enrichment, eg a mirror of what's in the document/search index DB
+		 * @return The JSON data post enrichment, eg a mirror of what's in the document/search index DB
 		 */
-		public String raw_exist_age_max() {
-			return raw_exist_age_max;
-		}
-		/** Describes if the archive service is used for JSON data in this bucket
-		 * @return the enabled
-		 */
-		public Boolean json_enabled() {
-			return json_enabled;
-		}
-		/** A string describing the time period granularity for searches
-		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
-		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
-		 * @return the grouping_time_period
-		 */
-		public String json_grouping_time_period() {
-			return json_grouping_time_period;
-		}
-		/** A string describing the age at which documents in this bucket are deleted
-		 * (eg "10 days", "864000", "5 years")
-		 * @return the exist_age_max
-		 */
-		public String json_exist_age_max() {
-			return json_exist_age_max;
-		}
-		/** Describes if the archive service is used for JSON data in this bucket
-		 * @return the enabled
-		 */
-		public Boolean processed_enabled() {
-			return processed_enabled;
-		}
-		/** A string describing the time period granularity for searches
-		 *  (ie it will be possible to "search" over objects within each time period of this granularity by directory only) 
-		 *  CURRENTLY SUPPORTED: "hour", "day", "week", "month", "year"
-		 * @return the grouping_time_period
-		 */
-		public String processed_grouping_time_period() {
-			return processed_grouping_time_period;
-		}
-		/** A string describing the age at which documents in this bucket are deleted
-		 * (eg "10 days", "864000", "5 years")
-		 * @return the exist_age_max
-		 */
-		public String processed_exist_age_max() {
-			return processed_exist_age_max;
-		}
+		public StorageSubSchemaBean processed() { return processed; }
+		
+		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -228,15 +225,9 @@ public class DataSchemaBean implements Serializable {
 		}
 		private Boolean enabled;
 		private String service_name;
-		private Boolean raw_enabled;
-		private String raw_grouping_time_period;
-		private String raw_exist_age_max;
-		private Boolean json_enabled;
-		private String json_grouping_time_period;
-		private String json_exist_age_max;
-		private Boolean processed_enabled;
-		private String processed_grouping_time_period;
-		private String processed_exist_age_max;
+		private StorageSubSchemaBean raw;
+		private StorageSubSchemaBean json;
+		private StorageSubSchemaBean processed;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Document Service

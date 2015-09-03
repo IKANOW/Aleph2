@@ -196,7 +196,7 @@ public class BeFileInputReader extends  RecordReader<String, Tuple2<Long, IBatch
 
 		ChronoUnit timeGroupingUnit = ChronoUnit.DAYS;
 		try {
-			timeGroupingUnit = TimeUtils.getTimePeriod(Optionals.of(() -> dataBucket.data_schema().storage_schema().processed_grouping_time_period()).orElse(DEFAULT_GROUPING)).success();			
+			timeGroupingUnit = TimeUtils.getTimePeriod(Optionals.of(() -> dataBucket.data_schema().storage_schema().processed().grouping_time_period()).orElse(DEFAULT_GROUPING)).success();			
 		} catch (Throwable t) {			
 			logger.error(ErrorUtils.getLongForm(ErrorUtils.VALIDATION_ERROR,t),t);
 		}

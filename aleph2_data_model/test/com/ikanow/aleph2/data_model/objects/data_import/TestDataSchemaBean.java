@@ -33,33 +33,49 @@ public class TestDataSchemaBean {
 		DataSchemaBean.StorageSchemaBean empty_storage_bean = new DataSchemaBean.StorageSchemaBean();
 		assertEquals("Empty Storage Bean", empty_storage_bean.service_name(), null);		
 		
+		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean raw = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
+				true,
+				"raw_grouping_time_period",
+				"raw_exist_age_max",
+				"raw_codec"
+				);
+		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean json = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
+				false,
+				"json_grouping_time_period",
+				"json_exist_age_max",
+				null
+				);
+		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean processed = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
+				null,
+				"processed_grouping_time_period",
+				"processed_exist_age_max",
+				"processed_codec"
+				);
+		
 		DataSchemaBean.StorageSchemaBean storage_bean =
 				new DataSchemaBean.StorageSchemaBean(
 						true,
 						"service_name",
-						true,
-						"raw_grouping_time_period",
-						"raw_exist_age_max",
-						false,
-						"json_grouping_time_period",
-						"json_exist_age_max",
-						null,
-						"processed_grouping_time_period",
-						"processed_exist_age_max",
+						raw,
+						json,
+						processed,
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 		
 		assertEquals("Storage bean enabled", storage_bean.enabled(), true);
 		assertEquals("Storage bean service_name", storage_bean.service_name(), "service_name");
-		assertTrue("Storage bean raw enabled", storage_bean.raw_enabled());
-		assertFalse("Storage bean json enabled", storage_bean.json_enabled());
-		assertEquals("Storage bean processed enabled", null, storage_bean.processed_enabled());
-		assertEquals("Storage bean raw_grouping_time_period", storage_bean.raw_grouping_time_period(), "raw_grouping_time_period");
-		assertEquals("Storage bean json_grouping_time_period", storage_bean.json_grouping_time_period(), "json_grouping_time_period");
-		assertEquals("Storage bean processed_grouping_time_period", storage_bean.processed_grouping_time_period(), "processed_grouping_time_period");
-		assertEquals("Storage bean raw_exist_age_max", storage_bean.raw_exist_age_max(), "raw_exist_age_max");
-		assertEquals("Storage bean json_exist_age_max", storage_bean.json_exist_age_max(), "json_exist_age_max");
-		assertEquals("Storage bean processed_exist_age_max", storage_bean.processed_exist_age_max(), "processed_exist_age_max");
+		assertTrue("Storage bean raw enabled", storage_bean.raw().enabled());
+		assertFalse("Storage bean json enabled", storage_bean.json().enabled());
+		assertEquals("Storage bean processed enabled", null, storage_bean.processed().enabled());
+		assertEquals("Storage bean raw_grouping_time_period", storage_bean.raw().grouping_time_period(), "raw_grouping_time_period");
+		assertEquals("Storage bean json_grouping_time_period", storage_bean.json().grouping_time_period(), "json_grouping_time_period");
+		assertEquals("Storage bean processed_grouping_time_period", storage_bean.processed().grouping_time_period(), "processed_grouping_time_period");
+		assertEquals("Storage bean raw_exist_age_max", storage_bean.raw().exist_age_max(), "raw_exist_age_max");
+		assertEquals("Storage bean json_exist_age_max", storage_bean.json().exist_age_max(), "json_exist_age_max");
+		assertEquals("Storage bean processed_exist_age_max", storage_bean.processed().exist_age_max(), "processed_exist_age_max");
+		assertEquals("Storage bean raw codec", storage_bean.raw().codec(), "raw_codec");
+		assertEquals("Storage bean json codec", storage_bean.json().codec(), null);
+		assertEquals("Storage bean processed codec", storage_bean.processed().codec(), "processed_codec");
 		assertEquals("Storage bean technology_override_schema", storage_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Document Bean

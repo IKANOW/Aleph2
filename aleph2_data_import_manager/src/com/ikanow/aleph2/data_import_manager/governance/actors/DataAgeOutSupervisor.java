@@ -109,10 +109,12 @@ public class DataAgeOutSupervisor extends UntypedActor {
 			
 			// Optimize the query the the age out manager is going to make
 			
-			writable_crud.optimizeQuery(Arrays.asList(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))).join();
-			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))).join();
-			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))).join();
-			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))).join();			
+			/**/
+			//TODO
+//			writable_crud.optimizeQuery(Arrays.asList(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))).join();
+//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))).join();
+//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))).join();
+//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))).join();			
 		}
 	}
 	
@@ -126,10 +128,12 @@ public class DataAgeOutSupervisor extends UntypedActor {
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
 			
 			final QueryComponent<DataBucketBean> query = CrudUtils.anyOf(DataBucketBean.class)
-					.withPresent(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))
-					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))
-					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))
-					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))
+					/**/
+					//TODO
+//					.withPresent(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))
+//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))
+//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))
+//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))
 					;
 
 			_bucket_crud.get().getObjectsBySpec(query).thenAccept(cursor -> {
