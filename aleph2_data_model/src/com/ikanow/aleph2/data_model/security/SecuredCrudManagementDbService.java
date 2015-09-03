@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.security;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -31,11 +32,14 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+
 
 public class SecuredCrudManagementDbService<T> implements IManagementCrudService<T> {
 	private static final Logger logger = LogManager.getLogger(SecuredCrudManagementDbService.class);
@@ -44,10 +48,14 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected AuthorizationBean authBean = null;
 	protected IServiceContext serviceContext = null;
 	protected ISecurityService securityService;
-	protected PermissionExtractor permissionExtractor;
+	protected static String systemUsername = System.getProperty("IKANOW_SECURITY_LOGIN", "test_user@ikanow.com");
+	protected static String systemPassword = System.getProperty("IKANOW_SECURITY_PWD", "not allowed!");
+
+	
+	protected PermissionExtractor permissionExtractor = new PermissionExtractor(); // default permission extractor;
 	//BiConsumer<? super Optional<T>, ? super Throwable> action = new
 	protected BiConsumer<? super Optional<T>, ? super Throwable> readCheckOne = (o, t) -> {
-			      //System.out.println(x);
+			      System.out.println("readCheckOne:"+o+",t="+t);
 			      //System.out.println(t);
 				if(o.isPresent()){
 					checkReadPermissions(o.get());
@@ -60,6 +68,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	      //System.out.println(t);
     	 // TODO wrap into secure cursor or can the cursor be re-used?
 	    };
+
+	private ISubject subject;
 
 	    public PermissionExtractor getPermissionExtractor() {
 		return permissionExtractor;
@@ -76,7 +86,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		this.serviceContext  = serviceContext;
 		this.authBean = authBean;
 		this.securityService = serviceContext.getSecurityService();
-
+		login();
 	}
 
 
@@ -155,7 +165,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 */
 	public ManagementFuture<Optional<T>> getObjectBySpec(QueryComponent<T> unique_spec) {
 		ManagementFuture<Optional<T>> mf = _delegate.getObjectBySpec(unique_spec); 
-		return (ManagementFuture<Optional<T>>) mf.whenComplete(readCheckOne);
+		return FutureUtils.createManagementFuture(mf.whenComplete(readCheckOne));
 	}
 
 	/**
@@ -378,11 +388,24 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @param new_object
 	 */
 	protected void checkReadPermissions(T new_object) {
-		String msg = "No read permissions for "+new_object;
 		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
-		
-		logger.error(msg);
-		throw new SecurityException(msg);		
+		if(!securityService.isPermitted(subject,permission)){
+			String msg = "No read permissions ("+permission+")for "+new_object.getClass();
+			logger.error(msg);
+			throw new SecurityException(msg);		
+			
+		}
+	}
+
+	/**
+	 * Login in as admin role,e.g. tomcat user
+	 * @return
+	 */
+	protected ISubject login() {
+		this.subject = securityService.login(systemUsername,systemPassword);			
+		securityService.releaseRunAs(subject);		
+		securityService.runAs(subject, Arrays.asList(authBean.getPrincipalName()));
+		return subject;
 	}
 
 }
