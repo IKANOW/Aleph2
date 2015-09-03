@@ -66,6 +66,11 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/analytics/temp/"; // (then name)
 	
+	/** The storage service  retains data from 0-3 different stages of the processing:
+	 *  "raw" - is the unprocessed data, "json" is the data after serialization but otherwise untouched (eg before enrichment/analytics), "processed" is post-processing/analytics
+	 */
+	public enum StorageStage { raw, json, processed };
+	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate
 	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none

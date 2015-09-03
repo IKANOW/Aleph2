@@ -24,7 +24,6 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
-import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.security.SecuredCrudManagementDbService;
 import com.ikanow.aleph2.data_model.utils.CrudServiceUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
