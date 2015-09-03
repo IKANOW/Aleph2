@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -189,6 +190,22 @@ public class Patterns {
 				return expression.get();
 			}
 		}
+		
+		/** For typical cases where the list of whens is (by construction) exhaustive, this method can be used to avoid
+		 *  having a spurious otherwise(--do something but it doesn't matter what because this will never get executed--) statement
+		 * @param assertion
+		 * @return the value (throws if it isn't met)
+		 */
+		public R otherwiseAssert(final Optional<String> assertion) {
+			return otherwise(() -> { throw new RuntimeException("Matcher.otherwiseAssert: " + assertion.orElse("")); });
+		}
+		/** For typical cases where the list of whens is (by construction) exhaustive, this method can be used to avoid
+		 *  having a spurious otherwise(--do something but it doesn't matter what because this will never get executed--) statement
+		 * @return the value (throws if it isn't met)
+		 */
+		public R otherwiseAssert() {
+			return otherwiseAssert(Optional.empty());
+		}
 	}
 
 	public static class ActionMatcher<G> {
@@ -317,5 +334,20 @@ public class Patterns {
 				expression.run();
 			}
 		}		
+		/** For typical cases where the list of whens is (by construction) exhaustive, this method can be used to avoid
+		 *  having a spurious otherwise(--do something but it doesn't matter what because this will never get executed--) statement
+		 * @param assertion
+		 * @return the value (throws if it isn't met)
+		 */
+		public void otherwiseAssert(final Optional<String> assertion) {
+			otherwise(() -> { throw new RuntimeException("ActionMatcher.otherwiseAssert: " + assertion.orElse("")); });
+		}
+		/** For typical cases where the list of whens is (by construction) exhaustive, this method can be used to avoid
+		 *  having a spurious otherwise(--do something but it doesn't matter what because this will never get executed--) statement
+		 * @return the value (throws if it isn't met)
+		 */
+		public void otherwiseAssert() {
+			otherwiseAssert(Optional.empty());
+		}
 	}	
 }

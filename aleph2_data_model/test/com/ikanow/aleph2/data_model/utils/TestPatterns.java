@@ -17,12 +17,15 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.Date;
+import java.util.Optional;
+
 import org.junit.Test;
 
 public class TestPatterns {
 
 	@Test
-	public void MatchReturnTest_ClassAndConditions() {
+	public void test_MatchReturnTest_ClassAndConditions() {
 		Object o = new Double(5.0); 
 		String s = Patterns.match(o).<String>andReturn()
 			.when(String.class, ss -> ss + ": string")
@@ -43,12 +46,41 @@ public class TestPatterns {
 		
 		assertEquals("Should pass condition and return accordingly", "1: class java.lang.Double", s);
 		
+		// Test the default otherwise cases:
+		
+		try {			
+			o = new Date(); 
+			s = Patterns.match(o).<String>andReturn()
+					.when(String.class, ss -> ss + ": string")
+					.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
+					.when(Double.class, d -> "2: " + d.getClass().toString())
+					.when(Boolean.class, b -> b ? "true" : "false")
+					.otherwiseAssert();
+			
+			fail("Should have asserted:" + s);
+		}
+		catch (Exception e) {}
+		try {			
+			o = new Date(); 
+			s = Patterns.match(o).<String>andReturn()
+					.when(String.class, ss -> ss + ": string")
+					.when(Double.class, t -> t < 4.0, d -> "1: " + d.getClass().toString())
+					.when(Double.class, d -> "2: " + d.getClass().toString())
+					.when(Boolean.class, b -> b ? "true" : "false")
+					.otherwiseAssert(Optional.of("OtherwiseTest"));
+			
+			fail("Should have asserted:" + s);
+		}
+		catch (Exception e) {
+			assertTrue("Should contain the assertion: " + e.getMessage(), e.getMessage().contains("OtherwiseTest"));
+		}
+		
 	}
 
 	private String _retVal;
 	
 	@Test
-	public void MatchActTest_ClassAndConditions() {
+	public void test_MatchActTest_ClassAndConditions() {
 		Object o = new Double(5.0); 
 		_retVal = null;
 		Patterns.match(o).andAct()
@@ -70,6 +102,32 @@ public class TestPatterns {
 			.otherwise(oo -> _retVal = ("unknown: " + oo));
 		
 		assertEquals("Should pass condition and assign accordingly", "1: class java.lang.Double", _retVal);
+		
+		try {
+			o = new Date(); 
+			Patterns.match(o).andAct()
+			.when(String.class, ss -> _retVal = (ss + ": string"))
+			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
+			.when(Double.class, d -> _retVal = ("2: " + d.getClass().toString()))
+			.when(Boolean.class, b -> _retVal = (b ? "true" : "false"))
+			.otherwiseAssert();			
+		}
+		catch (Exception e) {}
+		
+		try {
+			o = new Date(); 
+			Patterns.match(o).andAct()
+			.when(String.class, ss -> _retVal = (ss + ": string"))
+			.when(Double.class, t -> t < 4.0, d -> _retVal = ("1: " + d.getClass().toString()))
+			.when(Double.class, d -> _retVal = ("2: " + d.getClass().toString()))
+			.when(Boolean.class, b -> _retVal = (b ? "true" : "false"))
+			.otherwiseAssert(Optional.of("OtherwiseTest"));
+			
+			fail("Should have asserted");
+		}
+		catch (Exception e) {
+			assertTrue("Should contain the assertion: " + e.getMessage(), e.getMessage().contains("OtherwiseTest"));
+		}
 	}
 
 	@Test
