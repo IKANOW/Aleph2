@@ -76,6 +76,9 @@ public class DataAgeOutSupervisor extends UntypedActor {
 	final protected static MethodNamingHelper<DataSchemaBean> _schema_fields = BeanTemplateUtils.from(DataBucketBean.class).nested(DataBucketBean::data_schema, DataSchemaBean.class);
 	final protected static MethodNamingHelper<DataSchemaBean.TemporalSchemaBean> _time_fields = _schema_fields.nested(DataSchemaBean::temporal_schema, DataSchemaBean.TemporalSchemaBean.class);
 	final protected static MethodNamingHelper<DataSchemaBean.StorageSchemaBean> _disk_fields = _schema_fields.nested(DataSchemaBean::storage_schema, DataSchemaBean.StorageSchemaBean.class);
+	final protected static MethodNamingHelper<DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean> _disk_fields_raw = _disk_fields.nested(DataSchemaBean.StorageSchemaBean::raw, DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.class);
+	final protected static MethodNamingHelper<DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean> _disk_fields_json = _disk_fields.nested(DataSchemaBean.StorageSchemaBean::json, DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.class);
+	final protected static MethodNamingHelper<DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean> _disk_fields_px = _disk_fields.nested(DataSchemaBean.StorageSchemaBean::processed, DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.class);
 	
 	//TODO (ALEPH-40): Add DateAgeOut workers on a round robin message bus so we can distribute the load
 	
@@ -109,12 +112,10 @@ public class DataAgeOutSupervisor extends UntypedActor {
 			
 			// Optimize the query the the age out manager is going to make
 			
-			/**/
-			//TODO
-//			writable_crud.optimizeQuery(Arrays.asList(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))).join();
-//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))).join();
-//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))).join();
-//			writable_crud.optimizeQuery(Arrays.asList(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))).join();			
+			writable_crud.optimizeQuery(Arrays.asList(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))).join();
+			writable_crud.optimizeQuery(Arrays.asList(_disk_fields_raw.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))).join();
+			writable_crud.optimizeQuery(Arrays.asList(_disk_fields_json.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))).join();
+			writable_crud.optimizeQuery(Arrays.asList(_disk_fields_px.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))).join();
 		}
 	}
 	
@@ -128,12 +129,10 @@ public class DataAgeOutSupervisor extends UntypedActor {
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
 			
 			final QueryComponent<DataBucketBean> query = CrudUtils.anyOf(DataBucketBean.class)
-					/**/
-					//TODO
-//					.withPresent(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))
-//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::raw_exist_age_max))
-//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::json_exist_age_max))
-//					.withPresent(_disk_fields.field(DataSchemaBean.StorageSchemaBean::processed_exist_age_max))
+					.withPresent(_time_fields.field(DataSchemaBean.TemporalSchemaBean::exist_age_max))
+					.withPresent(_disk_fields_raw.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))
+					.withPresent(_disk_fields_json.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))
+					.withPresent(_disk_fields_px.field(DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean::exist_age_max))
 					;
 
 			_bucket_crud.get().getObjectsBySpec(query).thenAccept(cursor -> {
