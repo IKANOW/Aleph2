@@ -161,7 +161,7 @@ public class DataSchemaBean implements Serializable {
 				return exist_age_max;
 			}
 			/** Returns the compression/encoding codec to be used for this storage context, defaults to plain
-			 *  Currently supported: gz/gzip, sn/snappy, /frame.snappy 
+			 *  Currently supported: gz/gzip, sz/snappy, fr.sz/snappy_framed 
 			 * @return
 			 */
 			public String codec() {
