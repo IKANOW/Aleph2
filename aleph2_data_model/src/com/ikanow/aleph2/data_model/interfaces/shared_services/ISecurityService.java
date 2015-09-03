@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -124,9 +125,44 @@ public interface ISecurityService extends IUnderlyingService {
 	 */
 	public void clearPermission(String resourceName, String resourceIdentifier);
 
-	public void login(ISubject subject, Object credentials);
+	public ISubject login(String principalName, Object credentials);
 
 	public boolean hasRole(ISubject subject, String role);
 	
-	public Object isPermitted(ISubject subject, String string);
+	public boolean isPermitted(ISubject subject, String string);
+	
+    /**
+     * Allows this subject to 'run as' or 'assume' another identity indefinitely.  This can only be
+     * called when the {@code Subject} instance already has an identity (i.e. they are remembered from a previous
+     * log-in or they have authenticated during their current session).
+     * <p/>
+     * Some notes about {@code runAs}:
+     * <ul>
+     * <li>You can tell if a {@code Subject} is 'running as' another identity by calling the
+     * {@link #isRunAs() isRunAs()} method.</li>
+     * <li>If running as another identity, you can determine what the previous 'pre run as' identity
+     * was by calling the {@link #getPreviousPrincipals() getPreviousPrincipals()} method.</li>
+     * <li>When you want a {@code Subject} to stop running as another identity, you can return to its previous
+     * 'pre run as' identity by calling the {@link #releaseRunAs() releaseRunAs()} method.</li>
+     * </ul>
+     *
+     * @param principals the identity to 'run as', aka the identity to <em>assume</em> indefinitely.
+     * @throws NullPointerException  if the specified principals collection is {@code null} or empty.
+     * @throws IllegalStateException if this {@code Subject} does not yet have an identity of its own.
+     */
+	void runAs(ISubject subject,Collection<String> principals); 
+	
+    /**
+     * Releases the current 'run as' (assumed) identity and reverts back to the previous 'pre run as'
+     * identity that existed before {@code #runAs runAs} was called.
+     * <p/>
+     * This method returns 'run as' (assumed) identity being released or {@code null} if this {@code Subject} is not
+     * operating under an assumed identity.
+     *
+     * @return the 'run as' (assumed) identity being released or {@code null} if this {@code Subject} is not operating
+     *         under an assumed identity.
+     * @see #runAs
+     */
+    Collection<String> releaseRunAs(ISubject subject);
+
 }

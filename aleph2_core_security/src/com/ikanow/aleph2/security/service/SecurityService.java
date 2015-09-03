@@ -25,6 +25,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
 
@@ -155,10 +156,14 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 	@Override
-	public void login(ISubject subject, Object token) {
+	public ISubject login(String principalName, Object credentials) {
 		
-		((Subject)getSubject().getSubject()).login((AuthenticationToken)token);
-		
+		String password = (String)credentials;
+        UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
+
+        ISubject subject = getSubject(); 
+		((Subject)subject.getSubject()).login((AuthenticationToken)token);
+		return subject;
 	}
 
 	@Override
@@ -180,8 +185,24 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public Object isPermitted(ISubject subject, String string) {
+	public boolean isPermitted(ISubject subject, String string) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+
+	@Override
+	public void runAs(ISubject subject, Collection<String> principals) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public Collection<String> releaseRunAs(ISubject subject) {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+
 }

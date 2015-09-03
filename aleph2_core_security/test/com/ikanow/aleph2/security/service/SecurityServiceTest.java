@@ -71,25 +71,17 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	public void testAuthenticated() {
-		ISubject subject = securityService.getSubject();
-		assertNotNull(subject);
-        UsernamePasswordToken token = new UsernamePasswordToken("lonestarr", "vespa");
-        token.setRememberMe(true);
-        
-		securityService.login(subject,token);
+	public void testAuthenticated() {        
+        ISubject subject = securityService.login("lonestarr", "vespa");
 		assertEquals(true, subject.isAuthenticated());		
 	}
 	
 	@Test
 	public void testRole(){
-		ISubject subject = securityService.getSubject();
-		assertNotNull(subject);
 		String role = "schwartz";
-		assertEquals(false,securityService.hasRole(subject,role));
         UsernamePasswordToken token = new UsernamePasswordToken("lonestarr", "vespa");
         token.setRememberMe(true);
-		securityService.login(subject,token);
+        ISubject subject = securityService.login("lonestarr", "vespa");
 		assertEquals(true,securityService.hasRole(subject,role));
 		
 	}
@@ -97,13 +89,10 @@ public class SecurityServiceTest {
 	@Test
 	@Ignore
 	public void testSecondRealm(){
-		ISubject subject = securityService.getSubject();
-		assertNotNull(subject);
 		String role = "admin";
-		assertEquals(false,securityService.hasRole(subject,role));
-        UsernamePasswordToken token = new UsernamePasswordToken("trojan", "none");
+        UsernamePasswordToken token = new UsernamePasswordToken();
         token.setRememberMe(true);
-		securityService.login(subject,token);
+        ISubject subject = securityService.login("trojan", "none");
 		assertEquals(true,securityService.hasRole(subject,role));
 		
 	}

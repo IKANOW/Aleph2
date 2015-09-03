@@ -97,9 +97,9 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public void login(ISubject subject, Object credentials) {
+	public ISubject login(String principalName, Object credentials) {
 		// TODO Auto-generated method stub
-		
+		return null;		
 	}
 
 	@Override
@@ -109,8 +109,21 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public Object isPermitted(ISubject subject, String string) {
+	public boolean isPermitted(ISubject subject, String string) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void runAs(ISubject subject, Collection<String> principals) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Collection<String> releaseRunAs(ISubject subject) {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
 }
