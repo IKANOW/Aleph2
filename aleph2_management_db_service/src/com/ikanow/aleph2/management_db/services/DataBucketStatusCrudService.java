@@ -146,7 +146,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	public <T> Optional<T> getUnderlyingPlatformDriver(
 			Class<T> driver_class, Optional<String> driver_options) {
 		if (driver_class == ICrudService.class) {
-			return (Optional<T>) Optional.of(_underlying_data_bucket_status_db);
+			return (Optional<T>) Optional.of(_underlying_data_bucket_status_db.get());
 		}
 		else {
 			throw new RuntimeException("DataBucketCrudService.getUnderlyingPlatformDriver not supported");

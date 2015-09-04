@@ -476,7 +476,7 @@ public class ModuleUtils {
 		return i;
 	}
 	
-	/** For tests not using Guice, this has to be called
+	/** For tests not using Guice, this has to be called (or any modules that use the ModuleUtils.getAppInjector.thenRun() constructs will hang)
 	 */
 	public static void disableTestInjection() {
 		_test_mode.set(true); 
