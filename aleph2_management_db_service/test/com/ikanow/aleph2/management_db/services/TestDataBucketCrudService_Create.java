@@ -430,10 +430,10 @@ public class TestDataBucketCrudService_Create {
 			
 			//(delete the file path)
 			try {
-				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 			}
 			catch (Exception e) {} // (fine, dir prob dones't delete)
-			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 			
 			try {
 				final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_times);
@@ -506,10 +506,10 @@ public class TestDataBucketCrudService_Create {
 			
 			//(delete the file path)
 			try {
-				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 			}
 			catch (Exception e) {} // (fine, dir prob dones't delete)
-			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 			
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(invalid_times);
 			try {
@@ -543,10 +543,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 
 		// Try out the various ways in which it should be broken
 
@@ -590,10 +590,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		// 1) Check needs status object to be present
 		
@@ -962,10 +962,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -1023,10 +1023,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -1088,10 +1088,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -1181,10 +1181,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
@@ -1249,10 +1249,10 @@ public class TestDataBucketCrudService_Create {
 
 		//(delete the file path)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		
 		//(add the status object and try)
 		final DataBucketStatusBean status = 
