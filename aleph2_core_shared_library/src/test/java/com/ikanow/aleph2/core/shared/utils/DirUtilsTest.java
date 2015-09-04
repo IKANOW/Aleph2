@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
@@ -45,6 +46,9 @@ public class DirUtilsTest {
 	public void setupDependencies() throws Exception {
 		_temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
+		//delete everything for this test:
+		try { FileUtils.deleteDirectory(new File(_temp_dir+"/data/misc/")); } catch (Exception e) {}
+		
 		GlobalPropertiesBean globals = new GlobalPropertiesBean(_temp_dir, _temp_dir, _temp_dir, _temp_dir);
 		
 		// create folder structure if it does not exist for testing.
@@ -62,7 +66,7 @@ public class DirUtilsTest {
 	
 	@Test
 	public void test_findOneSubdirectory(){
-		Path start = new Path(_temp_dir+"/data/");
+		Path start = new Path(_temp_dir+"/data/misc/");
 		Path p = DirUtils.findOneSubdirectory(fileContext, start, "managed_bucket");
 		assertNotNull(p);
 
@@ -70,7 +74,7 @@ public class DirUtilsTest {
 
 	@Test
 	public void test_findAllSubdirectory(){
-		Path start = new Path(_temp_dir+"/data/");
+		Path start = new Path(_temp_dir+"/data/misc/");
 		
 		List<Path> paths = new ArrayList<Path>();
 		DirUtils.findAllSubdirectories(paths, fileContext, start, "managed_bucket",false);
