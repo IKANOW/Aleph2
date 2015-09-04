@@ -56,7 +56,9 @@ import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Patterns;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
@@ -74,9 +76,9 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	protected final IStorageService _storage_service;
 	protected final IManagementDbService _underlying_management_db;
 	
-	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
-	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_status_db;
-	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
+	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
+	protected final SetOnce<ICrudService<DataBucketStatusBean>> _underlying_data_bucket_status_db = new SetOnce<>();
+	protected final SetOnce<ICrudService<BucketActionRetryMessage>> _bucket_action_retry_store = new SetOnce<>();
 	
 	protected final ManagementDbActorContext _actor_context;
 	
@@ -87,13 +89,20 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	public DataBucketStatusCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
-		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
-		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
-		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
 		
+		ModuleUtils.getAppInjector().thenRun(() -> initialize());
+				
 		_storage_service = service_context.getStorageService();
 		
 		_actor_context = actor_context;
+	}
+	
+	/** Work around for Guice circular development issues
+	 */
+	protected void initialize() {
+		_underlying_data_bucket_db.set(_underlying_management_db.getDataBucketStore());
+		_underlying_data_bucket_status_db.set(_underlying_management_db.getDataBucketStatusStore());
+		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));		
 	}
 
 	/** User constructor, for wrapping
@@ -107,9 +116,9 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			)
 	{
 		_underlying_management_db = underlying_management_db;
-		_underlying_data_bucket_db = underlying_data_bucket_db;
-		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
-		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
+		_underlying_data_bucket_db.set(underlying_data_bucket_db);
+		_underlying_data_bucket_status_db.set(underlying_data_bucket_status_db);
+		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -117,7 +126,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public boolean deregisterOptimizedQuery(
 			List<String> ordered_field_list) {
-		return _underlying_data_bucket_status_db.deregisterOptimizedQuery(ordered_field_list);
+		return _underlying_data_bucket_status_db.get().deregisterOptimizedQuery(ordered_field_list);
 	}
 
 	/* (non-Javadoc)
@@ -125,7 +134,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	 */
 	@Override
 	public Optional<IBasicSearchService<DataBucketStatusBean>> getSearchService() {
-		return _underlying_data_bucket_status_db.getSearchService();
+		return _underlying_data_bucket_status_db.get().getSearchService();
 	}
 
 	
@@ -154,8 +163,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			Optional<ProjectBean> project_auth) {
 		return new DataBucketStatusCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_storage_service,
-				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth),
-				_underlying_data_bucket_status_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth)
+				_underlying_data_bucket_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth),
+				_underlying_data_bucket_status_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth)
 				);
 	}
 
@@ -181,7 +190,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		// Assuming the store works, then check the bucket
 		
 		final CompletableFuture<Supplier<Object>> ret_val = 
-				_underlying_data_bucket_status_db.storeObject(new_object);
+				_underlying_data_bucket_status_db.get().storeObject(new_object);
 		
 		return FutureUtils.createManagementFuture(ret_val, CompletableFuture.completedFuture(Collections.<BasicMessageBean>emptyList()));
 	}
@@ -219,7 +228,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public ManagementFuture<Boolean> optimizeQuery(
 			List<String> ordered_field_list) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.optimizeQuery(ordered_field_list));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().optimizeQuery(ordered_field_list));
 	}
 
 	/* (non-Javadoc)
@@ -228,7 +237,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public ManagementFuture<Optional<DataBucketStatusBean>> getObjectBySpec(
 			QueryComponent<DataBucketStatusBean> unique_spec) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectBySpec(unique_spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectBySpec(unique_spec));
 	}
 
 	/* (non-Javadoc)
@@ -238,7 +247,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	public ManagementFuture<Optional<DataBucketStatusBean>> getObjectBySpec(
 			QueryComponent<DataBucketStatusBean> unique_spec,
 			List<String> field_list, boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectBySpec(unique_spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -247,7 +256,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public ManagementFuture<Optional<DataBucketStatusBean>> getObjectById(
 			Object id) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectById(id));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectById(id));
 	}
 
 	/* (non-Javadoc)
@@ -257,7 +266,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	public ManagementFuture<Optional<DataBucketStatusBean>> getObjectById(
 			Object id, List<String> field_list,
 			boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectById(id, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectById(id, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -266,7 +275,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public ManagementFuture<Cursor<DataBucketStatusBean>> getObjectsBySpec(
 			QueryComponent<DataBucketStatusBean> spec) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
@@ -276,7 +285,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	public ManagementFuture<Cursor<DataBucketStatusBean>> getObjectsBySpec(
 			QueryComponent<DataBucketStatusBean> spec,
 			List<String> field_list, boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.getObjectsBySpec(spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().getObjectsBySpec(spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -285,7 +294,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Override
 	public ManagementFuture<Long> countObjectsBySpec(
 			QueryComponent<DataBucketStatusBean> spec) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.countObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().countObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
@@ -293,7 +302,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	 */
 	@Override
 	public ManagementFuture<Long> countObjects() {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.countObjects());
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_status_db.get().countObjects());
 	}
 
 	/* (non-Javadoc)
@@ -329,8 +338,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		// Now perform the update and based on the results we may need to send out instructions
 		// to any listening buckets
 
-		final CompletableFuture<Optional<DataBucketStatusBean>> update_reply = _underlying_data_bucket_status_db.
-			updateAndReturnObjectBySpec(unique_spec, Optional.of(false), update, Optional.of(false),
+		final CompletableFuture<Optional<DataBucketStatusBean>> update_reply = _underlying_data_bucket_status_db.get()
+			.updateAndReturnObjectBySpec(unique_spec, Optional.of(false), update, Optional.of(false),
 										 Arrays.asList(
 												 helper.field(DataBucketStatusBean::_id),
 												 helper.field(DataBucketStatusBean::suspended), 
@@ -349,7 +358,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 
 						// (note this handles suspending the bucket if no handlers are available)
 						return getOperationFuture(update_reply, sb -> sb.suspended(),
-								_underlying_data_bucket_db, _underlying_data_bucket_status_db, _actor_context, _bucket_action_retry_store
+								_underlying_data_bucket_db.get(), _underlying_data_bucket_status_db.get(), _actor_context, _bucket_action_retry_store.get()
 								);
 					}
 					else { // (this isn't an error, just nothing to do here)
@@ -368,7 +377,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 								sb -> { // (this predicate is slightly more complex)
 									return (null != sb.quarantined_until()) || (new Date().getTime() < sb.quarantined_until().getTime());
 								},
-								_underlying_data_bucket_db, _underlying_data_bucket_status_db, _actor_context, _bucket_action_retry_store
+								_underlying_data_bucket_db.get(), _underlying_data_bucket_status_db.get(), _actor_context, _bucket_action_retry_store.get()
 								);
 					}
 					else { // (this isn't an error, just nothing to do here)
@@ -403,7 +412,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		}
 		
 		final CompletableFuture<Cursor<DataBucketStatusBean>> affected_ids =
-				_underlying_data_bucket_status_db.getObjectsBySpec(spec, 
+				_underlying_data_bucket_status_db.get().getObjectsBySpec(spec, 
 						Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::_id)), true);
 		
 		try {
