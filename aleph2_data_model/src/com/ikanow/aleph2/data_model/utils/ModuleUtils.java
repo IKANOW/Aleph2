@@ -501,10 +501,16 @@ public class ModuleUtils {
 		T return_val = null;
 		
 		final Supplier<T> on_complete = () -> {
-			return application.either(app_clazz -> _app_injector.join().getInstance(app_clazz), app_obj -> {
-				_app_injector.join().injectMembers(app_obj);
-				return app_obj;
-			});
+			try {
+				return application.either(app_clazz -> _app_injector.join().getInstance(app_clazz), app_obj -> {
+					_app_injector.join().injectMembers(app_obj);
+					return app_obj;
+				});
+			}
+			catch (Throwable t) { // These will normally be guice errors so will break on wrap 
+				logger.error(ErrorUtils.getLongForm("ModuleUtils.initializeApplication.onComplete {0}", t));
+				throw t;
+			}				
 		};
 		
 		synchronized (ModuleUtils.class) {
