@@ -31,7 +31,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 public class SampleStorageService implements IStorageService {
 
 	@Override
-	public String getRootPath() {
+	public String getBucketRootPath() {
 		return null;
 	}
 
@@ -48,6 +48,11 @@ public class SampleStorageService implements IStorageService {
 
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
+		return null;
+	}
+
+	@Override
+	public String getRootPath() {
 		return null;
 	}
 }

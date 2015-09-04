@@ -81,8 +81,13 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.StorageSchemaBean schema, final DataBucketBean bucket);
 	
-	/** Returns the root path for all Aleph2 DB related activities
+	/** Returns the root path for all Aleph2 DB related activities (use getBucketRootPath for the root of all bucket directories) 
 	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
 	 */
 	String getRootPath();
+	
+	/** Returns the root path for all Aleph2 DB _bucket_ related activities (use getRootPath for the higher level) 
+	 * @return the root path, in a URI that is supported by the underlying file system (see getUnderlyingPlatformDriver)
+	 */
+	String getBucketRootPath();
 }

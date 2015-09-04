@@ -1136,7 +1136,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static void deleteFilePath(final DataBucketBean to_delete, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 		
-		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
+		final String bucket_root = storage_service.getBucketRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
 		
 		try (final FSDataOutputStream out = 
 				dfs.create(new Path(bucket_root + "/" + DELETE_TOUCH_FILE), EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)))
@@ -1150,7 +1150,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public static void removeBucketPath(final DataBucketBean to_delete, final IStorageService storage_service, Optional<String> extra_path) throws Exception
 	{ 
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-		final String bucket_root = storage_service.getRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
+		final String bucket_root = storage_service.getBucketRootPath() + "/" + to_delete.full_name() + IStorageService.BUCKET_SUFFIX;
 		dfs.delete(new Path(bucket_root + extra_path.map(s -> "/" + s).orElse("")), true);
 	}
 	
@@ -1163,7 +1163,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	public static boolean doesBucketPathExist(final DataBucketBean to_check, final IStorageService storage_service, final Optional<String> file) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-		final String bucket_root = storage_service.getRootPath() + "/" + to_check.full_name() + IStorageService.BUCKET_SUFFIX;
+		final String bucket_root = storage_service.getBucketRootPath() + "/" + to_check.full_name() + IStorageService.BUCKET_SUFFIX;
 		
 		try {
 			dfs.getFileStatus(new Path(bucket_root + file.map(s -> "/" + s).orElse("")));
@@ -1196,7 +1196,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
-		final String bucket_root = storage_service.getRootPath() + "/" + bucket.full_name();		
+		final String bucket_root = storage_service.getBucketRootPath() + "/" + bucket.full_name();		
 		
 		// Check if a "delete touch file is present, bail if so"
 		if (doesBucketPathExist(bucket, storage_service, Optional.of(DELETE_TOUCH_FILE))) {
