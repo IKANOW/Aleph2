@@ -631,7 +631,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, status_after.node_affinity().size());
 		assertEquals(true, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		assertEquals(valid_bucket.full_name(), status_after.bucket_path()); // (check has been normalized)
 		
@@ -901,16 +901,16 @@ public class TestDataBucketCrudService_Create {
 		
 		// Add a delete file:
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name()).mkdirs();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()).mkdirs();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").createNewFile();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").createNewFile();
 		}		
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 
-		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").exists());
+		assertTrue("file exists", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + File.separator + "managed_bucket" + File.separator + ".DELETED").exists());
 		
 		// OK now try inserting the bucket, should error:
 		
@@ -988,7 +988,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, status_after.node_affinity().size());
 		assertEquals(true, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 	
@@ -1049,7 +1049,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, status_after.node_affinity().size());
 		assertEquals(true, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + "/data/" + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 	
@@ -1115,7 +1115,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(1, status_after.node_affinity().size());
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) || status_after.node_affinity().contains(accepting_host2));
 		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		
 		// Check the "Confirmed" bucket fields match the bucket now
@@ -1208,7 +1208,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(2, status_after.node_affinity().size());
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
 		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + "/data/" +  valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		
 		// Check the "Confirmed" bucket fields match the bucket now
@@ -1285,7 +1285,7 @@ public class TestDataBucketCrudService_Create {
 		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) && status_after.node_affinity().contains(accepting_host2));
 		assertTrue("Check the node affinity is correct: ", !status_after.node_affinity().contains(streaming_host));
 		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 	}
 

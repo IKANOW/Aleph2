@@ -213,11 +213,11 @@ public class TestDataBucketCrudService_Delete {
 		
 		//(create a file path also)
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + IStorageService.BUCKET_SUFFIX));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.BUCKET_SUFFIX));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		try {
-			new File(System.getProperty("java.io.tmpdir") + File.separator +  bucket.full_name() + IStorageService.BUCKET_SUFFIX).mkdirs();
+			new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator +  bucket.full_name() + IStorageService.BUCKET_SUFFIX).mkdirs();
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		

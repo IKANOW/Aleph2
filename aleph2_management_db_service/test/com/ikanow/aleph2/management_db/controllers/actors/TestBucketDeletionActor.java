@@ -247,7 +247,7 @@ public class TestBucketDeletionActor {
 			assertEquals(1, _core_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
 			
 			// check file system not deleted:
-			assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + "/managed_bucket").exists());
+			assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + "/managed_bucket").exists());
 			
 			// check mock index not deleted:
 			assertEquals(0, _mock_index._handleBucketDeletionRequests.size());			
@@ -276,10 +276,10 @@ public class TestBucketDeletionActor {
 		//check system state afterwards
 		
 		// Full filesystem exists
-		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + "/managed_bucket").exists());
 		
 		// Data directories no longer exist
-		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
 		
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
@@ -343,10 +343,10 @@ public class TestBucketDeletionActor {
 		//check system state afterwards
 		
 		// Full filesystem exists
-		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + "/managed_bucket").exists());
+		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + "/managed_bucket").exists());
 		
 		// Data directories no longer exist
-		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
 		
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
@@ -440,7 +440,7 @@ public class TestBucketDeletionActor {
 		
 		// delete the existing path if present:
 		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + path));
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + path));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
@@ -453,7 +453,7 @@ public class TestBucketDeletionActor {
 		
 		if (create_file_path) {
 			DataBucketCrudService.createFilePaths(bucket, _service_context.getStorageService());
-			final String bucket_path = System.getProperty("java.io.tmpdir") + File.separator + bucket.full_name();
+			final String bucket_path = System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name();
 			assertTrue("The file path has been created", new File(bucket_path + "/managed_bucket").exists());
 			FileUtils.writeStringToFile(new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test"), "");
 			assertTrue("The extra file path has been created", new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
