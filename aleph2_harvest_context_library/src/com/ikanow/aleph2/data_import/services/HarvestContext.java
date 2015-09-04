@@ -47,6 +47,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -100,7 +101,11 @@ public class HarvestContext implements IHarvestContext {
 	@Inject protected IServiceContext _service_context;	
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
+	protected IStorageService _storage_service;
 	protected GlobalPropertiesBean _globals;
+	
+	protected Optional<IDataWriteService<String>> _crud_storage_service;
+	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_storage_service;	
 	
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
@@ -115,7 +120,11 @@ public class HarvestContext implements IHarvestContext {
 		_service_context = service_context;
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		_storage_service = service_context.getStorageService();
 		_globals = service_context.getGlobalProperties();
+		
+		_batch_storage_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
+		_crud_storage_service = Optional.empty();		
 	}
 
 	/** In-module constructor
@@ -156,6 +165,7 @@ public class HarvestContext implements IHarvestContext {
 				_service_context = to_clone._service_context;
 				_core_management_db = to_clone._core_management_db;
 				_distributed_services = to_clone._distributed_services;	
+				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
 			}
@@ -163,6 +173,7 @@ public class HarvestContext implements IHarvestContext {
 				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+				_storage_service = _service_context.getStorageService();
 				_globals = _service_context.getGlobalProperties();
 			}			
 			// Get bucket 
@@ -171,6 +182,15 @@ public class HarvestContext implements IHarvestContext {
 			_mutable_state.bucket.set(retrieve_bucket.get());
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.library_config.set(retrieve_library.get());
+			
+			_batch_storage_service = 
+					(_crud_storage_service = _storage_service.getDataService()
+												.flatMap(s -> 
+															s.getWritableDataService(String.class, retrieve_bucket.get(), 
+																Optional.of(IStorageService.StorageStage.json.toString()), Optional.empty()))
+					)
+					.flatMap(IDataWriteService::getBatchWriteSubservice)
+					.map(x -> (ICrudService.IBatchSubservice<String>) x);			
 			
 			static_instances.put(signature, this);
 		}
@@ -195,9 +215,17 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public void sendObjectToStreamingPipeline(
-			Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object) {		
-		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), 
-				object.either(JsonNode::toString, map -> _mapper.convertValue(map, JsonNode.class).toString()));
+			Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object) {
+				
+		final String obj_str =  object.either(JsonNode::toString, map -> _mapper.convertValue(map, JsonNode.class).toString());
+		
+		if (_batch_storage_service.isPresent()) {
+			_batch_storage_service.get().storeObject(obj_str);
+		}
+		else if (_crud_storage_service.isPresent()){ // (super slow)
+			_crud_storage_service.get().storeObject(obj_str);
+		}				
+		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), obj_str);
 	}
 
 	/* (non-Javadoc)

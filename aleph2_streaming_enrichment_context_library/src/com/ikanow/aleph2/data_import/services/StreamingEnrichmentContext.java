@@ -110,11 +110,14 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected ISearchIndexService _index_service;
+	protected IStorageService _storage_service;
 	protected GlobalPropertiesBean _globals;
 
 	// For writing objects out
 	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
 	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
+	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service;
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
 	
 	private static ConcurrentHashMap<String, StreamingEnrichmentContext> static_instances = new ConcurrentHashMap<>();
 	
@@ -128,7 +131,13 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();		
 		_index_service = service_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		_storage_service = service_context.getStorageService();
 		_globals = service_context.getGlobalProperties();
+		
+		_batch_index_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
+		_crud_index_service = Optional.empty();
+		_batch_storage_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
+		_crud_storage_service = Optional.empty();
 	}
 
 	/** In-module constructor
@@ -184,6 +193,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				_core_management_db = to_clone._core_management_db;
 				_distributed_services = to_clone._distributed_services;	
 				_index_service = to_clone._index_service;
+				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
 			}
@@ -193,6 +203,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
+				_storage_service = _service_context.getStorageService();
 				_globals = _service_context.getGlobalProperties();
 			}			
 			// Get bucket 
@@ -205,6 +216,15 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			_batch_index_service = 
 					(_crud_index_service = _index_service.getDataService()
 												.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
+					)
+					.flatMap(IDataWriteService::getBatchWriteSubservice)
+					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
+
+			_batch_storage_service = 
+					(_crud_storage_service = _storage_service.getDataService()
+												.flatMap(s -> 
+															s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), 
+																Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
 					)
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
 					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
@@ -397,6 +417,12 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		}
 		else if (_crud_index_service.isPresent()){ // (super slow)
 			_crud_index_service.get().storeObject(mutated_json);
+		}
+		if (_batch_storage_service.isPresent()) {
+			_batch_storage_service.get().storeObject(mutated_json);
+		}
+		else if (_crud_storage_service.isPresent()){ // (super slow)
+			_crud_storage_service.get().storeObject(mutated_json);
 		}
 		//(else nothing to do)
 	}
