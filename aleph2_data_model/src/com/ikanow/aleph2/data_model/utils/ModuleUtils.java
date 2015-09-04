@@ -476,6 +476,13 @@ public class ModuleUtils {
 		return i;
 	}
 	
+	/** For tests not using Guice, this has to be called
+	 */
+	public static void disableTestInjection() {
+		_test_mode.set(true); 
+		_test_injector.complete(null);
+	}
+	
 	// Some application level global state
 	private static AtomicBoolean _test_mode = new AtomicBoolean();
 	private enum GlobalGuiceState { idle, initializing, complete };

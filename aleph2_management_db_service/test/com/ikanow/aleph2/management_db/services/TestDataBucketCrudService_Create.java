@@ -63,6 +63,7 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
@@ -114,6 +115,7 @@ public class TestDataBucketCrudService_Create {
 	@SuppressWarnings("deprecation")
 	@Before
 	public void setup() throws Exception {
+		ModuleUtils.disableTestInjection();
 		
 		// Here's the setup that Guice normally gives you....
 		final String tmpdir = System.getProperty("java.io.tmpdir") + File.separator;
@@ -133,11 +135,12 @@ public class TestDataBucketCrudService_Create {
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _db_actor_context);
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);
 		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud, _db_actor_context);
+		
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
 		
-		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db;
-		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db;
-		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store;
+		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db.get();
+		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db.get();
+		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store.get();
 	}	
 	
 	@Test

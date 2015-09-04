@@ -78,6 +78,8 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
@@ -108,10 +110,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected final IStorageService _storage_service;	
 	protected final IManagementDbService _underlying_management_db;
 	
-	protected final ICrudService<DataBucketBean> _underlying_data_bucket_db;
-	protected final ICrudService<DataBucketStatusBean> _underlying_data_bucket_status_db;
-	protected final ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
-	protected final ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
+	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
+	protected final SetOnce<ICrudService<DataBucketStatusBean>> _underlying_data_bucket_status_db = new SetOnce<>();
+	protected final SetOnce<ICrudService<BucketActionRetryMessage>> _bucket_action_retry_store = new SetOnce<>();
+	protected final SetOnce<ICrudService<BucketDeletionMessage>> _bucket_deletion_queue = new SetOnce<>();
 	
 	protected final ManagementDbActorContext _actor_context;
 	protected final IServiceContext _service_context;
@@ -122,24 +124,31 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public DataBucketCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
-		
-		_underlying_data_bucket_db = _underlying_management_db.getDataBucketStore();
-		_underlying_data_bucket_status_db = _underlying_management_db.getDataBucketStatusStore();
-		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
-		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);
-		
+				
 		_storage_service = service_context.getStorageService();
 		
 		_actor_context = actor_context;
 		_service_context = service_context;
 		
+		ModuleUtils.getAppInjector().thenRun(() -> initialize());					
+	}
+	
+	/** Work around for Guice circular development issues
+	 */
+	protected void initialize() {
+		_underlying_data_bucket_db.set(_underlying_management_db.getDataBucketStore());
+		_underlying_data_bucket_status_db.set(_underlying_management_db.getDataBucketStatusStore());
+		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
+		_bucket_deletion_queue.set(_underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class));
+		
 		// Handle some simple optimization of the data bucket CRUD repo:
 		Executors.newSingleThreadExecutor().submit(() -> {
-			_underlying_data_bucket_db.optimizeQuery(Arrays.asList(
+			_underlying_data_bucket_db.get().optimizeQuery(Arrays.asList(
 					BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::full_name)));
 		});		
+		
 	}
-
+	
 	/** User constructor, for wrapping
 	 */
 	public DataBucketCrudService(final IServiceContext service_context,
@@ -151,10 +160,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		_service_context = service_context;
 		_underlying_management_db = underlying_management_db;
-		_underlying_data_bucket_db = underlying_data_bucket_db;
-		_underlying_data_bucket_status_db = underlying_data_bucket_status_db;
-		_bucket_action_retry_store = _underlying_management_db.getRetryStore(BucketActionRetryMessage.class);
-		_bucket_deletion_queue = _underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class);		
+		_underlying_data_bucket_db.set(underlying_data_bucket_db);
+		_underlying_data_bucket_status_db.set(underlying_data_bucket_status_db);
+		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
+		_bucket_deletion_queue.set(_underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class));		
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -169,8 +178,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		return new DataBucketCrudService(_service_context, _underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_storage_service,
-				_underlying_data_bucket_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth),
-				_underlying_data_bucket_status_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth)
+				_underlying_data_bucket_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth),
+				_underlying_data_bucket_status_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth)
 				);
 	}
 
@@ -185,7 +194,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final Optional<DataBucketBean> old_bucket = Lambdas.get(() -> {
 				try {
 					if (replace_if_present && (null != new_object._id())) {
-						return _underlying_data_bucket_db.getObjectById(new_object._id()).get();
+						return _underlying_data_bucket_db.get().getObjectById(new_object._id()).get();
 					}
 					else {
 						return Optional.<DataBucketBean>empty();
@@ -233,7 +242,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// (obviously need to block here until we're sure..)
 		
 		final CompletableFuture<Optional<DataBucketStatusBean>> corresponding_status = 
-				_underlying_data_bucket_status_db.getObjectById(new_object._id(), 
+				_underlying_data_bucket_status_db.get().getObjectById(new_object._id(), 
 						Arrays.asList(helper.field(DataBucketStatusBean::_id), 
 										helper.field(DataBucketStatusBean::node_affinity), 
 										helper.field(DataBucketStatusBean::confirmed_master_enrichment_type), 
@@ -275,19 +284,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// OK if the bucket is validated we can store it (and create a status object)
 				
-		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.storeObject(new_object, replace_if_present);
+		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.get().storeObject(new_object, replace_if_present);
 
 		// Get the status and then decide whether to broadcast out the new/update message
 		
 		final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
 		final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
-				? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db, _bucket_action_retry_store)
-				: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db, _actor_context);
+				? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db.get(), _bucket_action_retry_store.get())
+				: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db.get(), _actor_context);
 			
 		// Update the status depending on the results of the management channels
 				
 		return FutureUtils.createManagementFuture(ret_val,
-				MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db)					
+				MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db.get())					
 									.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
 	}
 
@@ -316,21 +325,21 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#optimizeQuery(java.util.List)
 	 */
 	public ManagementFuture<Boolean> optimizeQuery(final List<String> ordered_field_list) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.optimizeQuery(ordered_field_list));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().optimizeQuery(ordered_field_list));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deregisterOptimizedQuery(java.util.List)
 	 */
 	public boolean deregisterOptimizedQuery(final List<String> ordered_field_list) {
-		return _underlying_data_bucket_db.deregisterOptimizedQuery(ordered_field_list);
+		return _underlying_data_bucket_db.get().deregisterOptimizedQuery(ordered_field_list);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
 	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(final QueryComponent<DataBucketBean> unique_spec) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectBySpec(unique_spec));
 	}
 
 	/* (non-Javadoc)
@@ -339,14 +348,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public ManagementFuture<Optional<DataBucketBean>> getObjectBySpec(
 			final QueryComponent<DataBucketBean> unique_spec,
 			final List<String> field_list, final boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectBySpec(unique_spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getObjectById(java.lang.Object)
 	 */
 	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final Object id) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectById(id));
 	}
 
 	/* (non-Javadoc)
@@ -354,7 +363,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	public ManagementFuture<Optional<DataBucketBean>> getObjectById(final Object id,
 			final List<String> field_list, final boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectById(id, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectById(id, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -363,7 +372,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	public ManagementFuture<ICrudService.Cursor<DataBucketBean>> getObjectsBySpec(
 			final QueryComponent<DataBucketBean> spec)
 	{
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
@@ -373,28 +382,28 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final QueryComponent<DataBucketBean> spec, final List<String> field_list,
 			final boolean include)
 	{
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.getObjectsBySpec(spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().getObjectsBySpec(spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
 	public ManagementFuture<Long> countObjectsBySpec(final QueryComponent<DataBucketBean> spec) {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().countObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#countObjects()
 	 */
 	public ManagementFuture<Long> countObjects() {
-		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.countObjects());
+		return FutureUtils.createManagementFuture(_underlying_data_bucket_db.get().countObjects());
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectById(java.lang.Object)
 	 */
 	public ManagementFuture<Boolean> deleteObjectById(final Object id) {		
-		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectById(id);		
+		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.get().getObjectById(id);		
 		try {
 			if (result.get().isPresent()) {
 				return this.deleteBucket(result.get().get());
@@ -414,7 +423,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#deleteObjectBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
 	public ManagementFuture<Boolean> deleteObjectBySpec(final QueryComponent<DataBucketBean> unique_spec) {
-		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.getObjectBySpec(unique_spec);
+		final CompletableFuture<Optional<DataBucketBean>> result = _underlying_data_bucket_db.get().getObjectBySpec(unique_spec);
 		try {
 			if (result.get().isPresent()) {
 				return this.deleteBucket(result.get().get());
@@ -437,7 +446,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Need to do these one by one:
 
-		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.getObjectsBySpec(spec);
+		final CompletableFuture<Cursor<DataBucketBean>> to_delete = _underlying_data_bucket_db.get().getObjectsBySpec(spec);
 		
 		try {
 			return MgmtCrudUtils.applyCrudPredicate(to_delete, this::deleteBucket)._1();
@@ -460,10 +469,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			
 			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
 			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));
-			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.storeObject(new BucketDeletionMessage(to_delete, to_delete_date, false));
+			final CompletableFuture<Supplier<Object>> enqueue_delete = this._bucket_deletion_queue.get().storeObject(new BucketDeletionMessage(to_delete, to_delete_date, false));
 			
 			final CompletableFuture<Boolean> delete_reply = enqueue_delete
-																.thenCompose(__ -> _underlying_data_bucket_db.deleteObjectById(to_delete._id()));
+																.thenCompose(__ -> _underlying_data_bucket_db.get().deleteObjectById(to_delete._id()));
 
 			return FutureUtils.denestManagementFuture(delete_reply
 				.thenCompose(del_reply -> {		
@@ -473,7 +482,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					else { //Get the status and delete it 
 						
 						final CompletableFuture<Optional<DataBucketStatusBean>> future_status_bean =
-								_underlying_data_bucket_status_db.updateAndReturnObjectBySpec(
+								_underlying_data_bucket_status_db.get().updateAndReturnObjectBySpec(
 										CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, to_delete._id()),
 										Optional.empty(), CrudUtils.update(DataBucketStatusBean.class).deleteObject(), Optional.of(true), Collections.emptyList(), false);
 						
@@ -495,7 +504,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						
 						final CompletableFuture<Collection<BasicMessageBean>> management_results =
 							MgmtCrudUtils.applyRetriableManagementOperation(to_delete, 
-									_actor_context, _bucket_action_retry_store, 
+									_actor_context, _bucket_action_retry_store.get(), 
 									delete_message, source -> {
 										return new BucketActionMessage.DeleteBucketActionMessage(
 												delete_message.bucket(),
@@ -532,7 +541,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService#getSearchService()
 	 */
 	public Optional<IBasicSearchService<DataBucketBean>> getSearchService() {
-		return _underlying_data_bucket_db.getSearchService();
+		return _underlying_data_bucket_db.get().getSearchService();
 	}
 
 	/* (non-Javadoc)
@@ -636,7 +645,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			}
 			
 			if (!old_version.isPresent()) { // (create not update)
-				if (this._underlying_data_bucket_db.countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
+				if (this._underlying_data_bucket_db.get().countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
 																	.when(DataBucketBean::full_name, bucket.full_name())
 																).get() > 0)
 				{			
@@ -944,7 +953,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final MethodNamingHelper<DataBucketBean> helper = BeanTemplateUtils.from(DataBucketBean.class);
 		final String bucket_full_name = normalizeBucketPath(bucket.full_name(), true);
 
-		return this._underlying_data_bucket_db.getObjectsBySpec(getPathQuery(bucket_full_name), 
+		return this._underlying_data_bucket_db.get().getObjectsBySpec(getPathQuery(bucket_full_name), 
 				Arrays.asList(helper.field(DataBucketBean::full_name), helper.field(DataBucketBean::access_rights)), true)
 				.thenApply(cursor -> {
 					return StreamSupport.stream(cursor.spliterator(), false)
