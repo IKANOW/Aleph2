@@ -1281,11 +1281,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					// PROCESSED
 					if (null != bean.data_schema().storage_schema().processed()) {
 						if (null != bean.data_schema().storage_schema().processed().grouping_time_period()) {
-							TimeUtils.getTimePeriod(bean.data_schema().storage_schema().raw().grouping_time_period())
+							TimeUtils.getTimePeriod(bean.data_schema().storage_schema().processed().grouping_time_period())
 								.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.processed.grouping_time_period", s)));						
 						}
 						if (null != bean.data_schema().storage_schema().processed().exist_age_max()) {
-							TimeUtils.getDuration(bean.data_schema().storage_schema().json().exist_age_max())
+							TimeUtils.getDuration(bean.data_schema().storage_schema().processed().exist_age_max())
 								.f().forEach(s -> errs.add(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_INVALID_TIME, bean.full_name(), "data_schema.storage_schema.processed.exist_age_max", s)));						
 						}
 					}
