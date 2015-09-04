@@ -181,13 +181,11 @@ public class DataImportManagerModule {
 			app.start();
 		}
 		catch (Throwable e) {
-			_logger.error(ErrorUtils.get("Exception reached main(): {0}", e));
+			_logger.error(ErrorUtils.getLongForm("Exception reached main(): {0}", e));
 			try {
-				System.out.println("Got all the way to main");
 				e.printStackTrace();
 			}
 			catch (Exception e2) { // the exception failed!
-				System.out.println(ErrorUtils.getLongForm("Got all the way to main: {0}", e));
 			}
 			System.exit(-1);
 		}
