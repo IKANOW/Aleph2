@@ -43,9 +43,11 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 
 public class SharedLibraryCrudService implements IManagementCrudService<SharedLibraryBean> {
 	@SuppressWarnings("unused")
@@ -53,7 +55,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 
 	protected final IStorageService _storage_service;	
 	protected final IManagementDbService _underlying_management_db;
-	protected final ICrudService<SharedLibraryBean> _underlying_library_db;
+	protected final SetOnce<ICrudService<SharedLibraryBean>> _underlying_library_db = new SetOnce<>();
 	
 	/** Guice invoked constructor
 	 */
@@ -61,13 +63,16 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public SharedLibraryCrudService(final IServiceContext service_context) {
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
-		_underlying_library_db = _underlying_management_db.getSharedLibraryStore();
-		
-		// Handle some simple optimization of the data bucket CRUD repo:
-		Executors.newSingleThreadExecutor().submit(() -> {
-			_underlying_library_db.optimizeQuery(Arrays.asList(
-					BeanTemplateUtils.from(SharedLibraryBean.class).field(SharedLibraryBean::path_name)));
-		});				
+		ModuleUtils.getAppInjector().thenRun(() -> {
+			// (work around for guice initialization)
+			_underlying_library_db.set(_underlying_management_db.getSharedLibraryStore());
+			
+			// Handle some simple optimization of the data bucket CRUD repo:
+			Executors.newSingleThreadExecutor().submit(() -> {
+				_underlying_library_db.get().optimizeQuery(Arrays.asList(
+						BeanTemplateUtils.from(SharedLibraryBean.class).field(SharedLibraryBean::path_name)));
+			});				
+		});		
 	}
 	
 	/** User constructor, for wrapping
@@ -79,7 +84,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	{
 		_underlying_management_db = underlying_management_db;
 		_storage_service = storage_service;
-		_underlying_library_db = underlying_library_db;
+		_underlying_library_db.set(underlying_library_db);
 	}
 	
 	
@@ -89,7 +94,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public boolean deregisterOptimizedQuery(
 			List<String> ordered_field_list) {
-		return _underlying_library_db.deregisterOptimizedQuery(ordered_field_list);
+		return _underlying_library_db.get().deregisterOptimizedQuery(ordered_field_list);
 	}
 
 	/* (non-Javadoc)
@@ -97,7 +102,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	 */
 	@Override
 	public Optional<IBasicSearchService<SharedLibraryBean>> getSearchService() {
-		return _underlying_library_db.getSearchService();
+		return _underlying_library_db.get().getSearchService();
 	}
 
 	/* (non-Javadoc)
@@ -125,7 +130,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			Optional<ProjectBean> project_auth) {
 		return new SharedLibraryCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
 				_storage_service,
-				_underlying_library_db.getFilteredRepo(authorization_fieldname, client_auth, project_auth));
+				_underlying_library_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth));
 	}
 
 	/* (non-Javadoc)
@@ -135,7 +140,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Supplier<Object>> storeObject(
 			SharedLibraryBean new_object, boolean replace_if_present) {
 		//TODO (ALEPH-19): convert this into an update, ie get old version, compare and overwrite
-		return FutureUtils.createManagementFuture(_underlying_library_db.storeObject(new_object, replace_if_present));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().storeObject(new_object, replace_if_present));
 	}
 
 	/* (non-Javadoc)
@@ -157,7 +162,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 		if (continue_on_error) {
 			throw new RuntimeException("Can't call storeObjects with continue_on_error: true, use update instead");
 		}
-		return FutureUtils.createManagementFuture(_underlying_library_db.storeObjects(new_objects, continue_on_error));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().storeObjects(new_objects, continue_on_error));
 	}
 
 	/* (non-Javadoc)
@@ -175,7 +180,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public ManagementFuture<Boolean> optimizeQuery(
 			List<String> ordered_field_list) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.optimizeQuery(ordered_field_list));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().optimizeQuery(ordered_field_list));
 	}
 
 	/* (non-Javadoc)
@@ -184,7 +189,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectBySpec(unique_spec));
 	}
 
 	/* (non-Javadoc)
@@ -194,7 +199,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec,
 			List<String> field_list, boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectBySpec(unique_spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectBySpec(unique_spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -203,7 +208,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
 			Object id) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectById(id));
 	}
 
 	/* (non-Javadoc)
@@ -213,7 +218,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Optional<SharedLibraryBean>> getObjectById(
 			Object id, List<String> field_list,
 			boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectById(id, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectById(id, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -222,7 +227,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
@@ -232,7 +237,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Cursor<SharedLibraryBean>> getObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec,
 			List<String> field_list, boolean include) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.getObjectsBySpec(spec, field_list, include));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().getObjectsBySpec(spec, field_list, include));
 	}
 
 	/* (non-Javadoc)
@@ -241,7 +246,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Override
 	public ManagementFuture<Long> countObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
-		return FutureUtils.createManagementFuture(_underlying_library_db.countObjectsBySpec(spec));
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().countObjectsBySpec(spec));
 	}
 
 	/* (non-Javadoc)
@@ -249,7 +254,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	 */
 	@Override
 	public ManagementFuture<Long> countObjects() {
-		return FutureUtils.createManagementFuture(_underlying_library_db.countObjects());
+		return FutureUtils.createManagementFuture(_underlying_library_db.get().countObjects());
 	}
 
 	/* (non-Javadoc)
@@ -318,7 +323,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Boolean> deleteObjectBySpec(
 			QueryComponent<SharedLibraryBean> unique_spec) {		
 		return FutureUtils.createManagementFuture(
-			_underlying_library_db.getObjectBySpec(unique_spec).thenCompose(lib -> {
+			_underlying_library_db.get().getObjectBySpec(unique_spec).thenCompose(lib -> {
 				if (lib.isPresent()) {
 					try {
 						final FileContext fs = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
@@ -329,7 +334,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 						//DEBUG
 						//e.printStackTrace();
 					}
-					return _underlying_library_db.deleteObjectBySpec(unique_spec);
+					return _underlying_library_db.get().deleteObjectBySpec(unique_spec);
 				}
 				else {
 					return CompletableFuture.completedFuture(false);

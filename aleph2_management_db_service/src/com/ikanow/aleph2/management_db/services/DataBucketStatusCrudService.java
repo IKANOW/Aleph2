@@ -90,11 +90,11 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	{
 		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
 		
-		ModuleUtils.getAppInjector().thenRun(() -> initialize());
-				
 		_storage_service = service_context.getStorageService();
 		
 		_actor_context = actor_context;
+		
+		ModuleUtils.getAppInjector().thenRun(() -> initialize());			
 	}
 	
 	/** Work around for Guice circular development issues
