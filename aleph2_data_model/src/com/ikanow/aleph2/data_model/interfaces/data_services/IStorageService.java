@@ -50,6 +50,10 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 *  (Batch only)
 	 */
 	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/";
+	/** This suffix is where data is placed if there are no temporal considerations
+	 */
+	public static final String NO_TIME_SUFFIX = "/all_time/";
+	
 	
 	/** For non JSON input files (CSV/binary), the data immediately after it has been converted to JSON but before any other enrichment has occurred  
 	 *  (It is not expected that this directory will be commonly used)
