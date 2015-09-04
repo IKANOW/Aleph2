@@ -16,9 +16,11 @@
 package com.ikanow.aleph2.data_model.security;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
@@ -51,26 +53,30 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected static String systemUsername = System.getProperty("IKANOW_SECURITY_LOGIN", "test_user@ikanow.com");
 	protected static String systemPassword = System.getProperty("IKANOW_SECURITY_PWD", "not allowed!");
 
+	private ISubject subject; // system user's subject
 	
 	protected PermissionExtractor permissionExtractor = new PermissionExtractor(); // default permission extractor;
 	//BiConsumer<? super Optional<T>, ? super Throwable> action = new
 	protected BiConsumer<? super Optional<T>, ? super Throwable> readCheckOne = (o, t) -> {
-			      System.out.println("readCheckOne:"+o+",t="+t);
+			      logger.debug("readCheckOne:"+o+",t="+t);
 			      //System.out.println(t);
 				if(o.isPresent()){
-					checkReadPermissions(o.get());
+					checkReadPermissions(o.get(),true);
 				}			     
 			    };
 	
 
      protected BiConsumer<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>, ? super Throwable> readCheckMany = (c, t) -> {
-	      //System.out.println(c);
+	      logger.debug("readCheckMany:"+c+",t="+t);
 	      //System.out.println(t);
-    	 // TODO wrap into secure cursor or can the cursor be re-used?
+			//checkReadPermissions(c);
+	      
 	    };
 
-	private ISubject subject;
-
+		Function<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>,? extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> convertCursor = (c)->{
+			return new SecuredCursor<T>(c);
+		};
+		
 	    public PermissionExtractor getPermissionExtractor() {
 		return permissionExtractor;
 	}
@@ -215,9 +221,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#getObjectsBySpec(com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent)
 	 */
 	public ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> getObjectsBySpec(QueryComponent<T> spec) {
-		// TODO
-		ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> mf = _delegate.getObjectsBySpec(spec); 
-		return (ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>>) mf.whenComplete(readCheckMany);		
+		ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> mf = _delegate.getObjectsBySpec(spec);		
+		return FutureUtils.createManagementFuture(mf.thenApply(convertCursor));
 	}
 
 	/**
@@ -230,7 +235,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 */
 	public ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> getObjectsBySpec(
 			QueryComponent<T> spec, List<String> field_list, boolean include) {
-		return _delegate.getObjectsBySpec(spec, field_list, include);
+		ManagementFuture<com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> mf = _delegate.getObjectsBySpec(spec, field_list, include);		
+		return FutureUtils.createManagementFuture(mf.thenApply(convertCursor));
 	}
 
 	/**
@@ -387,14 +393,16 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * Read permissions are the default permissions. 
 	 * @param new_object
 	 */
-	protected void checkReadPermissions(T new_object) {
+	protected boolean checkReadPermissions(Object new_object, boolean throwOrReturn) {
 		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
-		if(!securityService.isPermitted(subject,permission)){
-			String msg = "No read permissions ("+permission+")for "+new_object.getClass();
+		
+		boolean permitted = securityService.isPermitted(subject,permission); 
+		if(!permitted && throwOrReturn){
+			String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permission+")for "+new_object.getClass();
 			logger.error(msg);
-			throw new SecurityException(msg);		
-			
+			throw new SecurityException(msg);					
 		}
+		return permitted;
 	}
 
 	/**
@@ -408,4 +416,68 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		return subject;
 	}
 
+	
+	/**
+	 * This class is wrapping the crud cursor and additionally performs security checks.
+	 * @author jfreydank
+	 *
+	 */
+	protected class SecuredCursor<T> extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>{
+		
+		private com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T> delegate;
+
+		public SecuredCursor(com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T> delegate){
+			this.delegate = delegate;
+		}
+		
+		@Override
+		public Iterator<T> iterator() {
+			return new SecureIterator(delegate.iterator());
+		}
+
+		@Override
+		public void close() throws Exception {
+			delegate.close();
+			
+		}
+
+		@Override
+		public long count() {
+			// TODO
+			return delegate.count();
+		}
+		
+		protected class SecureIterator implements Iterator<T>{
+			
+			private Iterator<T> itDelegate;
+			private T nextValid = null;
+			
+			public SecureIterator(Iterator<T> itDelegate){
+				this.itDelegate = itDelegate;
+			}
+
+			@Override
+			public boolean hasNext() {
+				while(itDelegate.hasNext()){
+					T nextCandidate = itDelegate.next();
+					if(checkReadPermissions(nextCandidate,false)){
+						// found next one with
+						nextValid = nextCandidate;
+						break;
+					}
+					
+				} // while
+				
+				return nextValid!=null;
+			}
+
+			@Override
+			public T next() {
+				T n = nextValid;
+				// reset nextValid, cannot be retrieved twice
+				nextValid = null;
+				return n;							
+			}
+		}
+	} // cursor
 }
