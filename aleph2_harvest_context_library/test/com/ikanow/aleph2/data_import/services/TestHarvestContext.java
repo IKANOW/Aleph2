@@ -246,7 +246,12 @@ public class TestHarvestContext {
 			assertTrue("Finds some libraries", !lib_paths.isEmpty());
 			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
 			
-			assertTrue("Can find the test JAR", lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_test_file_locations")));
+			assertTrue("Can find the test JAR or the data model: " +
+							lib_paths.stream().collect(Collectors.joining(";")),
+						lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_test_file_locations"))
+						||
+						lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_data_model"))
+					);
 			
 			// Now get the various shared libs
 
