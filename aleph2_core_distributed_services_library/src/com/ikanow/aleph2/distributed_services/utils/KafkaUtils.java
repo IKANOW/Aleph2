@@ -32,6 +32,7 @@ import scala.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -103,8 +104,8 @@ public class KafkaUtils {
 	 * @param bucket_path
 	 * @return
 	 */
-	public static String bucketPathToTopicName(final String bucket_path) {
-		return bucket_path.replaceFirst("^/", "").replace("/", "-").replaceAll("[^a-zA-Z\\d._-]", "_");
+	public static String bucketPathToTopicName(final String bucket_path, final Optional<String> sub_channel) {
+		return BucketUtils.getUniqueSignature(bucket_path, sub_channel);
 	}
 	
 	/**

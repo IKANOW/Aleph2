@@ -127,7 +127,7 @@ public class TestPassthroughTopology {
 		
 		//PHASE4 : WRITE TO KAFKA
 		
-		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name()), "{\"test\":\"test1\"}");
+		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.empty()), "{\"test\":\"test1\"}");
 		_logger.info("******** Written to CDS");
 		
 		for (int i = 0; i < 60; ++i) {

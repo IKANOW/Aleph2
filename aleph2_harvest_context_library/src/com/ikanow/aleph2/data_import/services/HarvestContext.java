@@ -226,7 +226,7 @@ public class HarvestContext implements IHarvestContext {
 		else if (_crud_storage_service.isPresent()){ // (super slow)
 			_crud_storage_service.get().storeObject(obj_str);
 		}				
-		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name()), obj_str);
+		_distributed_services.produce(KafkaUtils.bucketPathToTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name(), Optional.empty()), obj_str);
 	}
 
 	/* (non-Javadoc)
