@@ -52,6 +52,7 @@ import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -237,15 +238,26 @@ public class StormControllerUtil {
 			}			
 		});
 				
-		jars_to_merge.addAll( underlying_artefacts.stream().map(artefact -> LiveInjector.findPathJar(artefact.getClass(), "")).filter(f -> !f.equals("")).collect(Collectors.toList()));
+		jars_to_merge.addAll( underlying_artefacts.stream()
+				.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
+				.filter(f -> !f.equals(""))
+				.collect(Collectors.toList()));
+		
 		if (jars_to_merge.isEmpty()) { // special case: no aleph2 libs found, this is almost certainly because this is being run from eclipse...
-			//... and LiveInjecter doesn't work on classes ... as a backup just copy everything from "<LOCAL_ALEPH2_HOME>/lib" into there 
-			jars_to_merge.addAll(
-					FileUtils.listFiles(new File(ModuleUtils.getGlobalProperties().local_root_dir() + "/lib/"), new String[] { "jar" }, false)
-						.stream()
-						.map(File::toString)
-						.collect(Collectors.toList())
-						);
+			final GlobalPropertiesBean globals = ModuleUtils.getGlobalProperties();
+			_logger.warn("WARNING: no library files found, probably because this is running from an IDE - instead taking all JARs from: " + (globals.local_root_dir() + "/lib/"));
+			try {
+				//... and LiveInjecter doesn't work on classes ... as a backup just copy everything from "<LOCAL_ALEPH2_HOME>/lib" into there 
+				jars_to_merge.addAll(
+						FileUtils.listFiles(new File(globals.local_root_dir() + "/lib/"), new String[] { "jar" }, false)
+							.stream()
+							.map(File::toString)
+							.collect(Collectors.toList())
+							);
+			}
+			catch (Exception e) {
+				throw new RuntimeException("In eclipse/IDE mode, directory not found: " + (globals.local_root_dir() + "/lib/"));
+			}
 		}
 		
 		//add in the user libs

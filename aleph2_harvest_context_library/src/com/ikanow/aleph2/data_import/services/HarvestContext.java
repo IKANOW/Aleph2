@@ -31,6 +31,7 @@ import java.util.stream.Collector;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -245,11 +246,12 @@ public class HarvestContext implements IHarvestContext {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			// This very JAR			
 			final String this_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(this.getClass(), _globals.local_root_dir() + "/lib/aleph2_harvest_context_library.jar");	
+				return LiveInjector.findPathJar(this.getClass(), "");	
 			});
+			
 			// Data model			
 			final String data_model_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(_service_context.getClass(), _globals.local_root_dir() + "/lib/aleph2_data_model.jar");	
+				return LiveInjector.findPathJar(_service_context.getClass(), "");	
 			});
 			
 			// Libraries associated with services:
@@ -259,7 +261,6 @@ public class HarvestContext implements IHarvestContext {
 						.filter(service -> service.isPresent())
 						.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
 						.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 						.collect(Collectors.toSet());
 			})
 			.orElse(Collections.emptySet());
@@ -274,17 +275,39 @@ public class HarvestContext implements IHarvestContext {
 							.stream()
 							.flatMap(x -> x.stream())
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
-						.filter(jar_path -> jar_path != null && !jar_path.isEmpty())
 							.collect(Collectors.toSet());
 			
 			// Combine them together
-			return ImmutableSet.<String>builder()
+			final List<String> ret_val = ImmutableSet.<String>builder()
 							.add(this_jar)
 							.add(data_model_jar)
 							.addAll(user_service_class_files)
 							.addAll(mandatory_service_class_files)
 							.build()
-							.asList();
+							.stream()
+							.filter(f -> (null != f) && !f.equals(""))
+							.collect(Collectors.toList())
+							;
+			
+			if (ret_val.isEmpty()) {
+				_logger.warn("WARNING: no library files found, probably because this is running from an IDE - instead taking all JARs from: " + (_globals.local_root_dir() + "/lib/"));
+			}
+			
+			return !ret_val.isEmpty()
+					? ret_val
+					:
+					// Special case: no aleph2 libs found, this is almost certainly because this is being run from eclipse...
+					Lambdas.get(() -> {
+						try {
+							return FileUtils.listFiles(new File(_globals.local_root_dir() + "/lib/"), new String[] { "jar" }, false)
+										.stream()
+										.map(File::toString)
+										.collect(Collectors.toList());
+						}
+						catch (Exception e) {
+							throw new RuntimeException("In eclipse/IDE mode, directory not found: " + (_globals.local_root_dir() + "/lib/"));
+						}
+					});
 		}
 		else {
 			throw new RuntimeException(ErrorUtils.TECHNOLOGY_NOT_MODULE);
