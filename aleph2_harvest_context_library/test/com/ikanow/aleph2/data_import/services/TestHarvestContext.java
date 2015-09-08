@@ -53,6 +53,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBe
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -313,7 +314,7 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_produceConsume() throws JsonProcessingException, IOException {
-		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/TEST/HARVEST/CONTEXT").done().get();
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
@@ -340,7 +341,7 @@ public class TestHarvestContext {
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
-		Iterator<String> iter = test_context._distributed_services.consume("TEST_HARVEST_CONTEXT");
+		Iterator<String> iter = test_context._distributed_services.consume(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()));
 		long count = 0;
 		while ( iter.hasNext() ) {
 			String msg = iter.next();
