@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
@@ -53,6 +54,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 
 /**
@@ -235,7 +237,16 @@ public class StormControllerUtil {
 			}			
 		});
 				
-		jars_to_merge.addAll( underlying_artefacts.stream().map( artefact -> LiveInjector.findPathJar(artefact.getClass(), "")).collect(Collectors.toList()));
+		jars_to_merge.addAll( underlying_artefacts.stream().map(artefact -> LiveInjector.findPathJar(artefact.getClass(), "")).filter(f -> !f.equals("")).collect(Collectors.toList()));
+		if (jars_to_merge.isEmpty()) { // special case: no aleph2 libs found, this is almost certainly because this is being run from eclipse...
+			//... and LiveInjecter doesn't work on classes ... as a backup just copy everything from "<LOCAL_ALEPH2_HOME>/lib" into there 
+			jars_to_merge.addAll(
+					FileUtils.listFiles(new File(ModuleUtils.getGlobalProperties().local_root_dir() + "/lib/"), new String[] { "jar" }, false)
+						.stream()
+						.map(File::toString)
+						.collect(Collectors.toList())
+						);
+		}
 		
 		//add in the user libs
 		jars_to_merge.addAll(user_lib_paths);
