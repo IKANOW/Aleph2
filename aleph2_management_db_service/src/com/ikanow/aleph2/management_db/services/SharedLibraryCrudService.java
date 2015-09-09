@@ -42,6 +42,7 @@ import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -265,7 +266,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			Object id,
 			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
-		return null;
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "SharedLibraryService.updateObjectById"));
 	}
 
 	/* (non-Javadoc)
@@ -277,7 +278,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			Optional<Boolean> upsert,
 			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
-		return null;
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "SharedLibraryService.updateObjectBySpec"));
 	}
 
 	/* (non-Javadoc)
@@ -289,7 +290,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			Optional<Boolean> upsert,
 			UpdateComponent<SharedLibraryBean> update) {
 		// TODO limited in what can change?
-		return null;
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "SharedLibraryService.updateObjectsBySpec"));
 	}
 
 	/* (non-Javadoc)
@@ -303,7 +304,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			Optional<Boolean> before_updated, List<String> field_list,
 			boolean include) {
 		// TODO limited in what can change?
-		return null;
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "SharedLibraryService.updateAndReturnObjectBySpec"));
 	}
 
 	/* (non-Javadoc)
@@ -349,7 +350,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	public ManagementFuture<Long> deleteObjectsBySpec(
 			QueryComponent<SharedLibraryBean> spec) {
 		// TODO also delete the file
-		return null;
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "SharedLibraryService.deleteObjectsBySpec"));
 	}
 
 	/* (non-Javadoc)
