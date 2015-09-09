@@ -108,6 +108,6 @@ public class ShiroSecurityTest {
         //all done - log out!
         currentUser.logout();
 
-        System.exit(0);
+        //System.exit(0);
     }
 }
