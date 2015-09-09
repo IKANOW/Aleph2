@@ -19,7 +19,7 @@
         <module>aleph2_data_analytics_manager</module>
         <module>aleph2_data_import_manager</module>
         <module>aleph2_management_db_service</module>
-<!--        <module>aleph2_test_data_services</module> -->
+        <module>aleph2_core_security</module>
     </modules>
 
     <build>
