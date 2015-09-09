@@ -711,4 +711,17 @@ public class TestBucketActionSupervisor {
 		assertEquals(false, reply.replies().get(1).success());		
 		assertTrue("2nd reply from harvest not stream", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER != reply.replies().get(1).command());		
 	}
+	
+	public static class TestActor extends UntypedActor {
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+		}		
+	}
+	
+	@Test
+	public void test_getTimeoutMultipler() {
+		assertEquals(5, BucketActionSupervisor.getTimeoutMultipler(BucketActionChooseActor.class));
+		assertEquals(2, BucketActionSupervisor.getTimeoutMultipler(BucketActionDistributionActor.class));
+		assertEquals(1, BucketActionSupervisor.getTimeoutMultipler(TestActor.class));
+	}
 }
