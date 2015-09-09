@@ -96,7 +96,6 @@ import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 
 import java.util.stream.Stream;
 
-//TODO (ALEPH-19): Need an additional bucket service that is responsible for actually deleting the data (for now, add a .DELETED file just so we know)
 //TODO (ALEPH-19): ... handle the update poll messaging, needs an indexed "next poll" query, do a findAndMod from every thread every minute
 //TODO (ALEPH-19): If I change a bucket again, need to cancel anything in the retry bin for that bucket (or if I re-created a deleted bucket)
 
@@ -1211,12 +1210,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				"logs/storage",
 				"assets",
 				"import",
-				"temp",
-				"stored",
-				"stored/raw",
-				"stored/json",
-				"stored/processed",
-				"ready"
+				"import/temp",
+				"import/temp/upload",
+				"import/stored",
+				"import/stored/raw",
+				"import/stored/json",
+				"import/stored/processed",
+				"import/ready"
 				)
 				.stream()
 				.map(s -> new Path(bucket_root + IStorageService.BUCKET_SUFFIX + s))
