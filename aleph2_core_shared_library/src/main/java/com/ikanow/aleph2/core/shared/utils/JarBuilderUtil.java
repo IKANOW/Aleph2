@@ -103,18 +103,18 @@ public class JarBuilderUtil {
 	            while (entries.hasMoreElements()) {
 	                ZipEntry e = entries.nextElement();
 	                try {
-	                	logger.debug("copy: " + e.getName());
+	                	//logger.debug("copy: " + e.getName());
 	                	if ( !shouldExclude(e.getName(), dir_names_to_not_merge) ) {
 		                    outputZip.putNextEntry(e);
 		                    if (!e.isDirectory() ) {
 		                    	ByteStreams.copy(currentZip.getInputStream(e), outputZip);
 		                    }	    
 	                	} else {
-	                		logger.debug("skipping: " + e.getName() + " because it's in our do not merge list");
+	                		//logger.debug("skipping: " + e.getName() + " because it's in our do not merge list");
 	                	}
 	                } catch (ZipException ex) {
 	                	//duplicate file, just skip because we don't allow overwrites	
-	                	logger.debug("\tcouldn't overwrite: " + e.getName());
+	                	//logger.debug("\tcouldn't overwrite: " + e.getName());
 	                } finally {
 	                	outputZip.closeEntry();
 	                }

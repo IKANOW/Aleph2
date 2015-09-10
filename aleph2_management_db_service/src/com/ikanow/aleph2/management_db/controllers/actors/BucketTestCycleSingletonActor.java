@@ -86,7 +86,7 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 	}
 	
 	private void scheduleNextCheck(final long seconds) {
-		_logger.debug("Scheduling next TestCycleActor check for: " + seconds + "s from now.");
+		//_logger.debug("Scheduling next TestCycleActor check for: " + seconds + "s from now.");
 		ManagementDbActorContext.get().getActorSystem().scheduler().scheduleOnce(
 				Duration.create(seconds, TimeUnit.SECONDS), 
 				new QueueCheckerRunnable(), 
@@ -97,7 +97,7 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 	{
 		@Override
 		public void run() {
-			_logger.debug("TestCycleActor is running a check");
+			//_logger.debug("TestCycleActor is running a check");
 			setup();
 			final Date now = new Date();
 			final QueryComponent<BucketTimeoutMessage> recent_messages = 

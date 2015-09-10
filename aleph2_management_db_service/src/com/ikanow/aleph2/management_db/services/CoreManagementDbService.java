@@ -370,6 +370,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 						_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
 						return true;
 					} else {
+						//TODO need to get error messages out of here and into test response message
 						_logger.error("Error, hostnames was empty");
 						return false;
 					}					
