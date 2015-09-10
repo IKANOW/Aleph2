@@ -5,8 +5,9 @@
     <packaging>pom</packaging>
     <name>Aleph2 parent project</name>
     <version>${aleph2.version}</version>
-	<properties>
+    <properties>
         <aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+	<aleph2.hadoop>2.6.0</aleph2.hadoop>
     </properties>
     <modules>
         <module>aleph2_data_model</module>
