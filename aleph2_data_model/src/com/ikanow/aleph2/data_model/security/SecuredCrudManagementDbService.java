@@ -53,6 +53,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected static String systemUsername = System.getProperty("IKANOW_SECURITY_LOGIN", "4e3706c48d26852237078005"); //TODO: ALEPH-31 move this since it's V1 specific
 	protected static String systemPassword = System.getProperty("IKANOW_SECURITY_PWD", "not allowed!");
 
+	public static String ROLE_ADMIN="admin";
+	
 	private ISubject subject; // system user's subject
 	
 	protected PermissionExtractor permissionExtractor = new PermissionExtractor(); // default permission extractor;
@@ -343,7 +345,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService#deleteDatastore()
 	 */
 	public ManagementFuture<Boolean> deleteDatastore() {
-		// TODO check role
+		checkDeletePermission();
 		return _delegate.deleteDatastore();
 	}
 
@@ -380,9 +382,28 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	}
 	
 	protected void checkWritePermissions(T new_object) {
-		throw new SecurityException("No write permissions for "+new_object);
+		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
+		
+		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN); 
+//		boolean permitted = securityService.isPermitted(subject,permission); 
+		if(!permitted){
+			String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permission+")for "+new_object.getClass();
+			logger.error(msg);
+			throw new SecurityException(msg);					
+		}
 		
 	}
+	protected void checkDeletePermission() {
+		
+		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN); 
+		if(!permitted){
+			String msg = "Subject "+subject.getSubject()+" has no write permissions for deletions";
+			logger.error(msg);
+			throw new SecurityException(msg);					
+		}
+		
+	}
+
 	protected void checkWritePermissions(List<T> new_objects) {
 		for (T t : new_objects) {
 			checkWritePermissions(t);
