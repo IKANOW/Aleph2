@@ -31,7 +31,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.BatchEnrichmentModule;
@@ -168,7 +167,7 @@ public abstract class DataBucketTest {
 						.with(DataBucketBean::tags, Collections.emptySet())
 						.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
 						//.with(DataBucketBean::master_enrichment_type, val)
-						.with(DataBucketBean::access_rights, new AuthorizationBean(ImmutableMap.<String, String>builder().put("auth_token", "rw").build()))
+						.with(DataBucketBean::access_rights, new AuthorizationBean("test"))
 						.done().get();
 				
 

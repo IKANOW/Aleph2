@@ -33,7 +33,6 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
-import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -173,7 +172,7 @@ protected static String _check_actor_called = null;
 				.with(DataBucketBean::multi_node_enabled, false)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean(ImmutableMap.<String, String>builder().put("auth_token", "r").build()))
+				.with(DataBucketBean::access_rights, new AuthorizationBean("test"))
 				.done().get();
 		
 		final BucketActionMessage.DeleteBucketActionMessage test_message = new 

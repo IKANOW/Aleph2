@@ -16,8 +16,6 @@
 package com.ikanow.aleph2.data_model.objects.shared;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.Map;
 
 /** Contains information about authorization rights on an object
  * @author acp
@@ -45,19 +43,7 @@ public class AuthorizationBean implements Serializable {
 
 	protected AuthorizationBean() {}
 	
-	/** User constructor
-	 * @param auth_token_vs_role
-	 */
-	public AuthorizationBean(final Map<String, String> auth_token_vs_role) {
-		this.auth_token_vs_role = auth_token_vs_role;		
-	}
-
 	public AuthorizationBean(final String principalName) {
 		this.principalName = principalName;		
 	}
-	/** User/group token vs generic role string
-	 * @return
-	 */
-	public Map<String, String> auth_token() { return auth_token_vs_role == null ? auth_token_vs_role : Collections.unmodifiableMap(auth_token_vs_role); }
-	protected Map<String, String> auth_token_vs_role;
 }
