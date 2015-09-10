@@ -68,6 +68,8 @@ public class TestStreamingEnrichmentContext {
 	
 	@Before
 	public void injectModules() throws Exception {
+		_logger.info("run injectModules");
+		
 		final Config config = ConfigFactory.parseFile(new File("./example_config_files/context_local_test.properties"));
 		
 		try {
@@ -85,6 +87,7 @@ public class TestStreamingEnrichmentContext {
 	
 	@Test
 	public void test_basicContextCreation() {
+		_logger.info("run test_basicContextCreation");
 		try {
 			assertTrue("Injector created", _app_injector != null);
 		
@@ -157,6 +160,7 @@ public class TestStreamingEnrichmentContext {
 	
 	@Test
 	public void test_ExternalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+		_logger.info("run test_ExternalContextCreation");
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
 			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
@@ -316,6 +320,7 @@ public class TestStreamingEnrichmentContext {
 
 	@Test
 	public void test_getUnderlyingArtefacts() {
+		_logger.info("run test_getUnderlyingArtefacts");
 		
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		
@@ -352,6 +357,7 @@ public class TestStreamingEnrichmentContext {
 	
 	@Test
 	public void test_misc() {
+		_logger.info("run test_misc");
 		
 		assertTrue("Injector created", _app_injector != null);
 		
@@ -420,6 +426,7 @@ public class TestStreamingEnrichmentContext {
 	
 	@Test
 	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		_logger.info("run test_objectEmitting");
 
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		
@@ -512,6 +519,8 @@ public class TestStreamingEnrichmentContext {
 	
 	@Test
 	public void test_objectStateRetrieval() throws InterruptedException, ExecutionException {
+		_logger.info("run test_objectStateRetrieval");
+		
 		final StreamingEnrichmentContext test_context = _app_injector.getInstance(StreamingEnrichmentContext.class);
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
 
