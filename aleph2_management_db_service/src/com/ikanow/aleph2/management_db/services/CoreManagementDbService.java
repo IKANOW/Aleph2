@@ -332,6 +332,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		}
 	}
 
+	/**
+	 * Performs a test run for a bucket.  A test run is a processing cycle that only runs as
+	 * long as test_spec specifies and/or to the amount of results that test_spec specifies, whichever
+	 * occurs first.
+	 * 
+	 * Changes a buckets name to not overwrite an existing job, then sends out a start test message.
+	 * If that message is picked up, this throws an object on both the test queue and delete queue that
+	 * will timeout the test and delete the results respectively after a certain amount of time.
+	 * 
+	 */
 	@Override
 	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {		
 		//create a test bucket to put data into instead of the specified bucket

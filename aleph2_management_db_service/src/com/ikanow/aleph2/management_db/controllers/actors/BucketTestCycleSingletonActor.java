@@ -85,6 +85,10 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 		// TODO Auto-generated method stub
 	}
 	
+	/**
+	 * Schedules the next run for this actor
+	 * @param seconds
+	 */
 	private void scheduleNextCheck(final long seconds) {
 		//_logger.debug("Scheduling next TestCycleActor check for: " + seconds + "s from now.");
 		ManagementDbActorContext.get().getActorSystem().scheduler().scheduleOnce(
@@ -93,8 +97,19 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 				_system_context.getActorSystem().dispatcher());
 	}
 	
+	/**
+	 * When this actors runs, checks for items in the timeout queue and acts upon them.
+	 * 
+	 * @author Burch
+	 *
+	 */
 	private class QueueCheckerRunnable implements Runnable
 	{
+		/**
+		 * Gets all bucket timeout messages that have expired.  Sends a stop message to actors for that bucket, then removes
+		 * that timeout message from the queue.
+		 * 
+		 */
 		@Override
 		public void run() {
 			//_logger.debug("TestCycleActor is running a check");

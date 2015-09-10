@@ -308,6 +308,13 @@ protected static String _check_actor_called = null;
 		}		
 	}
 		
+	/**
+	 * Tests the test_bucket action by sending a fake bucket and test spec and checking that
+	 * objects were submitted to the test and delete queues.  The start test message is
+	 * intercepted by a fake actor (TestActor_Accepter)
+	 * 
+	 * @throws Exception
+	 */
 	@Test
 	public void test_TestBucket() throws Exception {
 		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
