@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * Handles permissions for the system.  All permissions are in reference to an Identity object so
@@ -29,101 +28,8 @@ import java.util.Map;
  *
  */
 public interface ISecurityService extends IUnderlyingService {
-	
-	
+		
 	public ISubject getSubject();
-	/**
-	 * Checks if the given identifier has permission to access the given resource/resource_id and perform the
-	 * specific operation (typically one of CRUD).
-	 * 
-	 * @param identity The identity trying to access the resource
-	 * @param resourceClass Any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation The operation this identity wants to perform, usually one of CRUD
-	 * @return
-	 */
-	public boolean hasPermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
-
-	/**
-	 * An alternative permission that allows any string name for a resourceName, this is not recommended as two
-	 * applications can collide when submitting rules (e.g. app1 submits a rule for "some rule name" and app2 submits 
-	 * a rule for the same "some rule name".
-	 * 
-	 * @param identity The identity trying to access the resource
-	 * @param resourceName The name of any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation The operation this identity wants to perform, usually one of CRUD
-	 * @return
-	 */
-	public boolean hasPermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
-	
-	/**
-	 * Returns back an identity given the token, for example if your security service is
-	 * implementing basic auth, you might put the Authorization header in the token
-	 * and the service would check that against the basic auth db, returning the user
-	 * associated with the passed in basic auth token.
-	 * 
-	 * @param token A map containing authentication tokens, these are different depending on what the currently
-	 * injected SecurityService requires.  E.g. an OAuth service might require the Authorization header to be passed in.
-	 * @return
-	 * @throws Exception
-	 */
-	public Identity getIdentity(Map<String, Object> token) throws Exception;
-
-	/**
-	 * Methods for adding permission rules with resource class
-	 * 
-	 * @param identity The identity trying to access the resource
-	 * @param resourceClass Any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation The operation this identity wants to perform, usually one of CRUD
-	 */
-	public void grantPermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
-	
-	/**
-	 * Method for adding permission rules with arbitrary resource
-	 * @param identity The identity trying to access the resource
-	 * @param resourceName The name of any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation
-	 */
-	public void grantPermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
-	
-	/**
-	 * Methods for removing permission rules with resource class
-	 * 
-	 * @param identity The identity trying to access the resource
-	 * @param resourceClass Any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation The operation this identity wants to perform, usually one of CRUD
-	 */
-	public void revokePermission(Identity identity, Class<?> resourceClass, String resourceIdentifier, String operation);
-	
-	/**
-	 * Methods for removing permission rules with arbitrary resource
-	 * 
-	 * @param identity The identity trying to access the resource
-	 * @param resourceName The name of any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 * @param operation The operation this identity wants to perform, usually one of CRUD
-	 */
-	public void revokePermission(Identity identity, String resourceName, String resourceIdentifier, String operation);
-	
-	/**
-	 * Utility function to remove all permissions from a resource class
-	 * 
-	 * @param resourceClass Any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 */
-	public void clearPermission(Class<?> resourceClass, String resourceIdentifier);
-	
-	/**
-	 * Utility function to remove all permissions from a resource
-	 * 
-	 * @param resourceName The name of any object that has permission rules associated with it
-	 * @param resourceIdentifier An identifier for that resource if necessary, null if not
-	 */
-	public void clearPermission(String resourceName, String resourceIdentifier);
 
 	public ISubject login(String principalName, Object credentials);
 

@@ -16,69 +16,13 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.Identity;
 
 public class SampleSecurityService implements ISecurityService {
 	
-	@Override
-	public boolean hasPermission(Identity identity,
-			Class<?> resourceClass, String resourceIdentifier,
-			String operation) {
-		return false;
-	}
-
-	@Override
-	public boolean hasPermission(Identity identity,
-			String resourceName, String resourceIdentifier,
-			String operation) {
-		return false;
-	}
-
-	@Override
-	public Identity getIdentity(Map<String, Object> token)
-			throws Exception {
-		return null;
-	}
-
-	@Override
-	public void grantPermission(Identity identity,
-			Class<?> resourceClass, String resourceIdentifier,
-			String operation) {
-	}
-
-	@Override
-	public void grantPermission(Identity identity,
-			String resourceName, String resourceIdentifier,
-			String operation) {
-	}
-
-	@Override
-	public void revokePermission(Identity identity,
-			Class<?> resourceClass, String resourceIdentifier,
-			String operation) {
-	}
-
-	@Override
-	public void revokePermission(Identity identity,
-			String resourceName, String resourceIdentifier,
-			String operation) {
-	}
-
-	@Override
-	public void clearPermission(Class<?> resourceClass,
-			String resourceIdentifier) {
-	}
-
-	@Override
-	public void clearPermission(String resourceName,
-			String resourceIdentifier) {
-	}
-
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		return null;
@@ -91,38 +35,31 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public ISubject getSubject() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public ISubject login(String principalName, Object credentials) {
-		// TODO Auto-generated method stub
 		return null;		
 	}
 
 	@Override
 	public boolean hasRole(ISubject subject, String role) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean isPermitted(ISubject subject, String string) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public void runAs(ISubject subject, Collection<String> principals) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public Collection<String> releaseRunAs(ISubject subject) {
-		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ISubject getSubject() {
 		return null;
 	}
 

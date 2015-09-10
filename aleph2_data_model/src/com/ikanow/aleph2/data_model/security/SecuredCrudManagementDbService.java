@@ -50,7 +50,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected AuthorizationBean authBean = null;
 	protected IServiceContext serviceContext = null;
 	protected ISecurityService securityService;
-	protected static String systemUsername = System.getProperty("IKANOW_SECURITY_LOGIN", "test_user@ikanow.com");
+	protected static String systemUsername = System.getProperty("IKANOW_SECURITY_LOGIN", "4e3706c48d26852237078005"); //TODO: ALEPH-31 move this since it's V1 specific
 	protected static String systemPassword = System.getProperty("IKANOW_SECURITY_PWD", "not allowed!");
 
 	private ISubject subject; // system user's subject
