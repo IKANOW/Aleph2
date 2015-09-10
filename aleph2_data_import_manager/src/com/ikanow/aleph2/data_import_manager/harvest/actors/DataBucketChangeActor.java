@@ -38,7 +38,9 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -118,7 +120,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				final boolean harvest_tech_only = m instanceof BucketActionOfferMessage;
 		    				
 	    				// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
-	    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, hostname, m)
+	    				cacheJars(m.bucket(), harvest_tech_only, _management_db, _globals, _fs, _context.getServiceContext(), hostname, m)
 	    					.thenCompose(err_or_map -> {
 	    						
 								final HarvestContext h_context = _context.getNewHarvestContext();
@@ -350,6 +352,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				final IManagementDbService management_db, 
 				final GlobalPropertiesBean globals,
 				final IStorageService fs, 
+				final IServiceContext context,
 				final String handler_for_errors, 
 				final M msg_for_errors
 			)
@@ -357,7 +360,8 @@ public class DataBucketChangeActor extends AbstractActor {
 		try {
 			final QueryComponent<SharedLibraryBean> spec = getQuery(bucket, cache_tech_jar_only);
 
-			return management_db.getSharedLibraryStore().getObjectsBySpec(spec)
+			return management_db.getSharedLibraryStore().secured(context, new AuthorizationBean(bucket.owner_id()))
+					.getObjectsBySpec(spec)
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 

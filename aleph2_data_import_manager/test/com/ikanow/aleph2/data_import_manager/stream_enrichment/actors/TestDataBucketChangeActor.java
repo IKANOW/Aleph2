@@ -241,7 +241,7 @@ public class TestDataBucketChangeActor {
 			{			
 				CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
 						DataBucketChangeActor.cacheJars(bucket,  
-								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 								"test1_source", "test1_command"
 							);
 				
@@ -268,7 +268,7 @@ public class TestDataBucketChangeActor {
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
 				DataBucketChangeActor.cacheJars(bucket2,  
-						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 						"test1_source", "test1_command"
 					);
 			
@@ -292,7 +292,7 @@ public class TestDataBucketChangeActor {
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
 					DataBucketChangeActor.cacheJars(bucket3,  
-							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(),
+							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
 			

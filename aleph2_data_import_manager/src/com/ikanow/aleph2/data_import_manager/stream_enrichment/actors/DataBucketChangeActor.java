@@ -35,8 +35,12 @@ import java.util.stream.StreamSupport;
 
 
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 
 
@@ -60,6 +64,8 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
 import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
@@ -75,7 +81,9 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -108,7 +116,6 @@ public class DataBucketChangeActor extends AbstractActor {
 	///////////////////////////////////////////
 
 	// Services
-	
 	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
 	protected final ICoreDistributedServices _core_distributed_services;
@@ -172,7 +179,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				final String hostname = _context.getInformationService().getHostname();
 	    				
 	    				// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
-	    				cacheJars(m.bucket(), _management_db, _globals, _fs, hostname, m)
+	    				cacheJars(m.bucket(), _management_db, _globals, _fs, _context.getServiceContext(), hostname, m)
 	    					.thenComposeAsync(err_or_map -> {
 	    						
 								final StreamingEnrichmentContext e_context = _context.getNewStreamingEnrichmentContext();								
@@ -374,6 +381,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				final IManagementDbService management_db, 
 				final GlobalPropertiesBean globals,
 				final IStorageService fs, 
+				final IServiceContext context,
 				final String handler_for_errors, 
 				final M msg_for_errors
 			)
@@ -385,7 +393,8 @@ public class DataBucketChangeActor extends AbstractActor {
 				return CompletableFuture.completedFuture(Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(Collections.emptyMap()));
 			}
 			
-			return management_db.getSharedLibraryStore().getObjectsBySpec(spec.get())
+			return management_db.getSharedLibraryStore().secured(context,  new AuthorizationBean(bucket.owner_id()))
+					.getObjectsBySpec(spec.get())
 					.thenComposeAsync(cursor -> {
 						// This is a map of futures from the cache call - either an error or the path name
 						// note we use a tuple of (id, name) as the key and then flatten out later 

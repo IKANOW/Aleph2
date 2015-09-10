@@ -31,6 +31,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,11 +65,14 @@ import com.typesafe.config.ConfigFactory;
 import fj.data.Either;
 
 public class TestHarvestContext {
+	private static final Logger _logger = LogManager.getLogger();	
 
 	protected Injector _app_injector;
 	
 	@Before
 	public void injectModules() throws Exception {
+		_logger.info("running injectModules");
+		
 		final Config config = ConfigFactory.parseFile(new File("./example_config_files/harvest_local_test.properties"));
 		
 		try {
@@ -85,6 +90,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_basicContextCreation() {
+		_logger.info("running test_basicContextCreation");
+		
 		try {
 			assertTrue("Injector created", _app_injector != null);
 		
@@ -115,6 +122,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_externalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+		_logger.info("running test_externalContextCreation");
+		
 		try {
 			assertTrue("Config contains application name: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("application_name"));
 			assertTrue("Config contains v1_enabled: " + ModuleUtils.getStaticConfig().root().toString(), ModuleUtils.getStaticConfig().root().toString().contains("v1_enabled"));
@@ -229,6 +238,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_fileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+		_logger.info("running test_fileLocations");
+		
 		try {
 			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 			
@@ -314,6 +325,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_produceConsume() throws JsonProcessingException, IOException {
+		_logger.info("running test_produceConsume");
+		
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/TEST/HARVEST/CONTEXT").done().get();
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
@@ -355,6 +368,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_objectStateRetrieval() throws InterruptedException, ExecutionException {
+		_logger.info("running test_objectStateRetrieval");
+		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
 
@@ -427,6 +442,8 @@ public class TestHarvestContext {
 	
 	@Test
 	public void test_misc() {
+		_logger.info("running test_misc");
+		
 		assertTrue("Injector created", _app_injector != null);		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));		
@@ -434,6 +451,7 @@ public class TestHarvestContext {
 
 	@Test
 	public void test_getUnderlyingArtefacts() {
+		_logger.info("running test_getUnderlyingArtefacts");
 		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
 		
