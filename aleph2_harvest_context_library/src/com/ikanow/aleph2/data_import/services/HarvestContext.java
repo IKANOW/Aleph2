@@ -191,7 +191,7 @@ public class HarvestContext implements IHarvestContext {
 																Optional.of(IStorageService.StorageStage.json.toString()), Optional.empty()))
 					)
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					.map(x -> (ICrudService.IBatchSubservice<String>) x);			
+					;			
 			
 			static_instances.put(signature, this);
 		}

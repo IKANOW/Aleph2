@@ -218,7 +218,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 												.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
 					)
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
+					;
 
 			_batch_storage_service = 
 					(_crud_storage_service = _storage_service.getDataService()
@@ -227,7 +227,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 																Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
 					)
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					.map(x -> (ICrudService.IBatchSubservice<JsonNode>) x);
+					;
 
 			static_instances.put(signature, this);
 		}
