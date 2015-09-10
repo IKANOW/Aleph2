@@ -74,7 +74,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	    };
 
 		Function<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>,? extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> convertCursor = (c)->{
-			return new SecuredCursor<T>(c);
+			return new SecuredCursor(c);
 		};
 		
 	    public PermissionExtractor getPermissionExtractor() {
@@ -422,7 +422,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @author jfreydank
 	 *
 	 */
-	protected class SecuredCursor<T> extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>{
+	protected class SecuredCursor extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>{
 		
 		private com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T> delegate;
 

@@ -57,6 +57,7 @@ public class BeJobLoader {
 			if (odb.isPresent()) {
 				DataBucketBean dataBucketBean = odb.get();
 				// TODO hook in security check
+				@SuppressWarnings("unused")
 				String ownerId = dataBucketBean.owner_id();
 
 				List<EnrichmentControlMetadataBean> enrichmentConfigs = dataBucketBean.batch_enrichment_configs();
