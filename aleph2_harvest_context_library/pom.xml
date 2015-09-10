@@ -132,7 +132,12 @@
   		<version>${aleph2.version}</version>
 	    <scope>test</scope>
   	</dependency>
-  	<dependency>
+	<dependency>
+		<groupId>commons-io</groupId>
+		<artifactId>commons-io</artifactId>
+		<version>2.4</version>
+	</dependency>
+  	  	<dependency>
   		<groupId>junit</groupId>
   		<artifactId>junit</artifactId>
   		<version>4.12</version>
