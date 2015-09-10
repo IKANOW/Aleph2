@@ -46,4 +46,7 @@ public class AuthorizationBean implements Serializable {
 	public AuthorizationBean(final String principalName) {
 		this.principalName = principalName;		
 	}
+	
+	@SuppressWarnings("unused")
+	private Object auth_token_vs_role;//(old field, no longer used - but present in the DB)
 }
