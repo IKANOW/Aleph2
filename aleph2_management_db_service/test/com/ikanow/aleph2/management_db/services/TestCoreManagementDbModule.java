@@ -89,7 +89,7 @@ public class TestCoreManagementDbModule {
 		// Here's the setup that Guice normally gives you....
 		_mock_service_context = new MockServiceContext();		
 		_crud_factory = new MockMongoDbCrudServiceFactory();
-		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null, null);
+		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null, null, null);
 		_mock_service_context.addGlobals(new GlobalPropertiesBean(null, null, null, null));
 		_mock_storage_service = new MockHdfsStorageService(_mock_service_context.getGlobalProperties());
 		_mock_service_context.addService(IStorageService.class, Optional.empty(), _mock_storage_service);		
@@ -308,6 +308,13 @@ protected static String _check_actor_called = null;
 		}		
 	}
 		
+	/**
+	 * Tests the test_bucket action by sending a fake bucket and test spec and checking that
+	 * objects were submitted to the test and delete queues.  The start test message is
+	 * intercepted by a fake actor (TestActor_Accepter)
+	 * 
+	 * @throws Exception
+	 */
 	@Test
 	public void test_TestBucket() throws Exception {
 		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
@@ -326,8 +333,7 @@ protected static String _check_actor_called = null;
 		//1. Test Queue populated		
 		assertEquals(test_queue.countObjects().get().longValue(),1);		
 		
-		//2. Delete queue populated
-		
+		//2. Delete queue populated		
 		assertEquals(delete_queue.countObjects().get().longValue(),1);
 		
 		//3. Actor received test message

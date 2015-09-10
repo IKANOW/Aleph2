@@ -106,6 +106,13 @@ public class TestBucketTestCycleSingletonActor {
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 	}
 	
+	/**
+	 * Puts items on the test queue and checks that they have been
+	 * picked up by the actor appropriately.
+	 * 
+	 * @throws InterruptedException
+	 * @throws ExecutionException
+	 */
 	@Test
 	public void test_bucketTestCycleSingletonActor() throws InterruptedException, ExecutionException {					
 		//(test queue)
