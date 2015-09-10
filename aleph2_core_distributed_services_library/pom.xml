@@ -7,6 +7,8 @@
 	<properties>
 		<aleph2.scope>compile</aleph2.scope>
 		<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+		<aleph2.curator>2.6.0</aleph2.curator>
+		<aleph2.akka>2.4-M1</aleph2.akka>
 	</properties>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
@@ -140,15 +142,20 @@
 			<version>${aleph2.version}</version>
 			<scope>${aleph2.scope}</scope>
 		</dependency>
+	  	<dependency>
+	  		<groupId>org.apache.curator</groupId>
+	  		<artifactId>curator-framework</artifactId>
+	  		<version>${aleph2.curator}</version>
+	  	</dependency>
 		<dependency>
 			<groupId>org.apache.curator</groupId>
 			<artifactId>curator-test</artifactId>
-			<version>2.7.1</version>
+	  		<version>${aleph2.curator}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-actor_2.11</artifactId>
-			<version>2.4-M1</version>
+			<version>${aleph2.akka}</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
@@ -161,16 +168,15 @@
 			<artifactId>kafka_2.11</artifactId>
 			<version>0.8.2.1</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.apache.curator</groupId>
 			<artifactId>curator-recipes</artifactId>
-			<version>2.8.0</version>
+	  		<version>${aleph2.curator}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-cluster_2.11</artifactId>
-			<version>2.4-M1</version>
+			<version>${aleph2.akka}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.sclasen</groupId>
@@ -180,7 +186,7 @@
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-cluster-tools_2.11</artifactId>
-			<version>2.4-M1</version>
+			<version>${aleph2.akka}</version>
 		</dependency>
 	</dependencies>
 </project>
