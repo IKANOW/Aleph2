@@ -365,33 +365,37 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				Optional.empty());
 				
 		//get the hostnames of the actor nodes so we can process our timeout message
-		CompletableFuture<Boolean> base_future = MgmtCrudUtils.getSuccessfulNodes(test_future.thenApply(msg -> msg.replies()))
+		CompletableFuture<BasicMessageBean> base_future = MgmtCrudUtils.getSuccessfulNodes(test_future.thenApply(msg -> msg.replies()))
 				.thenApply(hostnames -> {
 					//make sure there is at least 1 hostname result, otherwise throw error
 					if ( !hostnames.isEmpty() ) {					
+						//TODO add message about adding to test queue
 						// - add to the test queue
 						ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
 						test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), hostnames));
 						
+						//TODO add message about adding to delete queue
 						// - add to the delete queue
 						final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
 						delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
 						
 						_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
-						return true;
+						//return true;
+						return new BasicMessageBean(new Date(), true, "source", "command", 0, "Got hostnames successfully, added test to test queue and delete queue", null);
 					} else {
 						//TODO need to get error messages out of here and into test response message
-						_logger.error("Error, hostnames was empty");
-						return false;
+						_logger.error("Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
+						return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)", null);
 					}					
 				})
 				.exceptionally(t -> {
 					//return error
 					_logger.error("Error getting hostnames", t);
-					return false;
+					return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error getting hostnames: " + t.getMessage(), null);
 				});
-		
-		return FutureUtils.createManagementFuture(base_future, test_future.thenApply(msg -> msg.replies()));
+		final CompletableFuture<Collection<BasicMessageBean>> cf = test_future.thenCombine(base_future, (tf, bf) -> {return Stream.concat(tf.replies().stream(), Stream.of(bf)).collect(Collectors.toList());});
+		return FutureUtils.createManagementFuture(test_future.thenCombine(base_future, (tf, bf) -> {return !tf.replies().isEmpty() && bf.success();}),
+				cf);
 	}
 
 	/** TODO
