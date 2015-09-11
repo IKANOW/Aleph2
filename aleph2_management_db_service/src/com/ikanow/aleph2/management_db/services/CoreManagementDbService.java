@@ -52,15 +52,17 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
+
+import fj.Unit;
 
 /** A layer that sits in between the managers and modules on top, and the actual database technology underneath,
  *  and performs control activities (launching into Akka) and an additional layer of validation
@@ -350,52 +352,53 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		DataBucketBean validated_test_bucket = validateBucket(test_bucket);
 		
 		// - is there any test data already present for this user, delete if so (?)
-		if ( test_spec.overwrite_existing_data() ) {
-			//TODO delete test data, wait for completion
-			//   (I'm writing deletion logic atm so may need to TODO that out for now until I'm done)
-		}
-		
-		// - send messages to start the test (ie like other messages, via the BucketActionSupervisor)
-		final BucketActionMessage.TestBucketActionMessage test_message = 
-				new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec);
-		CompletableFuture<BucketActionCollectedRepliesMessage> test_future = BucketActionSupervisor.askDistributionActor(
-				_actor_context.getBucketActionSupervisor(), 
-				_actor_context.getActorSystem(), 
-				test_message, 
-				Optional.empty());
-				
-		//get the hostnames of the actor nodes so we can process our timeout message
-		CompletableFuture<BasicMessageBean> base_future = MgmtCrudUtils.getSuccessfulNodes(test_future.thenApply(msg -> msg.replies()))
-				.thenApply(hostnames -> {
-					//make sure there is at least 1 hostname result, otherwise throw error
-					if ( !hostnames.isEmpty() ) {					
-						//TODO add message about adding to test queue
-						// - add to the test queue
-						ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
-						test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), hostnames));
-						
-						//TODO add message about adding to delete queue
-						// - add to the delete queue
-						final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
-						delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
-						
-						_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
-						//return true;
-						return new BasicMessageBean(new Date(), true, "source", "command", 0, "Got hostnames successfully, added test to test queue and delete queue", null);
-					} else {
-						//TODO need to get error messages out of here and into test response message
-						_logger.error("Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
-						return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)", null);
-					}					
-				})
-				.exceptionally(t -> {
-					//return error
-					_logger.error("Error getting hostnames", t);
-					return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error getting hostnames: " + t.getMessage(), null);
+		CompletableFuture<BasicMessageBean> base_future = Lambdas.get(() -> {
+			if ( test_spec.overwrite_existing_data() ) {
+				return purgeBucket(validated_test_bucket, Optional.empty()).exceptionally( t -> {
+					_logger.error("Error clearing output datastore, probably okay: " + "ingest."+validated_test_bucket._id(), t);
+					return false;
 				});
-		final CompletableFuture<Collection<BasicMessageBean>> cf = test_future.thenCombine(base_future, (tf, bf) -> {return Stream.concat(tf.replies().stream(), Stream.of(bf)).collect(Collectors.toList());});
-		return FutureUtils.createManagementFuture(test_future.thenCombine(base_future, (tf, bf) -> {return !tf.replies().isEmpty() && bf.success();}),
-				cf);
+			} else {
+				return CompletableFuture.completedFuture(Unit.unit());
+			}
+		}).thenCompose(___ -> {
+			return MgmtCrudUtils.getSuccessfulNodes(BucketActionSupervisor.askDistributionActor(
+					_actor_context.getBucketActionSupervisor(), 
+					_actor_context.getActorSystem(), 
+					new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), 
+					Optional.empty())
+					.thenApply(msg -> msg.replies()))
+					.thenApply(hostnames -> {
+						//make sure there is at least 1 hostname result, otherwise throw error
+						//TODO switch this to CompletableFuture<Collection<BasicMessageBean>> and add messages from queues
+						if ( !hostnames.isEmpty() ) {					
+							//TODO add message about adding to test queue
+							// - add to the test queue
+							ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
+							test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, 
+									new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), 
+									hostnames));
+							
+							//TODO add message about adding to delete queue
+							// - add to the delete queue
+							final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
+							delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
+							
+							_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
+							return new BasicMessageBean(new Date(), true, "source", "command", 0, "Got hostnames successfully, added test to test queue and delete queue", null);
+						} else {
+							_logger.error("Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
+							return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)", null);
+						}					
+					})
+					.exceptionally(t -> {
+						//return error
+						_logger.error("Error getting hostnames", t);
+						return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error getting hostnames: " + t.getMessage(), null);
+					});
+		});
+		return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(true),
+				base_future.thenApply(bf -> Stream.of(bf).collect(Collectors.toList())));
 	}
 
 	/** TODO
