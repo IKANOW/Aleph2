@@ -206,7 +206,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 			// Validation (also generates a clone of the bucket with the data_locations written in)
 			
-			final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation_info = validateBucket(new_object, old_bucket);
+			final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation_info = validateBucket(new_object, old_bucket, true);
 			
 			if (!validation_info._2().isEmpty() && validation_info._2().stream().anyMatch(m -> !m.success())) {
 				return FutureUtils.createManagementFuture(
@@ -607,13 +607,25 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	// UTILITIES
 	
+	/** Standalone bucket validation
+	 * @param bucket
+	 * @return
+	 */
+	public Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket) {
+		try {
+			return validateBucket(bucket, Optional.empty(), false);
+		} catch (InterruptedException | ExecutionException e) {
+			return Tuples._2T(bucket, Arrays.asList(ErrorUtils.buildErrorMessage("DataBucketCrudService", "validateBucket", ErrorUtils.getLongForm("Unknown error = {0}" , e))));
+		}
+	}
+	
 	/** Validates whether the new or updated bucket is valid: both in terms of authorization and in terms of format
 	 * @param bucket
 	 * @return
 	 * @throws ExecutionException 
 	 * @throws InterruptedException 
 	 */
-	protected Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version) throws InterruptedException, ExecutionException {
+	protected Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version, boolean do_full_checks) throws InterruptedException, ExecutionException {
 		
 		// (will live with this being mutable)
 		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
@@ -644,14 +656,16 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			}
 			
 			if (!old_version.isPresent()) { // (create not update)
-				if (this._underlying_data_bucket_db.get().countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
-																	.when(DataBucketBean::full_name, bucket.full_name())
-																).get() > 0)
-				{			
-					errors.add(MgmtCrudUtils.createValidationError(
-							ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
-					
-					return Tuples._2T(bucket, errors); // (this is catastrophic obviously)
+				if (do_full_checks) {
+					if (this._underlying_data_bucket_db.get().countObjectsBySpec(CrudUtils.allOf(DataBucketBean.class)
+																		.when(DataBucketBean::full_name, bucket.full_name())
+																	).get() > 0)
+					{			
+						errors.add(MgmtCrudUtils.createValidationError(
+								ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_UNIQUENESS, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));
+						
+						return Tuples._2T(bucket, errors); // (this is catastrophic obviously)
+					}
 				}
 			}
 		}		
@@ -780,14 +794,17 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				
 		//TODO (ALEPH-19): multi buckets - authorization; other - authorization
 		
-		final CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
+		if (do_full_checks) {
 		
-		errors.addAll(bucket_path_errors_future.join());
-		
-		// OK before I do any more stateful checking, going to stop if we have logic errors first 
-		
-		if (!errors.isEmpty()) {
-			return Tuples._2T(bucket, errors);
+			final CompletableFuture<Collection<BasicMessageBean>> bucket_path_errors_future = validateOtherBucketsInPathChain(bucket);
+			
+			errors.addAll(bucket_path_errors_future.join());
+			
+			// OK before I do any more stateful checking, going to stop if we have logic errors first 
+			
+			if (!errors.isEmpty()) {
+				return Tuples._2T(bucket, errors);
+			}
 		}
 		
 		/////////////////

@@ -38,9 +38,7 @@ public class BucketUtils {
 	 * @return original_bean with the full_name field modified with a test path
 	 */
 	public static DataBucketBean convertDataBucketBeanToTest(final DataBucketBean original_bean, String user_id) {
-		//TODO when creating a bucket do we need to block any attempt of
-		//users to start with /test?
-		final String new_full_name = TEST_BUCKET_PREFIX + user_id + "/" + original_bean.full_name();
+		final String new_full_name = TEST_BUCKET_PREFIX + user_id + original_bean.full_name(); // (full name is is guaranteed to start /)
 		return BeanTemplateUtils.clone(original_bean)
 				.with(DataBucketBean::full_name, new_full_name)
 				.done();

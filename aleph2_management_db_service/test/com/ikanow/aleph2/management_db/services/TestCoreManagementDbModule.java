@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -40,6 +42,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -48,6 +51,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
@@ -82,6 +86,7 @@ public class TestCoreManagementDbModule {
 	@SuppressWarnings("deprecation")
 	@Before
 	public void test_Setup() throws Exception {
+		ModuleUtils.disableTestInjection();
 		
 		// A bunch of DI related setup:
 		// Here's the setup that Guice normally gives you....
@@ -101,7 +106,7 @@ public class TestCoreManagementDbModule {
 		
 		_core_db_service = new CoreManagementDbService(_mock_service_context, 
 				_bucket_crud, _bucket_status_crud, _shared_library_crud, _actor_context);
-		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
+		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);
 	}
 	
 protected static String _check_actor_called = null;
@@ -321,10 +326,17 @@ protected static String _check_actor_called = null;
 		delete_queue.deleteDatastore().get();
 		
 		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
-		final DataBucketBean to_test = createBucket("test_tech_id");
+		final DataBucketBean to_test = createBucket("test_tech_id", false);
 		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 10L);
 		final ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
-		assertTrue(future.get());
+		assertTrue("Fails! " + future.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(";")), future.get());
+		future.getManagementResults().get();
+		
+		//check a fail:
+		final DataBucketBean to_test2 = createBucket("test_tech_id", true);
+		final ManagementFuture<Boolean> future2 = _core_db_service.testBucket(to_test2, test_spec);
+		assertTrue("Should fail", !future2.get());
+		assertTrue("Should have management errs", !future.getManagementResults().get().isEmpty());		
 		
 		//TOTEST:
 		//1. Test Queue populated		
@@ -342,11 +354,15 @@ protected static String _check_actor_called = null;
 		shutdownActor(host_actor._2());		
 	}
 	
-	protected DataBucketBean createBucket(final String harvest_tech_id) {
+	protected DataBucketBean createBucket(final String harvest_tech_id, boolean fail) {
 		return BeanTemplateUtils.build(DataBucketBean.class)
 							.with(DataBucketBean::_id, "test1")
-							.with(DataBucketBean::full_name, "/test/path/")
+							.with(DataBucketBean::created, new Date())
+							.with(DataBucketBean::modified, new Date())
+							.with(DataBucketBean::display_name, "test1 display")
+							.with(DataBucketBean::full_name, "/test/path" + (fail ? "/" : ""))
 							.with(DataBucketBean::harvest_technology_name_or_id, harvest_tech_id)
+							.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 							.with(DataBucketBean::owner_id, "test_owner_id")
 							.done().get();
 	}
