@@ -58,7 +58,7 @@ public class TestBucketUtils {
 		DataBucketBean test_bean = BucketUtils.convertDataBucketBeanToTest(original_bean, user_id);
 		
 		assertTrue(test_bean._id().equals(original_id));
-		assertTrue(test_bean.full_name().equals("/aleph2_testing/" + user_id + "/" + original_full_name));
+		assertTrue("Name is wrong: " + test_bean.full_name(), test_bean.full_name().equals("/aleph2_testing/" + user_id + original_full_name));
 		
 		assertTrue(BucketUtils.isTestBucket(test_bean));
 		assertFalse(BucketUtils.isTestBucket(original_bean));		
