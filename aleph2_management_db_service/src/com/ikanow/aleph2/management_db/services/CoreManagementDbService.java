@@ -368,14 +368,17 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				return CompletableFuture.completedFuture(Unit.unit());
 			}
 		}).thenCompose(__ -> {
-			return MgmtCrudUtils.getSuccessfulNodes(
+			final CompletableFuture<Collection<BasicMessageBean>> future_replies = 
 					BucketActionSupervisor.askDistributionActor(
-						_actor_context.getBucketActionSupervisor(), 
-						_actor_context.getActorSystem(), 
-						new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), Optional.empty()
-					)
-					.thenApply(msg -> msg.replies()))
-					.thenApply(hostnames -> {						
+							_actor_context.getBucketActionSupervisor(), 
+							_actor_context.getActorSystem(), 
+							new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), Optional.empty()
+							)
+							.thenApply(msg -> msg.replies());
+					
+			return MgmtCrudUtils.getSuccessfulNodes(future_replies)
+					.thenCombine(future_replies, (hostnames, replies) -> {
+						final String reply_str = replies.stream().map(m -> m.message()).collect(Collectors.joining(";"));
 						//make sure there is at least 1 hostname result, otherwise throw error
 						if ( !hostnames.isEmpty() ) {					
 							// - add to the test queue
@@ -389,21 +392,25 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 							delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
 							
 							_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
-							return ErrorUtils.buildSuccessMessage("CoreManagementDbService", "testBucket", "Got hostnames successfully, added test to test queue and delete queue");
+							return ErrorUtils.buildSuccessMessage("CoreManagementDbService", "testBucket", "Created test on hosts {0}, added test to test queue and delete queue\nmessages = {1}", hostnames.stream().collect(Collectors.joining(";")), reply_str);
 						} else {
-							_logger.error("Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
-							return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
+							final String err = ErrorUtils.get("Error, hostnames was empty, possibly did not finish setting job up (storm can take a long time to receive jar)\nmessages = {0}", reply_str);
+							_logger.error(err);
+							return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", err);
 						}					
 					})
 					.exceptionally(t -> {
 						//return error
 						_logger.error("Error getting hostnames", t);
-						return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error getting hostnames: {0}", t.getMessage());
+						return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error launching job: {0}", t.getMessage());
 					});
 		})
 		;
-		return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(true),
-				base_future.thenApply(bf -> Stream.of(bf).collect(Collectors.toList())));
+		return FutureUtils.createManagementFuture(
+				base_future.<Boolean>thenApply(m -> m.success()) // (did it work?)
+				,
+				base_future.thenApply(m -> Arrays.asList(m))) // (what were the errors?)
+				;
 	}
 
 	/* (non-Javadoc)

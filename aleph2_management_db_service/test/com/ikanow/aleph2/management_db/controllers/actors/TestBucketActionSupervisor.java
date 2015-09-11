@@ -47,6 +47,8 @@ import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.DeleteBucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.TestBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.UpdateBucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.NewBucketActionMessage;
@@ -716,6 +718,22 @@ public class TestBucketActionSupervisor {
 		@Override
 		public void onReceive(Object arg0) throws Exception {
 		}		
+	}
+	
+	@Test
+	public void test_checkShouldStopOnStreaming() {
+		final DataBucketBean bucket = getBucket("test_checkShouldStopOnStreaming", true, true);
+		NewBucketActionMessage test_message1 = new NewBucketActionMessage(bucket, false);
+		UpdateBucketActionMessage test_message2 = new UpdateBucketActionMessage(bucket, false, bucket, Collections.emptySet());
+		UpdateBucketActionMessage test_message3 = new UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
+		TestBucketActionMessage test_message4 = new TestBucketActionMessage(bucket, null);
+		DeleteBucketActionMessage test_message5 = new DeleteBucketActionMessage(bucket, Collections.emptySet());
+		
+		assertTrue(BucketActionSupervisor.shouldStopOnStreamingError(test_message1));
+		assertTrue(!BucketActionSupervisor.shouldStopOnStreamingError(test_message2));
+		assertTrue(BucketActionSupervisor.shouldStopOnStreamingError(test_message3));
+		assertTrue(BucketActionSupervisor.shouldStopOnStreamingError(test_message4));
+		assertTrue(!BucketActionSupervisor.shouldStopOnStreamingError(test_message5));
 	}
 	
 	@Test

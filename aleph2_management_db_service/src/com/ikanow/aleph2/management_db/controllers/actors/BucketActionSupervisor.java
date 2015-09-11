@@ -176,9 +176,11 @@ public class BucketActionSupervisor extends UntypedActor {
 				if (has_harvester) { // (streaming + harvest) 
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
-							// Check if the stream succeeded or failed, only call if the 
-							if ((null == stream) ||
-									(!stream.replies().isEmpty() && stream.replies().get(0).success()))
+							// Check if the stream succeeded or failed, only call if success when a create/update-enabled message
+							if (shouldStopOnStreamingError(message) 
+								&& ((null == stream) 
+									||
+									(!stream.replies().isEmpty() && stream.replies().get(0).success())))
 							{
 								return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>
 									efficientWrap(Patterns.ask(supervisor, m, 
@@ -217,6 +219,18 @@ public class BucketActionSupervisor extends UntypedActor {
 	///////////////////////////////////////////////
 	
 	// LOW LEVEL UTILITIES
+	
+	/** If a streaming enrichment message fails and the resulting action is "positive", ie "Test"
+	 * @param message
+	 * @return
+	 */
+	public static boolean shouldStopOnStreamingError(final BucketActionMessage message) {
+		return com.ikanow.aleph2.data_model.utils.Patterns.match(message).<Boolean>andReturn()
+				.when(BucketActionMessage.NewBucketActionMessage.class, __ -> true)
+				.when(BucketActionMessage.TestBucketActionMessage.class, __ -> true)
+				.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> msg.is_enabled(), __ -> true)
+				.otherwise(() -> false);
+	}
 	
 	/** Returns whether a bucket needs extra processing to set its streaming mode up
 	 * @param bucket
