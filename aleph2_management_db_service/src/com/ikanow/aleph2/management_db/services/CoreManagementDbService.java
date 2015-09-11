@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -306,8 +305,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		
 		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
 		
-		final boolean is_test_bucket = BucketUtils.isTestBucket(to_purge);
-		
 		if (in.isPresent()) { // perform scheduled purge
 			
 			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			
@@ -321,9 +318,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		
 			final CompletableFuture<Collection<BasicMessageBean>> sys_res = BucketDeletionActor.deleteAllDataStoresForBucket(to_purge, _service_context, false);
 			
-			final CompletableFuture<Collection<BasicMessageBean>> user_res = is_test_bucket
-					? CompletableFuture.completedFuture(Collections.emptyList())
-					: BucketDeletionActor.notifyHarvesterOfPurge(to_purge, this.getDataBucketStatusStore(), this.getRetryStore(BucketActionRetryMessage.class));
+			final CompletableFuture<Collection<BasicMessageBean>> user_res = BucketDeletionActor.notifyHarvesterOfPurge(to_purge, this.getDataBucketStatusStore(), this.getRetryStore(BucketActionRetryMessage.class));
 			//(longer term I wonder if should allow the harvester reply to dictate the level of deletion, eg could return an _id and then only delete up to that id?)
 
 			final CompletableFuture<Collection<BasicMessageBean>> combined_res = sys_res.thenCombine(user_res, (a, b) -> {
