@@ -32,6 +32,8 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import scala.Tuple2;
+
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -48,8 +50,8 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
@@ -348,12 +350,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {		
 		//create a test bucket to put data into instead of the specified bucket
 		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());		
-		// - validate the bucket 
-		DataBucketBean validated_test_bucket = validateBucket(test_bucket);
+		// - validate the bucket
+		Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation = this._data_bucket_service.validateBucket(test_bucket);
+		if (validation._2().stream().anyMatch(m -> !m.success())) {
+			return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false), CompletableFuture.completedFuture(validation._2()));
+		}
+		DataBucketBean validated_test_bucket = validation._1();
 		
 		// - is there any test data already present for this user, delete if so (?)
 		CompletableFuture<BasicMessageBean> base_future = Lambdas.get(() -> {
-			if ( test_spec.overwrite_existing_data() ) {
+			if ( Optional.ofNullable(test_spec.overwrite_existing_data()).orElse(true) ) {
 				return purgeBucket(validated_test_bucket, Optional.empty()).exceptionally( t -> {
 					_logger.error("Error clearing output datastore, probably okay: " + "ingest."+validated_test_bucket._id(), t);
 					return false;
@@ -361,54 +367,43 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			} else {
 				return CompletableFuture.completedFuture(Unit.unit());
 			}
-		}).thenCompose(___ -> {
-			return MgmtCrudUtils.getSuccessfulNodes(BucketActionSupervisor.askDistributionActor(
-					_actor_context.getBucketActionSupervisor(), 
-					_actor_context.getActorSystem(), 
-					new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), 
-					Optional.empty())
+		}).thenCompose(__ -> {
+			return MgmtCrudUtils.getSuccessfulNodes(
+					BucketActionSupervisor.askDistributionActor(
+						_actor_context.getBucketActionSupervisor(), 
+						_actor_context.getActorSystem(), 
+						new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), Optional.empty()
+					)
 					.thenApply(msg -> msg.replies()))
-					.thenApply(hostnames -> {
+					.thenApply(hostnames -> {						
 						//make sure there is at least 1 hostname result, otherwise throw error
-						//TODO switch this to CompletableFuture<Collection<BasicMessageBean>> and add messages from queues
 						if ( !hostnames.isEmpty() ) {					
-							//TODO add message about adding to test queue
 							// - add to the test queue
 							ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
 							test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, 
 									new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), 
 									hostnames));
 							
-							//TODO add message about adding to delete queue
 							// - add to the delete queue
 							final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
 							delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(test_spec.max_storage_time_secs()*1000)), false));
 							
 							_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
-							return new BasicMessageBean(new Date(), true, "source", "command", 0, "Got hostnames successfully, added test to test queue and delete queue", null);
+							return ErrorUtils.buildSuccessMessage("CoreManagementDbService", "testBucket", "Got hostnames successfully, added test to test queue and delete queue");
 						} else {
 							_logger.error("Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
-							return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)", null);
+							return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error, hostnames was empty, probably did not finish setting job up (storm can take a long time to receive jar)");
 						}					
 					})
 					.exceptionally(t -> {
 						//return error
 						_logger.error("Error getting hostnames", t);
-						return new BasicMessageBean(new Date(), false, "source", "command", 0, "Error getting hostnames: " + t.getMessage(), null);
+						return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error getting hostnames: {0}", t.getMessage());
 					});
-		});
+		})
+		;
 		return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(true),
 				base_future.thenApply(bf -> Stream.of(bf).collect(Collectors.toList())));
-	}
-
-	/** TODO
-	 * @param data_bucket
-	 * @return
-	 */
-	private DataBucketBean validateBucket(DataBucketBean data_bucket) {
-		// TODO Auto-generated method stub
-		return BeanTemplateUtils.clone(data_bucket)
-				.done();
 	}
 
 	/* (non-Javadoc)
