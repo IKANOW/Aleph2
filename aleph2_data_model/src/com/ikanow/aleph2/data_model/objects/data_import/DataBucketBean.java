@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
 /** A very important bean that describes how a bucket gets and stores its data
  * @author acp
@@ -87,12 +86,6 @@ public class DataBucketBean implements Serializable {
 	public Set<String> tags() {
 		return tags == null ? null : Collections.unmodifiableSet(tags);
 	}
-	/** A map of SecurityService specific tokens that control read/write/admin access to the bucket
-	 * @return the access_groups
-	 */
-	public AuthorizationBean access_rights() {
-		return access_rights;
-	}
 	/** The frequency with which the harvester is polled for this bucket.
 	 * @return the poll_frequency in some human readable format ("every 5 minutes", "hourly", "3600" etc)
 	 */
@@ -108,9 +101,11 @@ public class DataBucketBean implements Serializable {
 	private String description;
 	private String owner_id;
 	private Set<String> tags;
-	private AuthorizationBean access_rights;
 	private String poll_frequency;
 
+	@SuppressWarnings("unused")
+	private Object access_rights; // (not currently used but still in the DB so leave in for now)	
+	
 	////////////////////////////////////////
 	
 	// Multi buckets

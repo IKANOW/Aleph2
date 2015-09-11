@@ -39,7 +39,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -207,7 +206,6 @@ public class TestDataBucketCrudService_Delete {
 				.with(DataBucketBean::multi_node_enabled, multi_node_enabled)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean("test"))
 				.done().get();
 		
 		//(create a file path also)

@@ -389,6 +389,19 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	}
 	
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#deleteTopic(java.lang.String)
+	 */
+	@Override
+	public void deleteTopic(String topic) {
+		if (_initializing_kafka) { //(wait for async to complete)
+			_initialized_kafka.join();
+		}		
+		logger.debug("DELETE " + topic);
+		KafkaUtils.deleteTopic(topic);
+	}
+	
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */
 	@Override
@@ -457,4 +470,5 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	public Optional<String> getApplicationName() {
 		return Optional.ofNullable(_config_bean.application_name());
 	}
+
 }

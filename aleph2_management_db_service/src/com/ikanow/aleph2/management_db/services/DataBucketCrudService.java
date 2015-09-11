@@ -953,10 +953,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final String bucket_full_name = normalizeBucketPath(bucket.full_name(), true);
 
 		return this._underlying_data_bucket_db.get().getObjectsBySpec(getPathQuery(bucket_full_name), 
-				Arrays.asList(helper.field(DataBucketBean::full_name), helper.field(DataBucketBean::access_rights)), true)
+				Arrays.asList(helper.field(DataBucketBean::full_name)), true)
 				.thenApply(cursor -> {
 					return StreamSupport.stream(cursor.spliterator(), false)
-						.filter(b -> (null == b.full_name()) || (null == b.access_rights()))
+						.filter(b -> (null == b.full_name()))
 						.<BasicMessageBean>map(b -> {
 							final String norm_name = normalizeBucketPath(b.full_name(), true);							
 							if (norm_name.startsWith(bucket_full_name)) {

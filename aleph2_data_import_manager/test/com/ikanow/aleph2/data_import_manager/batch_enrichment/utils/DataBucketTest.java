@@ -45,7 +45,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnr
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
@@ -167,7 +166,6 @@ public abstract class DataBucketTest {
 						.with(DataBucketBean::tags, Collections.emptySet())
 						.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
 						//.with(DataBucketBean::master_enrichment_type, val)
-						.with(DataBucketBean::access_rights, new AuthorizationBean("test"))
 						.done().get();
 				
 

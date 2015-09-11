@@ -41,7 +41,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContex
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
@@ -172,7 +171,6 @@ protected static String _check_actor_called = null;
 				.with(DataBucketBean::multi_node_enabled, false)
 				.with(DataBucketBean::tags, Collections.emptySet())
 				.with(DataBucketBean::owner_id, UuidUtils.get().getRandomUuid())
-				.with(DataBucketBean::access_rights, new AuthorizationBean("test"))
 				.done().get();
 		
 		final BucketActionMessage.DeleteBucketActionMessage test_message = new 

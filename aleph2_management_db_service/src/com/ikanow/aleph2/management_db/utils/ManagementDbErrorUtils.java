@@ -41,7 +41,6 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// Simple field rules
 	
 	public static final String BUCKET_NO_ID_FIELD = "Bucket {0} has no (non-empty) _id field";
-	public static final String BUCKET_NO_ACCESS_RIGHTS = "Bucket {0} has no access_rights field";
 	public static final String BUCKET_NO_OWNER_ID = "Bucket {0} has no (non-empty) owner_id field";
 	public static final String BUCKET_NO_CREATED = "Bucket {0} has no (non-empty) created field";
 	public static final String BUCKET_NO_MODIFIED = "Bucket {0} has no (non-empty) modified field";
@@ -50,7 +49,6 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 
 	public static final ImmutableMap<String, String> NEW_BUCKET_ERROR_MAP = ImmutableMap.<String, String>builder()
 			.put("_id", BUCKET_NO_ID_FIELD)
-			.put("access_rights", BUCKET_NO_ACCESS_RIGHTS)
 			.put("owner_id", BUCKET_NO_OWNER_ID)
 			.put("created", BUCKET_NO_CREATED)
 			.put("modified", BUCKET_NO_MODIFIED)

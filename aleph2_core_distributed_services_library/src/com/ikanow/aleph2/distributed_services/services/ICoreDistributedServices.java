@@ -111,6 +111,11 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 */
 	void createTopic(String topic); 
 	
+	/** Deletes a previously created topic
+	 * @param topic
+	 */
+	void deleteTopic(String topic);
+	
 	/** Writes a JSON string to the designated message queue
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
 	 * @param message - a string, in most cases will represent a JSON object

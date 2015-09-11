@@ -57,7 +57,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.Geospatia
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GraphSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -267,7 +266,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();				
 		
 		final DataSchemaBean enabled_schema = BeanTemplateUtils.build(DataSchemaBean.class)
@@ -387,7 +385,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		
@@ -463,7 +460,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		
@@ -538,7 +534,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		//(delete the file path)
@@ -585,7 +580,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::created, new Date())
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		//(delete the file path)
@@ -879,7 +873,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -951,13 +944,11 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, false) 
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 								.with(HarvestControlMetadataBean::enabled, true)
 								.done().get()))
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		//(delete the file path)
@@ -1012,13 +1003,11 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 								.with(HarvestControlMetadataBean::enabled, true)
 								.done().get()))
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.done().get();
 
 		//(delete the file path)
@@ -1078,7 +1067,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, false) 
 				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -1170,7 +1158,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
@@ -1238,7 +1225,6 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
-				.with(DataBucketBean::access_rights, BeanTemplateUtils.build(AuthorizationBean.class).done().get())
 				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 

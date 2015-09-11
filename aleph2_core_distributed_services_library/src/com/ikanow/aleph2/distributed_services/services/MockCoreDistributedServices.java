@@ -203,6 +203,16 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	}
 	
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#deleteTopic(java.lang.String)
+	 */
+	@Override
+	public void deleteTopic(String topic) {
+		setupKafka();
+		logger.debug("DELETE " + topic);
+		KafkaUtils.deleteTopic(topic);
+	}
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#produce(java.lang.String, java.lang.String)
 	 */
 	@Override

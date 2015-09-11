@@ -126,6 +126,9 @@ public class TestStormControllerUtil {
 		final TopologyInfo info1 = StormControllerUtil.getJobStats(storm_cluster, StormControllerUtil.bucketPathToTopologyName(bucket.full_name()));
 		_logger.debug("Status is: " + info.get_status());
 		assertTrue(info1.get_status().equals("ACTIVE"));	
+		
+		// Stop job and wait for result
+		StormControllerUtil.stopJob(storm_cluster, bucket).get();
 	}
 
 	protected DataBucketBean createBucket() {		

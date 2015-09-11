@@ -30,7 +30,7 @@ public class SharedLibraryBean implements Serializable {
 	 */
 	public SharedLibraryBean(final String _id, final String display_name, final String path_name,
 			final LibraryType type, final String subtype, final String owner_id,
-			final Set<String> tags, final AuthorizationBean access_rights,
+			final Set<String> tags, 
 			final String batch_streaming_entry_point, final String batch_enrichment_entry_point, final String misc_entry_point, 
 			final Map<String, Object> library_config) {
 		super();
@@ -41,7 +41,6 @@ public class SharedLibraryBean implements Serializable {
 		this.subtype = subtype;
 		this.owner_id = owner_id;
 		this.tags = tags;
-		this.access_rights = access_rights;
 		this.streaming_enrichment_entry_point = batch_streaming_entry_point;
 		this.batch_enrichment_entry_point = batch_enrichment_entry_point;
 		this.misc_entry_point = misc_entry_point;
@@ -107,12 +106,6 @@ public class SharedLibraryBean implements Serializable {
 	public Set<String> tags() {
 		return tags == null ? null : Collections.unmodifiableSet(tags);
 	}
-	/** The set of access tokens, read access only - any admin has write access and nobody else
-	 * @return the set of access tokens
-	 */
-	public AuthorizationBean access_rights() {
-		return access_rights;
-	}
 	
 	/** For JARs, the default entry point (type specific - eg will point to the implementation of IAccessTechnology, or IEnrichmentBatchModule, etc)
 	 * @return the fully qualified classpath of the primary/default entry point
@@ -159,9 +152,11 @@ public class SharedLibraryBean implements Serializable {
 						
 	private String owner_id;
 	private Set<String> tags;
-	private AuthorizationBean access_rights;
 	private String batch_enrichment_entry_point; // (for batch module only)
 	private String streaming_enrichment_entry_point; // (for streaming module only)
 	private String misc_entry_point; // (harvest, others)
 	private Map<String, Object> library_config;
+	
+	@SuppressWarnings("unused")
+	private Object access_rights; // (not currently used but still in the DB so leave in for now)	
 }
