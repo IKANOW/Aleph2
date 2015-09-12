@@ -16,6 +16,7 @@
         <module>aleph2_core_shared_library</module>
         -->
         <module>aleph2_core_distributed_services_library</module>
+        <module>aleph2_core_security</module>
     </modules>
 
     <build>
