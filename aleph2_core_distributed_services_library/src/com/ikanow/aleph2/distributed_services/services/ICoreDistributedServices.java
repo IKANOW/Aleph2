@@ -43,6 +43,10 @@ import akka.event.japi.LookupEventBus;
  */
 public interface ICoreDistributedServices extends IUnderlyingService {
 
+	public final static Optional<String> QUEUE_START_NAME = Optional.empty(); 
+	public final static Optional<String> QUEUE_START_ALIAS = Optional.of("$start"); 
+	public final static Optional<String> QUEUE_END_NAME = Optional.of("end"); 
+	
 	/** Returns the application role associated with this process, or optional if none (eg transient processes)
 	 * @return
 	 */

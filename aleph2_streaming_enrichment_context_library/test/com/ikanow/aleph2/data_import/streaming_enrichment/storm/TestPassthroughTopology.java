@@ -19,7 +19,9 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -100,12 +102,17 @@ public class TestPassthroughTopology {
 		test_context.getEnrichmentContextSignature(Optional.empty(), Optional.empty());
 		test_context.overrideSavedContext(); // (THIS IS NEEDED WHEN TESTING THE KAFKA SPOUT)
 		
+		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		
 		final ICoreDistributedServices cds = test_context.getServiceContext().getService(ICoreDistributedServices.class, Optional.empty()).get();
 		final StormTopology topology = (StormTopology) new PassthroughTopology()
 											.getTopologyAndConfiguration(test_bucket, test_context)
 											._1();
-		
+
+		//(Also: register a listener on the output to generate a secondary queue)
+		final String end_queue_topic = cds.generateTopicName(test_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
+		cds.createTopic(end_queue_topic, Optional.of(Collections.emptyMap()));
+
 		final backtype.storm.Config config = new backtype.storm.Config();
 		config.setDebug(true);
 		_local_cluster.submitTopology("test_passthroughTopology", config, topology);
@@ -138,6 +145,17 @@ public class TestPassthroughTopology {
 		}		
 		assertEquals("Should be 1 object in the repo", 1L, crud_service.countObjects().get().intValue());		
 		assertEquals("Object should be test:test1", 1L, crud_service.countObjectsBySpec(CrudUtils.allOf().when("test", "test1")).get().intValue());		
+		
+		//PHASE5: CHECK IF ALSO WROTE TO OUTPUT QUEUE
+		
+		Iterator<String> consumer = cds.consumeAs(end_queue_topic, Optional.empty());
+		int message_count = 0;
+		//read the item off the queue
+		while ( consumer.hasNext() ) {
+			consumer.next();
+        	message_count++;
+		}
+		assertEquals(1, message_count);
 	}
 	
 }
