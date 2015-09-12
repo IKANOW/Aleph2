@@ -120,30 +120,32 @@ public class TestBucketTestCycleSingletonActor {
 		//clear test queue
 		test_queue.deleteDatastore().get();
 		
+		BucketTestCycleSingletonActor.setTestMode(true);
+		
 		//add message to test queue that will expire now
+		System.out.println("TEST 1:");
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date()));				
-		assertEquals(test_queue.countObjects().get().longValue(), 1);				
-		Thread.sleep(1500);
-		assertEquals(test_queue.countObjects().get().longValue(), 0);
+		assertEquals(1, test_queue.countObjects().get().longValue());				
+		Thread.sleep(3000);
+		assertEquals(0, test_queue.countObjects().get().longValue());
 		
 		//test multiple things are gathered at once
+		System.out.println("TEST 2:");
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date()));
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date()));
-		assertEquals(test_queue.countObjects().get().longValue(), 2);		
-		Thread.sleep(1500);
-		assertEquals(test_queue.countObjects().get().longValue(), 0);
+		assertEquals(2, test_queue.countObjects().get().longValue());		
+		Thread.sleep(3000);
+		assertEquals(0, test_queue.countObjects().get().longValue());
 		
 		//test an item that expires in the future stays around
+		System.out.println("TEST 3:");
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date()));
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date(System.currentTimeMillis()+10000)));
-		assertEquals(test_queue.countObjects().get().longValue(), 2);		
-		Thread.sleep(1500);
-		assertEquals(test_queue.countObjects().get().longValue(), 1);
+		assertEquals(2, test_queue.countObjects().get().longValue());		
+		Thread.sleep(3000);
+		assertEquals(1, test_queue.countObjects().get().longValue());
 		
 		//TODO test error code somehow?
-		
-		//TODO these things are very time based, will probably die once up on travis
-		
 	}
 	
 	private BucketTimeoutMessage createTestBucketTimeoutMessage(final Date date_to_expire_on) {
