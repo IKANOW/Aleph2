@@ -177,8 +177,8 @@ public class BucketActionSupervisor extends UntypedActor {
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
 							// Check if the stream succeeded or failed, only call if success when a create/update-enabled message
-							if (shouldStopOnStreamingError(message) 
-								&& ((null == stream) 
+							if (!shouldStopOnStreamingError(message) 
+								|| ((null == stream) 
 									||
 									(!stream.replies().isEmpty() && stream.replies().get(0).success())))
 							{
