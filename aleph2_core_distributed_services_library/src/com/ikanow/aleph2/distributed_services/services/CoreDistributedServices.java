@@ -73,6 +73,8 @@ import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
 import com.typesafe.config.ConfigFactory;
 
+//TODO: ALEPH-12: have a singleton actor responsible for checking N topics/minute, and deciding if they still exist or not
+
 /** Implementation class for full Curator service
  * @author acp
  *
@@ -380,12 +382,12 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#createTopic(java.lang.String)
 	 */
 	@Override
-	public 	void createTopic(String topic) {
+	public 	void createTopic(String topic, Optional<Map<String, Object>> options) {
 		if (_initializing_kafka) { //(wait for async to complete)
 			_initialized_kafka.join();
 		}		
 		logger.debug("CREATING " + topic);
-		KafkaUtils.createTopic(topic);				
+		KafkaUtils.createTopic(topic, options);				
 	}
 	
 	/* (non-Javadoc)
@@ -406,7 +408,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public void produce(String topic, String message) {
-		this.createTopic(topic);
+		this.createTopic(topic, Optional.empty());
 		
 		logger.debug("PRODUCING");
 		final Producer<String, String> producer = KafkaUtils.getKafkaProducer();
@@ -421,15 +423,31 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#consume(java.lang.String)
 	 */
 	@Override
-	public Iterator<String> consume(String topic) {
+	public Iterator<String> consumeAs(String topic, Optional<String> consumer_name) {
 		if (_initializing_kafka) { //(wait for async to complete)
 			_initialized_kafka.join();
 		}		
 		logger.debug("CONSUMING");
-		final ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
+		final ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, consumer_name);
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#generateTopicName(java.lang.String, java.util.Optional)
+	 */
+	@Override
+	public String generateTopicName(String path, Optional<String> subchannel) {
+		return KafkaUtils.bucketPathToTopicName(path, subchannel.map(sc -> sc.equals("$start") ? "" : sc));
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#doesTopicExist(java.lang.String)
+	 */
+	@Override
+	public boolean doesTopicExist(String topic) {
+		return KafkaUtils.doesTopicExist(topic);
+	}
+		
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
 	 */
@@ -470,5 +488,4 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	public Optional<String> getApplicationName() {
 		return Optional.ofNullable(_config_bean.application_name());
 	}
-
 }

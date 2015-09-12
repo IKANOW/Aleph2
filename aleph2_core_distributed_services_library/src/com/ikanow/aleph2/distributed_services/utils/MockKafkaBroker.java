@@ -88,6 +88,7 @@ public class MockKafkaBroker {
 		logger.debug("ZOOKEEPER: " + zk);
 		props.put("zookeeper.connect", zk);
 		props.put("auto.create.topics.enable", "true");
+		props.put("delete.topic.enable", "true");
 		KafkaConfig config = new KafkaConfig(props);
 		
 		//NOTE: scala version won't work here for some reason, copied same implementation as {@link kafka.utils.SystemTime}

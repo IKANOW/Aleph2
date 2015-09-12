@@ -20,6 +20,7 @@ package com.ikanow.aleph2.distributed_services.services;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -105,11 +106,26 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	/////////////////////////////////////////////////////////////////////////
 	
 	// KAFKA SERVICES
+
+	/** Generates a unique topic name given the path (usually DataBucketBean::full_name and a subchannel, eg enrichment stage/intermediate analytic step
+	 *  There are 2 default subchannels: "$start" (aliased to: "") and "$end" for the start/end of a modular enrichment process
+	 * @param path
+	 * @param subchannel
+	 * @return
+	 */
+	String generateTopicName(String path, Optional<String> subchannel);
 	
 	/** Pre-creates a topic
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
+	 * @param options - optional and technology-specific set of options, leave as Optional.of(Collections.emptyMap()) is default, Optional.empty() to leave as they are
 	 */
-	void createTopic(String topic); 
+	void createTopic(String topic, Optional<Map<String, Object>> options); 
+	
+	/** Efficiently returns whether a topic exists (eg whether data should be produced for a given sub-channel)
+	 * @param topic
+	 * @return
+	 */
+	boolean doesTopicExist(String topic);
 	
 	/** Deletes a previously created topic
 	 * @param topic
@@ -126,6 +142,6 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
 	 * @return an iterator of Strings, typically representing JSON stringd
 	 */
-	Iterator<String> consume(String topic);
+	Iterator<String> consumeAs(String topic, Optional<String> consumer_name);
 	
 }

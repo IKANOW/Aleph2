@@ -171,14 +171,16 @@ public class TestCoreDistributedServices {
 		final String TOPIC_NAME = "TEST_CDS_" + System.currentTimeMillis();  
 		final int num_to_test = 10;
 		//throw items on the queue
-		
+				
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
 		String original_message = jsonNode.toString();	
-		for ( int i = 0; i < num_to_test; i++ ) 
-			_core_distributed_services.produce(TOPIC_NAME, original_message);	
+		for ( int i = 0; i < num_to_test; i++ ) {
+			_core_distributed_services.produce(TOPIC_NAME, original_message);
+		}
 		
 		//grab the consumer
-		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
+		
 		String consumed_message = null;
 		int message_count = 0;
 		//read the item off the queue
@@ -188,10 +190,16 @@ public class TestCoreDistributedServices {
             System.out.println(consumed_message);
 		}
 		
+		assertTrue("Topic should exist", _core_distributed_services.doesTopicExist(TOPIC_NAME));
+		
 		KafkaUtils.deleteTopic(TOPIC_NAME);
 		
-        assertEquals(message_count, num_to_test);
+        assertEquals(num_to_test, message_count);
         assertTrue(original_message.equals(consumed_message));
+
+        // Check some random other topic does _not_ exist
+        
+		assertTrue("Topic should _not_ exist", !_core_distributed_services.doesTopicExist(TOPIC_NAME + "xxx"));        
 	}
 		
 	@Test
@@ -211,7 +219,7 @@ public class TestCoreDistributedServices {
 			_core_distributed_services.produce(TOPIC_NAME, original_message);	
 		
 		//grab the consumer
-		Iterator<String> consumer = _core_distributed_services.consume(TOPIC_NAME);
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
 		String consumed_message = null;
 		int message_count = 0;
 		//read the item off the queue
@@ -223,6 +231,6 @@ public class TestCoreDistributedServices {
 		
 		KafkaUtils.deleteTopic(TOPIC_NAME);
 		
-		assertEquals(num_to_test, message_count); 
+		assertEquals(message_count, num_to_test); 
 	}
 }

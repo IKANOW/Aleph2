@@ -59,7 +59,8 @@ public class KafkaUtils {
 	private static Producer<String, String> producer;	
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
-	private final static Map<String, Boolean> known_topics = new ConcurrentHashMap<String, Boolean>();
+	private final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
+	private final static Map<String, Boolean> known_topics = new ConcurrentHashMap<String, Boolean>(); // (Things other to which people want me to publish, but I may not have yet)
 	
 	/**
 	 * Returns a producer pointed at the currently configured Kafka instance.
@@ -83,12 +84,22 @@ public class KafkaUtils {
 	 * This consumer should be closed once you are done reading.
 	 * 
 	 * @param topic
+	 * @param consumer_name - if set then uses a specific consumer group instead of the central "system" consumer - this has the effect of copying the data instead of round-robining it
 	 * @return
 	 */
-	public static ConsumerConnector getKafkaConsumer(String topic) {
+	public static ConsumerConnector getKafkaConsumer(String topic, Optional<String> consumer_name) {
 		Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
 		topicCountMap.put(topic, NUM_THREADS);
-		ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(kafka_properties));
+		final Properties new_properties = 
+				consumer_name
+					.map(name -> {
+						final Properties np = new Properties(kafka_properties);
+						np.put("group.id", name);
+						return np;
+					})
+				.orElse(kafka_properties)
+				;
+		ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
 		consumer.commitOffsets();
 		return consumer;
 	}
@@ -108,6 +119,25 @@ public class KafkaUtils {
 		return BucketUtils.getUniqueSignature(bucket_path, sub_channel);
 	}
 	
+	/** Checks if a topic exists, caches the result
+	 * @param topic
+	 * @return
+	 */
+	public static boolean doesTopicExist(final String topic) {
+		if (known_topics.containsKey(topic) || my_topics.containsKey(topic)) {
+			return true;
+		}
+		else { // Need to check ZK
+			final ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
+			
+			final boolean topic_exists = AdminUtils.topicExists(zk_client, topic);
+			if (topic_exists) {
+				known_topics.put(topic, true);
+			}
+			return topic_exists;
+		}
+	}
+	
 	/**
 	 * Changes out this classes configured properties pointing at
 	 * a kafka instance.  Also resets the current producer so a
@@ -121,7 +151,7 @@ public class KafkaUtils {
 	public static void setProperties(Config parseMap) {
 		kafka_properties = new Properties();
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				.put("group.id", "somegroup_1")
+				.put("group.id", "aleph2_unknown")
 				.put("serializer.class", "kafka.serializer.StringEncoder")
 				.put("request.required.acks", "1")
 				.put("consumer.timeout.ms", "3000")
@@ -135,6 +165,7 @@ public class KafkaUtils {
 				.put("zk.connectiontimeout.ms", "6000")
 				.put("zk.sessiontimeout.ms", "6000")
 				.put("zk.synctime.ms", "2000")
+				.put("delete.topic.enable", "true")
 				.build();	
 		
 		final Config fullConfig = parseMap.withFallback(ConfigFactory.parseMap(config_map_kafka));
@@ -194,18 +225,31 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public synchronized static void createTopic(String topic) {		
-		if ( !known_topics.containsKey(topic) ) {
+	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options) {
+		
+		//TODO (ALEPH-10): need to handle topics getting deleted but not being removed from this map
+		//TODO (ALEPH-10): override options if they change? not sure if that's possible 
+		
+		if ( !my_topics.containsKey(topic) ) {
 			logger.debug("CREATE TOPIC");
+			//http://stackoverflow.com/questions/27036923/how-to-create-a-topic-in-kafka-through-java
 			ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);				
 			logger.debug("DOES TOPIC EXIST: " + AdminUtils.topicExists(zk_client, topic));
+			
 			if ( !AdminUtils.topicExists(zk_client, topic) ) {		
-				AdminUtils.createTopic(zk_client, topic, 1, 1, new Properties());			
+				final Properties props = options.map(o -> { 
+						final Properties p = new Properties();
+						p.putAll(o);
+						return p;
+				})
+				.orElse(new Properties());				
+				AdminUtils.createTopic(zk_client, topic, 1, 1, props);			
 				boolean leader_elected = waitUntilLeaderElected(zk_client, topic, 1000);
 				logger.debug("LEADER WAS ELECTED: " + leader_elected);
 				
 				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic), topic);
+				final ConsumerConnector x = getKafkaConsumer(topic, Optional.empty());
+				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic);
 				iter.hasNext();
 				
 				//debug info
@@ -213,9 +257,12 @@ public class KafkaUtils {
 				logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
 				TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
 				logger.debug("META: " + meta);
-				iter.close();				
-			}	
-			known_topics.put(topic, true); //topic either already existed or was created
+
+				// (close resources)
+				iter.close();
+				x.shutdown();
+			}
+			my_topics.put(topic, true); //topic either already existed or was created
 			zk_client.close();
 		}
 	}
@@ -255,6 +302,10 @@ public class KafkaUtils {
 	 * @param topic
 	 */
 	public static void deleteTopic(String topic) {
+		// Update local cache - remote caches will need to wait to clear of course
+		known_topics.remove(topic);
+		my_topics.remove(topic);
+		
 		logger.debug("DELETE TOPIC: " + topic);
 		ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
 		AdminUtils.deleteTopic(zk_client, topic);

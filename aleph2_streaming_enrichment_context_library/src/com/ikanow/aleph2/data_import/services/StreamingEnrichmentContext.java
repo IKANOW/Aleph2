@@ -64,6 +64,7 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.BeanTemplate;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
@@ -95,6 +96,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected static class MutableState {
 		//TODO (ALEPH-10) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
+		SetOnce<String> post_enrichment_topic = new SetOnce<>();
 		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
 		SetOnce<String> user_topology_entry_point = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
@@ -153,6 +155,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
 	public boolean setBucket(DataBucketBean this_bucket) {
+		_mutable_state.post_enrichment_topic.set(_distributed_services.generateTopicName(this_bucket.full_name(), Optional.of("$end")));
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
@@ -352,9 +355,9 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			final BrokerHosts hosts = new ZkHosts(KafkaUtils.getZookeperConnectionString());
 			final String full_path = (_globals.distributed_root_dir() + GlobalPropertiesBean.BUCKET_DATA_ROOT_OFFSET + my_bucket.full_name()).replace("//", "/");
-			final String topic_name = KafkaUtils.bucketPathToTopicName(my_bucket.full_name(), Optional.empty());
-			_distributed_services.createTopic(topic_name);
-			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, my_bucket._id()); 
+			final String topic_name = _distributed_services.generateTopicName(my_bucket.full_name(), Optional.empty());
+			_distributed_services.createTopic(topic_name, Optional.empty());
+			final SpoutConfig spout_config = new SpoutConfig(hosts, topic_name, full_path, BucketUtils.getUniqueSignature(my_bucket.full_name(), Optional.empty())); 
 			spout_config.scheme = new SchemeAsMultiScheme(new StringScheme());
 			final KafkaSpout kafka_spout = new KafkaSpout(spout_config);
 			return Arrays.asList(Tuples._2T((T) kafka_spout, topic_name));			
@@ -423,6 +426,11 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 		}
 		else if (_crud_storage_service.isPresent()){ // (super slow)
 			_crud_storage_service.get().storeObject(mutated_json);
+		}
+		final String topic = _mutable_state.post_enrichment_topic.get();
+		if (_distributed_services.doesTopicExist(topic)) {
+			// (ie someone is listening in on our output data, so duplicate it for their benefit)
+			_distributed_services.produce(topic, mutated_json.toString());
 		}
 		//(else nothing to do)
 	}

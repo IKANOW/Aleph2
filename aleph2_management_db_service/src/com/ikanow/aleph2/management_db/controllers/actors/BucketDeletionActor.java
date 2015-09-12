@@ -115,6 +115,8 @@ public class BucketDeletionActor extends UntypedActor {
 		}
 		else { // 3) OK check for the rare but unpleasant case where the bucket wasn't deleted
 			
+			// (don't delete any topics for this bucket, there's a separate CDS worker that is responsible for topic-based "garbage collection")
+			
 			final QueryComponent<DataBucketBean> bucket_selector = CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, msg.bucket().full_name());
 			_bucket_crud_proxy.get().getObjectBySpec(bucket_selector)
 				.thenAccept(bucket_opt -> {

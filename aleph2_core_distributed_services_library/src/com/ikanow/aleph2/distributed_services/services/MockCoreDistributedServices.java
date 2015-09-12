@@ -196,10 +196,10 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#createTopic(java.lang.String)
 	 */
 	@Override
-	public 	void createTopic(String topic) {
+	public 	void createTopic(String topic, Optional<Map<String, Object>> options) {
 		setupKafka();
 		logger.debug("CREATING " + topic);
-		KafkaUtils.createTopic(topic);
+		KafkaUtils.createTopic(topic, options);
 	}
 	
 	/* (non-Javadoc)
@@ -217,7 +217,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public void produce(String topic, String message) {
-		this.createTopic(topic);
+		this.createTopic(topic, Optional.empty());
 		
 		logger.debug("PRODUCING");
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
@@ -230,11 +230,27 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#consume(java.lang.String)
 	 */
 	@Override
-	public Iterator<String> consume(String topic) {
+	public Iterator<String> consumeAs(String topic, Optional<String> consumer_name) {
 		setupKafka();
 		logger.debug("CONSUMING");
-		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic);
+		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, consumer_name);
 		return new WrappedConsumerIterator(consumer, topic);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#generateTopicName(java.lang.String, java.util.Optional)
+	 */
+	@Override
+	public String generateTopicName(String path, Optional<String> subchannel) {
+		return KafkaUtils.bucketPathToTopicName(path, subchannel.map(sc -> sc.equals("$start") ? "" : sc));
+	}	
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#doesTopicExist(java.lang.String)
+	 */
+	@Override
+	public boolean doesTopicExist(String topic) {
+		return KafkaUtils.doesTopicExist(topic);
 	}
 	
 	/* (non-Javadoc)

@@ -354,7 +354,7 @@ public class TestHarvestContext {
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
-		Iterator<String> iter = test_context._distributed_services.consume(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()));
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()), Optional.empty());
 		long count = 0;
 		while ( iter.hasNext() ) {
 			String msg = iter.next();

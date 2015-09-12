@@ -43,7 +43,6 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -127,7 +126,7 @@ public class TestPassthroughTopology {
 		
 		//PHASE4 : WRITE TO KAFKA
 		
-		cds.produce(KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.empty()), "{\"test\":\"test1\"}");
+		cds.produce(cds.generateTopicName(test_bucket.full_name(), Optional.empty()), "{\"test\":\"test1\"}");
 		_logger.info("******** Written to CDS");
 		
 		for (int i = 0; i < 60; ++i) {
