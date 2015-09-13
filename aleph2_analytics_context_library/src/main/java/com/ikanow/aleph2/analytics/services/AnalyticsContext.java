@@ -56,6 +56,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
@@ -154,7 +155,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @param this_bucket - the bucket to associate
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
-	public boolean setBucket(DataBucketBean this_bucket) {
+	public boolean setBucket(final DataBucketBean this_bucket) {
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
@@ -162,7 +163,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @param this_bucket - the library bean to be associated
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
-	public boolean setLibraryConfig(SharedLibraryBean lib_config) {
+	public boolean setLibraryConfig(final SharedLibraryBean lib_config) {
 		return _mutable_state.library_config.set(lib_config);
 	}
 	
@@ -342,8 +343,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
-			Optional<String> driver_options) {
+	public <T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class,
+			final Optional<String> driver_options) {
 		return Optional.empty();
 	}
 
@@ -360,11 +361,33 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public Optional<Tuple2<String, Optional<String>>> getOutputPath(
-			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+			final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
 		// TODO Auto-generated method stub ...hmmm do I need a getOutputTopic?
 		return null;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getOutputTopic(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean)
+	 */
+	@Override
+	public Optional<String> getOutputTopic(
+			final Optional<DataBucketBean> bucket,
+			final AnalyticThreadJobBean job)
+	{
+		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		if ((MasterEnrichmentType.streaming == job.output().transient_type()) || (MasterEnrichmentType.streaming_and_batch == job.output().transient_type())) {
+			final String topic = job.output().is_transient()
+					? _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()))
+					: 
+					  _distributed_services.generateTopicName(Optional.ofNullable(job.output().sub_bucket_path()).orElse(this_bucket.full_name()), 
+																ICoreDistributedServices.QUEUE_END_NAME)
+					;
+			return Optional.of(topic);
+		}
+		else return Optional.empty();
+	}
+	
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getInputTopics(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean)
 	 */
@@ -419,8 +442,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 	
 	@Override
 	public List<String> getInputPaths(
-			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
-			AnalyticThreadJobInputBean job_input) {
+			final Optional<DataBucketBean> bucket, 
+			final AnalyticThreadJobBean job,
+			final AnalyticThreadJobInputBean job_input) {
 		// TODO Auto-generated method stub
 		
 		// Handle diff cases like:
@@ -437,8 +461,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#checkForListeners(java.util.Optional, java.util.Optional)
 	 */
 	@Override
-	public boolean checkForListeners(Optional<DataBucketBean> bucket,
-			Optional<String> stage) {
+	public boolean checkForListeners(final Optional<DataBucketBean> bucket, final Optional<String> stage) {
 
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		final String topic_name = _distributed_services.generateTopicName(my_bucket.full_name(), stage);
@@ -450,7 +473,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public List<String> getAnalyticsContextLibraries(
-			Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+			final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 		
 		// Consists of:
 		// 1) This library 
@@ -583,7 +606,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public <S> ICrudService<S> getGlobalAnalyticTechnologyObjectStore(
-			Class<S> clazz, Optional<String> collection) {
+			final Class<S> clazz, final Optional<String> collection) {
 		return this.getBucketObjectStore(clazz, Optional.empty(), collection, Optional.of(AssetStateDirectoryBean.StateDirectoryType.library));
 	}
 
@@ -591,9 +614,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
 	 */
 	@Override
-	public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
-			Optional<DataBucketBean> bucket, Optional<String> collection,
-			Optional<StateDirectoryType> type)
+	public <S> ICrudService<S> getBucketObjectStore(final Class<S> clazz,
+			final Optional<DataBucketBean> bucket, final Optional<String> collection,
+			final Optional<StateDirectoryType> type)
 	{
 		final Optional<DataBucketBean> this_bucket = 
 				bucket
@@ -635,7 +658,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public CompletableFuture<DataBucketStatusBean> getBucketStatus(
-			Optional<DataBucketBean> bucket) {
+			final Optional<DataBucketBean> bucket) {
 		return this._core_management_db
 				.readOnlyVersion()
 				.getDataBucketStatusStore()
@@ -648,8 +671,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
 	 */
 	@Override
-	public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
-			BasicMessageBean message, boolean roll_up_duplicates) {
+	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
+			final BasicMessageBean message, final boolean roll_up_duplicates) {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
@@ -657,8 +680,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
 	 */
 	@Override
-	public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
-			BasicMessageBean message) {
+	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
+			final BasicMessageBean message) {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
@@ -666,7 +689,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#emergencyDisableBucket(java.util.Optional)
 	 */
 	@Override
-	public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
+	public void emergencyDisableBucket(final Optional<DataBucketBean> bucket) {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
@@ -674,8 +697,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#emergencyQuarantineBucket(java.util.Optional, java.lang.String)
 	 */
 	@Override
-	public void emergencyQuarantineBucket(Optional<DataBucketBean> bucket,
-			String quarantine_duration) {
+	public void emergencyQuarantineBucket(
+			final Optional<DataBucketBean> bucket,
+			final String quarantine_duration)
+	{
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
@@ -683,20 +708,22 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#sendObjectToStreamingPipeline(java.util.Optional, java.util.Optional, fj.data.Either)
 	 */
 	@Override
-	public void sendObjectToStreamingPipeline(Optional<DataBucketBean> bucket,
-			Optional<String> stage, Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations)
+	public void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket,
+			final AnalyticThreadJobBean job, 
+			final Either<JsonNode, Map<String, Object>> object, 
+			final Optional<AnnotationBean> annotations)
 	{
 		if (annotations.isPresent()) {
 			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
 		}
-		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get()); 
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
-		
-		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), stage);
-		if (_distributed_services.doesTopicExist(topic)) {
-			// (ie someone is listening in on our output data, so duplicate it for their benefit)
-			_distributed_services.produce(topic, obj_json.toString());
-		}
+
+		this.getOutputTopic(bucket, job).ifPresent(topic -> {	
+			if (_distributed_services.doesTopicExist(topic)) {
+				// (ie someone is listening in on our output data, so duplicate it for their benefit)
+				_distributed_services.produce(topic, obj_json.toString());
+			}
+		});
 	}
 
 	/* (non-Javadoc)
@@ -704,8 +731,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceInput(
-			Class<T> clazz, Optional<DataBucketBean> bucket,
-			AnalyticThreadJobBean job, AnalyticThreadJobInputBean job_input)
+			final Class<T> clazz, 
+			final Optional<DataBucketBean> bucket,
+			final AnalyticThreadJobBean job, 
+			final AnalyticThreadJobInputBean job_input)
 	{	
 		if ("storage_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
@@ -723,8 +752,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public <T extends IAnalyticsAccessContext<?>> Optional<T> getServiceOutput(
-			Class<T> clazz, Optional<DataBucketBean> bucket,
-			AnalyticThreadJobBean job, String data_service)
+			final Class<T> clazz, 
+			final Optional<DataBucketBean> bucket,
+			final AnalyticThreadJobBean job, 
+			final String data_service)
 	{
 		if ("storage_service".equalsIgnoreCase(data_service)) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
@@ -741,9 +772,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#emitObject(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean, fj.data.Either, java.util.Optional)
 	 */
 	@Override
-	public void emitObject(Optional<DataBucketBean> bucket,
-			AnalyticThreadJobBean job,
-			Either<JsonNode, Map<String, Object>> object, Optional<AnnotationBean> annotations)
+	public void emitObject(final Optional<DataBucketBean> bucket,
+			final AnalyticThreadJobBean job,
+			final Either<JsonNode, Map<String, Object>> object, 
+			final Optional<AnnotationBean> annotations)
 	{
 		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get()); 
 		
@@ -765,7 +797,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_crud_storage_service.get().storeObject(obj_json);
 		}
 		
-		//TODO (ALEPH-12): need some caching in here (memoize - there's a few other places as well, basically search for generateTopicName)
 		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()));
 		if (_distributed_services.doesTopicExist(topic)) {
 			// (ie someone is listening in on our output data, so duplicate it for their benefit)
@@ -773,4 +804,5 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 		//(else nothing to do)
 	}
+
 }

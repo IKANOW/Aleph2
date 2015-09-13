@@ -151,7 +151,14 @@ public class TestCoreDistributedServices {
 		});
         _completed3.get(20, TimeUnit.SECONDS);
         assertEquals(false, _test3.get());
-        
+	}
+	
+	@Test
+	public void test_topicNameGeneration() {		
+        assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.empty()), _core_distributed_services.generateTopicName("/test", Optional.empty()));
+        assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.empty()), _core_distributed_services.generateTopicName("/test", Optional.of("$start")));
+        assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end")), _core_distributed_services.generateTopicName("/test", Optional.of("$end")));
+        assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("other")), _core_distributed_services.generateTopicName("/test", Optional.of("other")));
 	}
 	
 	

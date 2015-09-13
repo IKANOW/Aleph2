@@ -242,7 +242,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public String generateTopicName(String path, Optional<String> subchannel) {
-		return KafkaUtils.bucketPathToTopicName(path, subchannel.map(sc -> sc.equals("$start") ? "" : sc));
+		return KafkaUtils.bucketPathToTopicName(path, subchannel.filter(sc -> !sc.equals(QUEUE_START_ALIAS.get())));		
 	}	
 	
 	/* (non-Javadoc)

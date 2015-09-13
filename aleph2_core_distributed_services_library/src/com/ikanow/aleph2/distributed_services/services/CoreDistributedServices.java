@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
@@ -61,6 +62,7 @@ import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Functions;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -432,12 +434,18 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 
+	/** Memoized version of generateTopicName
+	 */
+	private Function<Tuple2<String, Optional<String>>, String> generateTopicName_internal = Functions.memoize(path_subchannel -> {
+		return KafkaUtils.bucketPathToTopicName(path_subchannel._1(), path_subchannel._2().filter(sc -> !sc.equals(QUEUE_START_ALIAS.get())));		
+	});
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#generateTopicName(java.lang.String, java.util.Optional)
 	 */
 	@Override
 	public String generateTopicName(String path, Optional<String> subchannel) {
-		return KafkaUtils.bucketPathToTopicName(path, subchannel.map(sc -> sc.equals("$start") ? "" : sc));
+		return generateTopicName_internal.apply(Tuples._2T(path, subchannel));
 	}
 
 	/* (non-Javadoc)

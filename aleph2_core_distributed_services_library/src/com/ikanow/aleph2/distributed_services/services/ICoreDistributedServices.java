@@ -112,7 +112,7 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	// KAFKA SERVICES
 
 	/** Generates a unique topic name given the path (usually DataBucketBean::full_name and a subchannel, eg enrichment stage/intermediate analytic step
-	 *  There are 2 default subchannels: "$start" (aliased to: "") and "$end" for the start/end of a modular enrichment process
+	 *  There are 2 default subchannels: "$start"==QUEUE_START_NAME (aliased to: Optional.empty() and "$end"==QUEUE_END_NAME for the start/end of a modular enrichment process
 	 * @param path
 	 * @param subchannel
 	 * @return

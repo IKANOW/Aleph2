@@ -369,7 +369,7 @@ public class TestContextUtils {
 
 		@Override
 		public void sendObjectToStreamingPipeline(
-				Optional<DataBucketBean> bucket, Optional<String> stage,
+				Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job,
 				Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations) {
 		}
 
@@ -396,6 +396,12 @@ public class TestContextUtils {
 		@Override
 		public List<String> getInputTopics(Optional<DataBucketBean> bucket,
 				AnalyticThreadJobBean job, AnalyticThreadJobInputBean job_input) {
+			return null;
+		}
+
+		@Override
+		public Optional<String> getOutputTopic(Optional<DataBucketBean> bucket,
+				AnalyticThreadJobBean job) {
 			return null;
 		}
 	}

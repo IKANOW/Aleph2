@@ -62,7 +62,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param stage - if set to Optionals.empty() or "$end" then occurs post enrichment. If set to "" or "$start" then occurs pre-enrichment. Otherwise should be the name of a module - will listen immediately after that. 
 	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
-	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Optional<String> stage, final Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations);
+	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations);
 	
 	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
@@ -76,16 +76,26 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	
 	// BOTH ANALYTICS TECHNOLOGY AND ANALYTICS MODULE - DATA INPUT/OUTPUT 
 	
-	/** (AnalyticsTechnology/Analytics Module) Gets the path to which this (possibly) temporary job should write data
+	/** (AnalyticsTechnology/Analytics Module) Gets the path to which this (possibly) intermediate job should write data
 	 *  For non-temporary jobs that write to file, or permanent jobs with no temporal settings - a single string is returned, which is the path to which to write
 	 *  For bucket output with temporal settings, 2 strings are returned - the first is the base directory, the second is a DateFormat string that is the time-based sub-directory to which files should be written
 	 *  (If the bucket has no file output then no strings are returned)
 	 *  Note that for any specific technology it is possible to request an outputter of the right format via getServiceOutput instead - if it exists then it will likely contain an efficient pre-built module
+	 *  Or just write your own outputter calling emitOutput
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
-	 * @return - optionally (if the job requires file-based output) 
+	 * @return - optionally (if the job requires file-based output) the base path and the temporal suffix that can be passed to eg SimpleDateFormat 
 	 */
 	Optional<Tuple2<String, Optional<String>>> getOutputPath(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job);
+
+	/** (AnalyticsTechnology/Analytics Module) Gets the topic to which this (possibly) intermediate job should stream real-time data
+	 *  This is for passing the topic into an external library - alternatively sendObjectToStreamingPipeline can be called
+	 * @param bucket
+	 * @param job
+	 * @return
+	 */
+	Optional<String> getOutputTopic(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job);
+	
 	
 	/** (AnalyticsTechnology/Analytics Module) For jobs that read from file (either temporary or persistent), this provides a set of file paths from which to read
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
