@@ -38,6 +38,7 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 
 
+
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.Actor;
@@ -79,6 +80,27 @@ public class BucketActionSupervisor extends UntypedActor {
 		protected final Optional<FiniteDuration> timeout;
 		protected final String message_type; // ActorUtils.BUCKET_ACTION_ZOOKEEPER or STREAMING_ENRICHMENT_ZOOKEEPER 
 	}
+	
+	/** Send an action message to the appropriate distribution actor, get a future containing the reply 
+	 * @param supervisor - the (probably singleton
+	 * @param message - the message to send 
+	 * @param timeout - message timeout
+	 * @return the future containing a collection of replies
+	 */
+	public static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
+				askBucketActionActor(final Optional<Boolean> multi_node_override,
+						final ActorRef supervisor, final ActorSystem actor_context,
+						final BucketActionMessage message, 
+						final Optional<FiniteDuration> timeout)
+	{
+		return multi_node_override.orElseGet(() -> Optional.ofNullable(message.bucket().multi_node_enabled()).orElse(false))
+				? 					
+				askDistributionActor(supervisor, actor_context, message, timeout)
+				:
+				askChooseActor(supervisor, actor_context, message, timeout)
+				;
+	}
+	
 	
 	/** Send an action message to the multi-node distribution actor, get a future containing the reply 
 	 * @param supervisor - the (probably singleton

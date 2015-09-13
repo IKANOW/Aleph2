@@ -369,7 +369,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			}
 		}).thenCompose(__ -> {
 			final CompletableFuture<Collection<BasicMessageBean>> future_replies = 
-					BucketActionSupervisor.askDistributionActor(
+					BucketActionSupervisor.askBucketActionActor(Optional.empty(),
 							_actor_context.getBucketActionSupervisor(), 
 							_actor_context.getActorSystem(), 
 							new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), Optional.empty()

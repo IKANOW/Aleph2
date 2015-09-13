@@ -64,6 +64,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchServi
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
@@ -79,6 +82,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -1063,14 +1067,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				new BucketActionMessage.NewBucketActionMessage(new_object, is_suspended);
 		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				Optional.ofNullable(new_object.multi_node_enabled()).orElse(false)
-				? 					
-				BucketActionSupervisor.askDistributionActor(
-						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
-						(BucketActionMessage)new_message, 
-						Optional.empty())
-				:
-				BucketActionSupervisor.askChooseActor(
+				BucketActionSupervisor.askBucketActionActor(Optional.empty(),
 						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)new_message, 
 						Optional.empty());
@@ -1209,6 +1206,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.count();
 	}
 	
+	/** Create the different default files needed by the bucket in the distributed file system
+	 * @param bucket
+	 * @param storage_service
+	 * @throws Exception
+	 */
 	public static void createFilePaths(final DataBucketBean bucket, final IStorageService storage_service) throws Exception {
 		final FileContext dfs = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 	
@@ -1240,6 +1242,99 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
 	}
 	
+	/** Validate buckets for their analytic content (lots depends on the specific technology, so that is delegated to the technology)
+	 * @param bean
+	 * @return
+	 */
+	protected static List<String> validateAnalyticBuckets(final DataBucketBean bean) {
+		final LinkedList<String> errs = new LinkedList<String>();
+		if ((null != bean.analytic_thread()) && Optional.ofNullable(bean.analytic_thread().enabled()).orElse(true)) {
+			final AnalyticThreadBean analytic_thread = bean.analytic_thread();
+
+			// 1) Currently don't support analytic thread with any other type (harvest/enrichment)
+			
+			final Collection<AnalyticThreadJobBean> jobs = Optionals.ofNullable(bean.analytic_thread().jobs());
+			
+			// 2) Jobs must be non-empty (but will allow everything to be disabled)
+			
+			jobs.stream().filter(job -> Optional.ofNullable(job.enabled()).orElse(true)).forEach(job -> {
+
+				// 3) Some basic checks
+				
+				job.analytic_technology_name_or_id(); //must be non-empty
+				
+				job.analytic_type(); // must not be "none"
+				
+				job.name(); // must not be blank, must be alphanum/_ only
+				
+				// 4) Inputs
+				
+				final Stream<AnalyticThreadJobBean.AnalyticThreadJobInputBean> inputs = Optionals.ofNullable(job.inputs()).stream().filter(i -> Optional.ofNullable(i.enabled()).orElse(true));
+				
+				// enabled inputs must not be non-empty
+				
+				inputs.forEach(input -> {
+
+					// 4.1) basic checks
+					
+					input.data_service(); // must be sensible (or stream/batch)
+					
+					input.resource_name_or_id(); // must be sensible)
+					
+					// 4.2) input config
+					
+					input.config(); //TODO (merge in global input config)
+					
+					input.config().time_min(); //validate time
+					input.config().time_max(); //validate time
+				});
+				
+				// 5) Outputs
+				
+				job.output(); // must not be null
+				
+				job.output().sub_bucket_path(); // must not be specified if is_transient() is false
+				
+				job.output().transient_type(); // must not be null if is_transient() is true
+				
+			});
+			
+			// 6) Triggers
+			
+			final Optional<AnalyticThreadComplexTriggerBean> top_level_trigger_config = Optionals.of(() -> analytic_thread.trigger_config().trigger());
+			
+			top_level_trigger_config.ifPresent(trigger -> errs.addAll(validateAnalyticTrigger(trigger)));			
+		}
+		return errs;
+	}
+
+	/** Recursive check for triggers in analytic beans
+	 * @param trigger
+	 * @return
+	 */
+	private static List<String> validateAnalyticTrigger(final AnalyticThreadComplexTriggerBean trigger) {
+		final LinkedList<String> errs = new LinkedList<String>();
+		
+		//Stream.concat(Stream.of(analytic_thread.trigger_config().trigger()), b)
+		
+		trigger.resource_name_or_id(); // only one of this and...
+		trigger.op(); // can be non-null, and if op is specified then..
+		trigger.dependency_list(); // must be non null/empty
+		final Stream<AnalyticThreadComplexTriggerBean> other_trigger_configs = Optionals.ofNullable(trigger.dependency_list()).stream();
+		
+		trigger.type(); //if this is custom then
+		trigger.custom_analytic_technology_name_or_id(); // must be non null
+		
+		// Recursive check
+		other_trigger_configs.forEach(other_trigger -> errs.addAll(validateAnalyticTrigger(other_trigger)));		
+		
+		return errs;
+	}
+	
+	/** Check times inside the bucket and some of its standard schemas
+	 * @param bean
+	 * @return
+	 */
 	protected static List<String> validateBucketTimes(final DataBucketBean bean) {
 		final LinkedList<String> errs = new LinkedList<String>();
 		

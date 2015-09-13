@@ -85,21 +85,14 @@ public class MgmtCrudUtils {
 			)
 	{		
 		final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
-		
+				
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				!multi_node_enabled && Optional.ofNullable(mgmt_operation.handling_clients()).orElse(Collections.emptySet()).isEmpty()
-				?
-				//(special case: single-node-mode and no node affinity (due to error) => go back to choosing
-				BucketActionSupervisor.askChooseActor(
+				BucketActionSupervisor.askBucketActionActor(
+						Optional.of(!multi_node_enabled && Optional.ofNullable(mgmt_operation.handling_clients()).orElse(Collections.emptySet()).isEmpty())
+						,
 						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)mgmt_operation, 
-						Optional.empty())
-				:
-				BucketActionSupervisor.askDistributionActor(
-						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
-						(BucketActionMessage)mgmt_operation, 
-						Optional.empty())
-				;
+						Optional.empty());
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 				f.<Collection<BasicMessageBean>>thenApply(replies -> {
