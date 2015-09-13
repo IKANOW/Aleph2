@@ -45,4 +45,42 @@ public class TestKafkaUtils {
 				KafkaUtils.getBrokerListFromZookeeper(_cds.getCuratorFramework(), Optional.of("/brokers/ids"), mapper).split(":")[1]);
 	}
 	
+	@Test
+	public void test_kafkaCaching() {
+		
+		assertTrue("Topic should _not_ exist", !KafkaUtils.doesTopicExist("random_topic"));		
+
+		// Check cached version, cache type 1:
+		KafkaUtils.known_topics.put("random_topic", true);
+		assertTrue("Topic does exist", KafkaUtils.doesTopicExist("random_topic"));		
+		KafkaUtils.known_topics.put("random_topic", false);
+		assertTrue("Topic does not exist", !KafkaUtils.doesTopicExist("random_topic"));		
+		KafkaUtils.known_topics.asMap().remove("random_topic");
+		
+		// Check cached version, cache type 2:
+		KafkaUtils.my_topics.put("random_topic", true);
+		assertTrue("Topic does exist", KafkaUtils.doesTopicExist("random_topic"));		
+		KafkaUtils.my_topics.put("random_topic", false);
+		assertTrue("Topic does not exist", !KafkaUtils.doesTopicExist("random_topic"));		
+		KafkaUtils.my_topics.remove("random_topic");
+		
+		//(adds to my_cache)
+		assertTrue("Topic should _not_ exist", !KafkaUtils.doesTopicExist("random_topic"));
+		
+		// Create a topic
+		KafkaUtils.createTopic("random_topic", Optional.empty());
+		
+		// Will initially return true because createTopic adds to my_topics
+		assertTrue("Topic does exist", KafkaUtils.doesTopicExist("random_topic"));
+		// Clear my_topics cache
+		// Will return false because cached:
+		KafkaUtils.my_topics.remove("random_topic");		
+		assertTrue("Topic should _not_ exist", !KafkaUtils.doesTopicExist("random_topic"));
+		
+		// Clear cache:
+		KafkaUtils.known_topics.asMap().remove("random_topic");
+		// (finally will actually go check the topics)
+		assertTrue("Topic does exist", KafkaUtils.doesTopicExist("random_topic"));		
+	}
+	
 }

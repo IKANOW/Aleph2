@@ -62,8 +62,9 @@ public class KafkaUtils {
 	private static Producer<String, String> producer;	
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
-	private final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
-	private final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
+	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+	//TODO (ALEPH-12): make my_topics a cached map also
 	
 	/**
 	 * Returns a producer pointed at the currently configured Kafka instance.

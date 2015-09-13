@@ -206,7 +206,7 @@ public class TestCoreDistributedServices {
 
         // Check some random other topic does _not_ exist
         
-		assertTrue("Topic should _not_ exist", !_core_distributed_services.doesTopicExist(TOPIC_NAME + "xxx"));        
+		assertTrue("Topic should _not_ exist", !_core_distributed_services.doesTopicExist(TOPIC_NAME + "xxx"));		
 	}
 		
 	@Test
