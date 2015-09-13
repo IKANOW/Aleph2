@@ -88,7 +88,7 @@ public class MgmtCrudUtils {
 				
 		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
 				BucketActionSupervisor.askBucketActionActor(
-						Optional.of(!multi_node_enabled && Optional.ofNullable(mgmt_operation.handling_clients()).orElse(Collections.emptySet()).isEmpty())
+						Optional.of(multi_node_enabled || !Optional.ofNullable(mgmt_operation.handling_clients()).orElse(Collections.emptySet()).isEmpty())
 						,
 						actor_context.getBucketActionSupervisor(), actor_context.getActorSystem(),
 						(BucketActionMessage)mgmt_operation, 
