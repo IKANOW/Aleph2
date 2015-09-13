@@ -96,8 +96,9 @@ public abstract class DataBucketTest {
 
 		createFolderStructure();
 		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
-			
-}
+		
+		ModuleUtils.getAppInjector().get(); // (just ensures that all the services have completed)		
+	}
 
 	protected void createFolderStructure(){
 		// create folder structure if it does not exist for testing.		
