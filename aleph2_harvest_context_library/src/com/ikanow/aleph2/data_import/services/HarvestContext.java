@@ -42,7 +42,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import.utils.LiveInjector;
+import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;

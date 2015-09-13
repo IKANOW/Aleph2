@@ -22,11 +22,15 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
@@ -48,6 +52,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -506,4 +511,94 @@ public class TestAnalyticsContext {
 		assertEquals(2, dir_s.countObjects().get().intValue());
 		
 	}
+	
+	//TODO: copy this across from harvest
+	@org.junit.Ignore
+	@Test
+	public void test_fileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
+		_logger.info("running test_fileLocations");
+		
+		try {
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			//All we can do here is test the trivial eclipse specific path:
+			try { 
+				File f = new File(test_context._globals.local_root_dir() + "/lib/aleph2_test_file_locations.jar");
+				FileUtils.forceMkdir(f.getParentFile());
+				FileUtils.touch(f);
+			}
+			catch (Exception e) {} // probably already exists:
+			
+
+			final List<String> lib_paths = test_context.getAnalyticsContextLibraries(Optional.empty());
+
+			//(this doesn't work very well when run in test mode because it's all being found from file)
+			assertTrue("Finds some libraries", !lib_paths.isEmpty());
+			lib_paths.stream().forEach(lib -> assertTrue("No external libraries: " + lib, lib.contains("aleph2")));
+			
+			assertTrue("Can find the test JAR or the data model: " +
+							lib_paths.stream().collect(Collectors.joining(";")),
+						lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_test_file_locations"))
+						||
+						lib_paths.stream().anyMatch(lib -> lib.contains("aleph2_data_model"))
+					);
+			
+			// Now get the various shared libs
+
+			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+															.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name2"))
+															.done().get();
+			
+			final HarvestControlMetadataBean harvest_module2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+					.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
+															.done().get();
+												
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::harvest_technology_name_or_id, "test_harvest_tech_id")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module1, harvest_module2))
+					.done().get();
+
+			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
+												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
+												.done().get();
+			
+			final SharedLibraryBean htmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+					.with(SharedLibraryBean::_id, "id1")
+					.with(SharedLibraryBean::path_name, "name1")
+					.done().get();
+			
+			final SharedLibraryBean htmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+					.with(SharedLibraryBean::_id, "id2")
+					.with(SharedLibraryBean::path_name, "name2")
+					.done().get();
+			
+			final SharedLibraryBean htmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
+					.with(SharedLibraryBean::_id, "id3")
+					.with(SharedLibraryBean::path_name, "name3")
+					.done().get();
+			
+			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
+								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
+			
+			Map<String, String> mods = test_context.getAnalyticsLibraries(Optional.of(test_bucket), Collections.emptyList()).get();
+			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
+			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
+			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
+			assertTrue("test_harvest_tech_name", mods.containsKey("test_harvest_tech_name") && mods.get("test_harvest_tech_name").endsWith("test_harvest_tech_id.cache.jar"));
+		}
+		catch (Exception e) {
+			try {
+				e.printStackTrace();
+			}
+			catch (Exception ee) {
+				System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
+			}
+			fail("Threw exception");
+		}
+		
+	}
+	
 }

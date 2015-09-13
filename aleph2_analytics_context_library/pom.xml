@@ -126,6 +126,12 @@
 		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
 	</dependency>
+	<dependency>
+		<groupId>com.ikanow.aleph2</groupId>
+		<artifactId>aleph2_core_shared_library</artifactId>
+		<version>${aleph2.version}</version>
+		<scope>${aleph2.scope}</scope>
+	</dependency>
   	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_management_db_service</artifactId>
