@@ -67,10 +67,12 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -97,6 +99,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
+
+import fj.data.Validation;
 
 import java.util.stream.Stream;
 
@@ -786,6 +790,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			}
 		}
 		
+		
+		/////////////////
+		
+		// PHASE 1b: ANALYIC VALIDATION
+				
+		errors.addAll(validateAnalyticBucket(bucket).stream().map(MgmtCrudUtils::createValidationError).collect(Collectors.toList()));
+		
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
 		if (!errors.isEmpty()) {
@@ -1242,68 +1253,114 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
 	}
 	
+	private static final Pattern VALID_ANALYTIC_JOB_NAME = Pattern.compile("[a-zA-Z0-9_]+");
+	private static final Pattern VALID_DATA_SERVICES = Pattern.compile("(batch|stream|search_index_service|storage_service)");
+	private static final Pattern VALID_RESOURCE_ID = Pattern.compile("[^:]*:?[^:]*");
+	
+	//TODO (ALEPH-12): add test coverage for this
+	
 	/** Validate buckets for their analytic content (lots depends on the specific technology, so that is delegated to the technology)
 	 * @param bean
 	 * @return
 	 */
-	protected static List<String> validateAnalyticBuckets(final DataBucketBean bean) {
+	protected static List<String> validateAnalyticBucket(final DataBucketBean bean) {
 		final LinkedList<String> errs = new LinkedList<String>();
 		if ((null != bean.analytic_thread()) && Optional.ofNullable(bean.analytic_thread().enabled()).orElse(true)) {
 			final AnalyticThreadBean analytic_thread = bean.analytic_thread();
 
-			// 1) Currently don't support analytic thread with any other type (harvest/enrichment)
+			// 1) Jobs can be empty
 			
 			final Collection<AnalyticThreadJobBean> jobs = Optionals.ofNullable(bean.analytic_thread().jobs());
 			
-			// 2) Jobs must be non-empty (but will allow everything to be disabled)
-			
 			jobs.stream().filter(job -> Optional.ofNullable(job.enabled()).orElse(true)).forEach(job -> {
 
-				// 3) Some basic checks
+				// 2) Some basic checks
 				
-				job.analytic_technology_name_or_id(); //must be non-empty
+				final String job_identifier = Optional.ofNullable(job.name()).orElse(BeanTemplateUtils.toJson(job).toString());
+				if ((null == job.name()) || !VALID_ANALYTIC_JOB_NAME.matcher(job.name()).matches()) {
+					errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_JOB_MALFORMED_NAME, bean.full_name(), job_identifier));					
+				}
 				
-				job.analytic_type(); // must not be "none"
+				if (null == job.analytic_technology_name_or_id()) {
+					errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_BUT_NO_ANALYTIC_TECH, bean.full_name(), job_identifier));
+				}
 				
-				job.name(); // must not be blank, must be alphanum/_ only
+				if (null == job.analytic_type() || (MasterEnrichmentType.none == job.analytic_type())) {
+					errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_JOB_MUST_HAVE_TYPE, bean.full_name(), job_identifier));					
+				}
 				
-				// 4) Inputs
+				// 3) Inputs
 				
-				final Stream<AnalyticThreadJobBean.AnalyticThreadJobInputBean> inputs = Optionals.ofNullable(job.inputs()).stream().filter(i -> Optional.ofNullable(i.enabled()).orElse(true));
+				final List<AnalyticThreadJobBean.AnalyticThreadJobInputBean> inputs = 
+						Optionals.ofNullable(job.inputs()).stream().filter(i -> Optional.ofNullable(i.enabled()).orElse(true))
+						.collect(Collectors.toList());
+
+				// we'll allow inputs to be empty (or at least leave it up to the technology) - perhaps a job is hardwired to get external inputs?
 				
 				// enabled inputs must not be non-empty
 				
 				inputs.forEach(input -> {
 
-					// 4.1) basic checks
+					// 3.1) basic checks
 					
-					input.data_service(); // must be sensible (or stream/batch)
+					if ((null == input.data_service()) || !VALID_DATA_SERVICES.matcher(input.data_service()).matches()) {
+						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_DATA_SERVICE, bean.full_name(), job_identifier, 
+								input.data_service(), VALID_DATA_SERVICES.toString()));											
+					}
+					if ((null == input.resource_name_or_id()) || !VALID_DATA_SERVICES.matcher(input.resource_name_or_id()).matches()) {
+						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_RESOURCE_ID, bean.full_name(), job_identifier, 
+								input.resource_name_or_id(), VALID_RESOURCE_ID.toString()));											
+					}
 					
-					input.resource_name_or_id(); // must be sensible)
+					// 3.2) input config
 					
-					// 4.2) input config
-					
-					input.config(); //TODO (merge in global input config)
-					
-					input.config().time_min(); //validate time
-					input.config().time_max(); //validate time
+					final Optional<String> o_tmin = Optionals.of(() -> job.global_input_config().time_min()).map(Optional::of).orElse(Optionals.of(() -> input.config().time_min()));
+					final Optional<String> o_tmax = Optionals.of(() -> job.global_input_config().time_max()).map(Optional::of).orElse(Optionals.of(() -> input.config().time_max()));
+					o_tmin.ifPresent(tmin -> {
+						final Validation<String, Date> test = TimeUtils.getSchedule(tmin, Optional.empty());
+						if (test.isFail()) {
+							errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_DATE, bean.full_name(), job_identifier, "tmin", tmin, test.fail())); 
+						}
+					});
+					o_tmax.ifPresent(tmax -> {
+						final Validation<String, Date> test = TimeUtils.getSchedule(tmax, Optional.empty());
+						if (test.isFail()) {
+							errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_DATE, bean.full_name(), job_identifier, "tmax", tmax, test.fail())); 
+						}						
+					});
 				});
 				
-				// 5) Outputs
+				// 4) Outputs
 				
-				job.output(); // must not be null
-				
-				job.output().sub_bucket_path(); // must not be specified if is_transient() is false
-				
-				job.output().transient_type(); // must not be null if is_transient() is true
-				
+				// (will allow null output here, since the technology might be fine with that, though it will normally result in downstream errors)
+
+				if (null != job.output()) {
+					
+					final boolean is_transient = Optional.ofNullable(job.output().is_transient()).orElse(false);
+					if (is_transient) {
+						// If transient have to set a streaming/batch type
+						if (MasterEnrichmentType.none == Optional.ofNullable(job.output().transient_type()).orElse(MasterEnrichmentType.none)) {
+							errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_OUTPUT_TRANSIENT_MISSING_FIELD, bean.full_name(), job_identifier, "transient_type")); 
+						}
+						// Must not have a sub-bucket path
+						if (null != job.output().sub_bucket_path()) {
+							errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_OUTPUT_TRANSIENT_ILLEGAL_FIELD, bean.full_name(), job_identifier, "sub_bucket_path")); 
+						}
+					}
+				}				
 			});
 			
-			// 6) Triggers
+			// 5) Triggers
 			
-			final Optional<AnalyticThreadComplexTriggerBean> top_level_trigger_config = Optionals.of(() -> analytic_thread.trigger_config().trigger());
-			
-			top_level_trigger_config.ifPresent(trigger -> errs.addAll(validateAnalyticTrigger(trigger)));			
+			if (null != analytic_thread.trigger_config()) {
+				if (null != analytic_thread.trigger_config().schedule()) {
+					final Validation<String, Date> test = TimeUtils.getSchedule(analytic_thread.trigger_config().schedule(), Optional.empty());
+					if (test.isFail()) {
+						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_MALFORMED_DATE, bean.full_name(), analytic_thread.trigger_config().schedule(), test.fail()));
+					}					
+				}			
+				Optional.ofNullable(analytic_thread.trigger_config().trigger()).ifPresent(trigger -> errs.addAll(validateAnalyticTrigger(bean, trigger)));
+			}
 		}
 		return errs;
 	}
@@ -1312,21 +1369,33 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param trigger
 	 * @return
 	 */
-	private static List<String> validateAnalyticTrigger(final AnalyticThreadComplexTriggerBean trigger) {
+	private static List<String> validateAnalyticTrigger(final DataBucketBean bucket, final AnalyticThreadComplexTriggerBean trigger) {
 		final LinkedList<String> errs = new LinkedList<String>();
+
+		// Either: specify resource id or boolean equation type...
+		if ((null != trigger.resource_name_or_id()) && (null != trigger.op())
+				||
+			(null == trigger.resource_name_or_id()) && (null == trigger.op()))
+		{
+			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_ILLEGAL_COMBO, bucket.full_name()));
+		}
+		// if resource id then must have corresponding type (unless custom - custom analytic tech will have to do its own error validation)
+		if ((null != trigger.resource_name_or_id()) && (TriggerType.custom != Optional.ofNullable(trigger.type()).orElse(TriggerType.custom))) {
+			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_ILLEGAL_COMBO, bucket.full_name()));
+		}		
+		// (If custom then must specifiy a custom technology)
+		if ((TriggerType.custom == trigger.type()) && (null == trigger.custom_analytic_technology_name_or_id())) {
+			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_CUSTOM_TRIGGER_NOT_COMPLETE, bucket.full_name()));
+		}
+		// If generating a boolean equation then must have equation terms
+		if ((null != trigger.op()) && Optionals.ofNullable(trigger.dependency_list()).isEmpty()) {
+			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_ILLEGAL_COMBO, bucket.full_name()));
+		}
 		
-		//Stream.concat(Stream.of(analytic_thread.trigger_config().trigger()), b)
-		
-		trigger.resource_name_or_id(); // only one of this and...
-		trigger.op(); // can be non-null, and if op is specified then..
-		trigger.dependency_list(); // must be non null/empty
 		final Stream<AnalyticThreadComplexTriggerBean> other_trigger_configs = Optionals.ofNullable(trigger.dependency_list()).stream();
 		
-		trigger.type(); //if this is custom then
-		trigger.custom_analytic_technology_name_or_id(); // must be non null
-		
 		// Recursive check
-		other_trigger_configs.forEach(other_trigger -> errs.addAll(validateAnalyticTrigger(other_trigger)));		
+		other_trigger_configs.forEach(other_trigger -> errs.addAll(validateAnalyticTrigger(bucket, other_trigger)));		
 		
 		return errs;
 	}

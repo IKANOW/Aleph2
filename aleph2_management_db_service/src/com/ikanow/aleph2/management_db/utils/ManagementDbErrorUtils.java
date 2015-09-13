@@ -109,6 +109,22 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
+	// BUCKET ANALYTICS
+	
+	public static final String ANALYTIC_JOB_MALFORMED_NAME = "Bucket {0} has an analytic job with missing or malformed name {1}";
+	public static final String ANALYTIC_BUT_NO_ANALYTIC_TECH = "Bucket {0} has analytic job {1} with no analytic_technology_name_or_id field";
+	public static final String ANALYTIC_JOB_MUST_HAVE_TYPE = "Bucket {0} has an analytic job with missing type or set to 'none': {1}";
+	public static final String ANALYTIC_INPUT_MALFORMED_DATA_SERVICE = "Bucket {0} job {1} has a missing or malformed data_service: {2}, supported values = {3}";
+	public static final String ANALYTIC_INPUT_MALFORMED_RESOURCE_ID = "Bucket {0} job {1} has a missing or malformed data_service: {2}, supported patterns = {3}";
+	public static final String ANALYTIC_INPUT_MALFORMED_DATE = "Bucket {0} job {1} has a malformed date (field {2}): {3}, error = {4}";
+	public static final String ANALYTIC_OUTPUT_TRANSIENT_MISSING_FIELD = "Bucket {0} job {1} in transient mode missing field {2}";
+	public static final String ANALYTIC_OUTPUT_TRANSIENT_ILLEGAL_FIELD = "Bucket {0} job {1} in transient mode not allowed field {2}";
+	public static final String ANALYTIC_TRIGGER_MALFORMED_DATE = "Bucket {0} has a malformed trigger schedule: {1}, error = {2}";
+	public static final String ANALYTIC_TRIGGER_ILLEGAL_COMBO = "Bucket {0} has illegal trigger formation: must have _either_ 'op' _or_ 'resource_name_or_id'; if 'op' then 'dependency_list' must be non-empty; if 'resource_name_or_id' then type must be specified";
+	public static final String ANALYTIC_CUSTOM_TRIGGER_NOT_COMPLETE = "Bucket {0} has custom trigger specified but not custom analytic technology to execute it";
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
 	// BUCKET UPDATE
 	
 	public static final String BUCKET_UPDATE_ID_CHANGED = "Bucket {0}: can't update _id";
