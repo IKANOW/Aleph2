@@ -199,8 +199,10 @@ public class AnalyticThreadJobBean implements Serializable {
 		public Boolean enabled() { return enabled; }
 		
 		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc
-		 *  If it's a bucket path with data_service:stream then ":" can optionally be added to the end to stream from a stage (ie "/bucket/path" is the final state of the object before the output,
-		 *  "/bucket/path:" is the initial state of the object before any analytics/enrichment has occurred, "/bucket/path:<name>" is an intermediate state)
+		 *  If it's a bucket path with data_service:stream then ":" can optionally be added to the end to stream from a stage:
+		 *  - "/bucket/path" (equivalently "/bucket/path/$end") is the final state of the object before the output,
+		 *  - "/bucket/path:"(equivalently "/bucket/path/$start")  is the initial state of the object before any analytics/enrichment has occurred, 
+		 *  - "/bucket/path:<name>" is an intermediate state)
 		 * @return The resource name of the input
 		 */
 		public String resource_name_or_id() { return resource_name_or_id; }

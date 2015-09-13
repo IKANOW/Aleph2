@@ -32,10 +32,18 @@ public class AnalyticThreadBean implements Serializable {
 	 * @param trigger_config - Either a specific trigger instance, or a boolean grouping of trigger instances (can nest indefinitely)
 	 * @param jobs - The list of configurations of individual jobs within the larger analytic thread
 	 */
-	public AnalyticThreadBean(final AnalyticThreadTriggerBean trigger_config, final List<AnalyticThreadJobBean> jobs) {
+	public AnalyticThreadBean(final Boolean enabled, final AnalyticThreadTriggerBean trigger_config, final List<AnalyticThreadJobBean> jobs) {
+		this.enabled = enabled;
 		this.trigger_config = trigger_config;
 		this.jobs = jobs;
 	}
+
+	/** Whether the analytic job is enabled
+	 * @return
+	 */
+	public Boolean enabled() {
+		return enabled;
+	}	
 	
 	/** Either a specific trigger instance, or a boolean grouping of trigger instances (can nest indefinitely)
 	 * @return the trigger configuration
@@ -47,6 +55,7 @@ public class AnalyticThreadBean implements Serializable {
 	 */
 	public  List<AnalyticThreadJobBean> jobs() { return null == jobs ? jobs : Collections.unmodifiableList(jobs); }
 	
+	private Boolean enabled;
 	private AnalyticThreadTriggerBean trigger_config;
 	private List<AnalyticThreadJobBean> jobs;	
 }
