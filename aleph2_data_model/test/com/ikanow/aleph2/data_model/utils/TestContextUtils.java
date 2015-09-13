@@ -267,12 +267,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public String subscribeToBucket(DataBucketBean bucket,
-				Optional<String> stage) {
-			return null;
-		}
-
-		@Override
 		public List<String> getAnalyticsContextLibraries(
 				Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 			return null;
@@ -280,7 +274,7 @@ public class TestContextUtils {
 
 		@Override
 		public CompletableFuture<Map<String, String>> getAnalyticsLibraries(
-				Optional<DataBucketBean> bucket) {
+				Optional<DataBucketBean> bucket, final Collection<AnalyticThreadJobBean> jobs) {
 			return null;
 		}
 
@@ -343,7 +337,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Optional<List<String>> getInputPaths(
+		public List<String> getInputPaths(
 				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job,
 				AnalyticThreadJobInputBean job_input) {
 			return null;
@@ -376,7 +370,7 @@ public class TestContextUtils {
 		@Override
 		public void sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket, Optional<String> stage,
-				Either<JsonNode, Map<String, Object>> object) {
+				Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations) {
 		}
 
 		@Override
@@ -396,7 +390,13 @@ public class TestContextUtils {
 		@Override
 		public void emitObject(Optional<DataBucketBean> bucket,
 				AnalyticThreadJobBean job,
-				Either<JsonNode, Map<String, Object>> object) {
+				Either<JsonNode, Map<String, Object>> object, Optional<AnnotationBean> annotations) {
+		}
+
+		@Override
+		public List<String> getInputTopics(Optional<DataBucketBean> bucket,
+				AnalyticThreadJobBean job, AnalyticThreadJobInputBean job_input) {
+			return null;
 		}
 	}
 	

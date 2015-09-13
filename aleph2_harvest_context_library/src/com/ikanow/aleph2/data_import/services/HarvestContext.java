@@ -596,9 +596,9 @@ public class HarvestContext implements IHarvestContext {
 	}
 
 	@Override
-	public void emitObject(Optional<DataBucketBean> bucket,
-			Either<JsonNode, Map<String, Object>> object) {
-		//TODO (ALEPH-19): Fill this in later
+	public void emitObject(Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object)
+	{
+		//TODO (ALEPH-41, ALEPH-12): Fill this in later (this dumps the JSON into the ready directory, right?)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 }

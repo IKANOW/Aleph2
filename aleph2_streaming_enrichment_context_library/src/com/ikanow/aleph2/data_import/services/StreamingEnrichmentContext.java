@@ -116,6 +116,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	protected GlobalPropertiesBean _globals;
 
 	// For writing objects out
+	// TODO (ALEPH-12): this needs to get moved into the object output library
 	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
 	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
 	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service;
