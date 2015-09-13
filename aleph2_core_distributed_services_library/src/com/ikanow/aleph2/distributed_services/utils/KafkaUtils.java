@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.I0Itec.zkclient.ZkClient;
@@ -31,6 +32,8 @@ import org.apache.logging.log4j.Logger;
 import scala.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
@@ -60,7 +63,7 @@ public class KafkaUtils {
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
 	private final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
-	private final static Map<String, Boolean> known_topics = new ConcurrentHashMap<String, Boolean>(); // (Things other to which people want me to publish, but I may not have yet)
+	private final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 	
 	/**
 	 * Returns a producer pointed at the currently configured Kafka instance.
@@ -124,18 +127,20 @@ public class KafkaUtils {
 	 * @return
 	 */
 	public static boolean doesTopicExist(final String topic) {
-		if (known_topics.containsKey(topic) || my_topics.containsKey(topic)) {
-			return true;
+		Boolean does_topic_exist = my_topics.get(topic);
+		if (null != does_topic_exist) {
+			return does_topic_exist.booleanValue();
 		}
-		else { // Need to check ZK
-			final ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
-			
-			final boolean topic_exists = AdminUtils.topicExists(zk_client, topic);
-			if (topic_exists) {
-				known_topics.put(topic, true);
-			}
-			return topic_exists;
+		does_topic_exist = known_topics.getIfPresent(topic);
+		if (null != does_topic_exist) {
+			return does_topic_exist.booleanValue();
 		}
+		
+		final ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
+		
+		final boolean topic_exists = AdminUtils.topicExists(zk_client, topic);
+		known_topics.put(topic, topic_exists);		
+		return topic_exists;
 	}
 	
 	/**
@@ -303,7 +308,7 @@ public class KafkaUtils {
 	 */
 	public static void deleteTopic(String topic) {
 		// Update local cache - remote caches will need to wait to clear of course
-		known_topics.remove(topic);
+		known_topics.invalidate(topic);
 		my_topics.remove(topic);
 		
 		logger.debug("DELETE TOPIC: " + topic);
