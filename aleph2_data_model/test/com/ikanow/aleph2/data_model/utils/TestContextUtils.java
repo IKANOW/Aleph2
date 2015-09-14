@@ -345,7 +345,7 @@ public class TestContextUtils {
 
 		@Override
 		public boolean checkForListeners(Optional<DataBucketBean> bucket,
-				Optional<String> stage) {
+				final AnalyticThreadJobBean job) {
 			return false;
 		}
 

@@ -22,7 +22,6 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +42,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -50,15 +50,17 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
-import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -512,8 +514,6 @@ public class TestAnalyticsContext {
 		
 	}
 	
-	//TODO: copy this across from harvest
-	@org.junit.Ignore
 	@Test
 	public void test_fileLocations() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		_logger.info("running test_fileLocations");
@@ -530,7 +530,10 @@ public class TestAnalyticsContext {
 			catch (Exception e) {} // probably already exists:
 			
 
-			final List<String> lib_paths = test_context.getAnalyticsContextLibraries(Optional.empty());
+			final List<String> lib_paths = test_context.getAnalyticsContextLibraries(Optional.of(
+					ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
+						.add(Tuples._2T(IStorageService.class, Optional.<String>empty()))
+					.build()));
 
 			//(this doesn't work very well when run in test mode because it's all being found from file)
 			assertTrue("Finds some libraries", !lib_paths.isEmpty());
@@ -545,49 +548,53 @@ public class TestAnalyticsContext {
 			
 			// Now get the various shared libs
 
-			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-															.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name2"))
+			final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+															.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
 															.done().get();
-			
-			final HarvestControlMetadataBean harvest_module2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-					.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
-															.done().get();
-												
+
+			final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id_XXX") // (not actually possible, just for tesT)
+															.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name3", "test_analytic_tech_id"))
+															.done().get();												
 			
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::harvest_technology_name_or_id, "test_harvest_tech_id")
-					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module1, harvest_module2))
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1, analytic_job2))
+							.done().get()
+							)
 					.done().get();
 
-			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
-												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
-												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
+			final SharedLibraryBean atlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+												.with(SharedLibraryBean::_id, "test_analytic_tech_id")
+												.with(SharedLibraryBean::path_name, "test_analytic_tech_name")
 												.done().get();
 			
-			final SharedLibraryBean htmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+			final SharedLibraryBean atmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id1")
 					.with(SharedLibraryBean::path_name, "name1")
 					.done().get();
 			
-			final SharedLibraryBean htmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+			final SharedLibraryBean atmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id2")
 					.with(SharedLibraryBean::path_name, "name2")
 					.done().get();
 			
-			final SharedLibraryBean htmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
+			final SharedLibraryBean atmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id3")
 					.with(SharedLibraryBean::path_name, "name3")
 					.done().get();
 			
 			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
-								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
+								.getSharedLibraryStore().storeObjects(Arrays.asList(atlib1, atmod1, atmod2, atmod3)).get();
 			
-			Map<String, String> mods = test_context.getAnalyticsLibraries(Optional.of(test_bucket), Collections.emptyList()).get();
+			Map<String, String> mods = test_context.getAnalyticsLibraries(Optional.of(test_bucket), Arrays.asList(analytic_job1, analytic_job2)).get();
 			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
 			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
 			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
-			assertTrue("test_harvest_tech_name", mods.containsKey("test_harvest_tech_name") && mods.get("test_harvest_tech_name").endsWith("test_harvest_tech_id.cache.jar"));
+			assertTrue("test_analytic_tech_name", mods.containsKey("test_analytic_tech_name") && mods.get("test_analytic_tech_name").endsWith("test_analytic_tech_id.cache.jar"));
 		}
 		catch (Exception e) {
 			try {
@@ -601,4 +608,152 @@ public class TestAnalyticsContext {
 		
 	}
 	
+	public interface StringAnalyticsAccessContext extends IAnalyticsAccessContext<String> {}
+	
+	@Test
+	public void test_serviceInputsAndOutputs() {
+		
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+																						.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+																					.done().get();
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+			.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input3 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "mistake")
+			.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class).done().get();
+		
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2, analytic_input3))
+				.with(AnalyticThreadJobBean::output, analytic_output)
+				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+		
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+							.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
+							)
+						.done().get()
+						)
+				.done().get();
+				
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, analytic_input2));
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input3));
+		
+		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "search_index_service"));
+		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, "storage_service"));
+		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "random_string"));
+	}
+	
+	@org.junit.Ignore
+	@Test
+	public void test_inputAndOutputUtilities() {
+				
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output1 =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
+				.done().get();		
+
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output2 =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, false)
+				.done().get();		
+		
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+			.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "stream")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "test2")
+			.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input3 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "stream")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test3:")
+			.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input4 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "stream")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test4:test")
+			.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input5 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "stream")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test5:$start")
+			.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input6 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "stream")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test6:$end")
+			.done().get();
+		
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_name1")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2, analytic_input3))
+				.with(AnalyticThreadJobBean::output, analytic_output1)
+				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+		
+		final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_name2")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input4, analytic_input5, analytic_input6))
+				.with(AnalyticThreadJobBean::output, analytic_output2)
+				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+		
+		try {
+			test_context.getOutputPath(Optional.empty(), analytic_job1);
+			fail("Expected exception on getOutputPath");
+		}
+		catch (Exception e) {}
+
+		try {
+			test_context.getInputPaths(Optional.empty(), analytic_job1, analytic_input1);
+			fail("Expected exception on getInputPaths");
+		}
+		catch (Exception e) {}
+		
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test")
+				.with(DataBucketBean::full_name, "/test")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+							.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
+							)
+						.done().get()
+						)
+				.done().get();
+		
+		test_context.setBucket(test_bucket);
+
+		assertEquals(false, test_context.checkForListeners(Optional.of(test_bucket), analytic_job1)); 
+				
+		assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test_name1")), test_context.getOutputTopic(Optional.of(test_bucket), analytic_job1));
+		assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end")), test_context.getOutputTopic(Optional.empty(), analytic_job2));
+		
+		assertEquals(Arrays.asList(), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test2"))), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test3", Optional.of("$end"))), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test4", Optional.of("test"))), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input4));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test5", Optional.empty())), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input5));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test6", Optional.of("$end"))), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input6));
+	}
+	
+	//TODO: emit object
+	//TODO: send to streaming pipeline
 }

@@ -134,10 +134,10 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	
 	/** This checks whether another analytic job has requested a stream of objects - if so then sendObjectToStreamingPipeline can be used to forward them
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
-	 * @param stage - if set to Optionals.empty() then occurs post enrichment. If set to "" then occurs pre-enrichment. Otherwise should be the name of a module - will listen immediately after that. 
+	 * @param job - the job being run 
 	 * @return whether another bucket is listening for this bucket
 	 */
-	boolean checkForListeners(final Optional<DataBucketBean> bucket, final Optional<String> stage);
+	boolean checkForListeners(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job);
 	
 	//////////////////////////////////////////////////////
 	

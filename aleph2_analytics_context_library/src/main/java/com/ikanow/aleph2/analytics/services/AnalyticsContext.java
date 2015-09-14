@@ -362,8 +362,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	@Override
 	public Optional<Tuple2<String, Optional<String>>> getOutputPath(
 			final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
-		// TODO Auto-generated method stub ...hmmm do I need a getOutputTopic?
-		return null;
+		// TODO (ALEPH-12)
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
@@ -445,7 +445,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final Optional<DataBucketBean> bucket, 
 			final AnalyticThreadJobBean job,
 			final AnalyticThreadJobInputBean job_input) {
-		// TODO Auto-generated method stub
 		
 		// Handle diff cases like:
 		// 1) Analytics
@@ -454,17 +453,25 @@ public class AnalyticsContext implements IAnalyticsContext {
 		// Like final String base_path = storage_service.getRootPath() + input.resource_name_or_id() + IStorageService.STORED_DATA_SUFFIX;
 		// except I think we need to pick the right sub-dir .. probably need to be able to spec raw/processed/json
 		
-		return null;
+		// TODO (ALEPH-12)
+		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#checkForListeners(java.util.Optional, java.util.Optional)
 	 */
 	@Override
-	public boolean checkForListeners(final Optional<DataBucketBean> bucket, final Optional<String> stage) {
+	public boolean checkForListeners(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
 
-		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-		final String topic_name = _distributed_services.generateTopicName(my_bucket.full_name(), stage);
+		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		
+		final String topic_name = job.output().is_transient()
+				? _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()))
+				: 
+				  _distributed_services.generateTopicName(Optional.ofNullable(job.output().sub_bucket_path()).orElse(this_bucket.full_name()), 
+															ICoreDistributedServices.QUEUE_END_NAME)
+				;		
+		
 		return _distributed_services.doesTopicExist(topic_name);
 	}
 
@@ -736,11 +743,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job, 
 			final AnalyticThreadJobInputBean job_input)
 	{	
+		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job_input).toString());
 		if ("storage_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {
-			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
+			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else if ("search_index_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {			
-			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
+			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else { // (currently no other  
 			return Optional.empty();
@@ -757,11 +765,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job, 
 			final String data_service)
 	{
+		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job).toString());
 		if ("storage_service".equalsIgnoreCase(data_service)) {
-			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
+			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else if ("search_index_service".equalsIgnoreCase(data_service)) {			
-			return _storage_service.getUnderlyingPlatformDriver(clazz, Optional.empty());
+			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else { // (currently no other  
 			return Optional.empty();
