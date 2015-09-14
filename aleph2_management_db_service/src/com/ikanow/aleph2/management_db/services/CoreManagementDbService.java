@@ -385,12 +385,12 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 							ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
 							test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, 
 									new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), 
-									hostnames));
+									hostnames), true);
 							
 							// - add to the delete queue
 							final ICrudService<BucketDeletionMessage> delete_queue = getBucketDeletionQueue(BucketDeletionMessage.class);
 							final long max_storage_time_sec = Optional.ofNullable(test_spec.max_storage_time_secs()).orElse(86400L);
-							delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(max_storage_time_sec*1000)), false));
+							delete_queue.storeObject(new BucketDeletionMessage(validated_test_bucket, new Date(System.currentTimeMillis()+(max_storage_time_sec*1000)), false), true);
 							
 							_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
 							return ErrorUtils.buildSuccessMessage("CoreManagementDbService", "testBucket", "Created test on hosts {0}, added test to test queue and delete queue\nmessages = {1}", hostnames.stream().collect(Collectors.joining(";")), reply_str);
