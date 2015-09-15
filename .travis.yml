@@ -12,6 +12,7 @@ env:
  - TEST_DIR=aleph2_management_db_service
  - TEST_DIR=aleph2_data_import_manager
  - TEST_DIR=aleph2_core_security
+ - TEST_DIR=aleph2_analytics_context_library
 
 before_install:
  - mvn install -f dependency_pom.xml -DskipTests=true && cd test_dependencies && git pull origin master && mvn install -DskipTests=true && cd ../
