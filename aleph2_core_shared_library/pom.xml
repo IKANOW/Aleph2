@@ -126,15 +126,9 @@
 	</dependency>
   	<dependency>
   		<groupId>org.apache.hadoop</groupId>
-  		<artifactId>hadoop-common</artifactId>
+  		<artifactId>hadoop-client</artifactId>
   		<version>${aleph2.hadoop}</version>
-  		<scope>provided</scope>
+  		<scope>test</scope>
   	</dependency>
-   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_storage_service_hdfs</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>test</scope>
-  	</dependency>  	
   </dependencies>
 </project>

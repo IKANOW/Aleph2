@@ -36,17 +36,17 @@ import org.apache.hadoop.security.AccessControlException;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.ikanow.aleph2.core.shared.test_services.MockStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
 import fj.data.Validation;
 
 public class TestJarCacheUtils {
 
-	MockHdfsStorageService _mock_hdfs;
+	MockStorageService _mock_hdfs;
 	GlobalPropertiesBean _globals;
 	String _test_file_path;
 	long _test_file_time;
@@ -59,7 +59,7 @@ public class TestJarCacheUtils {
 		_globals = new GlobalPropertiesBean(
 				temp_dir, temp_dir, temp_dir, temp_dir);	
 		
-		_mock_hdfs = new MockHdfsStorageService(_globals);
+		_mock_hdfs = new MockStorageService(_globals);
 		
 		// Create a pretend "remote" file
 		

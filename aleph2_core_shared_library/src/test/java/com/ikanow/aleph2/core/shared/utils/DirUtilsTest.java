@@ -30,9 +30,9 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.ikanow.aleph2.core.shared.test_services.MockStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
-import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 import com.typesafe.config.Config;
 
 public class DirUtilsTest {
@@ -53,7 +53,7 @@ public class DirUtilsTest {
 		
 		// create folder structure if it does not exist for testing.
 		
-		IStorageService storage_service = new MockHdfsStorageService(globals);
+		IStorageService storage_service = new MockStorageService(globals);
 		
 		fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.empty()).get();
 		logger.info("Root dir:"+_temp_dir);
