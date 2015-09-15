@@ -20,9 +20,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,13 +35,16 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
@@ -52,17 +58,24 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import fj.data.Either;
 
 public class TestAnalyticsContext {
 
@@ -367,77 +380,6 @@ public class TestAnalyticsContext {
 //		}
 	}
 	
-	@Test
-	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		_logger.info("run test_objectEmitting");
-
-		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-		
-		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-				.with(DataBucketBean::_id, "test_objectemitting")
-				.with(DataBucketBean::full_name, "/test/object/emitting")
-				.with(DataBucketBean::modified, new Date())
-				.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-						.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
-								.done().get())
-						.done().get())
-				.done().get();
-
-		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
-				.with(SharedLibraryBean::path_name, "/test/lib")
-				.done().get();
-		test_context.setLibraryConfig(library);
-		
-		// Empty service set:
-		final String signature = test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());
-
-		@SuppressWarnings("unchecked")
-		final ICrudService<DataBucketBean> raw_mock_db =
-				test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
-		raw_mock_db.deleteDatastore().get();
-		assertEquals(0L, (long)raw_mock_db.countObjects().get());
-		raw_mock_db.storeObject(test_bucket).get();		
-		assertEquals(1L, (long)raw_mock_db.countObjects().get());
-		
-		final IAnalyticsContext test_external1a = ContextUtils.getAnalyticsContext(signature);		
-
-		//(internal)
-//		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
-		//(external)
-		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
-		final ICrudService<JsonNode> crud_check_index = 
-				check_index.getDataService()
-					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty()))
-					.flatMap(IDataWriteService::getCrudService)
-					.get();
-		crud_check_index.deleteDatastore();
-		Thread.sleep(2000L); // (wait for datastore deletion to flush)
-		assertEquals(0, crud_check_index.countObjects().get().intValue());
-		
-		
-		//TODO: use emitObject with some errors and then validly
-		
-//		final JsonNode jn1 = _mapper.createObjectNode().put("test", "test1");
-//		final JsonNode jn2 = _mapper.createObjectNode().put("test", "test2");
-		
-//		for (int i = 0; i < 60; ++i) {
-//			Thread.sleep(1000L);
-//			if (crud_check_index.countObjects().get().intValue() >= 2) {
-//				_logger.info("(Found objects after " + i + " seconds)");
-//				break;
-//			}
-//		}
-		
-		//DEBUG
-		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().indexContext().getReadableIndexList(Optional.empty()));
-		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().typeContext().getReadableTypeList());
-		
-//		assertEquals(3, crud_check_index.countObjects().get().intValue());
-//		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
-//				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
-//		
-	}
-
 	public static class TestBean {}	
 	
 	@Test
@@ -445,9 +387,9 @@ public class TestAnalyticsContext {
 		_logger.info("run test_objectStateRetrieval");
 		
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_ANALYTICS_CONTEXT").done().get();
 
-		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_HARVEST_CONTEXT").done().get();
+		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_ANALYTICS_CONTEXT").done().get();
 		test_context.setLibraryConfig(lib_bean);
 		
 		ICrudService<AssetStateDirectoryBean> dir_a = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
@@ -654,7 +596,6 @@ public class TestAnalyticsContext {
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "random_string"));
 	}
 	
-	@org.junit.Ignore
 	@Test
 	public void test_inputAndOutputUtilities() {
 				
@@ -662,14 +603,21 @@ public class TestAnalyticsContext {
 		
 		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output1 =  
 				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.streaming)
 					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
 				.done().get();		
 
 		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output2 =  
 				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.streaming_and_batch)
 					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, false)
 				.done().get();		
 		
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output_not_streaming =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.batch)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, false)
+				.done().get();		
 		
 		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
 				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
@@ -715,6 +663,10 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::output, analytic_output2)
 				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
+
+		final AnalyticThreadJobBean analytic_job_not_streaming = BeanTemplateUtils.clone(analytic_job1)
+																	.with(AnalyticThreadJobBean::output, analytic_output_not_streaming)
+																	.done();																		
 		
 		try {
 			test_context.getOutputPath(Optional.empty(), analytic_job1);
@@ -738,22 +690,242 @@ public class TestAnalyticsContext {
 						.done().get()
 						)
 				.done().get();
+
+		final DataBucketBean test_bucket_not_streaming = BeanTemplateUtils.clone(test_bucket)
+															.with(DataBucketBean::analytic_thread, 
+																BeanTemplateUtils.build(AnalyticThreadBean.class)
+																	.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job_not_streaming)
+																	)
+																.done().get()
+																)
+															.done();
 		
 		test_context.setBucket(test_bucket);
 
 		assertEquals(false, test_context.checkForListeners(Optional.of(test_bucket), analytic_job1)); 
 				
-		assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test_name1")), test_context.getOutputTopic(Optional.of(test_bucket), analytic_job1));
-		assertEquals(KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end")), test_context.getOutputTopic(Optional.empty(), analytic_job2));
+		assertEquals(Optional.empty(), test_context.getOutputTopic(Optional.of(test_bucket_not_streaming), analytic_job_not_streaming));
+		
+		assertEquals(Optional.of(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test_name1"))), test_context.getOutputTopic(Optional.of(test_bucket), analytic_job1));
+		assertEquals(Optional.of(KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end"))), test_context.getOutputTopic(Optional.empty(), analytic_job2));
 		
 		assertEquals(Arrays.asList(), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input1));
 		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test2"))), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2));
-		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test3", Optional.of("$end"))), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test3", Optional.empty())), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input3));
 		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test4", Optional.of("test"))), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input4));
 		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test5", Optional.empty())), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input5));
 		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test6", Optional.of("$end"))), test_context.getInputTopics(Optional.empty(), analytic_job2, analytic_input6));
 	}
 	
-	//TODO: emit object
-	//TODO: send to streaming pipeline
+	@Test
+	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		_logger.info("run test_objectEmitting");
+
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+				.done().get();
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class).done().get();
+
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
+				.with(AnalyticThreadJobBean::output, analytic_output)
+				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test")
+				.with(DataBucketBean::full_name, "/test")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
+								)
+								.done().get()
+						)
+				.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+						.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+								.done().get())
+						.done().get())						
+				.done().get();
+
+		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::path_name, "/test/lib")
+				.done().get();
+		test_context.setLibraryConfig(library);
+		
+		// Empty service set:
+		final String signature = test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());
+
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> raw_mock_db =
+				test_context._core_management_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		raw_mock_db.deleteDatastore().get();
+		assertEquals(0L, (long)raw_mock_db.countObjects().get());
+		raw_mock_db.storeObject(test_bucket).get();		
+		assertEquals(1L, (long)raw_mock_db.countObjects().get());
+		
+		final IAnalyticsContext test_external1a = ContextUtils.getAnalyticsContext(signature);		
+
+		//(internal)
+//		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
+		//(external)
+		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
+		final ICrudService<JsonNode> crud_check_index = 
+				check_index.getDataService()
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty()))
+					.flatMap(IDataWriteService::getCrudService)
+					.get();
+		crud_check_index.deleteDatastore();
+		Thread.sleep(2000L); // (wait for datastore deletion to flush)
+		assertEquals(0, crud_check_index.countObjects().get().intValue());
+		
+		
+		final JsonNode jn1 = _mapper.createObjectNode().put("test", "test1");
+		final JsonNode jn2 = _mapper.createObjectNode().put("test", "test2");
+				
+		//(try some errors)
+		try {
+			test_external1a.emitObject(Optional.empty(), analytic_job1, Either.left(jn1), Optional.of(BeanTemplateUtils.build(AnnotationBean.class).done().get()));
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+		}
+
+		test_external1a.emitObject(Optional.of(test_bucket), analytic_job1, Either.left(jn1), Optional.empty());
+		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.left(jn2), Optional.empty());
+		// (create topic now)
+		String topic = KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end"));
+		KafkaUtils.createTopic(topic, Optional.empty());
+		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
+				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
+				), Optional.empty());
+				
+		for (int i = 0; i < 60; ++i) {
+			Thread.sleep(1000L);
+			if (crud_check_index.countObjects().get().intValue() >= 2) {
+				_logger.info("(Found objects after " + i + " seconds)");
+				break;
+			}
+		}
+		
+		//DEBUG
+		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().indexContext().getReadableIndexList(Optional.empty()));
+		//System.out.println(crud_check_index.getUnderlyingPlatformDriver(ElasticsearchContext.class, Optional.empty()).get().typeContext().getReadableTypeList());
+		
+		assertEquals(3, crud_check_index.countObjects().get().intValue());
+		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
+				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
+
+		List<String> kafka = Optionals.streamOf(test_context._distributed_services.consumeAs(topic, Optional.empty()), false).collect(Collectors.toList());
+		assertEquals(1, kafka.size());
+	}
+
+	@Test
+	public void test_streamingPipeline() throws JsonProcessingException, IOException {
+		_logger.info("running test_streamingPipeline");
+		
+		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+		
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+				.done().get();
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+																	.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.streaming)
+																	.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
+																					.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output_no_streaming =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
+								.done().get();
+		
+		
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test1")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
+				.with(AnalyticThreadJobBean::output, analytic_output)
+				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "test")
+				.with(DataBucketBean::full_name, "/TEST/ANALYICS/CONTEXT")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
+								)
+								.done().get()
+						)
+				.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+						.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+								.done().get())
+						.done().get())						
+				.done().get();
+
+		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::path_name, "/test/lib")
+				.done().get();
+		test_context.setLibraryConfig(library);
+		
+		KafkaUtils.createTopic(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		
+		String message1 = "{\"key\":\"val\"}";
+		String message2 = "{\"key\":\"val2\"}";
+		String message3 = "{\"key\":\"val3\"}";
+		String message4 = "{\"key\":\"val4\"}";
+		Map<String, Object> msg3 = ImmutableMap.<String, Object>builder().put("key", "val3").build();
+		Map<String, Object> msg4 = ImmutableMap.<String, Object>builder().put("key", "val4").build();
+		//currently mock cds produce does nothing
+		try {
+			test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.left(mapper.readTree(message1)), Optional.empty());
+			fail("Should fail, bucket not set and not specified");
+		}
+		catch (Exception e) {}
+		test_context.setBucket(test_bucket);
+		assertEquals(test_bucket, test_context.getBucket().get());
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.left(mapper.readTree(message1)), Optional.empty());
+		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), analytic_job1, Either.left(mapper.readTree(message2)), Optional.empty());
+		test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.right(msg3), Optional.empty());
+		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), analytic_job1, Either.right(msg4), Optional.empty());
+
+		//(just send a quick message out on a different job name so it will fail silently)
+		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), BeanTemplateUtils.clone(analytic_job1).with("name", "different").done(), 
+				Either.right(msg4), Optional.empty());
+		//(just send a quick message out with streaming turned off so it will fail silently)
+		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), 
+				BeanTemplateUtils.clone(analytic_job1).with("output", analytic_output_no_streaming).done(), 
+				Either.right(msg4), Optional.empty());		
+		
+		try {
+			test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.left(mapper.readTree(message1)), Optional.of(BeanTemplateUtils.build(AnnotationBean.class).done().get()));
+			fail("Should fail, annotation specified");
+		}
+		catch (Exception e) {}
+
+		
+		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
+		
+		//nothing will be in consume
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		long count = 0;
+		while ( iter.hasNext() ) {
+			String msg = iter.next();
+			assertTrue("Sent this message: " + msg, mutable_set.remove(msg));
+			count++;
+		}
+		assertEquals(4,count);
+	}
 }

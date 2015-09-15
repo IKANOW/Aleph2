@@ -412,13 +412,16 @@ public class AnalyticsContext implements IAnalyticsContext {
 					
 					final String[] bucket_subchannel = Lambdas.<String, String[]> wrap_u(s -> {
 						if (s.startsWith("/")) { //1.*
-							if (s.endsWith(":") || s.endsWith(":$start")) {
-								return new String[] { s.substring(0, s.length() - 1), "" }; // (1.2)
+							if (s.endsWith(":")) {
+								return new String[] { s.substring(0, s.length() - 1), "" }; // (1.2a)
 							}
 							else {
 								final String[] b_sc = s.split(":");
 								if (1 == b_sc.length) {
 									return new String[] { b_sc[0], "$end" }; // (1.3)
+								}
+								else if ("$start".equals(b_sc[1])) {
+									return new String[] { b_sc[0], "" }; // (1.2b)									
 								}
 								else {
 									return b_sc; //(1.1)
@@ -806,7 +809,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_crud_storage_service.get().storeObject(obj_json);
 		}
 		
-		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()));
+		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
 		if (_distributed_services.doesTopicExist(topic)) {
 			// (ie someone is listening in on our output data, so duplicate it for their benefit)
 			_distributed_services.produce(topic, obj_json.toString());
