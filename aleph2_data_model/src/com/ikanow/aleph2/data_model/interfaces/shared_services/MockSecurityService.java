@@ -101,15 +101,20 @@ public class MockSecurityService implements ISecurityService {
 		return Collections.emptyList();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSubject()
+	 */
 	@Override
 	public ISubject getSubject() {
 		return new MockSubject();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#secured(com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService, com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean)
+	 */
 	@Override
 	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
-		// TODO Auto-generated method stub
-		return null;
+		return crud;
 	}
 
 
