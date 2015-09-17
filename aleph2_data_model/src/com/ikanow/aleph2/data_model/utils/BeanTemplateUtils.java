@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.codepoetics.protonpack.StreamUtils;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -480,6 +481,7 @@ public class BeanTemplateUtils {
 		mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 		mapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);		
 		mapper.setSerializationInclusion(Include.NON_NULL);
+		mapper.setVisibility(PropertyAccessor.IS_GETTER, JsonAutoDetect.Visibility.NONE);
 		
 		final SimpleModule module = new SimpleModule();
 		module.addDeserializer(Number.class, new NumberDeserializer());
