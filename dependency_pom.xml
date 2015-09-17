@@ -12,9 +12,7 @@
     <modules>
         <module>aleph2_data_model</module>
         <module>aleph2_object_import_library</module>
-        <!-- Currently can't use this as a dependency because it needs StorageService
         <module>aleph2_core_shared_library</module>
-        -->
         <module>aleph2_core_distributed_services_library</module>
         <module>aleph2_core_security</module>
     </modules>
