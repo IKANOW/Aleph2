@@ -25,14 +25,14 @@ public class ProcessingTestSpecBean implements Serializable {
 	private static final long serialVersionUID = -461079824203542423L;
 	protected ProcessingTestSpecBean() {}
 	
-	/** User constructor, defaults max storage time to 24h and
+	/** User constructor, defaults max storage time to 24h, max startup time to 2m and
 	 * overwrite existing data to true
 	 * @param requested_num_objects
 	 * @param max_run_time_secs
 	 */
 	public ProcessingTestSpecBean(final Long requested_num_objects,
 			final Long max_run_time_secs) {
-		this(requested_num_objects, max_run_time_secs, 86400L, true);
+		this(requested_num_objects, 120L, max_run_time_secs, 86400L, true);
 	}
 	
 	/**
@@ -43,10 +43,12 @@ public class ProcessingTestSpecBean implements Serializable {
 	 * @param overwrite_existing_data
 	 */
 	public ProcessingTestSpecBean(final Long requested_num_objects,
+			final Long max_startup_time_secs,
 			final Long max_run_time_secs,
 			final Long max_storage_time_secs,
 			final Boolean overwrite_existing_data) {
 		this.requested_num_objects = requested_num_objects;
+		this.max_startup_time_secs = max_startup_time_secs;
 		this.max_run_time_secs = max_run_time_secs;
 		this.max_storage_time_secs = max_storage_time_secs;
 		this.overwrite_existing_data = overwrite_existing_data;
@@ -58,6 +60,15 @@ public class ProcessingTestSpecBean implements Serializable {
 	public Long requested_num_objects() {
 		return requested_num_objects;
 	}
+	
+	/**
+	 * The max time to allow the test to startup
+	 * @return max time to allow the test to startup for (in seconds)
+	 */
+	public Long max_startup_time_secs() {
+		return max_startup_time_secs;
+	}
+	
 	/** The max time to allow the test to run for
 	 * @return max time to allow the test to run for (in seconds)
 	 */
@@ -82,6 +93,7 @@ public class ProcessingTestSpecBean implements Serializable {
 	}
 	
 	private Long requested_num_objects;
+	private Long max_startup_time_secs;
 	private Long max_run_time_secs;
 	private Long max_storage_time_secs;
 	private Boolean overwrite_existing_data = true;

@@ -408,4 +408,17 @@ public class TestBeanTemplateUtils {
 //		assertEquals(test.collectionTest2_change, new HashSet<String>(Arrays.asList("b2")));
 //	}
 	
+	public static class FieldTest {
+		public Boolean is_transient() { return is_transient; }
+		Boolean is_transient;
+	}
+	
+	@Test
+	public void test_jacksonGetterRead() {
+		FieldTest x = BeanTemplateUtils.build(FieldTest.class)
+				.with(FieldTest::is_transient, true)
+				.done().get();
+		String j = BeanTemplateUtils.toJson(x).toString();
+		assertEquals("{\"is_transient\":true}", j);
+	}
 }

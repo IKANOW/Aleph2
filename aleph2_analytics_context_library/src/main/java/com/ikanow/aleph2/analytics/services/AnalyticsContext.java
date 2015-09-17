@@ -170,7 +170,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	/** FOR DEBUGGING AND TESTING ONLY, inserts a copy of the current context into the saved "in module" versions
 	 */
 	public void overrideSavedContext() {
-		static_instances.put(_mutable_state.signature_override.get().split(":", 2)[1], this);
+		static_instances.put(_mutable_state.signature_override.get(), this);
 	}
 	
 	/* (non-Javadoc)
@@ -301,8 +301,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 												)
 												;
 			
-			final String ret = this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
-			_mutable_state.signature_override.set(ret);
+			final String ret1 = last_call.root().render(ConfigRenderOptions.concise());
+			_mutable_state.signature_override.set(ret1);
+			final String ret = this.getClass().getName() + ":" + ret1;
 
 			return ret;
 		}

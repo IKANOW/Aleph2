@@ -100,7 +100,7 @@ public class TestPassthroughTopology {
 		test_context.setLibraryConfig(library);			
 		test_context.setUserTopologyEntryPoint("com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology");
 		test_context.getEnrichmentContextSignature(Optional.empty(), Optional.empty());
-		test_context.overrideSavedContext(); // (THIS IS NEEDED WHEN TESTING THE KAFKA SPOUT)
+		test_context.overrideSavedContext(); // (THIS + PREV LINE ARE NEEDED WHEN TO AVOID CREATING 2 ModuleUtils INSTANCES WHICH BREAKS EVERYTHING)
 		
 		
 		//PHASE 2: CREATE TOPOLOGY AND SUBMit		

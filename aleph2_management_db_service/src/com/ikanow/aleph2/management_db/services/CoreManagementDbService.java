@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.Tuple2;
+import scala.concurrent.duration.FiniteDuration;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -375,7 +377,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 					BucketActionSupervisor.askBucketActionActor(Optional.empty(),
 							_actor_context.getBucketActionSupervisor(), 
 							_actor_context.getActorSystem(), 
-							new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), Optional.empty()
+							new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), 
+							Optional.of(FiniteDuration.create(test_spec.max_startup_time_secs(), TimeUnit.SECONDS))
 							)
 							.thenApply(msg -> msg.replies());
 					
