@@ -443,10 +443,20 @@ public class TestHarvestContext {
 	@Test
 	public void test_misc() {
 		_logger.info("running test_misc");
-		
-		assertTrue("Injector created", _app_injector != null);		
-		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));		
+		try {
+			assertTrue("Injector created", _app_injector != null);		
+			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+			assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));
+		}
+		catch (Exception e) {
+			try {
+				e.printStackTrace();
+			}
+			catch (Exception ee) {
+				System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
+			}
+			fail("Threw exception");
+		}
 	}
 
 	@Test

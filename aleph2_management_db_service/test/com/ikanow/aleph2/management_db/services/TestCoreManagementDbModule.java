@@ -39,6 +39,8 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -97,6 +99,7 @@ public class TestCoreManagementDbModule {
 		_mock_storage_service = new MockHdfsStorageService(_mock_service_context.getGlobalProperties());
 		_mock_service_context.addService(IStorageService.class, Optional.empty(), _mock_storage_service);		
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
+		_mock_service_context.addService(ISecurityService.class, Optional.empty(), new MockSecurityService());
 		_cds = new MockCoreDistributedServices();
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _cds);
 		_actor_context = new ManagementDbActorContext(_mock_service_context, true);

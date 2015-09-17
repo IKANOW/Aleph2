@@ -376,8 +376,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job)
 	{
 		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		final boolean is_transient = Optional.ofNullable(job.output().is_transient()).orElse(false);
 		if ((MasterEnrichmentType.streaming == job.output().transient_type()) || (MasterEnrichmentType.streaming_and_batch == job.output().transient_type())) {
-			final String topic = job.output().is_transient()
+			final String topic = is_transient
 					? _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()))
 					: 
 					  _distributed_services.generateTopicName(Optional.ofNullable(job.output().sub_bucket_path()).orElse(this_bucket.full_name()), 
