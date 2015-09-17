@@ -141,7 +141,39 @@ protected static String _check_actor_called = null;
 						this.self());
 			}
 		}		
-	}	
+	}
+	
+	// This one always accepts after sleeping for 5s, and returns a message
+		public static class TestActor_Accepter_Waits extends UntypedActor {
+			public TestActor_Accepter_Waits(String uuid) {
+				this.uuid = uuid;
+			}
+			private final String uuid;
+			@Override
+			public void onReceive(Object arg0) throws Exception {
+				if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+					_logger.info("Accept OFFER from: " + uuid);
+					this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
+				}
+				else {
+					_logger.info("Accept MESSAGE from: " + uuid);
+					_check_actor_called = uuid;
+					Thread.sleep(5000);
+					this.sender().tell(
+							new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
+									new BasicMessageBean(
+											new Date(),
+											true,
+											uuid + "replaceme", // (this gets replaced by the bucket)
+											arg0.getClass().getSimpleName(),
+											null,
+											"handled",
+											null									
+											)),
+							this.self());
+				}
+			}		
+		}	
 	
 	public Tuple2<String,ActorRef> insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
@@ -349,6 +381,37 @@ protected static String _check_actor_called = null;
 		assertEquals(_check_actor_called, host_actor._1());
 		//3a. harvest actor
 		//3b. stream actor
+		
+		//cleanup
+		shutdownActor(host_actor._2());		
+	}
+	
+	/**
+	 * Tests the test_bucket action timeout by sending a fake bucket and setting the timeout
+	 * to a tiny amount (1s).  Uses an actor that waits 5s to respond to messages, so the test
+	 * will timeout before the actor responds.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void test_TestBucket_startup_timeout() throws Exception {
+		final ICrudService<BucketTimeoutMessage> test_queue = _core_db_service.getBucketTestQueue(BucketTimeoutMessage.class);		
+		final ICrudService<BucketDeletionMessage> delete_queue = _core_db_service.getBucketDeletionQueue(BucketDeletionMessage.class);
+		//clear queues before starting
+		test_queue.deleteDatastore().get();
+		delete_queue.deleteDatastore().get();
+		
+		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter_Waits.class);
+		final DataBucketBean to_test = createBucket("test_tech_id", false);
+		//startup timeout is set to 1s
+		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L, 1L, 86400L, true);
+		final ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
+		assertFalse("Test should have failed via timeout, said something the lines of 'Error, hostnames was empty, possibly did not finish setting job up...'", future.get());
+		assertTrue(future.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(";")).startsWith("Error, hostnames was empty"));		
+		future.getManagementResults().get();
+		
+		//3. Actor received test message
+		assertEquals(_check_actor_called, host_actor._1());
 		
 		//cleanup
 		shutdownActor(host_actor._2());		
