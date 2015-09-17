@@ -40,6 +40,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -79,6 +80,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
 	protected final SharedLibraryCrudService _shared_library_service;
 	protected final ManagementDbActorContext _actor_context;
+	protected final ISecurityService _security_service;
 	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
@@ -107,7 +109,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_project = Optional.empty();
 		
 		_read_only = false;
-		
+		_security_service = service_context.getSecurityService();
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
@@ -136,6 +138,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_project = project;		
 		
 		_read_only = read_only;
+		_security_service = service_context.getSecurityService();
 	}
 	
 	

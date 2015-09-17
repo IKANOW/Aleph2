@@ -24,7 +24,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 public class SecuredCoreManagementDbService extends CoreManagementDbService {
 
 	protected AuthorizationBean authorizationBean = null;
-
+	
 	public SecuredCoreManagementDbService(IServiceContext service_context, DataBucketCrudService data_bucket_service,
 			DataBucketStatusCrudService data_bucket_status_service, SharedLibraryCrudService shared_library_service,
 			ManagementDbActorContext actor_context) {

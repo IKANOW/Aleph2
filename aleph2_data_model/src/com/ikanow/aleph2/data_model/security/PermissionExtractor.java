@@ -28,7 +28,7 @@ public class PermissionExtractor {
 	 * This class extracts permission values from known classes,e.g._id() or ownerId etc matching permissions.
 	 * @return
 	 */
-	protected String extractPermissionIdentifier(Object object) {
+	public String extractPermissionIdentifier(Object object) {
 		if (object != null) {
 			if (object instanceof SharedLibraryBean) {
 				return ((SharedLibraryBean) object)._id();

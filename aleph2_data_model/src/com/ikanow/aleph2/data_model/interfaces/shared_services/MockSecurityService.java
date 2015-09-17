@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+
 /** A useful mock object for unit testing. Allows everything
  *  TODO (ALEPH-31): provide an interface to add overrides for testing
  * @author acp
@@ -103,5 +105,12 @@ public class MockSecurityService implements ISecurityService {
 	public ISubject getSubject() {
 		return new MockSubject();
 	}
+
+	@Override
+	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

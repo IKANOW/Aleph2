@@ -27,7 +27,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService.IReadOnlyManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
-import com.ikanow.aleph2.data_model.security.SecuredCrudManagementDbService;
 
 public class ManagementDbUtils {
 
@@ -44,7 +43,10 @@ public class ManagementDbUtils {
 			@Override
 			public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 				if (method.getName().equals("secured")) { // (call the parent IManagementCrudService version of secured - this is a slight hack to get up and running)
-					return new SecuredCrudManagementDbService<T>((IServiceContext)args[0], (IManagementCrudService<T>)proxy, (AuthorizationBean)args[1]);
+					IServiceContext serviceContext = (IServiceContext)args[0];
+					IManagementCrudService<T> managementService = (IManagementCrudService<T>)proxy;
+					AuthorizationBean authorizationBean = (AuthorizationBean)args[1];
+					return serviceContext.getSecurityService().secured(managementService, authorizationBean);
 				}
 				else return lowLevelWrapper(delegate, proxy, method, args);
 			}

@@ -34,9 +34,11 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
@@ -146,6 +148,15 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+
+	@Override
+	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
+		
+		return null;
+	}
+
+
 
 
 }

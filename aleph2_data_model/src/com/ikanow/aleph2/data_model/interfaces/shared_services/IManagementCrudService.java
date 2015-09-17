@@ -24,7 +24,6 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
-import com.ikanow.aleph2.data_model.security.SecuredCrudManagementDbService;
 import com.ikanow.aleph2.data_model.utils.CrudServiceUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
@@ -271,7 +270,7 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 			return this;
 		}
 		else {
-			return new SecuredCrudManagementDbService<O>(_service_context,this,authorizationBean);
+			return _service_context.getSecurityService().secured(this,authorizationBean);
 		}
 	}	
 	

@@ -18,8 +18,11 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 import java.util.Collection;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
 public class SampleSecurityService implements ISecurityService {
 	
@@ -62,5 +65,12 @@ public class SampleSecurityService implements ISecurityService {
 	public ISubject getSubject() {
 		return null;
 	}
+
+	@Override
+	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 
 }

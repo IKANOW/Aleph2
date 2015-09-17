@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
 
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+
 /**
  * Handles permissions for the system.  All permissions are in reference to an Identity object so
  * all calls require an identity to be passed in with the requested resources/permissions being granted/revoked.
@@ -71,4 +73,5 @@ public interface ISecurityService extends IUnderlyingService {
      */
     Collection<String> releaseRunAs(ISubject subject);
 
+	<O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean);
 }
