@@ -484,6 +484,7 @@ public class TestDataBucketChangeActor {
 		// (Add streaming logic outside this via clone() - see cacheJars)
 		return BeanTemplateUtils.build(DataBucketBean.class)
 							.with(DataBucketBean::_id, "test1")
+							.with(DataBucketBean::owner_id, "person_id")
 							.with(DataBucketBean::full_name, "/test/path/")
 							.with(DataBucketBean::harvest_technology_name_or_id, harvest_tech_id)
 							.done().get();

@@ -180,7 +180,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @param filter - the filter to apply to the incoming data (CRUD or file-specific)
 		 * @param config - Generic configuration for input data
 		 */
-		protected AnalyticThreadJobInputBean(final Boolean enabled,
+		public AnalyticThreadJobInputBean(final Boolean enabled,
 											final String resource_name_or_id, final String data_service, 
 											final LinkedHashMap<String, Object> filter,
 											final AnalyticThreadJobInputConfigBean config 

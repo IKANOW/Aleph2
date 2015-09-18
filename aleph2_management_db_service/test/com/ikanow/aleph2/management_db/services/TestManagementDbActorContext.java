@@ -27,6 +27,8 @@ import akka.event.japi.LookupEventBus;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -67,6 +69,7 @@ public class TestManagementDbActorContext {
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
 		_cds = new MockCoreDistributedServices();
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _cds);
+		_mock_service_context.addService(ISecurityService.class, Optional.empty(), new MockSecurityService());
 		_actor_context = new ManagementDbActorContext(_mock_service_context, true);
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _actor_context);
 		_bucket_status_crud = new DataBucketStatusCrudService(_mock_service_context, _actor_context); 
