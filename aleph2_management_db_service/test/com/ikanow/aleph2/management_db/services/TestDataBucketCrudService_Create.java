@@ -645,6 +645,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -661,6 +662,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -670,17 +672,21 @@ public class TestDataBucketCrudService_Create {
 		}		
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		
-		// 4) Enrichment but no harvest
+		// EVERYTHING FROM HERE IS ALSO TESTED IN THE STATIC VERSION BELOW
+		
+		// 4) Enrichment but no harvest (THIS IS NOW FINE)
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test4")
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
-			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());			
+			assertFalse("Not Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
+			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message() + ":" + m.success()).collect(Collectors.joining(" ; ")));
 			result.get();
-			fail("Should have thrown an exception");
 		}
 		catch (Exception e) {
 			System.out.println("expected, err=" + e.getCause().getMessage());
@@ -692,6 +698,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test5")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::batch_enrichment_topology, 
@@ -699,6 +706,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -713,6 +721,7 @@ public class TestDataBucketCrudService_Create {
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::full_name, "/validation/test6")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
 					.with(DataBucketBean::batch_enrichment_topology, 
@@ -720,6 +729,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -733,6 +743,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test7")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
@@ -740,7 +751,8 @@ public class TestDataBucketCrudService_Create {
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
-			
+
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -754,11 +766,13 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test8")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -772,6 +786,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test9")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(
 							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -782,6 +797,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -795,6 +811,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test10")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
@@ -804,6 +821,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -818,6 +836,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test11")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming)
@@ -827,6 +846,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -841,6 +861,7 @@ public class TestDataBucketCrudService_Create {
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test12")
 					.with(DataBucketBean::multi_bucket_children, new HashSet<String>(Arrays.asList("a", "b")))
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).done().get()))
@@ -849,6 +870,7 @@ public class TestDataBucketCrudService_Create {
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
+			System.out.println("Mgmt side channels = " + result.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			result.get();
 			fail("Should have thrown an exception");
 		}
@@ -857,6 +879,196 @@ public class TestDataBucketCrudService_Create {
 			assertEquals(RuntimeException.class, e.getCause().getClass());
 		}				
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+	}
+
+	/** (More accurate test of validation using a simpler static method called by the non static one)
+	 * @throws Exception
+	 */
+	@Test
+	public void test_staticValidateInsert() throws Exception {
+		cleanDatabases();
+
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.done().get();
+
+		// 1) Check needs status object to be present
+		
+		{
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(valid_bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(0, errs.size());
+		}
+		
+		//////////////////////////
+		
+		// Validation _errors_
+		
+		// MOSTLY DUPS OF THE NON STATIC VERSION
+		
+		final DataBucketBean new_valid_bucket =  BeanTemplateUtils.clone(valid_bucket).with(DataBucketBean::_id, "id2").done();
+		
+		// 2) Missing field
+		
+		// (TESTED IN NON STATIC CODE - ABOVE)
+		
+		// 3) Zero length fields
+		
+		// (TESTED IN NON STATIC CODE - ABOVE)
+		
+		// 4) Enrichment but no harvest (THIS IS NOW FINE)
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test4")
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
+					.with(DataBucketBean::batch_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(0, errs.size());
+		}
+		
+		// 5) Enrichment but no type
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test5")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::batch_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+		
+		// 6) Wrong type of enrichment - streaming missing
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::full_name, "/validation/test6")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::batch_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+		
+		// 7) Wrong type of enrichment - batch missing
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test7")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::streaming_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+		
+		// 8) No harvest configs
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test8")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+				
+		// 9) Harvest config with empty lists
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test9")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(
+							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("xxx", ""))
+								.done().get()))
+					.done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+
+		// 10) Missing batch config enabled:
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test10")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
+					.with(DataBucketBean::batch_enrichment_configs, 
+							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()))
+							.done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+		
+		
+		// 11) Missing streaming config enabled:
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test11")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming)
+					.with(DataBucketBean::streaming_enrichment_configs, 
+							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()))
+							.done();
+			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
+			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
+			
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
+				
+		// 12) Multi bucket!
+		
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test12")
+					.with(DataBucketBean::multi_bucket_children, new HashSet<String>(Arrays.asList("a", "b")))
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).done().get()))
+					.done();
+			
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());
+		}
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////

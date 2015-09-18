@@ -677,126 +677,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				}
 			}
 		}		
-		// More complex missing field checks
-		
-		// - if has enrichment then must have harvest_technology_name_or_id (1) 
-		// - if has harvest_technology_name_or_id then must have harvest_configs (2)
-		// - if has enrichment then must have master_enrichment_type (3)
-		// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology (4)
-		// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology (5)
 
-		//(1, 3, 4, 5)
-		if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
-				|| ((null != bucket.streaming_enrichment_configs()) && !bucket.streaming_enrichment_configs().isEmpty())
-				|| (null != bucket.batch_enrichment_topology())
-				|| (null != bucket.streaming_enrichment_topology()))
-		{
-			if (null == bucket.harvest_technology_name_or_id()) { //(1)
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_HARVEST_TECH, bucket.full_name())));
-			}
-			if (null == bucket.master_enrichment_type()) { // (3)
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
-			}
-			else {
-				// (4)
-				if ((DataBucketBean.MasterEnrichmentType.batch == bucket.master_enrichment_type())
-					 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
-				{
-					if ((null == bucket.batch_enrichment_topology()) && 
-							((null == bucket.batch_enrichment_configs()) || bucket.batch_enrichment_configs().isEmpty()))
-					{
-						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
-					}
-				}
-				// (5)
-				if ((DataBucketBean.MasterEnrichmentType.streaming == bucket.master_enrichment_type())
-						 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
-				{
-					if ((null == bucket.streaming_enrichment_topology()) && 
-							((null == bucket.streaming_enrichment_configs()) || bucket.streaming_enrichment_configs().isEmpty()))
-					{
-						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
-					}
-				}
-			}
-		}
-		// (2)
-		if ((null != bucket.harvest_technology_name_or_id()) &&
-				((null == bucket.harvest_configs()) || bucket.harvest_configs().isEmpty()))
-		{			
-			errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.HARVEST_BUT_NO_HARVEST_CONFIG, bucket.full_name())));
-		}
+		// Some static validation moved into a separate function for testability
 		
-		// Embedded object field rules
-		
-		final Consumer<Tuple2<String, List<String>>> list_test = list -> {
-			if (null != list._2()) for (String s: list._2()) {
-				if ((s == null) || s.isEmpty()) {
-					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
-				}
-			}
-			
-		};
-		
-		// Lists mustn't have zero-length elements
-		
-		// (6)
-		if ((null != bucket.harvest_technology_name_or_id()) && (null != bucket.harvest_configs())) {
-			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
-				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
-				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
-			}
-		}
+		errors.addAll(staticValidation(bucket));		
 
-		// (7)
-		BiConsumer<Tuple2<String, EnrichmentControlMetadataBean>, Boolean> enrichment_test = (emeta, allowed_empty_list) -> {
-			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
-				if (!allowed_empty_list)
-					if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
-						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
-					}
-			}
-			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
-			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
-		};		
-		if (null != bucket.batch_enrichment_topology()) {
-			enrichment_test.accept(Tuples._2T("batch_enrichment_topology", bucket.batch_enrichment_topology()), true);
-		}
-		if (null != bucket.batch_enrichment_configs()) {
-			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
-				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta), false);
-			}
-		}
-		if (null != bucket.streaming_enrichment_topology()) {
-			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()), true);
-		}
-		if (null != bucket.streaming_enrichment_configs()) {
-			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
-				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta), false);
-			}
-		}
-		
-		// Multi-buckets logic 
-		
-		// - if a multi bucket than cannot have any of: enrichment or harvest (8)
-		// - multi-buckets cannot be nested (TODO: ALEPH-19, leave this one for later)		
-		
-		//(8)
-		if ((null != bucket.multi_bucket_children()) && !bucket.multi_bucket_children().isEmpty()) {
-			if (null != bucket.harvest_technology_name_or_id()) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));				
-			}
-		}
-		
-		
-		/////////////////
-		
-		// PHASE 1b: ANALYIC VALIDATION
-				
-		errors.addAll(validateAnalyticBucket(bucket).stream().map(MgmtCrudUtils::createValidationError).collect(Collectors.toList()));
-		
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
 		if (!errors.isEmpty()) {
@@ -849,6 +734,135 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		return Tuples._2T(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::data_locations, schema_validation._1()).done(), 
 				errors);
+	}
+	
+	
+	/** Static / simple bucket validation utility method
+	 * @param bucket - the bucket to test
+	 * @return - a list of errors
+	 */
+	protected static final LinkedList<BasicMessageBean> staticValidation(final DataBucketBean bucket) {
+		LinkedList<BasicMessageBean> errors = new LinkedList<>();
+		
+		// More complex missing field checks
+		
+		// - if has enrichment then must have harvest_technology_name_or_id (1) - REMOVED THIS .. eg can upload data/copy directly into Kafka/file system 
+		// - if has harvest_technology_name_or_id then must have harvest_configs (2)
+		// - if has enrichment then must have master_enrichment_type (3)
+		// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology (4)
+		// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology (5)
+
+		//(1, 3, 4, 5)
+		if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
+				|| ((null != bucket.streaming_enrichment_configs()) && !bucket.streaming_enrichment_configs().isEmpty())
+				|| (null != bucket.batch_enrichment_topology())
+				|| (null != bucket.streaming_enrichment_topology()))
+		{
+			if (null == bucket.master_enrichment_type()) { // (3)
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
+			}
+			else {
+				// (4)
+				if ((DataBucketBean.MasterEnrichmentType.batch == bucket.master_enrichment_type())
+					 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+				{
+					if ((null == bucket.batch_enrichment_topology()) && 
+							((null == bucket.batch_enrichment_configs()) || bucket.batch_enrichment_configs().isEmpty()))
+					{
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+					}
+				}
+				// (5)
+				if ((DataBucketBean.MasterEnrichmentType.streaming == bucket.master_enrichment_type())
+						 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+				{
+					if ((null == bucket.streaming_enrichment_topology()) && 
+							((null == bucket.streaming_enrichment_configs()) || bucket.streaming_enrichment_configs().isEmpty()))
+					{
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
+					}
+				}
+			}
+		}
+		// (2)
+		if ((null != bucket.harvest_technology_name_or_id()) &&
+				((null == bucket.harvest_configs()) || bucket.harvest_configs().isEmpty()))
+		{			
+			errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.HARVEST_BUT_NO_HARVEST_CONFIG, bucket.full_name())));
+		}
+		
+		// Embedded object field rules
+		
+		final Consumer<Tuple2<String, List<String>>> list_test = list -> {
+			if (null != list._2()) for (String s: list._2()) {
+				if ((s == null) || s.isEmpty()) {
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.FIELD_MUST_NOT_HAVE_ZERO_LENGTH, bucket.full_name(), list._1())));
+				}
+			}
+			
+		};
+		
+		// Lists mustn't have zero-length elements
+		
+		// (NOTE: these strings are just for error messing so not critical, which is we we're not using MethodNamingHelper)
+		
+		// (6)
+		if ((null != bucket.harvest_technology_name_or_id()) && (null != bucket.harvest_configs())) {
+			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
+				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
+				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
+			}
+		}
+
+		// (7)
+		BiConsumer<Tuple2<String, EnrichmentControlMetadataBean>, Boolean> enrichment_test = (emeta, allowed_empty_list) -> {
+			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
+				if (!allowed_empty_list)
+					if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
+						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
+					}
+			}
+			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
+			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
+		};		
+		if (null != bucket.batch_enrichment_topology()) {
+			enrichment_test.accept(Tuples._2T("batch_enrichment_topology", bucket.batch_enrichment_topology()), true);
+		}
+		if (null != bucket.batch_enrichment_configs()) {
+			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
+				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
+				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta), false);
+			}
+		}
+		if (null != bucket.streaming_enrichment_topology()) {
+			enrichment_test.accept(Tuples._2T("streaming_enrichment_topology", bucket.streaming_enrichment_topology()), true);
+		}
+		if (null != bucket.streaming_enrichment_configs()) {
+			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
+				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
+				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta), false);
+			}
+		}
+		
+		// Multi-buckets logic 
+		
+		// - if a multi bucket than cannot have any of: enrichment or harvest (8)
+		// - multi-buckets cannot be nested (TODO: ALEPH-19, leave this one for later)		
+		
+		//(8)
+		if ((null != bucket.multi_bucket_children()) && !bucket.multi_bucket_children().isEmpty()) {
+			if (null != bucket.harvest_technology_name_or_id()) {
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.MULTI_BUCKET_CANNOT_HARVEST, bucket.full_name())));				
+			}
+		}
+				
+		/////////////////
+		
+		// PHASE 1b: ANALYIC VALIDATION
+				
+		errors.addAll(validateAnalyticBucket(bucket).stream().map(MgmtCrudUtils::createValidationError).collect(Collectors.toList()));
+				
+		return errors;
 	}
 	
 	/** Checks active buckets for changes that will cause problems unless the bucket is suspended first (currently: only multi_node_enabled)
@@ -1255,9 +1269,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	
 	private static final Pattern VALID_ANALYTIC_JOB_NAME = Pattern.compile("[a-zA-Z0-9_]+");
 	private static final Pattern VALID_DATA_SERVICES = Pattern.compile("(batch|stream|search_index_service|storage_service)");
-	private static final Pattern VALID_RESOURCE_ID = Pattern.compile("[^:]*:?[^:]*");
-	
-	//TODO (ALEPH-12): add test coverage for this
+	private static final Pattern VALID_RESOURCE_ID = Pattern.compile("(:?[a-zA-Z0-9_$]*|/[^:]+|/[^:]+:[a-zA-Z0-9_$]*)");
+		//(first is internal job, second is external only, third is both) 
 	
 	/** Validate buckets for their analytic content (lots depends on the specific technology, so that is delegated to the technology)
 	 * @param bean
@@ -1307,7 +1320,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_DATA_SERVICE, bean.full_name(), job_identifier, 
 								input.data_service(), VALID_DATA_SERVICES.toString()));											
 					}
-					if ((null == input.resource_name_or_id()) || !VALID_DATA_SERVICES.matcher(input.resource_name_or_id()).matches()) {
+					if ((null == input.resource_name_or_id()) || !VALID_RESOURCE_ID.matcher(input.resource_name_or_id()).matches()) {
 						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_INPUT_MALFORMED_RESOURCE_ID, bean.full_name(), job_identifier, 
 								input.resource_name_or_id(), VALID_RESOURCE_ID.toString()));											
 					}
@@ -1380,7 +1393,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_ILLEGAL_COMBO, bucket.full_name()));
 		}
 		// if resource id then must have corresponding type (unless custom - custom analytic tech will have to do its own error validation)
-		if ((null != trigger.resource_name_or_id()) && (TriggerType.custom != Optional.ofNullable(trigger.type()).orElse(TriggerType.custom))) {
+		if ((null != trigger.resource_name_or_id()) ^ (null != trigger.type())) {
 			errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_ILLEGAL_COMBO, bucket.full_name()));
 		}		
 		// (If custom then must specifiy a custom technology)

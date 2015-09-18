@@ -197,7 +197,7 @@ public class TimeUtils {
 			return Validation.success(l2.get(0));
 		}
 		catch (Exception e) {
-			return Validation.fail(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, human_readable_date));
+			return getTimePeriod(human_readable_date).map(c -> c.getDuration().get(ChronoUnit.SECONDS)).map(l -> new Date(base_date.orElse(new Date()).getTime() + l*1000L));
 		}		
 	}
 	

@@ -115,7 +115,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String ANALYTIC_BUT_NO_ANALYTIC_TECH = "Bucket {0} has analytic job {1} with no analytic_technology_name_or_id field";
 	public static final String ANALYTIC_JOB_MUST_HAVE_TYPE = "Bucket {0} has an analytic job with missing type or set to 'none': {1}";
 	public static final String ANALYTIC_INPUT_MALFORMED_DATA_SERVICE = "Bucket {0} job {1} has a missing or malformed data_service: {2}, supported values = {3}";
-	public static final String ANALYTIC_INPUT_MALFORMED_RESOURCE_ID = "Bucket {0} job {1} has a missing or malformed data_service: {2}, supported patterns = {3}";
+	public static final String ANALYTIC_INPUT_MALFORMED_RESOURCE_ID = "Bucket {0} job {1} has a missing or malformed resource_name_or_id: {2}, supported patterns = {3}";
 	public static final String ANALYTIC_INPUT_MALFORMED_DATE = "Bucket {0} job {1} has a malformed date (field {2}): {3}, error = {4}";
 	public static final String ANALYTIC_OUTPUT_TRANSIENT_MISSING_FIELD = "Bucket {0} job {1} in transient mode missing field {2}";
 	public static final String ANALYTIC_OUTPUT_TRANSIENT_ILLEGAL_FIELD = "Bucket {0} job {1} in transient mode not allowed field {2}";

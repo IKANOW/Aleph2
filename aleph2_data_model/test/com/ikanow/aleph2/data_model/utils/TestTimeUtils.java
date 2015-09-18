@@ -79,6 +79,13 @@ public class TestTimeUtils {
 		assertTrue("Passes", result.isSuccess());
 		assertEquals(947052000000L, result.success().getTime());
 		
+		// Check success via duration
+		
+		Validation<String, Date> result2 = TimeUtils.getSchedule("hourly", Optional.of(now));
+		
+		assertTrue("Passes", result2.isSuccess());
+		assertEquals(946710000000L, result2.success().getTime());
+		
 		// Check failure
 		
 		Validation<String, Date> error = TimeUtils.getSchedule("banana", Optional.of(now));
