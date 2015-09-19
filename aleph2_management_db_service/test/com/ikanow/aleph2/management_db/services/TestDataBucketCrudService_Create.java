@@ -791,7 +791,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_configs, Arrays.asList(
 							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 								.with(HarvestControlMetadataBean::enabled, true)
-								.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("xxx", ""))
+								.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("xxx", ""))
 								.done().get()))
 					.done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
@@ -1007,7 +1007,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_configs, Arrays.asList(
 							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 								.with(HarvestControlMetadataBean::enabled, true)
-								.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("xxx", ""))
+								.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("xxx", ""))
 								.done().get()))
 					.done();
 			

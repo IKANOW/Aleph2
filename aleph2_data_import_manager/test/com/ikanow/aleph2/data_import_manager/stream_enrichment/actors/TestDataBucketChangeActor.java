@@ -258,7 +258,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id"), new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
@@ -284,7 +284,7 @@ public class TestDataBucketChangeActor {
 			// 3) Couple of error cases:
 			
 			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)
@@ -340,7 +340,7 @@ public class TestDataBucketChangeActor {
 
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2a = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_2a"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_names_or_ids, Arrays.asList("test_tech_id_stream_2a"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
 				Validation.success(test2_input));
@@ -353,7 +353,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test2b = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_2b"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_names_or_ids, Arrays.asList("test_tech_id_stream_2b"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
 				Validation.success(test2_input));
@@ -395,7 +395,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3 = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_names_or_ids, Arrays.asList("test_tech_id_stream"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3_input));
@@ -418,7 +418,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3a = DataBucketChangeActor.getStreamingTopology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::streaming_enrichment_topology,
-						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_ids_or_names, Arrays.asList("test_tech_id_stream_fail"))
+						BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).with(EnrichmentControlMetadataBean::library_names_or_ids, Arrays.asList("test_tech_id_stream_fail"))
 						.done().get()).done(), 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3a_input));
@@ -455,7 +455,7 @@ public class TestDataBucketChangeActor {
 					.build();		
 		
 		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-				"test_tech_name", Collections.emptyList(), true, Arrays.asList("test_tech_id_stream", "test_module_id"), null
+				"test_tech_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, null
 				);
 		
 		final Validation<BasicMessageBean, IEnrichmentStreamingTopology> test3b = DataBucketChangeActor.getStreamingTopology(

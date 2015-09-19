@@ -448,7 +448,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		final Stream<SingleQueryComponent<SharedLibraryBean>> other_libs = cache_tech_jar_only 
 			? Stream.empty()
 			: Optionals.ofNullable(bucket.harvest_configs()).stream()
-				.flatMap(hcfg -> Optionals.ofNullable(hcfg.library_ids_or_names()).stream())
+				.flatMap(hcfg -> Optionals.ofNullable(hcfg.library_names_or_ids()).stream())
 				.map(name -> {
 					return CrudUtils.anyOf(SharedLibraryBean.class)
 							.when(SharedLibraryBean::_id, name)

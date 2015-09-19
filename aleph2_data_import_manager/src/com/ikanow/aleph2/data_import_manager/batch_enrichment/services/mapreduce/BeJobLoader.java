@@ -66,7 +66,7 @@ public class BeJobLoader {
 						logger.info("Loading libraries: " + bucketFullName);
 
 						List<QueryComponent<SharedLibraryBean>> sharedLibsQuery = ec
-								.library_ids_or_names()
+								.library_names_or_ids()
 								.stream()
 								.map(name -> {
 									return CrudUtils.anyOf(SharedLibraryBean.class)

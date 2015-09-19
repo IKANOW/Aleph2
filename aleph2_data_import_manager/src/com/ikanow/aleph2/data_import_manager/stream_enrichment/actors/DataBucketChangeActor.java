@@ -475,7 +475,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		final Stream<QueryComponent<SharedLibraryBean>> libs =
 			Optionals.ofNullable(
 					Optional.ofNullable(bucket.streaming_enrichment_topology())
-							.map(t -> t.library_ids_or_names())
+							.map(t -> t.library_names_or_ids())
 					.orElse(Collections.emptyList()))
 				.stream()
 				.map(name -> {

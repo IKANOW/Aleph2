@@ -492,12 +492,12 @@ public class TestAnalyticsContext {
 
 			final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
-															.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 															.done().get();
 
 			final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id_XXX") // (not actually possible, just for tesT)
-															.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name3", "test_analytic_tech_id"))
+															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name3", "test_analytic_tech_id"))
 															.done().get();												
 			
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -574,7 +574,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2, analytic_input3))
 				.with(AnalyticThreadJobBean::output, analytic_output)
-				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 		
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -653,7 +653,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2, analytic_input3))
 				.with(AnalyticThreadJobBean::output, analytic_output1)
-				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 		
 		final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
@@ -661,7 +661,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input4, analytic_input5, analytic_input6))
 				.with(AnalyticThreadJobBean::output, analytic_output2)
-				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 
 		final AnalyticThreadJobBean analytic_job_not_streaming = BeanTemplateUtils.clone(analytic_job1)
@@ -736,7 +736,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
 				.with(AnalyticThreadJobBean::output, analytic_output)
-				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -857,7 +857,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
 				.with(AnalyticThreadJobBean::output, analytic_output)
-				.with(AnalyticThreadJobBean::module_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)

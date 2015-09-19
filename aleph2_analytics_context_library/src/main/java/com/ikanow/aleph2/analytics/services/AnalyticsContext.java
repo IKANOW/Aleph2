@@ -584,7 +584,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			
 			final List<SingleQueryComponent<SharedLibraryBean>> other_libs = 
 				Optionals.ofNullable(jobs).stream()
-					.flatMap(job -> Optionals.ofNullable(job.module_names_or_ids()).stream())
+					.flatMap(job -> Optionals.ofNullable(job.library_names_or_ids()).stream())
 					.map(name -> {
 						return CrudUtils.anyOf(SharedLibraryBean.class)
 								.when(SharedLibraryBean::_id, name)

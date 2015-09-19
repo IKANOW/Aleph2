@@ -294,7 +294,7 @@ public class TestDataBucketChangeActor {
 					.build();		
 		
 		final HarvestControlMetadataBean harvest_module = new HarvestControlMetadataBean(
-				"test_tech_name", true, Arrays.asList("test_module_id"), null
+				"test_tech_name", true, null, Arrays.asList("test_module_id"), null, null
 				);
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketChangeActor.getHarvestTechnology(
@@ -519,7 +519,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final HarvestControlMetadataBean harvest_module = new HarvestControlMetadataBean(
-					"test_tech_name", true, Arrays.asList("test_module_id"), null
+					"test_tech_name", true, null, Arrays.asList("test_module_id"), null, null
 					);
 			final DataBucketBean bucket2 = BeanTemplateUtils.clone(bucket)
 								.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest")

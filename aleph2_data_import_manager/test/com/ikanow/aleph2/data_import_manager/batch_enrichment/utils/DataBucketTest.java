@@ -141,12 +141,12 @@ public abstract class DataBucketTest {
 				EnrichmentControlMetadataBean ecm1 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
 						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_1")
 						.with(EnrichmentControlMetadataBean::enabled, false)
-						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("misc_enrichment1.jar"))
+						.with(EnrichmentControlMetadataBean::library_names_or_ids,Arrays.asList("misc_enrichment1.jar"))
 						.done().get();
 				EnrichmentControlMetadataBean ecm2 = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
 						.with(EnrichmentControlMetadataBean::name,"bucketEnrichmentConfig1_2")
 						.with(EnrichmentControlMetadataBean::enabled, true)
-						.with(EnrichmentControlMetadataBean::library_ids_or_names,Arrays.asList("be_module1.jar"))
+						.with(EnrichmentControlMetadataBean::library_names_or_ids,Arrays.asList("be_module1.jar"))
 						.done().get();				
 				HarvestControlMetadataBean hcm1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
 						.with(HarvestControlMetadataBean::name,"bucketEnrichment1")

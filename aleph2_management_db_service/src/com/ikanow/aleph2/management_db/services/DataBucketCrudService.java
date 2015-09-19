@@ -810,7 +810,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if ((null != bucket.harvest_technology_name_or_id()) && (null != bucket.harvest_configs())) {
 			for (int i = 0; i < bucket.harvest_configs().size(); ++i) {
 				final HarvestControlMetadataBean hmeta = bucket.harvest_configs().get(i);
-				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_ids_or_names()));
+				list_test.accept(Tuples._2T("harvest_configs" + Integer.toString(i) + ".library_ids_or_names", hmeta.library_names_or_ids()));
 			}
 		}
 
@@ -818,11 +818,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		BiConsumer<Tuple2<String, EnrichmentControlMetadataBean>, Boolean> enrichment_test = (emeta, allowed_empty_list) -> {
 			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
 				if (!allowed_empty_list)
-					if ((null == emeta._2().library_ids_or_names()) || emeta._2().library_ids_or_names().isEmpty()) {
+					if ((null == emeta._2().library_names_or_ids()) || emeta._2().library_names_or_ids().isEmpty()) {
 						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS, bucket.full_name(), emeta._1())));				
 					}
 			}
-			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_ids_or_names()));
+			list_test.accept(Tuples._2T(emeta._1() + ".library_ids_or_names", emeta._2().library_names_or_ids()));
 			list_test.accept(Tuples._2T(emeta._1() + ".dependencies", emeta._2().dependencies()));
 		};		
 		if (null != bucket.batch_enrichment_topology()) {

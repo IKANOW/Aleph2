@@ -268,11 +268,11 @@ public class TestHarvestContext {
 			// Now get the various shared libs
 
 			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-															.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name2"))
+															.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 															.done().get();
 			
 			final HarvestControlMetadataBean harvest_module2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-					.with(HarvestControlMetadataBean::library_ids_or_names, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
+					.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
 															.done().get();
 												
 			

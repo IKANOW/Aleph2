@@ -36,7 +36,9 @@ public class AnalyticThreadJobBean implements Serializable {
 	 * @param enabled - Whether the job is currently enabled, defaults to true
 	 * @param analytic_type - Whether the job is streaming (eg Storm), batch (eg Hadoop) , both ("streaming_and_batch", currently undefined), or "none" (currently undefined)
 	 * @param analytic_technology_name_or_id - The name or the id of the analytic technology that will handle this job
-	 * @param module_names_or_ids - An optional list of addition modules required on the classpath
+	 * @param module_name_or_id - An optional primary module containing application logic within the analytic technology
+	 * @param library_names_or_ids - An optional list of addition modules required on the classpath
+	 * @param entry_point - the entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified)
 	 * @param config - The analytic technology specific module configuration JSON
 	 * @param node_list_rules - the node list rules
 	 * @param multi_node_enabled - Determines whether this analytic job should run on a single node, or multiples nodes
@@ -46,9 +48,11 @@ public class AnalyticThreadJobBean implements Serializable {
 	 * @param output - The configuration for the job's output
 	 */
 	public AnalyticThreadJobBean(final String name, final Boolean enabled, 
-									final String analytic_technology_name_or_id, final List<String> module_names_or_ids, 
-									final LinkedHashMap<String, Object> config,
+									final String analytic_technology_name_or_id, 
+									final String module_name_or_id, 
+									final List<String> library_names_or_ids, 
 									final String entry_point,
+									final LinkedHashMap<String, Object> config,
 									final DataBucketBean.MasterEnrichmentType analytic_type,
 									final List<String> node_list_rules, final Boolean multi_node_enabled,
 									final List<String> dependencies,
@@ -60,9 +64,10 @@ public class AnalyticThreadJobBean implements Serializable {
 		this.name = name;
 		this.enabled = enabled;
 		this.analytic_technology_name_or_id = analytic_technology_name_or_id;
-		this.module_names_or_ids = module_names_or_ids;
-		this.config = config;
+		this.module_name_or_id = module_name_or_id;
+		this.library_names_or_ids = library_names_or_ids;
 		this.entry_point = entry_point;
+		this.config = config;
 		this.node_list_rules = node_list_rules;
 		this.multi_node_enabled = multi_node_enabled;
 		this.dependencies = dependencies;
@@ -103,24 +108,32 @@ public class AnalyticThreadJobBean implements Serializable {
 	 */
 	public String analytic_technology_name_or_id() { return analytic_technology_name_or_id; }
 	
+	/** An optional primary module containing application logic within the analytic technology
+	 *  The difference vs the library_names_or_ids is that the library bean (And hence its entry point) is accessible from the context
+	 *  hence no entry_point need then be specified
+	 * @return An optional primary module containing application logic within the analytic technology
+	 */
+	public String module_name_or_id() { return module_name_or_id; }
+	
 	/** A list of addition modules required on the classpath
 	 * @return An optional list of addition modules required on the classpath
 	 */
-	public List<String> module_names_or_ids() { return null == module_names_or_ids ? module_names_or_ids : Collections.unmodifiableList(module_names_or_ids); }
+	public List<String> library_names_or_ids() { return null == library_names_or_ids ? library_names_or_ids : Collections.unmodifiableList(library_names_or_ids); }
 	
 	/** The analytic technology specific module configuration JSON
 	 * @return The analytic technology specific module configuration JSON
 	 */
 	public Map<String, Object> config() { return null == config ? config : Collections.unmodifiableMap(config); }
 	
-	/** The "entry point class" that is on the module+technology's classpath. If left blank, the system will try to fill it in if possible (eg there is only one option.
+	/** The entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified) 
 	 *  In many (simpler) cases it is not necessary, eg the technology + config is sufficient to define the job 
 	 * @return (optional) the entry point class to run the module that defines the job
 	 */
 	public String entry_point() { return entry_point; }
 	
 	private String analytic_technology_name_or_id;
-	private List<String> module_names_or_ids;
+	private String module_name_or_id;
+	private List<String> library_names_or_ids;
 	private LinkedHashMap<String, Object> config;
 	private String entry_point;
 	

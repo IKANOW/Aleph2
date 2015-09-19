@@ -30,15 +30,29 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	protected EnrichmentControlMetadataBean() {}
 	
 	/** User constructor
+	 * @param name - The name of the job - optional but required if it is needed as a dependency
+	 * @param dependencies - 
+	 * @param enabled - Whether the job is currently enabled, defaults to true
+	 * @param module_name_or_id - An optional primary module containing application logic within the analytic technology
+	 * @param library_names_or_ids - An optional list of addition modules required on the classpath
+	 * @param entry_point - the entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified)
+	 * @param config - The analytic technology specific module configuration JSON
 	 */
-	public EnrichmentControlMetadataBean(final String name,
-			final List<String> dependencies, Boolean enabled,
-			final List<String> library_ids_or_names, LinkedHashMap<String, Object> config) {
+	public EnrichmentControlMetadataBean(
+			final String name,
+			final List<String> dependencies, 
+			final Boolean enabled,
+			final String module_name_or_id,
+			final List<String> library_names_or_ids,
+			final String entry_point,
+			final LinkedHashMap<String, Object> config) {
 		super();
 		this.name = name;
 		this.dependencies = dependencies;
 		this.enabled = enabled;
-		this.library_ids_or_names = library_ids_or_names;
+		this.module_name_or_id = module_name_or_id;
+		this.library_names_or_ids = library_names_or_ids;
+		this.entry_point = entry_point;
 		this.config = config;
 	}
 	/** The name of the enrichment - must be unique within the list of enrichments in this bucket (used for search/display/dependencies)
@@ -59,13 +73,25 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	public Boolean enabled() {
 		return enabled;
 	}
+	/** An optional primary module containing application logic within the analytic technology
+	 *  The difference vs the library_names_or_ids is that the library bean (And hence its entry point) is accessible from the context
+	 *  hence no entry_point need then be specified
+	 * @return An optional primary module containing application logic within the analytic technology
+	 */
+	public String module_name_or_id() { return module_name_or_id; }
+	
 	/** A list of ids or names (within either the bucket or global library) of enrichment JARs to be
 	 *  used as part of this enrichment. Exactly one of the JARs must be of type IEnrichmentBatchModule or IEnrichmentBatchTopology  
 	 * @return the library_ids_or_names
 	 */
-	public List<String> library_ids_or_names() {
-		return library_ids_or_names == null ? null : Collections.unmodifiableList(library_ids_or_names);
+	public List<String> library_names_or_ids() {
+		return library_names_or_ids == null ? null : Collections.unmodifiableList(library_names_or_ids);
 	}
+	/** The entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified) 
+	 * @return (optional) the entry point class to run the module that defines the job
+	 */
+	public String entry_point() { return entry_point; }
+	
 	/** The enrichment-module-specific configuration that controls the per-bucket enrichment
 	 * @return the config
 	 */
@@ -75,6 +101,8 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	private String name;
 	private List<String> dependencies;
 	private Boolean enabled;
-	private List<String> library_ids_or_names;
+	private String module_name_or_id;
+	private List<String> library_names_or_ids;
+	private String entry_point;
 	private LinkedHashMap<String, Object> config;
 }	
