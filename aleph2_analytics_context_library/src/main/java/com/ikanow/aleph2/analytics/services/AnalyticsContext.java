@@ -645,7 +645,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.harvest == t.get(), 
 						__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
-						__ -> _core_management_db.getPerLibraryState(clazz, this.getLibraryConfig(), collection))
+						__ -> _core_management_db.getPerLibraryState(clazz, this.getTechnologyConfig(), collection))
 				// default: analytics or not specified: analytics
 				.otherwise(__ -> _core_management_db.getBucketAnalyticThreadState(clazz, this_bucket.get(), collection))
 				;
@@ -663,7 +663,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLibraryConfig()
 	 */
 	@Override
-	public SharedLibraryBean getLibraryConfig() {
+	public SharedLibraryBean getTechnologyConfig() {
 		return _mutable_state.library_config.get();
 	}
 
@@ -819,6 +819,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_distributed_services.produce(topic, obj_json.toString());
 		}
 		//(else nothing to do)
+	}
+
+	@Override
+	public Optional<SharedLibraryBean> getModuleConfig() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

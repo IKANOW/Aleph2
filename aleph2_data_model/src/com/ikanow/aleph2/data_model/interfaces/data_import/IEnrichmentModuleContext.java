@@ -170,7 +170,7 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
 	 * @return the library bean that provided the user callback currently being executed
 	 */
-	SharedLibraryBean getLibraryConfig();
+	SharedLibraryBean getModuleConfig();
 	
 	/** (All Enrichment Types) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

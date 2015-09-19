@@ -192,7 +192,15 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
 	 * @return the library bean that provided the user callback currently being executed
 	 */
-	SharedLibraryBean getLibraryConfig();
+	SharedLibraryBean getTechnologyConfig();
+	
+	/** (AnalyticsTechnology/Analytics Module) Returns the library bean optionally specified in the analytic job's module_name_or_id
+	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
+	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
+	 *  This can also be used to obtain SharedLibraryBean.getStreamingEntryPoint or SharedLibraryBean.getBatchEntryPoint or SharedLibraryBean.getMiscEntryPoitn
+	 * @return the library bean that provided the user callback currently being executed
+	 */
+	Optional<SharedLibraryBean> getModuleConfig();
 	
 	/** (AnalyticsTechnology/Analytics Module) Returns the status bean for the specified bucket (whhch contains AnalyticThreadStatusBean) 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

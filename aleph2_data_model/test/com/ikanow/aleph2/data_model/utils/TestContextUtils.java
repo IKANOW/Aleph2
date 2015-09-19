@@ -215,7 +215,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public SharedLibraryBean getLibraryConfig() {
+		public SharedLibraryBean getTechnologyLibraryConfig() {
 			return null;
 		}
 
@@ -246,6 +246,11 @@ public class TestContextUtils {
 		@Override
 		public void emitObject(Optional<DataBucketBean> bucket,
 				Either<JsonNode, Map<String, Object>> object) {
+		}
+
+		@Override
+		public Optional<SharedLibraryBean> getModuleConfig() {
+			return null;
 		}
 		
 	}
@@ -297,7 +302,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public SharedLibraryBean getLibraryConfig() {
+		public SharedLibraryBean getTechnologyConfig() {
 			return null;
 		}
 
@@ -402,6 +407,11 @@ public class TestContextUtils {
 		@Override
 		public Optional<String> getOutputTopic(Optional<DataBucketBean> bucket,
 				AnalyticThreadJobBean job) {
+			return null;
+		}
+
+		@Override
+		public Optional<SharedLibraryBean> getModuleConfig() {
 			return null;
 		}
 	}
@@ -514,7 +524,7 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public SharedLibraryBean getLibraryConfig() {
+		public SharedLibraryBean getModuleConfig() {
 			return null;
 		}
 

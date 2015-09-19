@@ -269,7 +269,7 @@ public class TestStreamingEnrichmentContext {
 			assertEquals("test", test_external2b._mutable_state.bucket.get()._id());
 			
 			assertEquals("/test/lib", test_external2b._mutable_state.library_config.get().path_name());			
-			assertEquals("/test/lib", test_external2b.getLibraryConfig().path_name());			
+			assertEquals("/test/lib", test_external2b.getModuleConfig().path_name());			
 			
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IManagementDbService.class, Optional.of("test")));

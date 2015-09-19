@@ -468,7 +468,7 @@ public class HarvestContext implements IHarvestContext {
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.enrichment == t.get(), 
 						__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
-						__ -> _core_management_db.getPerLibraryState(clazz, this.getLibraryConfig(), collection))
+						__ -> _core_management_db.getPerLibraryState(clazz, this.getTechnologyLibraryConfig(), collection))
 				// default: harvest or not specified: harvest
 				.otherwise(__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
 				;
@@ -561,7 +561,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
 	 */
 	@Override
-	public SharedLibraryBean getLibraryConfig() {
+	public SharedLibraryBean getTechnologyLibraryConfig() {
 		return _mutable_state.library_config.get();
 	}
 
@@ -602,5 +602,11 @@ public class HarvestContext implements IHarvestContext {
 	{
 		//TODO (ALEPH-41, ALEPH-12): Fill this in later (this dumps the JSON into the ready directory, right?)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	}
+
+	@Override
+	public Optional<SharedLibraryBean> getModuleConfig() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

@@ -454,7 +454,7 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
 	 */
 	@Override
-	public SharedLibraryBean getLibraryConfig() {
+	public SharedLibraryBean getModuleConfig() {
 		return _mutable_state.library_config.get();
 	}
 

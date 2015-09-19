@@ -501,7 +501,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.harvest == t.get(), 
 						__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
-						__ -> _core_management_db.getPerLibraryState(clazz, this.getLibraryConfig(), collection))
+						__ -> _core_management_db.getPerLibraryState(clazz, this.getModuleConfig(), collection))
 				// default: harvest or not specified: harvest
 				.otherwise(__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
 				;
@@ -561,7 +561,7 @@ public class StreamingEnrichmentContext implements IEnrichmentModuleContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
 	 */
 	@Override
-	public SharedLibraryBean getLibraryConfig() {
+	public SharedLibraryBean getModuleConfig() {
 		return _mutable_state.library_config.get();
 	}
 }

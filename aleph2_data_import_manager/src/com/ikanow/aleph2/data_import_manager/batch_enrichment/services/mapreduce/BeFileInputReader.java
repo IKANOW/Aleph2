@@ -115,7 +115,7 @@ public class BeFileInputReader extends  RecordReader<String, Tuple2<Long, IBatch
 		try {
 			this.enrichmentContext = ContextUtils.getEnrichmentContext(contextSignature);
 			this.dataBucket = enrichmentContext.getBucket().get();
-			this.beSharedLibrary = enrichmentContext.getLibraryConfig();		
+			this.beSharedLibrary = enrichmentContext.getModuleConfig();		
 			this.ecMetadata = BeJobBean.extractEnrichmentControlMetadata(dataBucket, context.getConfiguration().get(BatchEnrichmentJob.BE_META_BEAN_PARAM)).get();
 		} catch (Exception e) {
 			logger.error(ErrorUtils.getLongForm("{0}", e),e);

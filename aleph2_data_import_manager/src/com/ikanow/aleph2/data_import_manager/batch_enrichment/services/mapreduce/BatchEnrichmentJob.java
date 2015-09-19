@@ -163,7 +163,7 @@ public class BatchEnrichmentJob{
 		beJobConfigurable.setEnrichmentContext(enrichmentContext);
 		DataBucketBean dataBucket = enrichmentContext.getBucket().get();
 		beJobConfigurable.setDataBucket(dataBucket);
-		SharedLibraryBean beSharedLibrary = enrichmentContext.getLibraryConfig();
+		SharedLibraryBean beSharedLibrary = enrichmentContext.getModuleConfig();
 		beJobConfigurable.setBeSharedLibrary(beSharedLibrary);		
 		beJobConfigurable.setEcMetadata(BeJobBean.extractEnrichmentControlMetadata(dataBucket, configuration.get(BE_META_BEAN_PARAM)).get());	
 		beJobConfigurable.setBatchSize(configuration.getInt(BATCH_SIZE_PARAM,100));	
