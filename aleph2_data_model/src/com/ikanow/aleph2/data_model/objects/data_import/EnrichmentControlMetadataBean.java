@@ -85,7 +85,9 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	 * @return the library_ids_or_names
 	 */
 	public List<String> library_names_or_ids() {
-		return library_names_or_ids == null ? null : Collections.unmodifiableList(library_names_or_ids);
+		return (null != library_ids_or_names)
+				? Collections.unmodifiableList(library_ids_or_names)
+				: (null == library_names_or_ids ? null : Collections.unmodifiableList(library_names_or_ids));
 	}
 	/** The entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified) 
 	 * @return (optional) the entry point class to run the module that defines the job
@@ -105,4 +107,7 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	private List<String> library_names_or_ids;
 	private String entry_point;
 	private LinkedHashMap<String, Object> config;
+	
+	// Legacy, renamed to "library_ids_or_names": just for bw-compatibility support:
+	private List<String> library_ids_or_names;
 }	
