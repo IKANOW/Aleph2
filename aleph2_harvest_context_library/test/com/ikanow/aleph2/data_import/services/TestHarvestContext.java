@@ -138,7 +138,7 @@ public class TestHarvestContext {
 													.with(SharedLibraryBean::path_name, "/test/lib")
 													.done().get();
 			
-			test_context.setLibraryConfig(library);
+			test_context.setTechnologyConfig(library);
 			
 			// Empty service set:
 			final String signature = test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());
@@ -149,7 +149,7 @@ public class TestHarvestContext {
 			// Additionals service set:
 
 			final HarvestContext test_context2 = _app_injector.getInstance(HarvestContext.class);
-			test_context2.setLibraryConfig(library);
+			test_context2.setTechnologyConfig(library);
 			final String signature2 = test_context2.getHarvestContextSignature(Optional.of(test_bucket),
 												Optional.of(
 														ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
@@ -208,7 +208,7 @@ public class TestHarvestContext {
 			
 			assertEquals("test", test_external2b._mutable_state.bucket.get()._id());
 			
-			assertEquals("/test/lib", test_external2b._mutable_state.library_config.get().path_name());			
+			assertEquals("/test/lib", test_external2b._mutable_state.technology_config.get().path_name());			
 			assertEquals("/test/lib", test_external2b.getTechnologyLibraryConfig().path_name());
 			
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
@@ -374,7 +374,7 @@ public class TestHarvestContext {
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_HARVEST_CONTEXT").done().get();
 
 		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_HARVEST_CONTEXT").done().get();
-		test_context.setLibraryConfig(lib_bean);
+		test_context.setTechnologyConfig(lib_bean);
 		
 		ICrudService<AssetStateDirectoryBean> dir_a = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
 		ICrudService<AssetStateDirectoryBean> dir_e = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
@@ -487,7 +487,7 @@ public class TestHarvestContext {
 		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
-		test_context.setLibraryConfig(library);		
+		test_context.setTechnologyConfig(library);		
 		
 		// Empty service set:
 		test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());		

@@ -144,7 +144,7 @@ public class TestAnalyticsContext {
 			final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::path_name, "/test/lib")
 					.done().get();
-			test_context.setLibraryConfig(library);
+			test_context.setTechnologyConfig(library);
 			
 			test_context.setBucket(test_bucket);
 			assertEquals(test_bucket, test_context.getBucket().get());
@@ -180,7 +180,7 @@ public class TestAnalyticsContext {
 					.with(SharedLibraryBean::path_name, "/test/lib")
 					.done().get();
 
-			test_context.setLibraryConfig(library);			
+			test_context.setTechnologyConfig(library);			
 			
 			// Empty service set:
 			final String signature = test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());
@@ -206,7 +206,7 @@ public class TestAnalyticsContext {
 			catch (Exception e) {}
 			// Create another injector:
 			final AnalyticsContext test_context2 = _app_injector.getInstance(AnalyticsContext.class);
-			test_context2.setLibraryConfig(library);			
+			test_context2.setTechnologyConfig(library);			
 
 			final String signature2 = test_context2.getAnalyticsContextSignature(Optional.of(test_bucket),
 					Optional.of(
@@ -267,7 +267,7 @@ public class TestAnalyticsContext {
 			
 			assertEquals("test", test_external2b._mutable_state.bucket.get()._id());
 			
-			assertEquals("/test/lib", test_external2b._mutable_state.library_config.get().path_name());			
+			assertEquals("/test/lib", test_external2b._mutable_state.technology_config.get().path_name());			
 			assertEquals("/test/lib", test_external2b.getTechnologyConfig().path_name());			
 			
 			assertTrue("I can see my additonal services", null != test_external2b._service_context.getService(IStorageService.class, Optional.empty()));
@@ -323,7 +323,7 @@ public class TestAnalyticsContext {
 		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
-		test_context.setLibraryConfig(library);		
+		test_context.setTechnologyConfig(library);		
 		
 		// Empty service set:
 		test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());		
@@ -390,7 +390,7 @@ public class TestAnalyticsContext {
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "TEST_ANALYTICS_CONTEXT").done().get();
 
 		final SharedLibraryBean lib_bean = BeanTemplateUtils.build(SharedLibraryBean.class).with("path_name", "TEST_ANALYTICS_CONTEXT").done().get();
-		test_context.setLibraryConfig(lib_bean);
+		test_context.setTechnologyConfig(lib_bean);
 		
 		ICrudService<AssetStateDirectoryBean> dir_a = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.analytic_thread));
 		ICrudService<AssetStateDirectoryBean> dir_e = test_context._core_management_db.getStateDirectory(Optional.empty(), Optional.of(AssetStateDirectoryBean.StateDirectoryType.enrichment));
@@ -757,7 +757,7 @@ public class TestAnalyticsContext {
 		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
-		test_context.setLibraryConfig(library);
+		test_context.setTechnologyConfig(library);
 		
 		// Empty service set:
 		final String signature = test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());
@@ -878,7 +878,7 @@ public class TestAnalyticsContext {
 		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
-		test_context.setLibraryConfig(library);
+		test_context.setTechnologyConfig(library);
 		
 		KafkaUtils.createTopic(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
 		

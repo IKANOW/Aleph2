@@ -131,7 +131,7 @@ public class DataBucketChangeActor extends AbstractActor {
 								// set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist 
 								err_or_map.forEach(map ->									
 									Optional.ofNullable(map.get(m.bucket().harvest_technology_name_or_id()))
-										.ifPresent(lib -> h_context.setLibraryConfig(lib._1()))
+										.ifPresent(lib -> h_context.setTechnologyConfig(lib._1()))
 								);
 								
 								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);

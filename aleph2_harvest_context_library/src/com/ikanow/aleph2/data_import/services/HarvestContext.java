@@ -81,6 +81,8 @@ import com.typesafe.config.ConfigValueFactory;
 
 import fj.data.Either;
 
+//TODO: ALEPH-12 wire up module config via signature
+
 @SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
 	protected static final Logger _logger = LogManager.getLogger();	
@@ -94,7 +96,8 @@ public class HarvestContext implements IHarvestContext {
 	protected static class MutableState {
 		//TODO (ALEPH-19) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<>();
-		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
+		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
+		SetOnce<SharedLibraryBean> module_config = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
@@ -149,8 +152,16 @@ public class HarvestContext implements IHarvestContext {
 	 * @param this_bucket - the library bean to be associated
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
-	public boolean setLibraryConfig(SharedLibraryBean lib_config) {
-		return _mutable_state.library_config.set(lib_config);
+	public boolean setTechnologyConfig(SharedLibraryBean lib_config) {
+		return _mutable_state.technology_config.set(lib_config);
+	}
+	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the optional module library bean for this context instance
+	 * @param this_bucket - the library bean to be associated
+	 * @returns whether the library bean has been updated (ie fails if it's already been set)
+	 */
+	public boolean setModuleConfig(final SharedLibraryBean lib_config) {
+		return _mutable_state.module_config.set(lib_config);
 	}
 	
 	/* (non-Javadoc)
@@ -183,7 +194,7 @@ public class HarvestContext implements IHarvestContext {
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
-			_mutable_state.library_config.set(retrieve_library.get());
+			_mutable_state.technology_config.set(retrieve_library.get());
 			
 			_batch_storage_service = 
 					(_crud_storage_service = _storage_service.getDataService()
@@ -381,7 +392,7 @@ public class HarvestContext implements IHarvestContext {
 													)
 										.withValue(__MY_LIBRARY_ID, 
 													ConfigValueFactory
-														.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.library_config.get()).toString())
+														.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
 													)
 													;
 			
@@ -562,9 +573,19 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public SharedLibraryBean getTechnologyLibraryConfig() {
-		return _mutable_state.library_config.get();
+		return _mutable_state.technology_config.get();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getModuleConfig()
+	 */
+	@Override
+	public Optional<SharedLibraryBean> getModuleConfig() {
+		return _mutable_state.module_config.isSet()
+				? Optional.of(_mutable_state.module_config.get())
+				: Optional.empty();
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
 	 */
@@ -602,11 +623,5 @@ public class HarvestContext implements IHarvestContext {
 	{
 		//TODO (ALEPH-41, ALEPH-12): Fill this in later (this dumps the JSON into the ready directory, right?)
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-	}
-
-	@Override
-	public Optional<SharedLibraryBean> getModuleConfig() {
-		// TODO Auto-generated method stub
-		return null;
 	}
 }

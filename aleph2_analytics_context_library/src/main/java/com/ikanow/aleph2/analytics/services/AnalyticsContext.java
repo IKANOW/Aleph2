@@ -85,6 +85,8 @@ import com.typesafe.config.ConfigValueFactory;
 
 import fj.data.Either;
 
+//TODO: ALEPH-12 wire up module config via signature
+
 /** The implementation of the analytics context interface
  * @author Alex
  */
@@ -101,7 +103,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	protected static class MutableState {
 		//TODO (ALEPH-12) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
-		SetOnce<SharedLibraryBean> library_config = new SetOnce<>();
+		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
+		SetOnce<SharedLibraryBean> module_config = new SetOnce<>();
 		SetOnce<String> user_topology_entry_point = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();		
@@ -160,12 +163,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
-	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the library bean for this context instance
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the technology library bean for this context instance
 	 * @param this_bucket - the library bean to be associated
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
-	public boolean setLibraryConfig(final SharedLibraryBean lib_config) {
-		return _mutable_state.library_config.set(lib_config);
+	public boolean setTechnologyConfig(final SharedLibraryBean lib_config) {
+		return _mutable_state.technology_config.set(lib_config);
+	}
+	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the optional module library bean for this context instance
+	 * @param this_bucket - the library bean to be associated
+	 * @returns whether the library bean has been updated (ie fails if it's already been set)
+	 */
+	public boolean setModuleConfig(final SharedLibraryBean lib_config) {
+		return _mutable_state.module_config.set(lib_config);
 	}
 	
 	/** FOR DEBUGGING AND TESTING ONLY, inserts a copy of the current context into the saved "in module" versions
@@ -207,7 +218,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
-			_mutable_state.library_config.set(retrieve_library.get());
+			_mutable_state.technology_config.set(retrieve_library.get());
 			
 			_batch_index_service = 
 					(_crud_index_service = _index_service.getDataService()
@@ -299,7 +310,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 												)
 								.withValue(__MY_LIBRARY_ID, 
 											ConfigValueFactory
-												.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.library_config.get()).toString())
+												.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
 												)
 												;
 			
@@ -664,9 +675,19 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public SharedLibraryBean getTechnologyConfig() {
-		return _mutable_state.library_config.get();
+		return _mutable_state.technology_config.get();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getModuleConfig()
+	 */
+	@Override
+	public Optional<SharedLibraryBean> getModuleConfig() {
+		return _mutable_state.module_config.isSet()
+				? Optional.of(_mutable_state.module_config.get())
+				: Optional.empty();
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getBucketStatus(java.util.Optional)
 	 */
@@ -820,11 +841,4 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 		//(else nothing to do)
 	}
-
-	@Override
-	public Optional<SharedLibraryBean> getModuleConfig() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 }
