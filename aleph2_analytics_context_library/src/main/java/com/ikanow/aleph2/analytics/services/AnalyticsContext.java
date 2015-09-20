@@ -98,7 +98,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	// CONSTRUCTION
 	
 	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
-	public static final String __MY_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
+	public static final String __MY_TECH_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
+	public static final String __MY_MODULE_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247cff";
 	
 	protected static class MutableState {
 		//TODO (ALEPH-12) logging information - will be genuinely mutable
@@ -217,8 +218,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
-			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
+			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
+			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
+				final BeanTemplate<SharedLibraryBean> retrieve_module = BeanTemplateUtils.from(parsed_config.getString(__MY_MODULE_LIBRARY_ID), SharedLibraryBean.class);
+				_mutable_state.module_config.set(retrieve_module.get());				
+			}
 			
 			_batch_index_service = 
 					(_crud_index_service = _index_service.getDataService()
@@ -303,16 +308,27 @@ public class AnalyticsContext implements IAnalyticsContext {
 				
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
-			final Config last_call = config_subset_services
-								.withValue(__MY_BUCKET_ID, 
-											ConfigValueFactory
-												.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
-												)
-								.withValue(__MY_LIBRARY_ID, 
-											ConfigValueFactory
-												.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
-												)
-												;
+			final Config last_call = 
+					Lambdas.get(() -> 
+						_mutable_state.module_config.isSet()
+						?
+						config_subset_services
+							.withValue(__MY_MODULE_LIBRARY_ID, 
+									ConfigValueFactory
+										.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.module_config.get()).toString())
+										)
+						:
+						config_subset_services						
+					)
+					.withValue(__MY_BUCKET_ID, 
+								ConfigValueFactory
+									.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
+									)
+					.withValue(__MY_TECH_LIBRARY_ID, 
+								ConfigValueFactory
+									.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
+									)
+									;
 			
 			final String ret1 = last_call.root().render(ConfigRenderOptions.concise());
 			_mutable_state.signature_override.set(ret1);

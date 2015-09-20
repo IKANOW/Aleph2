@@ -88,7 +88,8 @@ public class HarvestContext implements IHarvestContext {
 	protected static final Logger _logger = LogManager.getLogger();	
 
 	public static final String __MY_BUCKET_ID = "030e2b82-0285-11e5-a322-1697f925ec7b";
-	public static final String __MY_LIBRARY_ID = "030e2b82-0285-11e5-a322-1697f925ec7c";
+	public static final String __MY_TECH_LIBRARY_ID = "030e2b82-0285-11e5-a322-1697f925ec7c";
+	public static final String __MY_MODULE_LIBRARY_ID = "030e2b82-0285-11e5-a322-1697f925ec7d";
 	
 	public enum State { IN_TECHNOLOGY, IN_MODULE };
 	protected final State _state_name;
@@ -193,8 +194,12 @@ public class HarvestContext implements IHarvestContext {
 			
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
 			_mutable_state.bucket.set(retrieve_bucket.get());
-			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_LIBRARY_ID), SharedLibraryBean.class);
+			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
+			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
+				final BeanTemplate<SharedLibraryBean> retrieve_module = BeanTemplateUtils.from(parsed_config.getString(__MY_MODULE_LIBRARY_ID), SharedLibraryBean.class);
+				_mutable_state.module_config.set(retrieve_module.get());				
+			}
 			
 			_batch_storage_service = 
 					(_crud_storage_service = _storage_service.getDataService()
@@ -385,16 +390,27 @@ public class HarvestContext implements IHarvestContext {
 				
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
-			final Config last_call = config_subset_services
-										.withValue(__MY_BUCKET_ID, 
-												ConfigValueFactory
-													.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
-													)
-										.withValue(__MY_LIBRARY_ID, 
-													ConfigValueFactory
-														.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
-													)
-													;
+			final Config last_call = 
+					Lambdas.get(() -> 
+						_mutable_state.module_config.isSet()
+						?
+						config_subset_services
+							.withValue(__MY_MODULE_LIBRARY_ID, 
+									ConfigValueFactory
+										.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.module_config.get()).toString())
+										)
+						:
+						config_subset_services						
+					)
+					.withValue(__MY_BUCKET_ID, 
+								ConfigValueFactory
+									.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
+									)
+					.withValue(__MY_TECH_LIBRARY_ID, 
+								ConfigValueFactory
+									.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
+									)
+									;
 			
 			return this.getClass().getName() + ":" + last_call.root().render(ConfigRenderOptions.concise());
 		}
