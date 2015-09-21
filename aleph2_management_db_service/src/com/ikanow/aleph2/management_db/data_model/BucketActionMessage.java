@@ -166,7 +166,7 @@ public class BucketActionMessage implements Serializable {
 			super(bucket);
 			this.test_spec = test_spec;
 		}
-		public ProcessingTestSpecBean get_test_spec() {
+		public ProcessingTestSpecBean test_spec() {
 			return test_spec;
 		}
 		protected ProcessingTestSpecBean test_spec;

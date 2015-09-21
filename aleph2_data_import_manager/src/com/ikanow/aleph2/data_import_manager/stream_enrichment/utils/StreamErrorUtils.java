@@ -22,7 +22,7 @@ public class StreamErrorUtils {
 
 	public static final String STREAM_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";
 
-	public static final String NO_TECHNOLOGY_NAME_OR_ID = "No harvest technology name or id in bucket {0}";
+	public static final String NO_TECHNOLOGY_NAME_OR_ID = "No analytic technology name or id in bucket {0}";
 	public static final String TOPOLOGY_NAME_NOT_FOUND = "No valid topology {0} found for bucket {1}";
 	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";	
 	public static final String TOPOLOGY_NULL_ERROR = "Topology from {0} (bucket {0}) was null";

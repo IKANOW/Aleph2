@@ -166,7 +166,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		if (!is_streaming && !has_harvester) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
-					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(
+					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
 							Collections.emptyList(), Collections.emptySet()
 							));
 		}
@@ -187,7 +187,7 @@ public class BucketActionSupervisor extends UntypedActor {
 																			.done())
 																		.collect(Collectors.toList());
 									
-									return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(replace, stream.timed_out());
+									return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), replace, stream.timed_out());
 								});
 				}
 				else { // (harvest only)
@@ -218,7 +218,7 @@ public class BucketActionSupervisor extends UntypedActor {
 																									.addAll(stream.timed_out())
 																									.addAll(harvest.timed_out())
 																								.build();
-													return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(combined_replies, timed_out);
+													return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), combined_replies, timed_out);
 												}
 												else {
 													return harvest;

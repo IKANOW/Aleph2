@@ -156,7 +156,7 @@
   	</dependency>
   	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_streaming_enrichment_context_library</artifactId>
+  		<artifactId>aleph2_analytics_context_library</artifactId>
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
   	</dependency>
@@ -175,6 +175,12 @@
    	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
+  		<version>${aleph2.version}</version>
+		<scope>test</scope>
+  	</dependency>  	
+   	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_analytic_services_storm</artifactId>
   		<version>${aleph2.version}</version>
 		<scope>test</scope>
   	</dependency>  	
@@ -214,16 +220,6 @@
   		<version>4.12</version>
   		<scope>test</scope>
   	</dependency>
-	<dependency>
-		<groupId>org.apache.storm</groupId>
-		<artifactId>storm-core</artifactId>
-		<version>0.9.3</version>
-	</dependency>
-	<dependency>
-		<groupId>org.apache.storm</groupId>
-		<artifactId>storm-kafka</artifactId>
-		<version>0.9.5</version>
-	</dependency>
 	<dependency>
 		<groupId>org.yaml</groupId>
 		<artifactId>snakeyaml</artifactId>

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -72,10 +73,12 @@ public class TestBucketActionChooseActor {
 
 	// This one always accepts, and returns a message
 	public static class TestActor_Accepter extends UntypedActor {
-		public TestActor_Accepter(String uuid) {
+		public TestActor_Accepter(String uuid, boolean multi_reply) {
 			this.uuid = uuid;
+			this.multi_reply = multi_reply;
 		}
 		private final String uuid;
+		private final boolean multi_reply;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
 			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
@@ -83,8 +86,7 @@ public class TestBucketActionChooseActor {
 				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage(uuid), this.self());
 			}
 			else {
-				_logger.info("Accept MESSAGE from: " + uuid);
-				this.sender().tell(
+				BucketActionReplyMessage.BucketActionHandlerMessage reply =
 						new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
 								new BasicMessageBean(
 										new Date(),
@@ -94,7 +96,14 @@ public class TestBucketActionChooseActor {
 										null,
 										"handled",
 										null									
-										)),
+										));
+				
+				_logger.info("Accept MESSAGE from: " + uuid);
+				this.sender().tell(
+						multi_reply
+						? new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(uuid, Arrays.asList(reply.reply()), Collections.emptySet())
+						: reply
+						,
 						this.self());
 			}
 		}		
@@ -274,7 +283,7 @@ public class TestBucketActionChooseActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, true), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -326,7 +335,7 @@ public class TestBucketActionChooseActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, false), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -391,7 +400,7 @@ public class TestBucketActionChooseActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, true), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		

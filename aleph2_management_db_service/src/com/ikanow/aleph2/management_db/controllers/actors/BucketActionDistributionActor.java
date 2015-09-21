@@ -100,6 +100,18 @@ public class BucketActionDistributionActor extends AbstractActor {
 			.build();
 			
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReplies = ReceiveBuilder
+			.match(BucketActionCollectedRepliesMessage.class, 
+					m -> {
+						if (_state.data_import_manager_set.remove(m.source()) || !_state.restrict_replies.get())
+						{
+							_state.reply_list.addAll(m.replies()
+									.stream()
+									.map(msg -> BeanTemplateUtils.clone(msg).with(BasicMessageBean::source, m.source()).done())
+									.collect(Collectors.toList())
+									);
+							this.checkIfComplete();
+						}
+					})
 			.match(BucketActionHandlerMessage.class, 
 				m -> {
 					if (_state.data_import_manager_set.remove(m.source()) || !_state.restrict_replies.get())
@@ -225,7 +237,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 																.collect(Collectors.toList());
 		_state.reply_list.addAll(convert_timeouts_to_replies);
 		
-		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(_state.reply_list, _state.down_targeted_clients), 
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), _state.reply_list, _state.down_targeted_clients), 
 									this.self());		
 		this.context().stop(this.self());
 	}

@@ -34,9 +34,6 @@ import com.google.inject.Inject;
 import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.governance.actors.DataAgeOutSupervisor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -205,15 +202,6 @@ public class DataImportManagerModule {
 			try {
 				DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
 				this.bind(DataImportConfigurationBean.class).toInstance(bean);
-				
-				if (bean.streaming_enrichment_enabled() && !bean.storm_debug_mode()) {
-					this.bind(IStormController.class).toInstance(
-							StormControllerUtil.getStormControllerFromYarnConfig(
-									ModuleUtils.getGlobalProperties().local_yarn_config_dir()));					
-				}
-				else { // guice still needs an implementation, making it null is problematic, so we'll just bind a local controller
-					this.bind(IStormController.class).toInstance(new LocalStormController());					
-				}
 			} 
 			catch (Exception e) {
 				throw new RuntimeException(ErrorUtils.get(ErrorUtils.INVALID_CONFIG_ERROR,

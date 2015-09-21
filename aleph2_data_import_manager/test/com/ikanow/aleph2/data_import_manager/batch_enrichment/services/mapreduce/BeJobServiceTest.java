@@ -29,8 +29,6 @@ import com.ikanow.aleph2.data_import_manager.batch_enrichment.actors.BeBucketAct
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.module.DataImportManagerModule;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImportManager;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.utils.DataBucketTest;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 
@@ -51,7 +49,6 @@ public class BeJobServiceTest extends DataBucketTest {
 			protected void configureServices() {
 			    bind(DataImportManager.class).in(Scopes.SINGLETON);
 			    bind(IBeJobService.class).to(useMiniCluster?MiniClusterBeJobLauncher.class:LocalBeJobLauncher.class).in(Scopes.SINGLETON);
-			    bind(IStormController.class).to(LocalStormController.class).in(Scopes.SINGLETON);
 			}
 			
 		}), Optional.of(config));

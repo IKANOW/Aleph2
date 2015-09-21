@@ -90,7 +90,7 @@ public abstract class DataBucketTest {
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null); //TODO storm controller
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(_actor_context);
 
 

@@ -106,7 +106,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		SetOnce<SharedLibraryBean> module_config = new SetOnce<>();
-		SetOnce<String> user_topology_entry_point = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();		
 	};	
@@ -176,8 +175,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @param this_bucket - the library bean to be associated
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
-	public boolean setModuleConfig(final SharedLibraryBean lib_config) {
-		return _mutable_state.module_config.set(lib_config);
+	@SuppressWarnings("deprecation")
+	public boolean resetModuleConfig(final SharedLibraryBean lib_config) {
+		_mutable_state.module_config.forceSet(lib_config);
+		return true;
 	}
 	
 	/** FOR DEBUGGING AND TESTING ONLY, inserts a copy of the current context into the saved "in module" versions

@@ -26,9 +26,11 @@ import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.DataImpor
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.BeJobLauncher;
 import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.LocalStormController;
 
+/** Main module for batch enrichment
+ * @author Joern
+ *
+ */
 public class DataImportManagerModule extends AbstractModule { 
 	@SuppressWarnings("unused")
 	private static Logger logger = LogManager.getLogger();	
@@ -43,9 +45,7 @@ public class DataImportManagerModule extends AbstractModule {
 	}
 	
 	protected void configureServices(){
-		//TODO [Error injecting constructor, java.lang.RuntimeException: Missing mandatory service: CoreManagementDbService]
 	    bind(DataImportManager.class).in(Scopes.SINGLETON);
 	    bind(IBeJobService.class).to(BeJobLauncher.class).in(Scopes.SINGLETON);
-	    bind(IStormController.class).to(LocalStormController.class).in(Scopes.SINGLETON);
 	}
 }

@@ -37,8 +37,38 @@ import java.util.stream.StreamSupport;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -66,23 +96,41 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import com.google.common.collect.Maps;
+import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
-import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
-import com.ikanow.aleph2.data_import.stream_enrichment.storm.PassthroughTopology;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StormControllerUtil;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
+import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyService;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
-import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
-import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -90,8 +138,10 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Patterns;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -101,6 +151,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 
 import fj.data.Either;
 import fj.data.Validation;
@@ -108,6 +159,10 @@ import fj.data.Validation;
 /** This actor is responsible for supervising the job of handling changes to data
  *  buckets on the "data import manager" end - specifically vs streaming enrichment (see harvest.DataBucketChangeActor for harvest related control)
  * @author acp
+ */
+/**
+ * @author Alex
+ *
  */
 @SuppressWarnings("unused")
 public class DataBucketChangeActor extends AbstractActor {
@@ -122,7 +177,11 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected final ActorSystem _actor_system;
 	protected final GlobalPropertiesBean _globals;
 	protected final IStorageService _fs;
-	protected final IStormController _storm_controller;
+	protected final Optional<IAnalyticsTechnologyService> _stream_analytics_tech;
+	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
+	
+	// Streaming enrichment handling:
+	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichment"); 
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -133,7 +192,8 @@ public class DataBucketChangeActor extends AbstractActor {
 		_management_db = _context.getServiceContext().getCoreManagementDbService().readOnlyVersion();
 		_globals = _context.getGlobalProperties();
 		_fs = _context.getServiceContext().getStorageService();
-		_storm_controller = _context.getStormController();
+		
+		_stream_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, STREAMING_ENRICHMENT_DEFAULT);
 	}
 	
 	///////////////////////////////////////////
@@ -150,7 +210,13 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				m -> !m.handling_clients().isEmpty() && !m.handling_clients().contains(_context.getInformationService().getHostname()),
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionOfferMessage.class,
+	    			m -> isEnrichmentRequest(m),
 	    			m -> {
+	    				// Streaming enrichment special case:
+	    				if (!_stream_analytics_context.isSet()) {
+	    					_stream_analytics_context.trySet(_context.getNewAnalyticsContext());
+	    				}	    				
+	    				
 		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 
 		    			final ActorRef closing_sender = this.sender();
@@ -160,8 +226,16 @@ public class DataBucketChangeActor extends AbstractActor {
 		    			
 						// (this isn't async so doesn't require any futures)
 						
-						final boolean accept_or_ignore = new File(_globals.local_yarn_config_dir() + File.separator + "storm.yaml").exists();
-						
+	    				final boolean accept_or_ignore =
+		    				 _stream_analytics_tech.map(tech -> {
+		    					 tech.onInit(_stream_analytics_context.get());
+		    					 return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
+		    				 })
+		    				 .orElseGet(() -> {
+		    					 _logger.warn("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name());
+		    					 return false;
+		    				 });
+	    				
 						final BucketActionReplyMessage reply = 						
 							accept_or_ignore
 									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(hostname)
@@ -171,137 +245,185 @@ public class DataBucketChangeActor extends AbstractActor {
 	    			})
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket={3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
-		    			final ActorRef closing_sender = this.sender();
-		    			final ActorRef closing_self = this.self();
-		    					    			
-	    				final String hostname = _context.getInformationService().getHostname();
-	    				
-	    				// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
-	    				cacheJars(m.bucket(), _management_db, _globals, _fs, _context.getServiceContext(), hostname, m)
-	    					.thenComposeAsync(err_or_map -> {
-	    						
-								final StreamingEnrichmentContext e_context = _context.getNewStreamingEnrichmentContext();								
-								
-								final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_tech_module = 
-										getStreamingTopology(m.bucket(), m, hostname, err_or_map);
-								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToStream(_storm_controller, m.bucket(), m, err_or_tech_module, err_or_map, hostname, e_context, _globals.local_yarn_config_dir(), _globals.local_cached_jar_dir());
-								return ret;
-								
-	    					})
-	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
-	    						// Some information logging:
-	    						Patterns.match(reply).andAct()
-	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-	    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
-	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-	    									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())))
-	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
-	    						
-								closing_sender.tell(reply,  closing_self);		    						
-	    					})
-	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
-	    						// Some information logging:
-	    						_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
-	    						
-			    				final BasicMessageBean error_bean = 
-			    						SharedErrorUtils.buildErrorMessage(hostname, m,
-			    								ErrorUtils.getLongForm(StreamErrorUtils.STREAM_UNKNOWN_ERROR, e, m.bucket().full_name())
-			    								);
-			    				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
-	    						return null;
-	    					})
-	    					;	    				
+		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
+		    			
+		    			final BucketActionMessage final_msg = Lambdas.get(() -> {
+		    				if (isEnrichmentRequest(m)) {
+		    					return convertEnrichmentToAnalytics(m);
+		    				}
+		    				else return m;
+		    			});
+		    			handleActionRequest(final_msg);
 		    		})
 	    		.build();
 	 }
+
+	////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////
+	
+	// TOP LEVEL MESSAGE PROCESSING
+
+	/** Send the specified message to the specified analytic technology
+	 * @param message - the message to process
+	 */
+	void handleActionRequest(final BucketActionMessage message) {
+		final ActorRef closing_sender = this.sender();
+		final ActorRef closing_self = this.self();
+				    			
+		final String hostname = _context.getInformationService().getHostname();
+		final boolean analytic_tech_only = message instanceof BucketActionOfferMessage;
+			
+		// (cacheJars can't throw checked or unchecked in this thread, only from within exceptions)
+		LibraryCacheUtils.cacheJars(message.bucket(), getQuery(message.bucket(), analytic_tech_only), _management_db, _globals, _fs, _context.getServiceContext(), hostname, message)
+			.thenCompose(err_or_map -> {
+				
+				final AnalyticsContext a_context = _context.getNewAnalyticsContext();
+				a_context.setBucket(message.bucket());
+				
+				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module = 
+						getAnalyticsTechnology(message.bucket(), analytic_tech_only, message, hostname, err_or_map);
+
+				// set the library bean - note if here then must have been set, else IAnalyticsTechnologyModule wouldn't exist
+				final String technology = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
+				
+				err_or_map.forEach(map ->									
+					Optional.ofNullable(map.get(technology))
+						.ifPresent(lib -> a_context.setTechnologyConfig(lib._1()))
+				);
+				
+				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(message.bucket(), message, hostname, a_context, 
+																			err_or_map.toOption().orSome(Collections.emptyMap()), 
+																			err_or_tech_module);
+				return handleTechnologyErrors(message.bucket(), message, hostname, err_or_tech_module, ret);
+				
+			})
+			.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
+				// Some information logging:
+				Patterns.match(reply).andAct()
+					.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+							message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
+					.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+							msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
+					.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+				
+				closing_sender.tell(reply,  closing_self);		    						
+			})
+			.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
+				// Some information logging:
+				_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name());
+				
+				final BasicMessageBean error_bean = 
+						SharedErrorUtils.buildErrorMessage(hostname, message,
+								ErrorUtils.getLongForm(StreamErrorUtils.STREAM_UNKNOWN_ERROR, e, message.bucket().full_name())
+								);
+				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
+				return null;
+			})
+			;		
+	}
 	
 	////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////
+
+	// STREAMING ENRICHMENT SPECIAL CASE
+	
+	/** Determines whether this bucket should be handled as 
+	 * @param bucket - the bucket
+	 * @param m - the request, currently not used but probably at some point will need to make it explicit vs infer from the bucket parameters
+	 * @return
+	 */
+	protected static boolean isEnrichmentRequest(final BucketActionMessage message) {
+		return (null == message.bucket().analytic_thread());
+	}
+	
+	
+	/** Converts an enrichment request into an equivalent analytics request
+	 * @param message
+	 * @return
+	 */
+	protected BucketActionMessage convertEnrichmentToAnalytics(final BucketActionMessage message) {
+		
+		return BeanTemplateUtils.clone(message)
+					.with(BucketActionMessage::bucket, convertStreamingEnrichmentToAnalyticBucket(message.bucket()))
+					.done();
+	}
+
+	/** Converts a bucket with only streaming enrichment settings into one that has an analytic thread dervied
+	 * @param bucket
+	 * @return
+	 */
+	protected static DataBucketBean convertStreamingEnrichmentToAnalyticBucket(final DataBucketBean bucket) {
+		
+		final EnrichmentControlMetadataBean enrichment = bucket.streaming_enrichment_topology();
+		
+		if (null == enrichment) {
+			return bucket;
+		}
+		else {
+			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
+					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
+							true, //(enabled) 
+							"", // (myself) 
+							"stream", 
+							null, // (no filter)
+							null // (no extra config)
+							);		
+			
+			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
+					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
+							false, // (not used for streaming) 
+							false, // (not transient, ie final output) 
+							null,  // (no sub-bucket path)
+							DataBucketBean.MasterEnrichmentType.streaming // (not used for non-transient)
+							);					
+	
+			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
+					Optional.ofNullable(enrichment.name()).orElse("streaming_enrichment"), //(name) 
+					true, // (enabled)
+					"system", //(technology name or id)
+					enrichment.module_name_or_id(),
+					enrichment.library_names_or_ids(), //(additional modules)
+					enrichment.entry_point(), // entry point
+					Maps.newLinkedHashMap(Optional.ofNullable(enrichment.config()).orElse(Collections.emptyMap())), //(config)
+					DataBucketBean.MasterEnrichmentType.streaming, // (type) 
+					Collections.emptyList(), //(node rules)
+					false, //(multi node enabled)
+					Collections.emptyList(), // (dependencies) 
+					Arrays.asList(input), 
+					null, //(global input config)
+					output
+					);
+			
+			return BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+							.done().get()
+					)
+					.done();
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////
+	
+	// GENERAL ANALYTICS CASE
+
+	/** Handy utiltiy for code used in a couple of places
+	 * @param bucket
+	 * @return
+	 */
+	protected static Optional<String> getAnalyticsTechnologyName(final DataBucketBean bucket) {
+		return Optional.ofNullable(bucket.analytic_thread().jobs())
+				.flatMap(jobs -> jobs.stream().findFirst())
+				.map(job -> job.analytic_technology_name_or_id());		
+	}
 	
 	// Functional code - control logic
 
-	protected static CompletableFuture<BucketActionReplyMessage> talkToStream(
-			final IStormController storm_controller, 
-			final DataBucketBean bucket, 
-			final BucketActionMessage m,
-			final Validation<BasicMessageBean, IEnrichmentStreamingTopology> err_or_user_topology,
-			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_map,
-			final String source, 
-			final StreamingEnrichmentContext context,
-			final String yarn_config_dir,
-			final String cached_jars_dir
-			)
-	{
-		try {
-			//handle getting the user libs
-			final List<String> user_lib_paths = err_or_map.<List<String>>validation(
-					fail -> Collections.emptyList() // (going to die soon anyway)
-					,
-					success -> success.values().stream().map(tuple -> tuple._2.replaceFirst("file:", "")).collect(Collectors.toList())
-					);
-
-			return err_or_user_topology.<CompletableFuture<BucketActionReplyMessage>>validation(
-					//ERROR getting enrichment topology
-					error -> {
-						return CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error));
-					},		
-					//NORMAL grab enrichment topology
-					enrichment_topology -> {
-						
-						final String entry_point = enrichment_topology.getClass().getName();
-						context.setBucket(bucket);
-						context.setUserTopologyEntryPoint(entry_point);
-						// also set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist
-						err_or_map.forEach(map -> {
-							context.setLibraryConfig(
-								map.values().stream().map(t2 -> t2._1())
-									.filter(lib -> entry_point.equals(lib.misc_entry_point()) || entry_point.equals(lib.streaming_enrichment_entry_point()))
-									.findFirst()
-									.orElse(BeanTemplateUtils.build(SharedLibraryBean.class).done().get()));
-										// (else this is a passthrough topology, so just use a dummy library bean)
-						});						
-
-						_logger.info("Set active class=" + enrichment_topology.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());						
-						
-						return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
-								.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-									return StormControllerUtil.stopJob( storm_controller, bucket);
-								})
-								.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-									if (!msg.is_suspended())
-										return StormControllerUtil.startJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
-									else
-										return StormControllerUtil.stopJob(storm_controller, bucket); // (nothing to do but just do this to return something sensible)
-								})
-								.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-									if ( msg.is_enabled() )
-										return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);
-									else
-										return StormControllerUtil.stopJob(storm_controller, bucket);
-								})
-								.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {		
-									//TODO (ALEPH-25): in the future run this test with local storm rather than remote storm_controller
-									return StormControllerUtil.restartJob(storm_controller, bucket, context, user_lib_paths, enrichment_topology, cached_jars_dir);									
-								})
-								.otherwise(msg -> {
-									return CompletableFuture.completedFuture(
-											new BucketActionHandlerMessage(source, new BasicMessageBean(new Date(), false, null, "Unknown message", 0, "Unknown message", null)));
-								});
-					});
-		} catch (Throwable e) { // (trying to use Validation to avoid this, but just in case...)
-			return CompletableFuture.completedFuture(
-					new BucketActionHandlerMessage(source, new BasicMessageBean(new Date(), false, null, ErrorUtils.getLongForm("Error loading streaming class: {0}", e), 0, ErrorUtils.getLongForm("Error loading streaming class: {0}", e), null)));
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////////////
-	
-	// Functional code - Utility
-	
-	/** Talks to the topology module - this top level function just sets the classloader up and creates the module,
-	 *  then calls talkToStream to do the talking
+	/** Talks to the analytic tech module - this top level function just sets the classloader up and creates the module,
+	 *  then calls talkToHarvester_actuallyTalk to do the talking
 	 * @param bucket
 	 * @param libs
 	 * @param harvest_tech_only
@@ -309,182 +431,294 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
-	protected static Validation<BasicMessageBean, IEnrichmentStreamingTopology> getStreamingTopology(
+	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology(
 			final DataBucketBean bucket, 
+			boolean harvest_tech_only,
 			final BucketActionMessage m, 
 			final String source,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
 		try {
-			
-			return err_or_libs.<Validation<BasicMessageBean, IEnrichmentStreamingTopology>>validation(
+			return err_or_libs.<Validation<BasicMessageBean, IAnalyticsTechnologyModule>>validation(
 					//Error:
 					error -> Validation.fail(error)
 					,
 					// Normal
 					libs -> {
-						// Easy case, if streaming is turned off, just pass data through this layer
-						if ( !Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(true) )
-							return Validation.success(new PassthroughTopology());
-						// Easy case, if libs is empty then use the default streaming topology
-						if (libs.isEmpty()) {
-							return Validation.success(new PassthroughTopology());
-						}
+						final String technology = getAnalyticsTechnologyName(bucket).get(); // (exists by construction)
 						
-						final Tuple2<SharedLibraryBean, String> libbean_path = libs.values().stream()
-								.filter(t2 -> (null != t2._1()) && 
-										(null != Optional.ofNullable(t2._1().streaming_enrichment_entry_point()).orElse(t2._1().misc_entry_point())))
-								.findFirst()
-								.orElse(null);
-						
+						final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(technology);  // (exists by construction)
+
 						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
 							return Validation.fail(
 									SharedErrorUtils.buildErrorMessage(source, m,
-											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "(unknown)"));
+											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), technology));
 						}
 						
-						final Validation<BasicMessageBean, IEnrichmentStreamingTopology> ret_val = 
-								ClassloaderUtils.getFromCustomClasspath(IEnrichmentStreamingTopology.class, 
-										Optional.ofNullable(libbean_path._1().streaming_enrichment_entry_point()).orElse(libbean_path._1().misc_entry_point()), 
+						final List<String> other_libs = harvest_tech_only 
+								? Collections.emptyList() 
+								: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
+						
+						final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
+								ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+										libbean_path._1().misc_entry_point(), 
 										Optional.of(libbean_path._2()),
-										libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList()),
+										other_libs,
 										source, m);
 						
 						return ret_val;
 					});
 		}
-		catch (Throwable t) {
+		catch (Throwable t) {			
 			return Validation.fail(
 					SharedErrorUtils.buildErrorMessage(source, m,
-						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, t, bucket.harvest_technology_name_or_id())));  
+						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, t, bucket.full_name())));  
 			
 		}
 	}
 	
-	//
-	
-	/** Given a bucket ...returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
-	 * (and guarantee that the file has been cached when the future completes)
+	/** Make various requests of the analytics module based on the message type
 	 * @param bucket
-	 * @param management_db
-	 * @param globals
-	 * @param fs
-	 * @param handler_for_errors
-	 * @param msg_for_errors
-	 * @return  a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
+	 * @param tech_module
+	 * @param m
+	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Validation finally)
 	 */
-	@SuppressWarnings("unchecked")
-	protected static <M> CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> 
-		cacheJars(
-				final DataBucketBean bucket, 
-				final IManagementDbService management_db, 
-				final GlobalPropertiesBean globals,
-				final IStorageService fs, 
-				final IServiceContext context,
-				final String handler_for_errors, 
-				final M msg_for_errors
+	protected static CompletableFuture<BucketActionReplyMessage> talkToAnalytics(
+			final DataBucketBean bucket, 
+			final BucketActionMessage m,
+			final String source,
+			final AnalyticsContext context,
+			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)
+			final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module // "pipeline element"
 			)
 	{
-		try {
-			MethodNamingHelper<SharedLibraryBean> helper = BeanTemplateUtils.from(SharedLibraryBean.class);
-			final Optional<QueryComponent<SharedLibraryBean>> spec = getQuery(bucket);
-			if (!spec.isPresent()) {
-				return CompletableFuture.completedFuture(Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(Collections.emptyMap()));
-			}
-			
-			return management_db.getSharedLibraryStore().secured(context,  new AuthorizationBean(bucket.owner_id()))
-					.getObjectsBySpec(spec.get())
-					.thenComposeAsync(cursor -> {
-						// This is a map of futures from the cache call - either an error or the path name
-						// note we use a tuple of (id, name) as the key and then flatten out later 
-						final Map<Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Validation<BasicMessageBean, String>>>> map_of_futures = 
-							StreamSupport.stream(cursor.spliterator(), true)
-								.filter(lib -> {
-									return true;
-								})
-								.collect(Collectors.<SharedLibraryBean, Tuple2<String, String>, Tuple2<SharedLibraryBean, CompletableFuture<Validation<BasicMessageBean, String>>>>
-									toMap(
-										// want to keep both the name and id versions - will flatten out below
-										lib -> Tuples._2T(lib.path_name(), lib._id()), //(key)
-										// spin off a future in which the file is being copied - save the shared library bean also
-										lib -> Tuples._2T(lib, // (value) 
-												JarCacheUtils.getCachedJar(globals.local_cached_jar_dir(), lib, fs, handler_for_errors, msg_for_errors))));
-						
-						// denest from map of futures to future of maps, also handle any errors here:
-						// (some sort of "lift" function would be useful here - this are a somewhat inelegant few steps)
-						
-						final CompletableFuture<Validation<BasicMessageBean, String>>[] futures = 
-								(CompletableFuture<Validation<BasicMessageBean, String>>[]) map_of_futures
-								.values()
-								.stream().map(t2 -> t2._2()).collect(Collectors.toList())
-								.toArray(new CompletableFuture[0]);
-						
-						// (have to embed this thenApply instead of bringing it outside as part of the toCompose chain, because otherwise we'd lose map_of_futures scope)
-						return CompletableFuture.allOf(futures).<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>>thenApply(f -> {								
-							try {
-								final Map<String, Tuple2<SharedLibraryBean, String>> almost_there = map_of_futures.entrySet().stream()
-									.flatMap(kv -> {
-										final Validation<BasicMessageBean, String> ret = kv.getValue()._2().join(); // (must have already returned if here
-										return ret.<Stream<Tuple2<String, Tuple2<SharedLibraryBean, String>>>>
-											validation(
-												//Error:
-												err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
-												,
-												// Normal:
-												s -> { 
-													return Arrays.asList(
-														Tuples._2T(kv.getKey()._1(), Tuples._2T(kv.getValue()._1(), s)), // result object with path_name
-														Tuples._2T(kv.getKey()._2(), Tuples._2T(kv.getValue()._1(), s))) // result object with id
-															.stream();
-												});
-									})
-									.collect(Collectors.<Tuple2<String, Tuple2<SharedLibraryBean, String>>, String, Tuple2<SharedLibraryBean, String>>
-										toMap(
-											idname_path -> idname_path._1(), //(key)
-											idname_path -> idname_path._2() // (value)
-											))
-									;								
-								return Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>success(almost_there);
-							}
-							catch (Exception e) { // handle the exception thrown above containing the message bean from whatever the original error was!
-								return Validation.<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>fail(
-										SharedErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
-												e.getMessage()));
-							}
+		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
+		
+		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
+		try {			
+			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>validation(
+				//Error:
+				error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
+				,
+				// Normal
+				tech_module -> {
+					_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
+					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
+					
+					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
+						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
+							tech_module.onInit(context);
+							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, jobs, context);
+							return CompletableFuture.completedFuture(accept_or_ignore
+									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
+									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
+						})
+						.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onDeleteThread(bucket, jobs, context);
+							final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
+									.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+									.map(job -> tech_module.stopAnalyticJob(bucket, jobs, job, context))
+									.collect(Collectors.toList());
+							
+							return combineResults(top_level_result, job_results, source);
+						})
+						.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onNewThread(bucket, jobs, context, !msg.is_suspended());
+							final List<CompletableFuture<BasicMessageBean>> job_results =
+									msg.is_suspended()
+									? Collections.emptyList()
+									: jobs.stream()
+										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+										.map(job -> tech_module.startAnalyticJob(bucket, jobs, job, context))
+										.collect(Collectors.toList());
+							
+							return combineResults(top_level_result, job_results, source);
+						})
+						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
+							final List<CompletableFuture<BasicMessageBean>> job_results =
+									jobs.stream()
+										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+										.map(job -> msg.is_enabled()												
+											? tech_module.resumeAnalyticJob(bucket, jobs, job, context)
+											: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
+											)
+										.collect(Collectors.toList());
+							
+							return combineResults(top_level_result, job_results, source);
+						})
+						.when(BucketActionMessage.PurgeBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onPurge(bucket, jobs, context);
+							
+							return combineResults(top_level_result, Collections.emptyList(), source);
+						})
+						.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onTestThread(bucket, jobs, msg.test_spec(), context);
+							final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
+										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+										.map(job -> tech_module.startAnalyticJobTest(bucket, jobs, job, msg.test_spec(), context))
+										.collect(Collectors.toList());
+							
+							return combineResults(top_level_result, Collections.emptyList(), source);
+						})
+						.otherwise(msg -> { // return "command not recognized" error
+							tech_module.onInit(context);
+							return CompletableFuture.completedFuture(
+									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+										StreamErrorUtils.MESSAGE_NOT_RECOGNIZED, 
+											bucket.full_name(), m.getClass().getSimpleName())));
 						});
-					});
+				});
 		}
-		catch (Throwable e) { // (can only occur if the DB call errors)
+		catch (Throwable e) { // (trying to use Validation to avoid this, but just in case...)
 			return CompletableFuture.completedFuture(
-				Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors.toString(), msg_for_errors,
-					ErrorUtils.getLongForm(SharedErrorUtils.ERROR_CACHING_SHARED_LIBS, e, bucket.full_name())
-					)));
+					new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.success().getClass()))));
+		}		
+		finally {
+			Thread.currentThread().setContextClassLoader(saved_current_classloader);
 		}
 	}
-
-
+			
+	/** Utility to set the per modules settings for the context 
+	 * @param job
+	 * @param context
+	 * @param libs
+	 */
+	protected final static void setPerJobContextParams(
+			final AnalyticThreadJobBean job, 
+			final AnalyticsContext context,
+			final Map<String, Tuple2<SharedLibraryBean, String>> libs
+			)
+	{
+		Optional.ofNullable(job.module_name_or_id())
+				.map(module_name -> libs.get(module_name))
+				.map(t2 -> {
+					return context.resetModuleConfig(t2._1());
+				})
+		.orElseGet(() -> context.resetModuleConfig(null)); // (unsets if can't find the module)
+	}
+	
+	/** Combine the analytic thread level results and the per-job results into a single reply
+	 * @param top_level
+	 * @param per_job
+	 * @param source
+	 * @return
+	 */
+	protected final static CompletableFuture<BucketActionReplyMessage> combineResults(
+			final CompletableFuture<BasicMessageBean> top_level,
+			final List<CompletableFuture<BasicMessageBean>> per_job,
+			final String source
+			)
+	{
+		if (per_job.isEmpty()) {
+			return top_level.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
+		}
+		else { // slightly more complex:
+		
+			// First off wait for them all to complete:
+			final CompletableFuture<?>[] futures = per_job.toArray(new CompletableFuture<?>[0]);
+			
+			return top_level.thenCombine(CompletableFuture.allOf(futures), (thread, __) -> {
+				List<BasicMessageBean> replies = Stream.concat(
+						Lambdas.get(() -> {
+							if (thread.success() 
+									&& ((null == thread.message()) || thread.message().isEmpty()))
+							{
+								// Ignore top level, it's not very interesting
+								return Stream.empty();
+							}
+							else return Stream.of(thread);
+						})
+						,
+						per_job.stream().map(cf -> cf.join())
+					
+				)
+				.collect(Collectors.toList())
+				;
+				
+				return (BucketActionReplyMessage) new BucketActionCollectedRepliesMessage(source, replies, Collections.emptySet());
+			})
+			.exceptionally(t -> {
+				return (BucketActionReplyMessage) new BucketActionHandlerMessage(source, ErrorUtils.buildErrorMessage(DataBucketChangeActor.class.getSimpleName(), source, ErrorUtils.getLongForm("{0}", t)));					
+			})
+			;					
+		}
+	}
+	
+	/** Wraps the communications with the tech module so that calls to completeExceptionally are handled
+	 * @param bucket
+	 * @param m
+	 * @param source
+	 * @param context
+	 * @param err_or_tech_module - the tech module (is ignored unless the user code got called ie implies err_or_tech_module.isRight)
+	 * @param return_value - either the user return value or a wrap of the exception
+	 * @return
+	 */
+	public static final CompletableFuture<BucketActionReplyMessage> handleTechnologyErrors(
+			final DataBucketBean bucket, 
+			final BucketActionMessage m,
+			final String source,
+			final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module, 
+			final CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
+					)
+	{
+		if (return_value.isCompletedExceptionally()) { // Harvest Tech developer called completeExceptionally, ugh
+			try {				
+				return_value.get(); // (causes an exception)
+			}
+			catch (Throwable t) { // e.getCause() is the exception we want
+				// Note if we're here then err_or_tech_module must be "right"
+				return CompletableFuture.completedFuture(
+						new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+							ErrorUtils.getLongForm(StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, t.getCause(), m.bucket().full_name(), err_or_tech_module.success().getClass()))));
+			}
+		}
+		//(else fall through to...)
+		return return_value;
+	}
+	
 	/** Creates a query component to get all the shared library beans i need
 	 * @param bucket
 	 * @param cache_tech_jar_only
 	 * @return
 	 */
-	protected static Optional<QueryComponent<SharedLibraryBean>> getQuery(
-			final DataBucketBean bucket)
+	protected static QueryComponent<SharedLibraryBean> getQuery(
+			final DataBucketBean bucket, 
+			final boolean cache_tech_jar_only)
 	{
-		final Stream<QueryComponent<SharedLibraryBean>> libs =
-			Optionals.ofNullable(
-					Optional.ofNullable(bucket.streaming_enrichment_topology())
-							.map(t -> t.library_names_or_ids())
-					.orElse(Collections.emptyList()))
-				.stream()
+		final String technology = getAnalyticsTechnologyName(bucket).get(); //(non-empty by construction)
+		final SingleQueryComponent<SharedLibraryBean> tech_query = 
+				CrudUtils.anyOf(SharedLibraryBean.class)
+					.when(SharedLibraryBean::_id, technology)
+					.when(SharedLibraryBean::path_name, technology);
+		
+		final Stream<SingleQueryComponent<SharedLibraryBean>> other_libs = cache_tech_jar_only 
+			? Stream.empty()
+			: Optionals.ofNullable(bucket.analytic_thread().jobs()).stream()
+				.flatMap(a_job ->
+						Stream.concat(
+								Optional.ofNullable(a_job.module_name_or_id()).map(Stream::of).orElse(Stream.empty())
+								,
+								Optionals.ofNullable(a_job.library_names_or_ids()).stream()
+						))
 				.map(name -> {
 					return CrudUtils.anyOf(SharedLibraryBean.class)
 							.when(SharedLibraryBean::_id, name)
 							.when(SharedLibraryBean::path_name, name);
 				});
 
-		final CrudUtils.MultiQueryComponent<SharedLibraryBean> mqc = CrudUtils.<SharedLibraryBean>anyOf(libs);
-		return mqc.getElements().isEmpty() ? Optional.empty() : Optional.of(mqc);
-	}
+		return CrudUtils.<SharedLibraryBean>anyOf(Stream.concat(Stream.of(tech_query), other_libs));
+	}	
 }

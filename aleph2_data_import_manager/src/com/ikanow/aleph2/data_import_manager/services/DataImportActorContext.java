@@ -19,9 +19,8 @@ import java.util.Optional;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
-import com.ikanow.aleph2.data_import.services.StreamingEnrichmentContext;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.services.IStormController;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -36,7 +35,6 @@ public class DataImportActorContext {
 	protected final ICoreDistributedServices _distributed_services;
 	protected final IServiceContext _service_context;
 	protected final GeneralInformationService _information_service;
-	protected final IStormController _storm_controller;
 	
 	@Inject 
 	protected Injector _injector; // (used to generate harvest contexts)
@@ -44,13 +42,12 @@ public class DataImportActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service, final IStormController storm_controller)
+	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service)
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
 		_information_service = information_service;
-		_storm_controller = storm_controller;
 	}
 
 	/** Returns the global properties bean
@@ -60,18 +57,18 @@ public class DataImportActorContext {
 		return _service_context.getGlobalProperties();
 	}
 	
-	/** Returns a new (non singleton) instance of a streaming enrichment context
-	 * @return the new harvest context
-	 */
-	public StreamingEnrichmentContext getNewStreamingEnrichmentContext() {
-		return _injector.getInstance(StreamingEnrichmentContext.class);
-	}
-	
 	/** Returns a new (non singleton) instance of a harvest context
 	 * @return the new harvest context
 	 */
 	public HarvestContext getNewHarvestContext() {
 		return _injector.getInstance(HarvestContext.class);
+	}
+	
+	/** Returns a new (non singleton) instance of a harvest context
+	 * @return the new harvest context
+	 */
+	public AnalyticsContext getNewAnalyticsContext() {
+		return _injector.getInstance(AnalyticsContext.class);
 	}
 	
 	/** Returns the information service providing eg hostname and process information
@@ -100,14 +97,6 @@ public class DataImportActorContext {
 	 */
 	public ICoreDistributedServices getDistributedServices() {
 		return _distributed_services;
-	}
-	
-	/**
-	 * Returns the storm controller
-	 * @return the storm controller
-	 */
-	public IStormController getStormController() {
-		return _storm_controller;
 	}
 	
 	/** Gets the actor context

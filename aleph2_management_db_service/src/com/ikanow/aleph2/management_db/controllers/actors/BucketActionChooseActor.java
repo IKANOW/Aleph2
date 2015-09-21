@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.logging.log4j.LogManager;
@@ -139,11 +140,20 @@ public class BucketActionChooseActor extends AbstractActor {
 			.build();
 	
 	private PartialFunction<Object, BoxedUnit> _stateAwaitingReply = ReceiveBuilder
+			.match(BucketActionCollectedRepliesMessage.class, 
+				m -> {
+					this.sendReplyAndClose(m.replies()
+							.stream()
+							.map(msg -> BeanTemplateUtils.clone(msg).with(BasicMessageBean::source, m.source()).done())
+							.collect(Collectors.toList())
+							);
+				})
 			.match(BucketActionHandlerMessage.class, 
 				m -> {
 					// (note - overwrite the source field of the bean with the host)
-					this.sendReplyAndClose(BeanTemplateUtils
-							.clone(m.reply()).with(BasicMessageBean::source, m.source()).done());
+					this.sendReplyAndClose(
+							Arrays.asList(
+									BeanTemplateUtils.clone(m.reply()).with(BasicMessageBean::source, m.source()).done()));
 				})
 			.match(BucketActionIgnoredMessage.class, __ -> this.sender().equals(_state.targeted_source._2()),
 				m -> {
@@ -183,7 +193,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			this.checkIfComplete();
 		}
 		else { // Just terminate with a "nothing to say" request
-			_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(
+			_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(),
 					Arrays.asList(), _state.data_import_manager_set), 
 					this.self());		
 			this.context().stop(this.self());			
@@ -276,10 +286,9 @@ public class BucketActionChooseActor extends AbstractActor {
 			this.pickAndSend();
 		}
 	}
-	protected void sendReplyAndClose(final BasicMessageBean reply) {
-		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(Arrays.asList(reply), Collections.emptySet()), 
+	protected void sendReplyAndClose(final List<BasicMessageBean> replies) {
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), replies, Collections.emptySet()), 
 				this.self());		
 		this.context().stop(this.self());
 	}
-
 }

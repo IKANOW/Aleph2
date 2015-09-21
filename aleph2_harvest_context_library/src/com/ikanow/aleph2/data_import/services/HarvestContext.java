@@ -98,7 +98,7 @@ public class HarvestContext implements IHarvestContext {
 		//TODO (ALEPH-19) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<>();
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
-		SetOnce<SharedLibraryBean> module_config = new SetOnce<>();
+		SetOnce<Map<String, SharedLibraryBean>> module_config = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
@@ -161,7 +161,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @param this_bucket - the library bean to be associated
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
-	public boolean setModuleConfig(final SharedLibraryBean lib_config) {
+	public boolean setModuleConfigs(final Map<String, SharedLibraryBean> lib_config) {
 		return _mutable_state.module_config.set(lib_config);
 	}
 	
@@ -197,8 +197,9 @@ public class HarvestContext implements IHarvestContext {
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
 			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
-				final BeanTemplate<SharedLibraryBean> retrieve_module = BeanTemplateUtils.from(parsed_config.getString(__MY_MODULE_LIBRARY_ID), SharedLibraryBean.class);
-				_mutable_state.module_config.set(retrieve_module.get());				
+				_mutable_state.module_config.set(
+						Optionals.streamOf(_mapper.readTree(parsed_config.getString(__MY_MODULE_LIBRARY_ID)).fields(), false)
+							.collect(Collectors.toMap(kv -> kv.getKey(), kv -> BeanTemplateUtils.from(kv.getValue(), SharedLibraryBean.class).get())));
 			}
 			
 			_batch_storage_service = 
@@ -397,7 +398,7 @@ public class HarvestContext implements IHarvestContext {
 						config_subset_services
 							.withValue(__MY_MODULE_LIBRARY_ID, 
 									ConfigValueFactory
-										.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.module_config.get()).toString())
+										.fromAnyRef(_mapper.valueToTree(_mutable_state.module_config.get()).toString())
 										)
 						:
 						config_subset_services						
@@ -433,10 +434,11 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
-			final Class<S> clazz, final Optional<String> collection) {
-		return this.getModuleConfig().map(module_lib -> 
+			final Class<S> clazz, final String module_name_or_id, final Optional<String> collection) {
+		return Optional.ofNullable(this.getModuleConfigs().get(module_name_or_id)).map(module_lib -> 
 			_core_management_db.getPerLibraryState(clazz, module_lib, collection)
-		);
+		)
+		;
 	}	
 	
 	/* (non-Javadoc)
@@ -608,10 +610,10 @@ public class HarvestContext implements IHarvestContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getModuleConfig()
 	 */
 	@Override
-	public Optional<SharedLibraryBean> getModuleConfig() {
+	public Map<String, SharedLibraryBean> getModuleConfigs() {
 		return _mutable_state.module_config.isSet()
-				? Optional.of(_mutable_state.module_config.get())
-				: Optional.empty();
+				? Collections.unmodifiableMap(_mutable_state.module_config.get())
+				: Collections.emptyMap();
 	}
 	
 	/* (non-Javadoc)

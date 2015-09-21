@@ -54,6 +54,7 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
+import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
@@ -115,7 +116,7 @@ public class TestDataBucketChangeActor {
 		
 		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
 		
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null); //TODO
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService());
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		
@@ -529,7 +530,7 @@ public class TestDataBucketChangeActor {
 			// 1) Normal operation
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-				DataBucketChangeActor.cacheJars(bucket, true, 
+				LibraryCacheUtils.cacheJars(bucket, DataBucketChangeActor.getQuery(bucket, true), 
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 						"test1_source", "test1_command"
 					);
@@ -546,7 +547,7 @@ public class TestDataBucketChangeActor {
 			// 2) Normal operation - tech + module
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
-					DataBucketChangeActor.cacheJars(bucket2, false, 
+					LibraryCacheUtils.cacheJars(bucket, DataBucketChangeActor.getQuery(bucket2, false), 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
@@ -565,7 +566,7 @@ public class TestDataBucketChangeActor {
 			DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id, "failtest").done();
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
-					DataBucketChangeActor.cacheJars(bucket3, false, 
+					LibraryCacheUtils.cacheJars(bucket, DataBucketChangeActor.getQuery(bucket3, false), 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);

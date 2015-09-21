@@ -74,15 +74,15 @@ public class TestBucketActionDistributionActor {
 
 	// This one always accepts, and returns a message
 	public static class TestActor_Accepter extends UntypedActor {
-		public TestActor_Accepter(String uuid) {
+		public TestActor_Accepter(String uuid, boolean multi_reply) {
 			this.uuid = uuid;
+			this.multi_reply = multi_reply;
 		}
 		private final String uuid;
+		private final boolean multi_reply;
 		@Override
 		public void onReceive(Object arg0) throws Exception {
-			_logger.info("Accept from: " + uuid);
-			
-			this.sender().tell(
+			BucketActionReplyMessage.BucketActionHandlerMessage reply =
 					new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, 
 							new BasicMessageBean(
 									new Date(),
@@ -92,7 +92,14 @@ public class TestBucketActionDistributionActor {
 									null,
 									"handled",
 									null									
-									)),
+									));
+			
+			_logger.info("Accept MESSAGE from: " + uuid);
+			this.sender().tell(
+					multi_reply
+					? new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(uuid, Arrays.asList(reply.reply()), Collections.emptySet())
+					: reply
+					,
 					this.self());
 		}		
 	}
@@ -241,7 +248,7 @@ public class TestBucketActionDistributionActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, false), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -294,7 +301,7 @@ public class TestBucketActionDistributionActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, true), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -360,7 +367,7 @@ public class TestBucketActionDistributionActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, false), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -430,8 +437,8 @@ public class TestBucketActionDistributionActor {
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
-			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, true), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		
@@ -507,7 +514,7 @@ public class TestBucketActionDistributionActor {
 				.getCuratorFramework().create().creatingParentsIfNeeded()
 				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
 			
-			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid, false), uuid);
 			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		}
 		

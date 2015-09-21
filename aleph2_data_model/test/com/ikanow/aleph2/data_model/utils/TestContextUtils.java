@@ -249,13 +249,13 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Optional<SharedLibraryBean> getModuleConfig() {
+		public Map<String, SharedLibraryBean> getModuleConfigs() {
 			return null;
 		}
 
 		@Override
 		public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
-				Class<S> clazz, Optional<String> collection) {
+				Class<S> clazz, String module_name_or_id, Optional<String> collection) {
 			return null;
 		}
 		

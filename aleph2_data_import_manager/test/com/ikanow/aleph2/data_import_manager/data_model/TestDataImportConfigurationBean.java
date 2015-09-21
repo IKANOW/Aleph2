@@ -27,49 +27,44 @@ public class TestDataImportConfigurationBean {
 		assertEquals("DataImportManager", DataImportConfigurationBean.PROPERTIES_ROOT);
 		
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, false, true, false);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, false, true);
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
-			assertEquals(false, x.storm_debug_mode());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, false, false);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, false);
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(true, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(false, x.governance_enabled());
-			assertEquals(false, x.storm_debug_mode());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, null, false);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, null);
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(true, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
-			assertEquals(false, x.storm_debug_mode());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, false, true, true);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, false, true);
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
-			assertEquals(true, x.storm_debug_mode());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null, null);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null);
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(true, x.streaming_enrichment_enabled());
 			assertEquals(true, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
-			assertEquals(false, x.storm_debug_mode());
 		}
 		
 	}

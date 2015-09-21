@@ -57,15 +57,18 @@ public class BucketActionReplyMessage implements Serializable {
 		 * @param replies - replies from any hosts that handled the message or timed out trying
 		 * @param timed_out - the set of hosts that timed out
 		 */
-		public BucketActionCollectedRepliesMessage(final List<BasicMessageBean> replies, Set<String> timed_out)
+		public BucketActionCollectedRepliesMessage(final String source, final List<BasicMessageBean> replies, Set<String> timed_out)
 		{
+			this.source = source;
 			this.replies = replies;
 			this.timed_out = timed_out;			
 		}		
+		public String source() { return source; }
 		public List<BasicMessageBean> replies() { return replies; }
 		public Set<String> timed_out() { return timed_out; }
 		private List<BasicMessageBean> replies;
 		private Set<String> timed_out;
+		private String source;
 	}
 	
 	/** When a data import manager will accept a bucket action
