@@ -252,6 +252,12 @@ public class TestContextUtils {
 		public Optional<SharedLibraryBean> getModuleConfig() {
 			return null;
 		}
+
+		@Override
+		public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
+				Class<S> clazz, Optional<String> collection) {
+			return null;
+		}
 		
 	}
 	public static class MockAnalyticsContext implements IAnalyticsContext {
@@ -412,6 +418,12 @@ public class TestContextUtils {
 
 		@Override
 		public Optional<SharedLibraryBean> getModuleConfig() {
+			return null;
+		}
+
+		@Override
+		public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
+				Class<S> clazz, Optional<String> collection) {
 			return null;
 		}
 	}

@@ -429,6 +429,17 @@ public class HarvestContext implements IHarvestContext {
 	}
 
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getGlobalModuleTechnologyObjectStore(java.lang.Class, java.util.Optional)
+	 */
+	@Override
+	public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
+			final Class<S> clazz, final Optional<String> collection) {
+		return this.getModuleConfig().map(module_lib -> 
+			_core_management_db.getPerLibraryState(clazz, module_lib, collection)
+		);
+	}	
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestLibraries(java.util.Optional)
 	 */
 	@Override
@@ -494,6 +505,7 @@ public class HarvestContext implements IHarvestContext {
 						__ -> _core_management_db.getBucketAnalyticThreadState(clazz, this_bucket.get(), collection))
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.enrichment == t.get(), 
 						__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
+				// assume this is the technology context, most likely usage
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
 						__ -> _core_management_db.getPerLibraryState(clazz, this.getTechnologyLibraryConfig(), collection))
 				// default: harvest or not specified: harvest

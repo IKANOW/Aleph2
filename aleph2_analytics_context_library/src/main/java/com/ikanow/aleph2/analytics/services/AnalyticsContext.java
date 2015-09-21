@@ -652,6 +652,17 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getGlobalModuleObjectStore(java.lang.Class, java.util.Optional)
+	 */
+	@Override
+	public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
+			final Class<S> clazz, final Optional<String> collection) {
+		return this.getModuleConfig().map(module_lib -> 
+			_core_management_db.getPerLibraryState(clazz, module_lib, collection)
+		);
+	}	
+	
+	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
 	 */
 	@Override
@@ -671,6 +682,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 						__ -> _core_management_db.getBucketEnrichmentState(clazz, this_bucket.get(), collection))
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.harvest == t.get(), 
 						__ -> _core_management_db.getBucketHarvestState(clazz, this_bucket.get(), collection))
+				// assume this is the technology context, most likely usage
 				.when(t -> t.isPresent() && AssetStateDirectoryBean.StateDirectoryType.library == t.get(), 
 						__ -> _core_management_db.getPerLibraryState(clazz, this.getTechnologyConfig(), collection))
 				// default: analytics or not specified: analytics

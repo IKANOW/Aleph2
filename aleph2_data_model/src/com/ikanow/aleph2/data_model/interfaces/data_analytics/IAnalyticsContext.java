@@ -173,6 +173,13 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	<S> ICrudService<S> getGlobalAnalyticTechnologyObjectStore(final Class<S> clazz, final Optional<String> collection);
 	
+	/** (AnalyticsTechnology/Analytics Module) Get the global (ie module library-specific _not_ bucket-specific) object data store, if a module has been specified
+	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
+	 * @param collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then returns a directory of existing collections (clazz has to be AssetStateDirectoryBean.class)
+	 * @return a generic object repository visible to all users of this module
+	 */
+	<S> Optional<ICrudService<S>> getGlobalModuleObjectStore(final Class<S> clazz, final Optional<String> collection);
+	
 	/** (AnalyticsTechnology/Analytics Module) Returns an object repository that the harvester/module can use to store arbitrary internal state. 
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
