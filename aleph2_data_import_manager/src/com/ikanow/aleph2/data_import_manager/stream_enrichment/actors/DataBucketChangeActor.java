@@ -408,6 +408,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////
 	
+	//TODO: need to handle the case where the bean is on the classpath (but the entry point is set ... eg for the stream enrichment case
+	
 	// GENERAL ANALYTICS CASE
 
 	/** Handy utiltiy for code used in a couple of places
@@ -426,14 +428,14 @@ public class DataBucketChangeActor extends AbstractActor {
 	 *  then calls talkToHarvester_actuallyTalk to do the talking
 	 * @param bucket
 	 * @param libs
-	 * @param harvest_tech_only
+	 * @param analytic_tech_only
 	 * @param m
 	 * @param source
 	 * @return
 	 */
 	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology(
 			final DataBucketBean bucket, 
-			boolean harvest_tech_only,
+			boolean analytic_tech_only,
 			final BucketActionMessage m, 
 			final String source,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
@@ -456,7 +458,7 @@ public class DataBucketChangeActor extends AbstractActor {
 											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), technology));
 						}
 						
-						final List<String> other_libs = harvest_tech_only 
+						final List<String> other_libs = analytic_tech_only 
 								? Collections.emptyList() 
 								: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
 						
