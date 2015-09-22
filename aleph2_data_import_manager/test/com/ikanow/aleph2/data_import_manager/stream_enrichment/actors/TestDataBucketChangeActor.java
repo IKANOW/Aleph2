@@ -22,6 +22,8 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -52,10 +54,13 @@ import akka.pattern.Patterns;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologyService;
+import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -64,6 +69,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
@@ -72,6 +78,7 @@ import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.PurgeBucketActionMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -325,10 +332,178 @@ public class TestDataBucketChangeActor {
 			throw e;
 		}
 	}
+
+	//TODO (ALEPH-12): fix the return values from here
 	
-	//TODO: test code for the enrichment -> analytics conversion code
+	@org.junit.Ignore
+	@Test
+	public void test_talkToAnalytics() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
+
+		// Get the analytics tech module standalone ("in app" way is covered above)
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
+						Collections.emptyList(), "test1", "test");						
+		
+		if (ret_val.isFail()) {
+			fail("getAnalyticsTechnology call failed: " + ret_val.fail().message());
+		}
+		assertTrue("harvest tech created: ", ret_val.success() != null);
+		
+		final IAnalyticsTechnologyModule analytics_tech = ret_val.success();
+		
+		// Test 1: pass along errors:
+		{
+			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+
+			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToAnalytics(
+					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), 
+					"test1", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.fail(error));
 	
-	//TODO: are these now tested from somewhere else? or do they need to get duplicated in the storm analytic services
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
+			assertEquals(false, test1err.reply().success());
+			assertEquals("test_source", test1err.reply().source());
+			assertEquals("test_message", test1err.reply().command());
+			assertEquals("test_error", test1err.reply().message());
+		}		
+		// Test 2: offer
+		{
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket);
+			
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketChangeActor.talkToAnalytics(
+					bucket, offer,
+					"test2", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+			
+			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
+			final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
+			assertEquals("test2", test2_reply.source());
+		}		
+		// Test 3: delete
+		{
+			final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
+
+			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketChangeActor.talkToAnalytics(
+					bucket, delete,
+					"test3", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
+			assertEquals("test3", test3_reply.source());
+			assertEquals("called onDelete", test3_reply.reply().message());
+			assertEquals(true, test3_reply.reply().success());
+		}
+		// Test 4: new
+		{
+			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
+			
+			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToAnalytics(
+					bucket, create,
+					"test4", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
+			assertEquals("test4", test4_reply.source());
+			assertEquals("called onNewSource: false", test4_reply.reply().message());
+			assertEquals(true, test4_reply.reply().success());
+		}		
+		// Test 5: update
+		{
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+					bucket, update,
+					"test5", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
+			assertEquals("test5", test5_reply.source());
+			assertEquals("called onUpdatedSource true", test5_reply.reply().message());
+			assertEquals(true, test5_reply.reply().success());
+		}		
+		// Test 6: update state - (a) resume, (b) suspend
+		{
+			//(REMOVED NOW SUSPEND/RESUME ARE HANDLED BY UPDATE WITH THE APPROPRIATE DIFF SENT)
+		}		
+		// Test 7: purge
+		{
+			final PurgeBucketActionMessage purge_msg = new PurgeBucketActionMessage(bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketChangeActor.talkToAnalytics(
+					bucket, purge_msg,
+					"test7", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();		
+			
+			assertEquals("test7", test7_reply.source());
+			assertEquals("called onPurge", test7_reply.reply().message());
+		}		
+		// Test 8: test
+		{
+			final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
+			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
+			
+			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketChangeActor.talkToAnalytics(
+					bucket, test,
+					"test8", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+									
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test8_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
+			assertEquals("test8", test8_reply.source());
+			assertEquals("10 / 1", test8_reply.reply().message());
+			assertEquals(true, test8_reply.reply().success());
+		}
+		// Test X: unrecognized
+		{
+			// Use reflection to create a "raw" BucketActionMessage
+			final Constructor<BucketActionMessage> contructor = (Constructor<BucketActionMessage>) BucketActionMessage.class.getDeclaredConstructor(DataBucketBean.class);
+			contructor.setAccessible(true);
+			BucketActionMessage bad_msg = contructor.newInstance(bucket);
+	
+			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketChangeActor.talkToAnalytics(
+					bucket, bad_msg,
+					"testX", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+									
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, testX.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage testX_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) testX.get();
+			assertEquals(false, testX_reply.reply().success());
+			assertEquals("testX", testX_reply.source());
+			assertEquals("Message type BucketActionMessage not recognized for bucket /test/path/", testX_reply.reply().message());
+		}		
+		
+	}	
+	
+	//TODO (ALEPH-12): test code for the enrichment -> analytics conversion code
+	
+	//TODO (ALEPH-12): some of this is duplicate tests, some needs to get moved into the storm analytic services test suite
 	
 //	@Test
 //	public void test_getStreamingTopology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
