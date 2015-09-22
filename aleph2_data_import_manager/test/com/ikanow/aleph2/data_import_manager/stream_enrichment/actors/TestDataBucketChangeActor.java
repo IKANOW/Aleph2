@@ -848,17 +848,89 @@ public class TestDataBucketChangeActor {
 	@Test
 	public void test_enrichToAnalyticsConversion() throws IOException {
 		// Simple functional test
+		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
+		final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
+		final String bucket_final_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_final.json"), Charsets.UTF_8);
+		
+		final DataBucketBean in = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
+		final DataBucketBean out = BeanTemplateUtils.from(bucket_out_str, DataBucketBean.class).get();
+		final DataBucketBean final_bucket = BeanTemplateUtils.from(bucket_final_str, DataBucketBean.class).get();
+		
 		{
-			final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
-			final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
-			
-			final DataBucketBean in = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
-			final DataBucketBean out = BeanTemplateUtils.from(bucket_out_str, DataBucketBean.class).get();
-			
 			final DataBucketBean res = DataBucketChangeActor.convertStreamingEnrichmentToAnalyticBucket(in);
 			
-			assertEquals(BeanTemplateUtils.toJson(out).toString(), BeanTemplateUtils.toJson(res).toString());			
-		}		
+			assertEquals(BeanTemplateUtils.toJson(out).toString(), BeanTemplateUtils.toJson(res).toString());
+		}
+		
+		// Test some aspects of the final conversion also:
+		
+		// empty
+		final Map<String, Tuple2<SharedLibraryBean, String>> map1 = Collections.emptyMap();
+		
+		// no entry point
+		final Map<String, Tuple2<SharedLibraryBean, String>> map2 = ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("/app/aleph2/library/storm_js_main.jar", 
+							Tuples._2T(
+									BeanTemplateUtils.build(SharedLibraryBean.class).done().get()
+									, 
+									"")
+							)
+							.build();
+		
+		// misc entry point
+		final Map<String, Tuple2<SharedLibraryBean, String>> map3 = ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+				.put("/app/aleph2/library/storm_js_main.jar", 
+						Tuples._2T(
+								BeanTemplateUtils.build(SharedLibraryBean.class)
+									.with(SharedLibraryBean::misc_entry_point, "test.entry.point")
+								.done().get()
+								, 
+								"")
+						)
+						.build();
+		
+		// misc entry point
+		final Map<String, Tuple2<SharedLibraryBean, String>> map4 = ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+				.put("/app/aleph2/library/storm_js_test.jar", 
+						Tuples._2T(
+								BeanTemplateUtils.build(SharedLibraryBean.class)
+									.with(SharedLibraryBean::streaming_enrichment_entry_point, "test.entry.point")
+								.done().get()
+								, 
+								"")
+						)
+						.build();
+		
+		// Error with libs 
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.fail(ErrorUtils.buildErrorMessage("", "", "")));
+			assertEquals(res, out);
+		}
+		// No error, but not streaming
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion("NOT_STREAMING", out, Validation.success(map3));
+			assertEquals(res, out);
+		}
+		// Can't find item in map
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map1));
+			assertEquals(res, out);
+		}
+		// No entry point
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map2));
+			assertEquals(res, out);
+		}
+		// Misc entry point, success
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map3));
+			assertEquals(BeanTemplateUtils.toJson(final_bucket).toString(), BeanTemplateUtils.toJson(res).toString());
+		}
+		// Streaming entry point, success
+		{
+			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map4));
+			assertEquals(BeanTemplateUtils.toJson(final_bucket).toString(), BeanTemplateUtils.toJson(res).toString());
+		}
 	}
 	
 	//TODO (ALEPH-12): some of this is duplicate tests, some needs to get moved into the storm analytic services test suite

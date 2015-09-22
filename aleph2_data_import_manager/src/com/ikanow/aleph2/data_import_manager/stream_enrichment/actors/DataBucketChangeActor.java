@@ -181,7 +181,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
 	
 	// Streaming enrichment handling:
-	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService"); 
+	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService");
+	public static final String STREAMING_ENRICHMENT_TECH_NAME = "streaming_enrichment_service";
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -284,6 +285,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				// set the library bean - note if here then must have been set, else IAnalyticsTechnologyModule wouldn't exist
 				final String technology = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
 				
+				// handles system classpath and streaming enrichment special cases
 				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
 						getAnalyticsTechnology_withSpecialCases(message.bucket(), technology, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
@@ -294,10 +296,13 @@ public class DataBucketChangeActor extends AbstractActor {
 						.ifPresent(lib -> a_context.setTechnologyConfig(lib._1()))
 				);
 				
-				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(message.bucket(), message, hostname, a_context, 
+				// One final system classpath/streaming enrichment fix:
+				final DataBucketBean final_bucket = finalBucketConversion(technology, message.bucket(), err_or_map);
+				
+				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
 																			err_or_tech_module);
-				return handleTechnologyErrors(message.bucket(), message, hostname, err_or_tech_module, ret);
+				return handleTechnologyErrors(final_bucket, message, hostname, err_or_tech_module, ret);
 				
 			})
 			.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
@@ -383,10 +388,10 @@ public class DataBucketChangeActor extends AbstractActor {
 			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
 					Optional.ofNullable(enrichment.name()).orElse("streaming_enrichment"), //(name) 
 					true, // (enabled)
-					"streaming_enrichment_service", //(technology name or id)
+					STREAMING_ENRICHMENT_TECH_NAME, //(technology name or id)
 					enrichment.module_name_or_id(),
 					enrichment.library_names_or_ids(), //(additional modules)
-					null, // (no entry point ... note that the enrichment entry point is different to the analytics entry point) 
+					enrichment.entry_point(), // if the user specifies an overide 
 					Maps.newLinkedHashMap(Optional.ofNullable(enrichment.config()).orElse(Collections.emptyMap())), //(config)
 					DataBucketBean.MasterEnrichmentType.streaming, // (type) 
 					Collections.emptyList(), //(node rules)
@@ -407,10 +412,63 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 	}
 	
-	////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////
+	/** Fills in the jobs' entry points in the streaming enrichment case
+	 * @param technology
+	 * @param bucket
+	 * @return
+	 */
+	protected static final DataBucketBean finalBucketConversion(
+			final String technology, 
+			final DataBucketBean bucket, 
+			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs)
+	{
+		//TODO (ALEPH-12 also handle the system classpath case, using some lookup engine)
+		return err_or_libs.validation(
+				fail -> bucket
+				,
+				libs -> { 
+					if (STREAMING_ENRICHMENT_TECH_NAME.equals(technology)) // (must mean that is non null bucket.streaming_enrichment_topology())
+					{
+						// Check all modules and libs...
+						return Stream.concat(
+									Optional.of(bucket.streaming_enrichment_topology().module_name_or_id()).map(Stream::of).orElse(Stream.empty())
+									,
+									Optional.of(bucket.streaming_enrichment_topology().library_names_or_ids()).map(List::stream).orElse(Stream.empty())
+								)
+								.map(name -> libs.get(name)) //...to see if we can find the corresponding shared library...
+								.filter(t2 -> t2 != null)
+								.map(t2 -> t2._1())
+								.map(lib -> Optional.ofNullable(bucket.streaming_enrichment_topology().entry_point()) 
+												.map(Optional::of)
+												.orElse(Optional.ofNullable(lib.streaming_enrichment_entry_point()))
+												.orElse(lib.misc_entry_point())
+								)
+								.filter(entry_point -> entry_point != null) //...that has a valid entry point...
+								.findFirst() 
+								.map(entry_point -> { // ... grab the first and ...
+									return BeanTemplateUtils.clone(bucket)
+											.with(DataBucketBean::analytic_thread,
+												BeanTemplateUtils.clone(bucket.analytic_thread())
+													.with(AnalyticThreadBean::jobs,
+														bucket.analytic_thread().jobs().stream().map(job ->
+															BeanTemplateUtils.clone(job)
+																.with(AnalyticThreadJobBean::entry_point, entry_point) //...set that entry point in all the jobs...
+															.done()
+														)
+														.collect(Collectors.toList())
+														)
+												.done())
+											.done();									
+								})
+								.orElse(bucket); // (if anything fails just return the bucket)					
+					}
+					else return bucket;
+				})
+				;
+	}
 	
-	//TODO: need to handle the case where the bean is on the classpath (but the entry point is set ... eg for the stream enrichment case
+	////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////
 	
 	// GENERAL ANALYTICS CASE
 
@@ -448,7 +506,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
 				Patterns.match(technology).<Validation<BasicMessageBean, IAnalyticsTechnologyModule>>andReturn()
 					// Streaming enrichment case
-					.when(t -> t.equals("streaming_enrichment_service"), __ -> {
+					.when(t -> STREAMING_ENRICHMENT_TECH_NAME.equals(t), __ -> {
 						try { return Validation.success(streaming_enrichment.get()); }
 						catch (Throwable t) { return Validation.fail(
 								ErrorUtils.buildErrorMessage(source, m, StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, bucket.full_name())); }
