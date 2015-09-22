@@ -15,11 +15,21 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.module;
 
+import java.util.Collection;
+
+import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.cache.ehcache.EhCacheManager;
+import org.apache.shiro.config.ConfigurationException;
 import org.apache.shiro.config.Ini;
 import org.apache.shiro.guice.ShiroModule;
-import org.apache.shiro.realm.text.IniRealm;
+import org.apache.shiro.mgt.DefaultSecurityManager;
+import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
+import org.apache.shiro.session.mgt.SessionManager;
+import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
 
 import com.google.inject.Provides;
+import com.google.inject.binder.AnnotatedBindingBuilder;
 
 /** Core module for Security Service
  * @author Joern
@@ -27,6 +37,7 @@ import com.google.inject.Provides;
 public class CoreSecurityModule extends ShiroModule {
     protected void configureShiro() {
         	bindRealms();
+        	bind(CacheManager.class).to(EhCacheManager.class).asEagerSingleton();
     }
 
     @Provides
@@ -45,19 +56,38 @@ public class CoreSecurityModule extends ShiroModule {
     
 /*    protected void bindSessionManager(AnnotatedBindingBuilder<SessionManager> bind) {
     	DefaultSessionManager sessionManager = new DefaultSessionManager();
-    	sessionManager.setGlobalSessionTimeout(2000);
+//    	EnterpriseCacheSessionDAO sessionDao = new EnterpriseCacheSessionDAO();
+    	EhCacheManager cacheManager =  new EhCacheManager(); 
+    	bind(CacheManager.class).toInstance(cacheManager);
+  //  	sessionDao.setCacheManager(cacheManager);
+ //   	sessionManager.setSessionDAO(sessionDao);    	
+    	//sessionManager.setGlobalSessionTimeout(2000);
         bind.toInstance(sessionManager);
     }
+
     */
     protected void bindRealms(){
-        try {
+       /*( try {
         bindRealm().toConstructor(IniRealm.class.getConstructor(Ini.class));
-        // TODO test of additional realm, remove 
-//        SimpleAccountRealm accountRealm = new SimpleAccountRealm("backdoor");
-//        accountRealm.addAccount("trojan", "none", "admin");
-//        bindRealm().toInstance(accountRealm);
         } catch (NoSuchMethodException e) {
             addError(e);
-        }    	
+        }
+        */    	
     }
+    
+    /**
+     * Binds the security manager.  Override this method in order to provide your own security manager binding.
+     * <p/>
+     * By default, a {@link org.apache.shiro.mgt.DefaultSecurityManager} is bound as an eager singleton.
+     *
+     * @param bind
+     */
+    protected void bindSecurityManager(AnnotatedBindingBuilder<? super SecurityManager> bind) {
+        try {
+            bind.toConstructor(DefaultSecurityManager.class.getConstructor(Collection.class)).asEagerSingleton();
+        } catch (NoSuchMethodException e) {
+            throw new ConfigurationException("This really shouldn't happen.  Either something has changed in Shiro, or there's a bug in " + ShiroModule.class.getSimpleName(), e);
+        }
+    }
+
 }
