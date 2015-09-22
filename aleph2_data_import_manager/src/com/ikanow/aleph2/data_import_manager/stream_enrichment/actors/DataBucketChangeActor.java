@@ -181,7 +181,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
 	
 	// Streaming enrichment handling:
-	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichment"); 
+	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService"); 
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -570,7 +570,7 @@ public class DataBucketChangeActor extends AbstractActor {
 										.map(job -> tech_module.startAnalyticJobTest(bucket, jobs, job, msg.test_spec(), context))
 										.collect(Collectors.toList());
 							
-							return combineResults(top_level_result, Collections.emptyList(), source);
+							return combineResults(top_level_result, job_results, source);
 						})
 						.otherwise(msg -> { // return "command not recognized" error
 							tech_module.onInit(context);

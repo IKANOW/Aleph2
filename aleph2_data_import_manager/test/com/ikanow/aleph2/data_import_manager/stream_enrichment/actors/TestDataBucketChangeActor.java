@@ -333,9 +333,6 @@ public class TestDataBucketChangeActor {
 		}
 	}
 
-	//TODO (ALEPH-12): fix the return values from here
-	
-	@org.junit.Ignore
 	@Test
 	public void test_talkToAnalytics() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
 		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
@@ -399,15 +396,20 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(analytics_tech));
 						
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
-			assertEquals("test3", test3_reply.source());
-			assertEquals("called onDelete", test3_reply.reply().message());
-			assertEquals(true, test3_reply.reply().success());
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test3.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test3.get();
+			assertEquals("test3", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onDeleteThread", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called stopAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
 		}
-		// Test 4: new
+		// Test 4: new (activated)
 		{
-			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
+			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, false);
 			
 			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToAnalytics(
 					bucket, create,
@@ -416,11 +418,44 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(analytics_tech));
 						
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
-			assertEquals("test4", test4_reply.source());
-			assertEquals("called onNewSource: false", test4_reply.reply().message());
-			assertEquals(true, test4_reply.reply().success());
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test4.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test4.get();
+			assertEquals("test4", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onNewThread: true", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called startAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
+		}		
+		// Test 4b: new (suspended)
+		{
+			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
+			
+			final CompletableFuture<BucketActionReplyMessage> test4b = DataBucketChangeActor.talkToAnalytics(
+					bucket, create,
+					"test4b", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			//TODO: I think this should be a bucket action handled message?
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4b.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4b.get();					
+			assertEquals("test4b", test_reply.source());
+			assertEquals("called onNewThread: false", test_reply.reply().message());
+
+//			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test4.get().getClass());
+//			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test4.get();
+//			assertEquals("test3", test_reply.source());
+//			assertEquals(2, test_reply.replies().size());
+//			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+//			assertEquals("called onNewThread: false", test_reply1.message());
+//			assertEquals(true, test_reply1.success());
+//			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+//			assertEquals("called startAnalyticJob", test_reply2.message());
+//			assertEquals(true, test_reply2.success());
 		}		
 		// Test 5: update
 		{
@@ -433,12 +468,40 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(analytics_tech));
 						
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
-			assertEquals("test5", test5_reply.source());
-			assertEquals("called onUpdatedSource true", test5_reply.reply().message());
-			assertEquals(true, test5_reply.reply().success());
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
+			assertEquals("test5", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onUpdatedThread: true", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called resumeAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
 		}		
+		// Test 5b: suspend
+		{
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, false, bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+					bucket, update,
+					"test5b", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(analytics_tech));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
+			assertEquals("test5b", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onUpdatedThread: false", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called suspendAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
+		}		
+		
 		// Test 6: update state - (a) resume, (b) suspend
 		{
 			//(REMOVED NOW SUSPEND/RESUME ARE HANDLED BY UPDATE WITH THE APPROPRIATE DIFF SENT)
@@ -472,11 +535,16 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(analytics_tech));
 									
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test8_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
-			assertEquals("test8", test8_reply.source());
-			assertEquals("10 / 1", test8_reply.reply().message());
-			assertEquals(true, test8_reply.reply().success());
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test8.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test8.get();
+			assertEquals("test8", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onTestThread", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called startAnalyticJobTest", test_reply2.message());
+			assertEquals(true, test_reply2.success());
 		}
 		// Test X: unrecognized
 		{
