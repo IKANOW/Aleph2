@@ -281,11 +281,13 @@ public class DataBucketChangeActor extends AbstractActor {
 				final AnalyticsContext a_context = _context.getNewAnalyticsContext();
 				a_context.setBucket(message.bucket());
 				
-				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module = 
-						getAnalyticsTechnology(message.bucket(), analytic_tech_only, message, hostname, err_or_map);
-
 				// set the library bean - note if here then must have been set, else IAnalyticsTechnologyModule wouldn't exist
 				final String technology = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
+				
+				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
+						getAnalyticsTechnology_withSpecialCases(message.bucket(), technology, analytic_tech_only, 
+								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
+								message, hostname, err_or_map);
 				
 				err_or_map.forEach(map ->									
 					Optional.ofNullable(map.get(technology))
@@ -381,10 +383,10 @@ public class DataBucketChangeActor extends AbstractActor {
 			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
 					Optional.ofNullable(enrichment.name()).orElse("streaming_enrichment"), //(name) 
 					true, // (enabled)
-					"system", //(technology name or id)
+					"streaming_enrichment_service", //(technology name or id)
 					enrichment.module_name_or_id(),
 					enrichment.library_names_or_ids(), //(additional modules)
-					enrichment.entry_point(), // entry point
+					null, // (no entry point ... note that the enrichment entry point is different to the analytics entry point) 
 					Maps.newLinkedHashMap(Optional.ofNullable(enrichment.config()).orElse(Collections.emptyMap())), //(config)
 					DataBucketBean.MasterEnrichmentType.streaming, // (type) 
 					Collections.emptyList(), //(node rules)
@@ -433,9 +435,45 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
+	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology_withSpecialCases(
+			final DataBucketBean bucket, 
+			final String technology,
+			final boolean analytic_tech_only,
+			final Optional<IAnalyticsTechnologyModule> streaming_enrichment,
+			final BucketActionMessage m, 
+			final String source,
+			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
+			)
+	{
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
+				Patterns.match(technology).<Validation<BasicMessageBean, IAnalyticsTechnologyModule>>andReturn()
+					// Streaming enrichment case
+					.when(t -> t.equals("streaming_enrichment_service"), __ -> {
+						try { return Validation.success(streaming_enrichment.get()); }
+						catch (Throwable t) { return Validation.fail(
+								ErrorUtils.buildErrorMessage(source, m, StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, bucket.full_name())); }
+					})
+					//TODO (ALEPH-12: handle general "on classpath" case)
+					// Analytic tech specified via shared library bean as per usual 
+					.otherwise(__ -> getAnalyticsTechnology(bucket, technology, analytic_tech_only, m, source, err_or_libs))						
+					;
+
+		return err_or_tech_module;
+	}
+	
+	/** Talks to the analytic tech module - this top level function just sets the classloader up and creates the module,
+	 *  then calls talkToHarvester_actuallyTalk to do the talking
+	 * @param bucket
+	 * @param libs
+	 * @param analytic_tech_only
+	 * @param m
+	 * @param source
+	 * @return
+	 */
 	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology(
 			final DataBucketBean bucket, 
-			boolean analytic_tech_only,
+			final String technology,
+			final boolean analytic_tech_only,
 			final BucketActionMessage m, 
 			final String source,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
@@ -448,8 +486,6 @@ public class DataBucketChangeActor extends AbstractActor {
 					,
 					// Normal
 					libs -> {
-						final String technology = getAnalyticsTechnologyName(bucket).get(); // (exists by construction)
-						
 						final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(technology);  // (exists by construction)
 
 						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
@@ -487,8 +523,8 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Validation finally)
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage> talkToAnalytics(
-			final DataBucketBean bucket, 
-			final BucketActionMessage m,
+			final DataBucketBean bucket,
+			final BucketActionMessage m,			
 			final String source,
 			final AnalyticsContext context,
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)

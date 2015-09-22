@@ -67,6 +67,7 @@ import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -245,6 +246,36 @@ public class TestDataBucketChangeActor {
 	}	
 
 	@Test
+	public void test_getAnalyticsTechnology_specialCases() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
+		// Just check the streaming enrichment error and success cases
+		
+		final DataBucketBean bucket = createBucket("streaming_enrichment_service"); //(note this also sets the analytics name in the jobs)	
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
+				bucket, "streaming_enrichment_service", 
+				true, 
+				Optional.empty(),
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test1", 
+				Validation.success(Collections.emptyMap()));
+		
+		assertTrue("Failed with no analytic technology", test1.isFail());
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
+				bucket, "streaming_enrichment_service", 
+				true, 
+				_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.STREAMING_ENRICHMENT_DEFAULT)
+					.map(s->(IAnalyticsTechnologyModule)s),
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test2", 
+				Validation.success(Collections.emptyMap()));
+
+		assertTrue("Failed with no analytic technology", test2.isSuccess());
+
+		
+		// (Later will include the system classpath cases also)		
+	}
+
+	
+	@Test
 	public void test_getAnalyticsTechnology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
 		final DataBucketBean bucket = createBucket("test_tech_id_analytics"); //(note this also sets the analytics name in the jobs)	
 		
@@ -261,7 +292,7 @@ public class TestDataBucketChangeActor {
 		
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, true, 
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
@@ -279,7 +310,7 @@ public class TestDataBucketChangeActor {
 					.build();
 
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2a = DataBucketChangeActor.getAnalyticsTechnology(
-				createBucket("test_tech_id_analytics_2a"), 
+				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
 				Validation.success(test2_input));
@@ -291,7 +322,7 @@ public class TestDataBucketChangeActor {
 						test2a.fail().message());
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2b = DataBucketChangeActor.getAnalyticsTechnology(
-				createBucket("test_tech_id_analytics_2b"), 
+				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
 				Validation.success(test2_input));
@@ -332,7 +363,7 @@ public class TestDataBucketChangeActor {
 					.build();		
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3 = DataBucketChangeActor.getAnalyticsTechnology(
-				bucket, 
+				bucket, "test_tech_id_analytics",
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3_input));
@@ -373,7 +404,7 @@ public class TestDataBucketChangeActor {
 					.build();		
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3b = DataBucketChangeActor.getAnalyticsTechnology(
-				bucket,
+				bucket, "test_tech_id_analytics",
 				false, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
 				Validation.success(test3b_input));
@@ -411,8 +442,10 @@ public class TestDataBucketChangeActor {
 			
 			// 0a) Check with no streaming, gets nothing
 			{			
+				final DataBucketBean bucket0 = DataBucketChangeActor.convertStreamingEnrichmentToAnalyticBucket(createBucket("broken"));		
+				
 				CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-						LibraryCacheUtils.cacheJars(bucket, DataBucketChangeActor.getQuery(bucket, false),
+						LibraryCacheUtils.cacheJars(bucket0, DataBucketChangeActor.getQuery(bucket0, false),
 								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 								"test1_source", "test1_command"
 							);
