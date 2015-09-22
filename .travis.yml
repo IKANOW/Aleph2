@@ -9,7 +9,6 @@ env:
  - TEST_DIR=aleph2_core_shared_library
  - TEST_DIR=aleph2_harvest_context_library
  - TEST_DIR=aleph2_analytics_context_library
- - TEST_DIR=aleph2_streaming_enrichment_context_library
  - TEST_DIR=aleph2_management_db_service
  - TEST_DIR=aleph2_data_import_manager
  - TEST_DIR=aleph2_core_security
