@@ -64,6 +64,7 @@ public class SecurityServiceTest {
 	}
 
 	@Test	
+	@Ignore
 	public void testUnauthenticated() {
 		ISubject subject = securityService.getSubject();
 		assertNotNull(subject);
@@ -71,12 +72,14 @@ public class SecurityServiceTest {
 	}
 
 	@Test
+	@Ignore
 	public void testAuthenticated() {        
         ISubject subject = securityService.login("lonestarr", "vespa");
 		assertEquals(true, subject.isAuthenticated());		
 	}
 	
 	@Test
+	@Ignore
 	public void testRole(){
 		String role = "schwartz";
         UsernamePasswordToken token = new UsernamePasswordToken("lonestarr", "vespa");

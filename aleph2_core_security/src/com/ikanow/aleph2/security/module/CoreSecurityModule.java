@@ -24,6 +24,7 @@ import org.apache.shiro.config.Ini;
 import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.realm.text.IniRealm;
 import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
@@ -67,12 +68,11 @@ public class CoreSecurityModule extends ShiroModule {
 
     */
     protected void bindRealms(){
-       /*( try {
+       try {
         bindRealm().toConstructor(IniRealm.class.getConstructor(Ini.class));
         } catch (NoSuchMethodException e) {
             addError(e);
-        }
-        */    	
+        }        	
     }
     
     /**
