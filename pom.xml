@@ -17,7 +17,6 @@
         <module>aleph2_access_manager</module>
         <module>aleph2_harvest_context_library</module>
         <module>aleph2_analytics_context_library</module>
-        <module>aleph2_streaming_enrichment_context_library</module>
         <module>aleph2_data_analytics_manager</module>
         <module>aleph2_data_import_manager</module>
         <module>aleph2_management_db_service</module>
