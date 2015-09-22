@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -51,10 +52,15 @@ import akka.actor.Inbox;
 import akka.actor.Props;
 import akka.pattern.Patterns;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologyService;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
+import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
@@ -74,6 +80,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -238,6 +245,148 @@ public class TestDataBucketChangeActor {
 	}	
 
 	@Test
+	public void test_getAnalyticsTechnology() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
+		final DataBucketBean bucket = createBucket("test_tech_id_analytics"); //(note this also sets the analytics name in the jobs)	
+		
+		final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-analytics-example.jar";
+		final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
+		final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
+		final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
+		
+		List<SharedLibraryBean> lib_elements = createSharedLibraryBeans_analytics(path1, path2);
+		
+		//////////////////////////////////////////////////////
+
+		// 1) Check - if called with an error, then just passes that error along
+		
+		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, true, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
+		
+		assertTrue("Got error back", test1.isFail());
+		assertEquals("test_source", test1.fail().source());
+		assertEquals("test_message", test1.fail().command());
+		assertEquals("test_error", test1.fail().message());
+		
+		//////////////////////////////////////////////////////
+
+		// 2) Check the error handling inside getAnalyticsTechnology
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test2_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id_analytics_2b", Tuples._2T(null, null))
+					.build();
+
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2a = DataBucketChangeActor.getAnalyticsTechnology(
+				createBucket("test_tech_id_analytics_2a"), 
+				true, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
+				Validation.success(test2_input));
+
+		assertTrue("Got error back", test2a.isFail());
+		assertEquals("test_source2a", test2a.fail().source());
+		assertEquals("BucketActionOfferMessage", test2a.fail().command());
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_analytics_2a"), // (cloned bucket above)
+						test2a.fail().message());
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2b = DataBucketChangeActor.getAnalyticsTechnology(
+				createBucket("test_tech_id_analytics_2b"), 
+				true, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
+				Validation.success(test2_input));
+
+		assertTrue("Got error back", test2b.isFail());
+		assertEquals("test_source2b", test2b.fail().source());
+		assertEquals("BucketActionOfferMessage", test2b.fail().command());
+		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_analytics_2a"), // (cloned bucket above)
+						test2a.fail().message());
+		
+		//////////////////////////////////////////////////////
+
+		// 3) OK now it will actually do something 
+		
+		final String java_name = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_tech_id_analytics.cache.jar";
+		
+		System.out.println("Needed to delete locally cached file? " + java_name + ": " + new File(java_name).delete());		
+		
+		// Requires that the file has already been cached:
+		final Validation<BasicMessageBean, String> cached_file = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+				lib_elements.get(0), 
+				_service_context.getStorageService(),
+				"test3", "test3").get();
+		
+		if (cached_file.isFail()) {
+			fail("About to crash with: " + cached_file.fail().message());
+		}		
+		
+		assertTrue("The cached file should exist: " + java_name, new File(java_name).exists());
+		
+		// OK the setup is done and validated now actually test the underlying call:
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id_analytics", Tuples._2T(
+							lib_elements.get(0),
+							cached_file.success()))
+					.build();		
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3 = DataBucketChangeActor.getAnalyticsTechnology(
+				bucket, 
+				true, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
+				Validation.success(test3_input));
+
+		if (test3.isFail()) {
+			fail("About to crash with: " + test3.fail().message());
+		}		
+		assertTrue("getAnalyticsTechnology call succeeded", test3.isSuccess());
+		assertTrue("harvest tech created: ", test3.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3.success().getClass().getName());
+		
+		// Now check with the "not just the harvest tech" flag set
+		
+		final String java_name2 = _service_context.getGlobalProperties().local_cached_jar_dir() + File.separator + "test_module_id.cache.jar";
+		
+		System.out.println("Needed to delete locally cached file? " + java_name2 + ": " + new File(java_name2).delete());		
+		
+		// Requires that the file has already been cached:
+		final Validation<BasicMessageBean, String> cached_file2 = JarCacheUtils.getCachedJar(_service_context.getGlobalProperties().local_cached_jar_dir(), 
+				lib_elements.get(1), 
+				_service_context.getStorageService(),
+				"test3b", "test3b").get();
+		
+		if (cached_file2.isFail()) {
+			fail("About to crash with: " + cached_file2.fail().message());
+		}		
+		
+		assertTrue("The cached file exists: " + java_name, new File(java_name2).exists());				
+		
+		final ImmutableMap<String, Tuple2<SharedLibraryBean, String>> test3b_input = 
+				ImmutableMap.<String, Tuple2<SharedLibraryBean, String>>builder()
+					.put("test_tech_id_analytics", Tuples._2T(
+							lib_elements.get(0),
+							cached_file.success()))
+					.put("test_module_id", Tuples._2T(
+							lib_elements.get(1),
+							cached_file.success()))
+					.build();		
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3b = DataBucketChangeActor.getAnalyticsTechnology(
+				bucket,
+				false, 
+				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
+				Validation.success(test3b_input));
+
+		if (test3b.isFail()) {
+			fail("About to crash with: " + test3b.fail().message());
+		}		
+		assertTrue("getAnalyticsTechnology call succeeded", test3b.isSuccess());
+		assertTrue("harvest tech created: ", test3b.success() != null);
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
+	}
+	
+	@Test
 	public void test_cacheJars_streamEnrichment() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
 		try {
 			// Preamble:
@@ -250,7 +399,7 @@ public class TestDataBucketChangeActor {
 			final String pathname2 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example2.jar";
 			final Path path2 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname2));		
 			
-			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans(path1, path2);
+			List<SharedLibraryBean> lib_elements = createSharedLibraryBeans_streaming(path1, path2);
 	
 			final IManagementDbService underlying_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();			
 			final IManagementCrudService<SharedLibraryBean> library_crud = underlying_db.getSharedLibraryStore();
@@ -440,22 +589,10 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(analytics_tech));
 						
-			//TODO: I think this should be a bucket action handled message?
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4b.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4b.get();					
 			assertEquals("test4b", test_reply.source());
 			assertEquals("called onNewThread: false", test_reply.reply().message());
-
-//			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test4.get().getClass());
-//			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test4.get();
-//			assertEquals("test3", test_reply.source());
-//			assertEquals(2, test_reply.replies().size());
-//			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
-//			assertEquals("called onNewThread: false", test_reply1.message());
-//			assertEquals(true, test_reply1.success());
-//			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
-//			assertEquals("called startAnalyticJob", test_reply2.message());
-//			assertEquals(true, test_reply2.success());
 		}		
 		// Test 5: update
 		{
@@ -569,7 +706,127 @@ public class TestDataBucketChangeActor {
 		
 	}	
 	
-	//TODO (ALEPH-12): test code for the enrichment -> analytics conversion code
+	@Test
+	public void test_setPerJobContextParams() {
+		
+		List<SharedLibraryBean> l = createSharedLibraryBeans_analytics(new Path("/test1"), new Path("/test2"));
+		Map<String, Tuple2<SharedLibraryBean, String>> map = l.stream().collect(Collectors.toMap(
+				bean -> bean.path_name(),
+				bean -> Tuples._2T(bean, bean.path_name())
+				));
+		
+		final AnalyticsContext context = _actor_context.getNewAnalyticsContext(); 
+		
+		assertTrue("module config not present", !context.getModuleConfig().isPresent());
+		
+		// Check works
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.with(AnalyticThreadJobBean::module_name_or_id, "/test1")
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("Finds module config", context.getModuleConfig().isPresent());
+			assertEquals("/test1", context.getModuleConfig().get().path_name());
+		}
+		// Check works again
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.with(AnalyticThreadJobBean::module_name_or_id, "/test2")
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("Finds module config", context.getModuleConfig().isPresent());
+			assertEquals("/test2", context.getModuleConfig().get().path_name());
+		}
+		// Check unsets - no module name
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("No module config", !context.getModuleConfig().isPresent());
+		}
+		// (and then works again)
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.with(AnalyticThreadJobBean::module_name_or_id, "/test2")
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("Finds module config", context.getModuleConfig().isPresent());
+			assertEquals("/test2", context.getModuleConfig().get().path_name());
+		}
+		// Check unsets - module name not found
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+										.with(AnalyticThreadJobBean::module_name_or_id, "/test3")
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("No module config", !context.getModuleConfig().isPresent());
+		}
+		// (and then works again)
+		{
+			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.with(AnalyticThreadJobBean::module_name_or_id, "/test1")
+												.done().get();
+			
+			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+
+			assertTrue("Finds module config", context.getModuleConfig().isPresent());
+			assertEquals("/test1", context.getModuleConfig().get().path_name());
+		}
+	}
+	
+	@Test
+	public void test_combineResults() {		
+	
+		List<CompletableFuture<BasicMessageBean>> test1_jobs = Arrays.asList(
+				CompletableFuture.completedFuture(ErrorUtils.buildMessage(true, "test1_jobs", "test1_jobs", "test1_jobs"))
+				);
+		
+		// case 1: blank message returned from top level call
+		
+		BasicMessageBean top_level = ErrorUtils.buildMessage(true, "test1", "test1", "");
+		
+		BucketActionReplyMessage res1 = 
+				DataBucketChangeActor.combineResults(CompletableFuture.completedFuture(top_level), test1_jobs, "test1").join();
+		
+		assertTrue("Is a multi message type: " + res1.getClass(), res1 instanceof BucketActionReplyMessage.BucketActionCollectedRepliesMessage);
+		assertEquals("One reply", 1, ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)res1).replies().size());
+		
+		// case 2: blank but error so return
+
+		BasicMessageBean top_level2 = ErrorUtils.buildMessage(false, "test1", "test1", "");
+		
+		BucketActionReplyMessage res2 = 
+				DataBucketChangeActor.combineResults(CompletableFuture.completedFuture(top_level2), test1_jobs, "test2").join();
+		
+		assertTrue("Is a multi message type: " + res2.getClass(), res2 instanceof BucketActionReplyMessage.BucketActionCollectedRepliesMessage);
+		assertEquals("2 replies", 2, ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)res2).replies().size());
+	}
+	
+	@Test
+	public void test_enrichToAnalyticsConversion() throws IOException {
+		// Simple functional test
+		{
+			final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
+			final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
+			
+			final DataBucketBean in = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
+			final DataBucketBean out = BeanTemplateUtils.from(bucket_out_str, DataBucketBean.class).get();
+			
+			final DataBucketBean res = DataBucketChangeActor.convertStreamingEnrichmentToAnalyticBucket(in);
+			
+			assertEquals(BeanTemplateUtils.toJson(out).toString(), BeanTemplateUtils.toJson(res).toString());			
+		}		
+	}
 	
 	//TODO (ALEPH-12): some of this is duplicate tests, some needs to get moved into the storm analytic services test suite
 	
@@ -740,16 +997,13 @@ public class TestDataBucketChangeActor {
 //		assertTrue("getStreamingTopology call succeeded", test3b.isSuccess());
 //		assertTrue("topology created: ", test3b.success() != null);
 //		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());	
-//		
-//		//TODO add a test for disabled streaming but config given (should default to passthrough top and
-//		//ignore given topology
 //	}
 	
 	////////////////////////////////////////////////////////////////////////////////////
 	
 	// UTILS
 	
-	protected DataBucketBean createBucket(final String harvest_tech_id) {
+	protected DataBucketBean createBucket(final String analytic_tech_id) {
 		// (Add streaming logic outside this via clone() - see cacheJars)
 		return BeanTemplateUtils.build(DataBucketBean.class)
 							.with(DataBucketBean::_id, "test1")
@@ -760,17 +1014,36 @@ public class TestDataBucketChangeActor {
 										.with(AnalyticThreadBean::jobs,
 												Arrays.asList(
 														BeanTemplateUtils.build(AnalyticThreadJobBean.class)
-															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "/test/tech")
+															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, analytic_tech_id)
 														.done().get()
 														)
 												)
 									.done().get()
 									)
-							.with(DataBucketBean::harvest_technology_name_or_id, harvest_tech_id)
 							.done().get();
 	}
 	
-	protected List<SharedLibraryBean> createSharedLibraryBeans(Path path1, Path path2) {
+	protected List<SharedLibraryBean> createSharedLibraryBeans_analytics(Path path1, Path path2) {
+		final SharedLibraryBean lib_element = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::_id, "test_tech_id_analytics")
+				.with(SharedLibraryBean::path_name, path1.toString())
+				.with(SharedLibraryBean::misc_entry_point, "com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology")
+				.done().get();
+
+		final SharedLibraryBean lib_element2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+		.with(SharedLibraryBean::_id, "test_module_id")
+		.with(SharedLibraryBean::path_name, path2.toString())
+		.done().get();
+
+		final SharedLibraryBean lib_element3 = BeanTemplateUtils.build(SharedLibraryBean.class)
+		.with(SharedLibraryBean::_id, "failtest")
+		.with(SharedLibraryBean::path_name, "/not_exist/here.fghgjhgjhg")
+		.done().get();
+
+		return Arrays.asList(lib_element, lib_element2, lib_element3);		
+	}
+	
+	protected List<SharedLibraryBean> createSharedLibraryBeans_streaming(Path path1, Path path2) {
 		final SharedLibraryBean lib_element = BeanTemplateUtils.build(SharedLibraryBean.class)
 			.with(SharedLibraryBean::_id, "test_tech_id_stream")
 			.with(SharedLibraryBean::path_name, path1.toString())
