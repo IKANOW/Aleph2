@@ -1279,6 +1279,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static List<String> validateAnalyticBucket(final DataBucketBean bean) {
 		final LinkedList<String> errs = new LinkedList<String>();
 		if ((null != bean.analytic_thread()) && Optional.ofNullable(bean.analytic_thread().enabled()).orElse(true)) {
+			
+			// Check that no enrichment is specified
+			if (MasterEnrichmentType.none != Optional.ofNullable(bean.master_enrichment_type()).orElse(MasterEnrichmentType.none)) {
+				errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_JOB_ENRICHMENT_SPECIFIED, bean.full_name()));
+			}		
+			
 			final AnalyticThreadBean analytic_thread = bean.analytic_thread();
 
 			// 1) Jobs can be empty

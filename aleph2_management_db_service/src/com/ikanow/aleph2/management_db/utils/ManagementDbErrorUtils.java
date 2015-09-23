@@ -111,6 +111,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	// BUCKET ANALYTICS
 	
+	public static final String ANALYTIC_JOB_ENRICHMENT_SPECIFIED = "Bucket {0} has an analytic job but also enrichment";
 	public static final String ANALYTIC_JOB_MALFORMED_NAME = "Bucket {0} has an analytic job with missing or malformed name {1}";
 	public static final String ANALYTIC_BUT_NO_ANALYTIC_TECH = "Bucket {0} has analytic job {1} with no analytic_technology_name_or_id field";
 	public static final String ANALYTIC_JOB_MUST_HAVE_TYPE = "Bucket {0} has an analytic job with missing type or set to 'none': {1}";

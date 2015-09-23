@@ -48,6 +48,25 @@ public class TestDataBucketCrudService_Analytics {
 		List<String> res0 = DataBucketCrudService.validateAnalyticBucket(getBaseBucket("/tb0", null, null));
 		assertTrue("Simple bucket validates: " + res0.stream().collect(Collectors.joining(";")), res0.isEmpty());
 
+		// 1) Combined enrichment and analytics
+		
+		{
+			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb1", null, null))
+										.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+										.done();
+
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			assertEquals(1, res.size());
+		}		
+		{
+			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb1b", null, null))
+										.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
+										.done();
+
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			assertEquals(0, res.size());
+		}		
+		
 		// 2) Jobs
 
 		// Job should have valid name		
@@ -330,8 +349,7 @@ public class TestDataBucketCrudService_Analytics {
 
 			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
-			assertEquals(0, res.size());
-			
+			assertEquals(0, res.size());			
 		}
 		
 		// 4) Output
