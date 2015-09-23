@@ -1107,6 +1107,61 @@ public class TestDataBucketChangeActor {
 //		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());	
 //	}
 	
+	@Test
+	public void test_classloader() throws ClassNotFoundException {
+		
+		// TEst some standard operations:
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> res = ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+				"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+				Optional.empty(),
+				Arrays.asList("file:misc_test_assets/simple-analytics-example.jar"),
+				"test",
+				"test");
+		
+		assertTrue("Should get module: " + res.validation(f->f.message(), s->""), res.isSuccess());
+		
+		// Check can't find example harvest technology in classpath
+		
+		try {
+			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+			fail("Should throw class not found exception");
+		}
+		catch (Throwable e) {}
+		
+		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
+		try {			
+			_logger.info("Set active classloader=" + res.success().getClass().getClassLoader() + " class=" + res.success().getClass());					
+			Thread.currentThread().setContextClassLoader(res.success().getClass().getClassLoader());
+			
+			try {
+				// This _doesn't_ work (defaults to system classloader):
+				Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+				fail("Should still throw class not found exception");
+			}
+			catch (Throwable t) {}
+			
+			Class<?> h = Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", true, Thread.currentThread().getContextClassLoader());
+			assertEquals("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", h.getName());
+		}
+		finally {
+			Thread.currentThread().setContextClassLoader(saved_current_classloader);
+		}
+		// Back to original classpath
+		try {
+			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+			fail("Should throw class not found exception");
+		}
+		catch (Throwable e) {}		
+		
+		// Specify classpath
+		
+		Class<?> h = Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", true, res.success().getClass().getClassLoader());
+		assertEquals("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", h.getName());
+		
+		
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////
 	
 	// UTILS
