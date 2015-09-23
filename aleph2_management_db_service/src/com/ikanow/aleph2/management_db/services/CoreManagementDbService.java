@@ -373,12 +373,13 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				return CompletableFuture.completedFuture(Unit.unit());
 			}
 		}).thenCompose(__ -> {
+			final long max_startup_time_secs = Optional.ofNullable(test_spec.max_startup_time_secs()).orElse(120L);
 			final CompletableFuture<Collection<BasicMessageBean>> future_replies = 
 					BucketActionSupervisor.askBucketActionActor(Optional.empty(),
-							_actor_context.getBucketActionSupervisor(), 
-							_actor_context.getActorSystem(), 
-							new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), 
-							Optional.of(FiniteDuration.create(test_spec.max_startup_time_secs(), TimeUnit.SECONDS))
+								_actor_context.getBucketActionSupervisor(), 
+								_actor_context.getActorSystem(), 
+								new BucketActionMessage.TestBucketActionMessage(validated_test_bucket, test_spec), 
+								Optional.of(FiniteDuration.create(max_startup_time_secs, TimeUnit.SECONDS))
 							)
 							.thenApply(msg -> msg.replies());
 					
@@ -389,8 +390,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 						if ( !hostnames.isEmpty() ) {					
 							// - add to the test queue
 							ICrudService<BucketTimeoutMessage> test_service = getBucketTestQueue(BucketTimeoutMessage.class);
+							final long max_run_time_secs = Optional.ofNullable(test_spec.max_run_time_secs()).orElse(60L);
 							test_service.storeObject(new BucketTimeoutMessage(validated_test_bucket, 
-									new Date(System.currentTimeMillis()+(test_spec.max_run_time_secs()*1000)), 
+									new Date(System.currentTimeMillis()+(max_run_time_secs*1000L)), 
 									hostnames), true);
 							
 							// - add to the delete queue

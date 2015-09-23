@@ -96,5 +96,5 @@ public class ProcessingTestSpecBean implements Serializable {
 	private Long max_startup_time_secs;
 	private Long max_run_time_secs;
 	private Long max_storage_time_secs;
-	private Boolean overwrite_existing_data = true;
+	private Boolean overwrite_existing_data;
 }
