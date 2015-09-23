@@ -25,6 +25,8 @@ import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.realm.text.IniRealm;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
+import org.apache.shiro.session.mgt.SessionManager;
 
 import com.google.inject.Provides;
 import com.google.inject.binder.AnnotatedBindingBuilder;
@@ -43,27 +45,6 @@ public class CoreSecurityModule extends ShiroModule {
         return Ini.fromResourcePath("classpath:shiro.ini");
     }
     
-    /**
-     * Binds the session manager.  Override this method in order to provide your own session manager binding
-     * used for testing timeouts because ini settings do not work for this.
-     * <p/>
-     * By default, a {@link org.apache.shiro.session.mgt.DefaultSessionManager} is bound as an eager singleton.
-     *
-     * @param bind
-     */
-    
-/*    protected void bindSessionManager(AnnotatedBindingBuilder<SessionManager> bind) {
-    	DefaultSessionManager sessionManager = new DefaultSessionManager();
-//    	EnterpriseCacheSessionDAO sessionDao = new EnterpriseCacheSessionDAO();
-    	EhCacheManager cacheManager =  new EhCacheManager(); 
-    	bind(CacheManager.class).toInstance(cacheManager);
-  //  	sessionDao.setCacheManager(cacheManager);
- //   	sessionManager.setSessionDAO(sessionDao);    	
-    	//sessionManager.setGlobalSessionTimeout(2000);
-        bind.toInstance(sessionManager);
-    }
-
-    */
     protected void bindRealms(){
        try {
         bindRealm().toConstructor(IniRealm.class.getConstructor(Ini.class));
