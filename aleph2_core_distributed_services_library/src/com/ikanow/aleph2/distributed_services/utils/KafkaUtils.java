@@ -144,6 +144,7 @@ public class KafkaUtils {
 			return does_topic_exist.booleanValue();
 		}		
 		final boolean topic_exists = AdminUtils.topicExists(zk_client, topic);
+		
 		known_topics.put(topic, topic_exists);		
 		return topic_exists;
 	}
@@ -235,7 +236,7 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options, final ZkClient zk_client) {
+	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options, final ZkClient zk_client1) {
 		
 		//TODO (ALEPH-10): need to handle topics getting deleted but not being removed from this map
 		//TODO (ALEPH-10): override options if they change? not sure if that's possible 
@@ -244,7 +245,10 @@ public class KafkaUtils {
 			logger.debug("CREATE TOPIC");
 			//http://stackoverflow.com/questions/27036923/how-to-create-a-topic-in-kafka-through-java
 			
-			if ( !AdminUtils.topicExists(zk_client, topic) ) {		
+			// For some reason need to create a new zk_client in here for the createTopic call, otherwise the partitions aren't set correctly?!
+			final ZkClient zk_client = getNewZkClient();
+			
+			try { if ( !AdminUtils.topicExists(zk_client, topic) ) {		
 				final Properties props = options.map(o -> { 
 						final Properties p = new Properties();
 						p.putAll(o);
@@ -256,19 +260,22 @@ public class KafkaUtils {
 				logger.debug("LEADER WAS ELECTED: " + leader_elected);
 				
 				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-				final ConsumerConnector x = getKafkaConsumer(topic, Optional.empty());
 				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic);
 				iter.hasNext();
 				
 				//debug info
-				logger.debug("DONE CREATING TOPIC");	
-				logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
-				TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
-				logger.debug("META: " + meta);
-
+				if (logger.isDebugEnabled()) {
+					logger.debug("DONE CREATING TOPIC");	
+					logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
+					TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
+					logger.debug("META: " + meta);
+				}
+				
 				// (close resources)
 				iter.close();
-				x.shutdown();
+			}}
+			finally {
+				zk_client.close();				
 			}
 			my_topics.put(topic, true); //topic either already existed or was created
 		}
