@@ -199,7 +199,7 @@ public class TestCoreDistributedServices {
 		
 		assertTrue("Topic should exist", _core_distributed_services.doesTopicExist(TOPIC_NAME));
 		
-		KafkaUtils.deleteTopic(TOPIC_NAME);
+		_core_distributed_services.deleteTopic(TOPIC_NAME);
 		
         assertEquals(num_to_test, message_count);
         assertTrue(original_message.equals(consumed_message));
@@ -236,7 +236,7 @@ public class TestCoreDistributedServices {
             System.out.println(consumed_message);
 		}
 		
-		KafkaUtils.deleteTopic(TOPIC_NAME);
+		_core_distributed_services.deleteTopic(TOPIC_NAME);
 		
 		assertEquals(message_count, num_to_test); 
 	}

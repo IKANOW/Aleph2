@@ -28,6 +28,7 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 
+import org.I0Itec.zkclient.ZkClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -60,6 +61,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 
 	protected final SetOnce<TestingServer> _test_server = new SetOnce<>();
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
+	protected final SetOnce<ZkClient> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
 	protected final ActorSystem _akka_system;
 	private final SetOnce<MockKafkaBroker> _kafka_broker = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
 	private final static Logger logger = LogManager.getLogger();
@@ -97,6 +99,8 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 							.put("zookeeper.connect", _test_server.get().getConnectString())
 							.build();	
 					KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
+					
+					_kafka_zk_framework.set(KafkaUtils.getNewZkClient());
 				}
 				catch (Exception e) { // (just make unchecked)
 					throw new RuntimeException(e);
@@ -199,7 +203,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	public 	void createTopic(String topic, Optional<Map<String, Object>> options) {
 		setupKafka();
 		logger.debug("CREATING " + topic);
-		KafkaUtils.createTopic(topic, options);
+		KafkaUtils.createTopic(topic, options, _kafka_zk_framework.get());
 	}
 	
 	/* (non-Javadoc)
@@ -209,7 +213,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	public void deleteTopic(String topic) {
 		setupKafka();
 		logger.debug("DELETE " + topic);
-		KafkaUtils.deleteTopic(topic);
+		KafkaUtils.deleteTopic(topic, _kafka_zk_framework.get());
 	}
 	
 	/* (non-Javadoc)
@@ -250,7 +254,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public boolean doesTopicExist(String topic) {
-		return KafkaUtils.doesTopicExist(topic);
+		return KafkaUtils.doesTopicExist(topic, _kafka_zk_framework.get());
 	}
 	
 	/* (non-Javadoc)

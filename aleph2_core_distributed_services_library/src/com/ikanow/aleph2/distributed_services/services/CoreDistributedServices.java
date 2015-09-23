@@ -34,6 +34,7 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 
+import org.I0Itec.zkclient.ZkClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -89,6 +90,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 
 	// Curator, instantiated lazily (in practice immediately because we need it for Kafka)
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>();
+	protected final SetOnce<ZkClient> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
 
 	// Akka, instantiated laziy
 	protected final SetOnce<ActorSystem> _akka_system = new SetOnce<>();
@@ -140,6 +142,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list,										
 							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
 					logger.info("Kafka broker_list=" + broker_list);
+					
+					_kafka_zk_framework.set(KafkaUtils.getNewZkClient());
 				}
 				catch (Exception e) { // just use the default and hope:
 					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST,
@@ -389,7 +393,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			_initialized_kafka.join();
 		}		
 		logger.debug("CREATING " + topic);
-		KafkaUtils.createTopic(topic, options);				
+		KafkaUtils.createTopic(topic, options, _kafka_zk_framework.get());				
 	}
 	
 	/* (non-Javadoc)
@@ -401,7 +405,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			_initialized_kafka.join();
 		}		
 		logger.debug("DELETE " + topic);
-		KafkaUtils.deleteTopic(topic);
+		KafkaUtils.deleteTopic(topic, _kafka_zk_framework.get());
 	}
 	
 	
@@ -453,7 +457,10 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public boolean doesTopicExist(String topic) {
-		return KafkaUtils.doesTopicExist(topic);
+		if (_initializing_kafka) { //(wait for async to complete)
+			_initialized_kafka.join();
+		}				
+		return KafkaUtils.doesTopicExist(topic, _kafka_zk_framework.get());
 	}
 		
 	/* (non-Javadoc)

@@ -66,6 +66,13 @@ public class KafkaUtils {
 	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 	//TODO (ALEPH-12): make my_topics a cached map also
 	
+	/** Creates a new ZK client from the properties
+	 * @return
+	 */
+	public synchronized static ZkClient getNewZkClient() {
+		return new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
+	}
+	
 	/**
 	 * Returns a producer pointed at the currently configured Kafka instance.
 	 * 
@@ -127,7 +134,7 @@ public class KafkaUtils {
 	 * @param topic
 	 * @return
 	 */
-	public static boolean doesTopicExist(final String topic) {
+	public static boolean doesTopicExist(final String topic, final ZkClient zk_client) {
 		Boolean does_topic_exist = my_topics.get(topic);
 		if (null != does_topic_exist) {
 			return does_topic_exist.booleanValue();
@@ -135,10 +142,7 @@ public class KafkaUtils {
 		does_topic_exist = known_topics.getIfPresent(topic);
 		if (null != does_topic_exist) {
 			return does_topic_exist.booleanValue();
-		}
-		
-		final ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
-		
+		}		
 		final boolean topic_exists = AdminUtils.topicExists(zk_client, topic);
 		known_topics.put(topic, topic_exists);		
 		return topic_exists;
@@ -231,7 +235,7 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options) {
+	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options, final ZkClient zk_client) {
 		
 		//TODO (ALEPH-10): need to handle topics getting deleted but not being removed from this map
 		//TODO (ALEPH-10): override options if they change? not sure if that's possible 
@@ -239,8 +243,6 @@ public class KafkaUtils {
 		if ( !my_topics.containsKey(topic) ) {
 			logger.debug("CREATE TOPIC");
 			//http://stackoverflow.com/questions/27036923/how-to-create-a-topic-in-kafka-through-java
-			ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);				
-			logger.debug("DOES TOPIC EXIST: " + AdminUtils.topicExists(zk_client, topic));
 			
 			if ( !AdminUtils.topicExists(zk_client, topic) ) {		
 				final Properties props = options.map(o -> { 
@@ -307,13 +309,12 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public static void deleteTopic(String topic) {
+	public static void deleteTopic(String topic, final ZkClient zk_client) {
 		// Update local cache - remote caches will need to wait to clear of course
 		known_topics.invalidate(topic);
 		my_topics.remove(topic);
 		
 		logger.debug("DELETE TOPIC: " + topic);
-		ZkClient zk_client = new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
 		AdminUtils.deleteTopic(zk_client, topic);
 	}
 }

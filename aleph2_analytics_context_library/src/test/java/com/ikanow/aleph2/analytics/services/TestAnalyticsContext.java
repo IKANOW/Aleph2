@@ -807,7 +807,7 @@ public class TestAnalyticsContext {
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.left(jn2), Optional.empty());
 		// (create topic now)
 		String topic = KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end"));
-		KafkaUtils.createTopic(topic, Optional.empty());
+		test_context._distributed_services.createTopic(topic, Optional.empty());
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
@@ -885,7 +885,7 @@ public class TestAnalyticsContext {
 				.done().get();
 		test_context.setTechnologyConfig(library);
 		
-		KafkaUtils.createTopic(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		test_context._distributed_services.createTopic(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
 		
 		String message1 = "{\"key\":\"val\"}";
 		String message2 = "{\"key\":\"val2\"}";
