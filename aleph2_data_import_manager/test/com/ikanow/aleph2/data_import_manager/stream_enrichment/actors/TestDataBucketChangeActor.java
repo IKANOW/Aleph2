@@ -253,7 +253,7 @@ public class TestDataBucketChangeActor {
 		
 		final DataBucketBean bucket = createBucket(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				Optional.empty(),
@@ -262,7 +262,7 @@ public class TestDataBucketChangeActor {
 		
 		assertTrue("Failed with no analytic technology", test1.isFail());
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.STREAMING_ENRICHMENT_DEFAULT)
@@ -293,7 +293,7 @@ public class TestDataBucketChangeActor {
 		
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, 
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
@@ -312,7 +312,7 @@ public class TestDataBucketChangeActor {
 
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2a = DataBucketChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
-				true, 
+				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
 				Validation.success(test2_input));
 
@@ -324,7 +324,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2b = DataBucketChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
-				true, 
+				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
 				Validation.success(test2_input));
 
@@ -365,7 +365,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
-				true, 
+				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
 				Validation.success(test3_input));
 
@@ -406,7 +406,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3b = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
-				false, 
+				false, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
 				Validation.success(test3b_input));
 

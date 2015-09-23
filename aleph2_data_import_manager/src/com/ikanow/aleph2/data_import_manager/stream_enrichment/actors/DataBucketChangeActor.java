@@ -287,26 +287,26 @@ public class DataBucketChangeActor extends AbstractActor {
 				a_context.setBucket(message.bucket());
 				
 				// set the library bean - note if here then must have been set, else IAnalyticsTechnologyModule wouldn't exist
-				final String technology = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
+				final String technology_name_or_id = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
 				
 				// handles system classpath and streaming enrichment special cases
 				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
-						getAnalyticsTechnology_withSpecialCases(message.bucket(), technology, analytic_tech_only, 
+						getAnalyticsTechnology(message.bucket(), technology_name_or_id, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
 								message, hostname, err_or_map);
 				
 				err_or_map.forEach(map ->									
-					Optional.ofNullable(map.get(technology))
+					Optional.ofNullable(map.get(technology_name_or_id))
 						.map(lib -> a_context.setTechnologyConfig(lib._1()))
 						// Else just build a dummy shared library
 						.orElseGet(() -> a_context.setTechnologyConfig(
 											BeanTemplateUtils.build(SharedLibraryBean.class)
-												.with(SharedLibraryBean::path_name, "/" + technology)
+												.with(SharedLibraryBean::path_name, "/" + technology_name_or_id)
 											.done().get()))
 				);
 				
 				// One final system classpath/streaming enrichment fix:
-				final DataBucketBean final_bucket = finalBucketConversion(technology, message.bucket(), err_or_map);
+				final DataBucketBean final_bucket = finalBucketConversion(technology_name_or_id, message.bucket(), err_or_map);
 				
 				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
@@ -521,45 +521,11 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
-	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology_withSpecialCases(
-			final DataBucketBean bucket, 
-			final String technology,
-			final boolean analytic_tech_only,
-			final Optional<IAnalyticsTechnologyModule> streaming_enrichment,
-			final BucketActionMessage m, 
-			final String source,
-			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
-			)
-	{
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
-				Patterns.match(technology).<Validation<BasicMessageBean, IAnalyticsTechnologyModule>>andReturn()
-					// Streaming enrichment case
-					.when(t -> STREAMING_ENRICHMENT_TECH_NAME.equals(t), __ -> {
-						try { return Validation.success(streaming_enrichment.get()); }
-						catch (Throwable t) { return Validation.fail(
-								ErrorUtils.buildErrorMessage(source, m, StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, bucket.full_name())); }
-					})
-					//TODO (ALEPH-12: handle general "on classpath" case)
-					// Analytic tech specified via shared library bean as per usual 
-					.otherwise(__ -> getAnalyticsTechnology(bucket, technology, analytic_tech_only, m, source, err_or_libs))						
-					;
-
-		return err_or_tech_module;
-	}
-	
-	/** Talks to the analytic tech module - this top level function just sets the classloader up and creates the module,
-	 *  then calls talkToHarvester_actuallyTalk to do the talking
-	 * @param bucket
-	 * @param libs
-	 * @param analytic_tech_only
-	 * @param m
-	 * @param source
-	 * @return
-	 */
 	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology(
 			final DataBucketBean bucket, 
-			final String technology,
+			final String technology_name_or_id,
 			final boolean analytic_tech_only,
+			final Optional<IAnalyticsTechnologyModule> streaming_enrichment,
 			final BucketActionMessage m, 
 			final String source,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
@@ -572,12 +538,27 @@ public class DataBucketChangeActor extends AbstractActor {
 					,
 					// Normal
 					libs -> {
-						final Tuple2<SharedLibraryBean, String> libbean_path = libs.get(technology);  // (exists by construction)
+						
+						// Special case: streaming enrichment classpath
+						//TODO (ALEPH-12: handle general "on classpath" case)
+						final Tuple2<String, String> entrypoint_path = Lambdas.get(() -> {
+							return Optional.ofNullable(libs.get(technology_name_or_id)) 
+										.map(bean_path -> Tuples._2T(bean_path._1().misc_entry_point(), bean_path._2()))
+									.orElseGet(() -> {
+										return Patterns.match(technology_name_or_id).<Tuple2<String, String>>andReturn()
+											.when(t -> STREAMING_ENRICHMENT_TECH_NAME.equals(t), __ -> {
+												try { 
+													return Tuples._2T(streaming_enrichment.get().getClass().getName(), null); 
+												} catch (Throwable t) { return null; }
+											})
+											.otherwise(__ -> null);
+									});
+						});
 
-						if ((null == libbean_path) || (null == libbean_path._2())) { // Nice easy error case, probably can't ever happen
+						if ((null == entrypoint_path) || (null == entrypoint_path._1())) { // Nice easy error case, probably can't ever happen (note ._2() can be null)
 							return Validation.fail(
 									SharedErrorUtils.buildErrorMessage(source, m,
-											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), technology));
+											SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), technology_name_or_id));
 						}
 						
 						final List<String> other_libs = analytic_tech_only 
@@ -586,8 +567,8 @@ public class DataBucketChangeActor extends AbstractActor {
 						
 						final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
 								ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
-										libbean_path._1().misc_entry_point(), 
-										Optional.of(libbean_path._2()),
+										entrypoint_path._1(), 
+										Optional.ofNullable(entrypoint_path._2()),
 										other_libs,
 										source, m);
 						
