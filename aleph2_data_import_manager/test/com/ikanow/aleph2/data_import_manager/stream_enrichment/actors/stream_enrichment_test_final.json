@@ -6,7 +6,7 @@
 			{
 				"name": "streaming_topology_1",
 				"enabled": true,
-				"analytic_technology_name_or_id": "streaming_enrichment_service",
+				"analytic_technology_name_or_id": "StreamingEnrichmentService",
 		        "module_name_or_id": "/app/aleph2/library/storm_js_main.jar",
 		        "library_names_or_ids": ["/app/aleph2/library/storm_js_test.jar"],
 		        "entry_point": "test.entry.point",
@@ -32,7 +32,7 @@
     "streaming_enrichment_topology": {
         "config": {"userScript": "$$SCRIPT_js$$"},
         "dependencies": [],
-        "enabled": false,
+        "enabled": true,
        	"module_name_or_id": "/app/aleph2/library/storm_js_main.jar",
         "library_names_or_ids": ["/app/aleph2/library/storm_js_test.jar"],
         "name": "streaming_topology_1"

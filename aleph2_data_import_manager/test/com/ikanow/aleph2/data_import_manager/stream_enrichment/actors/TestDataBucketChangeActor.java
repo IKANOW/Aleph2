@@ -75,6 +75,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -166,6 +167,7 @@ public class TestDataBucketChangeActor {
 						BeanTemplateUtils.clone(createBucket("test_actor"))
 								.with(DataBucketBean::analytic_thread, null)
 								.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
+								.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 						.done()
 						;
 		
@@ -249,10 +251,10 @@ public class TestDataBucketChangeActor {
 	public void test_getAnalyticsTechnology_specialCases() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
 		// Just check the streaming enrichment error and success cases
 		
-		final DataBucketBean bucket = createBucket("streaming_enrichment_service"); //(note this also sets the analytics name in the jobs)	
+		final DataBucketBean bucket = createBucket(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
-				bucket, "streaming_enrichment_service", 
+				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test1", 
@@ -261,15 +263,14 @@ public class TestDataBucketChangeActor {
 		assertTrue("Failed with no analytic technology", test1.isFail());
 		
 		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2 = DataBucketChangeActor.getAnalyticsTechnology_withSpecialCases(
-				bucket, "streaming_enrichment_service", 
+				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.STREAMING_ENRICHMENT_DEFAULT)
 					.map(s->(IAnalyticsTechnologyModule)s),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test2", 
 				Validation.success(Collections.emptyMap()));
 
-		assertTrue("Failed with no analytic technology", test2.isSuccess());
-
+		assertTrue("Failed with no analytic technology: " + test2.validation(f -> f,  s -> "(worked)"), test2.isSuccess());
 		
 		// (Later will include the system classpath cases also)		
 	}
@@ -470,6 +471,7 @@ public class TestDataBucketChangeActor {
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
+									.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 									.done());
 			
 			// 1) Normal operation
@@ -499,6 +501,7 @@ public class TestDataBucketChangeActor {
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)
+									.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 									.done());
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
