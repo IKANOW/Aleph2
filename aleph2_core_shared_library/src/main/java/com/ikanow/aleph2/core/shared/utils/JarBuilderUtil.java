@@ -18,6 +18,7 @@ package com.ikanow.aleph2.core.shared.utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -28,6 +29,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
+
 
 
 
@@ -91,7 +93,7 @@ public class JarBuilderUtil {
 	 * @param output_path
 	 * @throws IOException
 	 */
-	public static void mergeJars(List<String> jars_to_merge, String output_path, Set<String> dir_names_to_not_merge) throws IOException {
+	public static void mergeJars(Collection<String> jars_to_merge, String output_path, Set<String> dir_names_to_not_merge) throws IOException {
 		ZipOutputStream outputZip = new ZipOutputStream(new FileOutputStream(output_path));
         //loop over the zips, the first entry to write a file to zip has precendence (can't be overwritten)        
         jars_to_merge.stream().forEach(zip_path -> {
@@ -155,7 +157,7 @@ public class JarBuilderUtil {
 	 * @param jars_to_merge
 	 * @return
 	 */
-	public static String getHashedJarName(final List<String> jars_to_merge, String output_folder) {				
+	public static String getHashedJarName(final Collection<String> jars_to_merge, String output_folder) {				
 		final String hash = String.valueOf( Objects.hash(jars_to_merge));
 		final String output_location = output_folder + File.separator + DEFAULT_JAR_NAME_PREFIX + hash + ".jar";
 		return output_location;
@@ -167,7 +169,7 @@ public class JarBuilderUtil {
 	 * @param jars_to_merge
 	 * @return
 	 */
-	public static Date getMostRecentlyUpdatedFile(final List<String> jars_to_merge) {
+	public static Date getMostRecentlyUpdatedFile(final Collection<String> jars_to_merge) {
 		long most_recent_update = jars_to_merge.stream().map(jar_path -> {			
 			File file = new File(jar_path);
 			long last_modified = file.lastModified();
