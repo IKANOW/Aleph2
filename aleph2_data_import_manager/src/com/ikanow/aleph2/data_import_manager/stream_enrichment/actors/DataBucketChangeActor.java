@@ -297,7 +297,12 @@ public class DataBucketChangeActor extends AbstractActor {
 				
 				err_or_map.forEach(map ->									
 					Optional.ofNullable(map.get(technology))
-						.ifPresent(lib -> a_context.setTechnologyConfig(lib._1()))
+						.map(lib -> a_context.setTechnologyConfig(lib._1()))
+						// Else just build a dummy shared library
+						.orElseGet(() -> a_context.setTechnologyConfig(
+											BeanTemplateUtils.build(SharedLibraryBean.class)
+												.with(SharedLibraryBean::path_name, "/" + technology)
+											.done().get()))
 				);
 				
 				// One final system classpath/streaming enrichment fix:

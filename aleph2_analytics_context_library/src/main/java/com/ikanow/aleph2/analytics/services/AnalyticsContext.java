@@ -85,8 +85,6 @@ import com.typesafe.config.ConfigValueFactory;
 
 import fj.data.Either;
 
-//TODO: ALEPH-12 wire up module config via signature
-
 /** The implementation of the analytics context interface
  * @author Alex
  */
