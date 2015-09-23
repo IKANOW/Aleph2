@@ -290,7 +290,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				final String technology_name_or_id = getAnalyticsTechnologyName(message.bucket()).get(); // (exists by construction)
 				
 				// handles system classpath and streaming enrichment special cases
-				final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module =
+				final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module =
 						getAnalyticsTechnology(message.bucket(), technology_name_or_id, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
 								message, hostname, err_or_map);
@@ -521,7 +521,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param source
 	 * @return
 	 */
-	protected static Validation<BasicMessageBean, IAnalyticsTechnologyModule> getAnalyticsTechnology(
+	protected static Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> getAnalyticsTechnology(
 			final DataBucketBean bucket, 
 			final String technology_name_or_id,
 			final boolean analytic_tech_only,
@@ -532,7 +532,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			)
 	{
 		try {
-			return err_or_libs.<Validation<BasicMessageBean, IAnalyticsTechnologyModule>>validation(
+			return err_or_libs.<Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>>validation(
 					//Error:
 					error -> Validation.fail(error)
 					,
@@ -565,8 +565,8 @@ public class DataBucketChangeActor extends AbstractActor {
 								? Collections.emptyList() 
 								: libs.values().stream().map(lp -> lp._2()).collect(Collectors.toList());
 						
-						final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
-								ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+						final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> ret_val = 
+								ClassloaderUtils.getFromCustomClasspath_withClassloader(IAnalyticsTechnologyModule.class, 
 										entrypoint_path._1(), 
 										Optional.ofNullable(entrypoint_path._2()),
 										other_libs,
@@ -595,7 +595,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final String source,
 			final AnalyticsContext context,
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)
-			final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module // "pipeline element"
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module // "pipeline element"
 			)
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
@@ -607,9 +607,10 @@ public class DataBucketChangeActor extends AbstractActor {
 				error -> CompletableFuture.completedFuture(new BucketActionHandlerMessage(source, error))
 				,
 				// Normal
-				tech_module -> {
-					_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
-					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
+				techmodule_classloader -> {
+					final IAnalyticsTechnologyModule tech_module = techmodule_classloader._1();
+					_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
+					Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
 					
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
@@ -775,7 +776,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final DataBucketBean bucket, 
 			final BucketActionMessage m,
 			final String source,
-			final Validation<BasicMessageBean, IAnalyticsTechnologyModule> err_or_tech_module, 
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module, 
 			final CompletableFuture<BucketActionReplyMessage> return_value // "pipeline element"
 					)
 	{
@@ -787,7 +788,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				// Note if we're here then err_or_tech_module must be "right"
 				return CompletableFuture.completedFuture(
 						new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-							ErrorUtils.getLongForm(StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, t.getCause(), m.bucket().full_name(), err_or_tech_module.success().getClass()))));
+							ErrorUtils.getLongForm(StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, t.getCause(), m.bucket().full_name(), err_or_tech_module.success()._1().getClass()))));
 			}
 		}
 		//(else fall through to...)

@@ -253,7 +253,7 @@ public class TestDataBucketChangeActor {
 		
 		final DataBucketBean bucket = createBucket(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				Optional.empty(),
@@ -262,7 +262,7 @@ public class TestDataBucketChangeActor {
 		
 		assertTrue("Failed with no analytic technology", test1.isFail());
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2 = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 				true, 
 				_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.STREAMING_ENRICHMENT_DEFAULT)
@@ -293,8 +293,9 @@ public class TestDataBucketChangeActor {
 		
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test1 = DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(),
-				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = 
+				DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(),
+						new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
 		assertEquals("test_source", test1.fail().source());
@@ -310,7 +311,7 @@ public class TestDataBucketChangeActor {
 					.put("test_tech_id_analytics_2b", Tuples._2T(null, null))
 					.build();
 
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2a = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2a = DataBucketChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
 				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
@@ -322,7 +323,7 @@ public class TestDataBucketChangeActor {
 		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_analytics_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test2b = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2b = DataBucketChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
 				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
@@ -363,7 +364,7 @@ public class TestDataBucketChangeActor {
 							cached_file.success()))
 					.build();		
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3 = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3 = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				true, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
@@ -374,7 +375,7 @@ public class TestDataBucketChangeActor {
 		}		
 		assertTrue("getAnalyticsTechnology call succeeded", test3.isSuccess());
 		assertTrue("harvest tech created: ", test3.success() != null);
-		assertEquals(lib_elements.get(0).misc_entry_point(), test3.success().getClass().getName());
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3.success()._1().getClass().getName());
 		
 		// Now check with the "not just the harvest tech" flag set
 		
@@ -404,7 +405,7 @@ public class TestDataBucketChangeActor {
 							cached_file.success()))
 					.build();		
 		
-		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> test3b = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3b = DataBucketChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				false, Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
@@ -415,7 +416,7 @@ public class TestDataBucketChangeActor {
 		}		
 		assertTrue("getAnalyticsTechnology call succeeded", test3b.isSuccess());
 		assertTrue("harvest tech created: ", test3b.success() != null);
-		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
+		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success()._1().getClass().getName());		
 	}
 	
 	@Test
@@ -564,7 +565,7 @@ public class TestDataBucketChangeActor {
 					"test2", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
 			final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
@@ -579,7 +580,7 @@ public class TestDataBucketChangeActor {
 					"test3", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test3.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test3.get();
@@ -601,7 +602,7 @@ public class TestDataBucketChangeActor {
 					"test4", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test4.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test4.get();
@@ -623,7 +624,7 @@ public class TestDataBucketChangeActor {
 					"test4b", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4b.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4b.get();					
@@ -639,7 +640,7 @@ public class TestDataBucketChangeActor {
 					"test5", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -661,7 +662,7 @@ public class TestDataBucketChangeActor {
 					"test5b", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -688,7 +689,7 @@ public class TestDataBucketChangeActor {
 					"test7", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();		
@@ -706,7 +707,7 @@ public class TestDataBucketChangeActor {
 					"test8", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 									
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test8.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test8.get();
@@ -731,7 +732,7 @@ public class TestDataBucketChangeActor {
 					"testX", 
 					_actor_context.getNewAnalyticsContext(), 
 					Collections.emptyMap(), 
-					Validation.success(analytics_tech));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 									
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, testX.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage testX_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) testX.get();
@@ -1157,6 +1158,68 @@ public class TestDataBucketChangeActor {
 		// Specify classpath
 		
 		Class<?> h = Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", true, res.success().getClass().getClassLoader());
+		assertEquals("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", h.getName());
+		
+		
+	}
+	
+	@Test
+	public void test_classloader_systemClasspathCase() throws ClassNotFoundException {
+		
+		//(so it's already on the classpath)
+		@SuppressWarnings("unused")
+		IAnalyticsTechnologyModule x = new com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologyService();
+		
+		// TEst some standard operations:
+		
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> res = ClassloaderUtils.getFromCustomClasspath_withClassloader(IAnalyticsTechnologyModule.class, 
+				"com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologyService",
+				Optional.empty(),
+				Arrays.asList("file:misc_test_assets/simple-analytics-example.jar"),
+				"test",
+				"test");
+		
+		assertTrue("Should get module: " + res.validation(f->f.message(), s->""), res.isSuccess());
+		
+		// Check can't find example harvest technology in classpath
+		
+		ClassLoader class_loader = 
+				res.success()._2()
+				;
+		
+		try {
+			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+			fail("Should throw class not found exception");
+		}
+		catch (Throwable e) {}
+		
+		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
+		try {			
+			Thread.currentThread().setContextClassLoader(class_loader);
+			
+			try {
+				// This _doesn't_ work (defaults to system classloader):
+				Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+				fail("Should still throw class not found exception");
+			}
+			catch (Throwable t) {}
+			
+			Class<?> h = Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", true, Thread.currentThread().getContextClassLoader());
+			assertEquals("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", h.getName());
+		}
+		finally {
+			Thread.currentThread().setContextClassLoader(saved_current_classloader);
+		}
+		// Back to original classpath
+		try {
+			Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology");
+			fail("Should throw class not found exception");
+		}
+		catch (Throwable e) {}		
+		
+		// Specify classpath
+		
+		Class<?> h = Class.forName("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", true, class_loader);
 		assertEquals("com.ikanow.aleph2.test.example.ExampleHarvestTechnology", h.getName());
 		
 		
