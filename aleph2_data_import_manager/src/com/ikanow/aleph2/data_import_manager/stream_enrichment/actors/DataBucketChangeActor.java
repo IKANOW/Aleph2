@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
 
 
 
@@ -79,6 +81,7 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -86,6 +89,7 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
 
 
 
@@ -182,7 +186,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	
 	// Streaming enrichment handling:
 	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService");
-	public static final String STREAMING_ENRICHMENT_TECH_NAME = "streaming_enrichment_service";
+	public static final String STREAMING_ENRICHMENT_TECH_NAME = STREAMING_ENRICHMENT_DEFAULT.get();
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -233,7 +237,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		    					 return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
 		    				 })
 		    				 .orElseGet(() -> {
-		    					 _logger.warn("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name());
+		    					 _logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
 		    					 return false;
 		    				 });
 	    				
@@ -302,6 +306,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
 																			err_or_tech_module);
+				
 				return handleTechnologyErrors(final_bucket, message, hostname, err_or_tech_module, ret);
 				
 			})
@@ -318,7 +323,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			})
 			.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 				// Some information logging:
-				_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name());
+				_logger.warn(ErrorUtils.get("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name()));
 				
 				final BasicMessageBean error_bean = 
 						SharedErrorUtils.buildErrorMessage(hostname, message,
@@ -362,12 +367,17 @@ public class DataBucketChangeActor extends AbstractActor {
 	 */
 	protected static DataBucketBean convertStreamingEnrichmentToAnalyticBucket(final DataBucketBean bucket) {
 		
-		final EnrichmentControlMetadataBean enrichment = bucket.streaming_enrichment_topology();
-		
-		if (null == enrichment) {
+		if ((null == bucket.streaming_enrichment_topology()) || !isEnrichmentType(bucket))
+		{
 			return bucket;
 		}
 		else {
+			final EnrichmentControlMetadataBean enrichment =  Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(false)
+					? bucket.streaming_enrichment_topology()
+					: BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.done().get()
+					;			
+			
 			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
 					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
 							true, //(enabled) 
@@ -412,6 +422,15 @@ public class DataBucketChangeActor extends AbstractActor {
 		}
 	}
 	
+	/** Quick utility to determine if a bucket has a streaming type
+	 * @param bucket
+	 * @return
+	 */
+	private static boolean isEnrichmentType(final DataBucketBean bucket) {
+		return _streaming_types.contains(Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
+	}
+	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);
+	
 	/** Fills in the jobs' entry points in the streaming enrichment case
 	 * @param technology
 	 * @param bucket
@@ -427,13 +446,17 @@ public class DataBucketChangeActor extends AbstractActor {
 				fail -> bucket
 				,
 				libs -> { 
-					if (STREAMING_ENRICHMENT_TECH_NAME.equals(technology)) // (must mean that is non null bucket.streaming_enrichment_topology())
+					if (STREAMING_ENRICHMENT_TECH_NAME.equals(technology) // enrichment is specified
+							&& (null != bucket.streaming_enrichment_topology()) // there is a streaming topology specified
+							&& Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(true) // it's enabled (otherwise entry_point==null)
+							&& isEnrichmentType(bucket) // it is an enrichment bucket
+							) 
 					{
 						// Check all modules and libs...
 						return Stream.concat(
-									Optional.of(bucket.streaming_enrichment_topology().module_name_or_id()).map(Stream::of).orElse(Stream.empty())
+									Optional.ofNullable(bucket.streaming_enrichment_topology().module_name_or_id()).map(Stream::of).orElse(Stream.empty())
 									,
-									Optional.of(bucket.streaming_enrichment_topology().library_names_or_ids()).map(List::stream).orElse(Stream.empty())
+									Optional.ofNullable(bucket.streaming_enrichment_topology().library_names_or_ids()).map(List::stream).orElse(Stream.empty())
 								)
 								.map(name -> libs.get(name)) //...to see if we can find the corresponding shared library...
 								.filter(t2 -> t2 != null)
