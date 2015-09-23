@@ -271,7 +271,6 @@ public class KafkaUtils {
 				x.shutdown();
 			}
 			my_topics.put(topic, true); //topic either already existed or was created
-			zk_client.close();
 		}
 	}
 

@@ -73,6 +73,9 @@ public class TestKafkaUtils {
 		// Create a topic
 		KafkaUtils.createTopic("random_topic", Optional.empty(), zk_client);
 		
+		/**/
+		System.out.println("-------------------");
+		
 		// Will initially return true because createTopic adds to my_topics
 		assertTrue("Topic does exist", KafkaUtils.doesTopicExist("random_topic", zk_client));
 		// Clear my_topics cache
