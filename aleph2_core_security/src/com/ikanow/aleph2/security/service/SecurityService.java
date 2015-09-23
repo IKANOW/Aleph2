@@ -151,9 +151,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
-		
-		return null;
+	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {		
+		return new SecuredCrudManagementDbService<O>(serviceContext, crud, authorizationBean);
 	}
 
 

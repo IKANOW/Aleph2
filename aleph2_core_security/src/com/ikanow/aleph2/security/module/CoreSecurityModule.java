@@ -25,9 +25,6 @@ import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.realm.text.IniRealm;
-import org.apache.shiro.session.mgt.DefaultSessionManager;
-import org.apache.shiro.session.mgt.SessionManager;
-import org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO;
 
 import com.google.inject.Provides;
 import com.google.inject.binder.AnnotatedBindingBuilder;
