@@ -17,7 +17,9 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -39,6 +41,10 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 
 
+
+import com.ikanow.aleph2.management_db.utils.AnalyticActorUtils;
+
+import scala.Tuple3;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.Actor;
@@ -129,6 +135,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	{
 		return controlLogic(supervisor, actor_context, message, BucketActionChooseActor.class, timeout);
 	}
+	
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
 	 */
@@ -160,10 +167,11 @@ public class BucketActionSupervisor extends UntypedActor {
 			final Optional<FiniteDuration> timeout)
 	{
 		final DataBucketBean bucket = message.bucket();
-		final boolean is_streaming = isStreaming(bucket);
+		final boolean is_streaming_enrichment = hasStreamingEnrichment(bucket);
+		final boolean has_streaming_analytics = !is_streaming_enrichment && bucketHasStreamingAnalytics(bucket);
 		final boolean has_harvester = hasHarvester(bucket);
 		
-		if (!is_streaming && !has_harvester) {
+		if (!is_streaming_enrichment && !has_harvester) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
 					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
@@ -172,30 +180,18 @@ public class BucketActionSupervisor extends UntypedActor {
 		}
 		else {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
-				if (is_streaming) { // (streaming + ??)
-					final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
-													BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
-													ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
-						// (note that I'm stripping the node_affinity for stream enrichment messages, they always get distributed across available nodes)
-					
-					return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
-							getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
-								.thenApply(stream -> {
-									List<BasicMessageBean> replace = Optionals.ofNullable(stream.replies()).stream()
-																		.map(r -> BeanTemplateUtils.clone(r)
-																			.with(BasicMessageBean::command, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)
-																			.done())
-																		.collect(Collectors.toList());
-									
-									return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), replace, stream.timed_out());
-								});
+				if (is_streaming_enrichment) { // (streaming + ??)
+					return handleStreamingEnrichment(bucket, supervisor, actor_context, message, timeout);
+				}
+				else if (has_streaming_analytics) {
+					return handleStreamingAnalytics(bucket, supervisor, actor_context, message, timeout);
 				}
 				else { // (harvest only)
 					return CompletableFuture.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>completedFuture(null);
 				}				
 			})
 			.andThen(cf -> {
-				if (has_harvester) { // (streaming + harvest) 
+				if (has_harvester) { // (streaming/analytics + harvest) 
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
 							// Check if the stream succeeded or failed, only call if success when a create/update-enabled message
@@ -240,6 +236,87 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	///////////////////////////////////////////////
 	
+	// MIDDLE LEVEL UTILITIES
+	
+	/** Launches a streaming enrichment request (or a request for a single aspect of an analytic bucket)
+	 * @param bucket
+	 * @param supervisor
+	 * @param actor_context
+	 * @param message
+	 * @param timeout
+	 * @return
+	 */
+	protected static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
+				handleStreamingEnrichment(
+						DataBucketBean bucket,
+						final ActorRef supervisor, final ActorSystem actor_context,
+						final BucketActionMessage message, 
+						final Optional<FiniteDuration> timeout)
+	{
+		final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
+				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
+				ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
+		// (note that I'm stripping the node_affinity for stream enrichment messages, they always get distributed across available nodes)
+
+		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
+				getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
+				.thenApply(stream -> {
+					List<BasicMessageBean> replace = Optionals.ofNullable(stream.replies()).stream()
+							.map(r -> BeanTemplateUtils.clone(r)
+									.with(BasicMessageBean::command, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)
+									.done())
+									.collect(Collectors.toList());
+
+					return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), replace, stream.timed_out());
+				});
+	}
+														
+	/** Launches a set of streaming analytics requests and aggregates their responses
+	 * @param bucket
+	 * @param supervisor
+	 * @param actor_context
+	 * @param message
+	 * @param timeout
+	 * @return
+	 */
+	protected static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
+				handleStreamingAnalytics(
+						DataBucketBean bucket,
+						final ActorRef supervisor, final ActorSystem actor_context,
+						final BucketActionMessage message, 
+						final Optional<FiniteDuration> timeout)
+	{
+
+		// Split into sub-buckets
+		final Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> sub_buckets = AnalyticActorUtils.splitAnalyticBuckets(bucket);
+		
+		//TODO (ALEPH-12) streaming only? need a T3?
+		// Create a stream of requests
+		final List<CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>> results =
+			sub_buckets.entrySet().stream()
+					.filter(kv -> (kv.getKey()._3() == MasterEnrichmentType.streaming) || (kv.getKey()._3() == MasterEnrichmentType.streaming_and_batch))
+					.map(kv -> handleStreamingEnrichment(kv.getValue(), supervisor, actor_context, message, timeout))
+					.collect(Collectors.toList());
+
+		// Aggregate the requests
+		return CompletableFuture.allOf(results.toArray(new CompletableFuture<?>[0]))
+			.thenApply(__ -> {
+				final List<BasicMessageBean> all_replies = 
+					results.stream().map(CompletableFuture::join)
+							.flatMap(reply -> reply.replies().stream())
+							.collect(Collectors.toList());
+				
+				final Set<String> all_timed_out =
+						results.stream().map(CompletableFuture::join)
+						.flatMap(reply -> reply.timed_out().stream())
+							.collect(Collectors.toSet());
+				
+				return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), all_replies, all_timed_out);
+			});		
+	}
+	
+	///////////////////////////////////////////////
+	
 	// LOW LEVEL UTILITIES
 	
 	/** If a streaming enrichment message fails and the resulting action is "positive", ie "Test"
@@ -257,10 +334,27 @@ public class BucketActionSupervisor extends UntypedActor {
 	/** Returns whether a bucket needs extra processing to set its streaming mode up
 	 * @param bucket
 	 */
-	public static boolean isStreaming(final DataBucketBean bucket) {
+	public static boolean hasStreamingEnrichment(final DataBucketBean bucket) {
 		return Optional.ofNullable(bucket.master_enrichment_type())
 						.map(type -> (type == MasterEnrichmentType.streaming) || (type == MasterEnrichmentType.streaming_and_batch))
 						.orElse(false); // (ie if null)
+	}
+	
+	/** Returns whether a bucket has any streaming analytic components
+	 * @param bucket
+	 * @return
+	 */
+	public static boolean bucketHasStreamingAnalytics(final DataBucketBean bucket) {
+		return Optional.ofNullable(bucket.analytic_thread())
+						.map(analytic -> analytic.jobs())
+						.flatMap(jobs -> jobs.stream()
+											.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
+											.map(job -> Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+											.filter(type -> (type == MasterEnrichmentType.streaming) || (type == MasterEnrichmentType.streaming_and_batch))
+											.findFirst()											
+							)
+						.map(__ -> true)
+						.orElse(false);
 	}
 	
 	/** Returns whether a bucket needs to be sent to 1+ harvest nodes 

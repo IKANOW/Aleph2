@@ -24,32 +24,35 @@ import java.util.stream.Collectors;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 
-import scala.Tuple2;
+import scala.Tuple3;
 
 /** Utility code for handling analytic buckets
  * @author Alex
  */
-public class AnalyticsUtils {
+public class AnalyticActorUtils {
 
 	/** Splits a bucket into a set of buckets with the jobs grouped by entry point/analytic thread id
 	 *  Which we'll then use to generate a set of messages
 	 * @param bucket
 	 * @return
 	 */
-	Map<Tuple2<String, String>, DataBucketBean> splitAnalyticBuckets(final DataBucketBean bucket) {
-		Map<Tuple2<String, String>, List<AnalyticThreadJobBean>> res1 = 
+	public static Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> splitAnalyticBuckets(final DataBucketBean bucket) {
+		Map<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>> res1 = 
 			Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 						.stream()
-						.collect(Collectors.groupingBy(job -> Tuples._2T(job.analytic_technology_name_or_id(), job.entry_point())));
+						.collect(Collectors.groupingBy(job -> 
+							Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type())));
 		
 		return res1.entrySet()
 					.stream()
 					.collect(Collectors
-						.<Entry<Tuple2<String, String>, List<AnalyticThreadJobBean>>, Tuple2<String, String>, DataBucketBean>
+						.<Entry<Tuple3<String, String, MasterEnrichmentType>, 
+							List<AnalyticThreadJobBean>>, Tuple3<String, String, MasterEnrichmentType>, DataBucketBean>
 						toMap(
 							kv -> kv.getKey()
 							,
