@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobOutputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
@@ -98,6 +100,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
 	public static final String __MY_TECH_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
 	public static final String __MY_MODULE_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247cff";
+	
+	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);	
 	
 	protected static class MutableState {
 		//TODO (ALEPH-12) logging information - will be genuinely mutable
@@ -403,13 +407,15 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final Optional<DataBucketBean> bucket,
 			final AnalyticThreadJobBean job)
 	{
-		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-		final boolean is_transient = Optional.ofNullable(job.output().is_transient()).orElse(false);
-		if ((MasterEnrichmentType.streaming == job.output().transient_type()) || (MasterEnrichmentType.streaming_and_batch == job.output().transient_type())) {
+		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());		
+		final AnalyticThreadJobOutputBean output = Optional.ofNullable(job.output()).orElseGet(() -> BeanTemplateUtils.build(AnalyticThreadJobOutputBean.class).done().get());		
+		final boolean is_transient = Optional.ofNullable(output.is_transient()).orElse(false);
+		
+		if (_streaming_types.contains(Optional.ofNullable(output.transient_type()).orElse(MasterEnrichmentType.none))) {
 			final String topic = is_transient
 					? _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()))
 					: 
-					  _distributed_services.generateTopicName(Optional.ofNullable(job.output().sub_bucket_path()).orElse(this_bucket.full_name()), 
+					  _distributed_services.generateTopicName(Optional.ofNullable(output.sub_bucket_path()).orElse(this_bucket.full_name()), 
 																ICoreDistributedServices.QUEUE_END_NAME)
 					;
 			return Optional.of(topic);
@@ -497,11 +503,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 	public boolean checkForListeners(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
 
 		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
-		
-		final String topic_name = job.output().is_transient()
+		final AnalyticThreadJobOutputBean output = Optional.ofNullable(job.output()).orElseGet(() -> BeanTemplateUtils.build(AnalyticThreadJobOutputBean.class).done().get());		
+
+		final String topic_name = Optional.ofNullable(output.is_transient()).orElse(false)
 				? _distributed_services.generateTopicName(this_bucket.full_name(), Optional.of(job.name()))
 				: 
-				  _distributed_services.generateTopicName(Optional.ofNullable(job.output().sub_bucket_path()).orElse(this_bucket.full_name()), 
+				  _distributed_services.generateTopicName(Optional.ofNullable(output.sub_bucket_path()).orElse(this_bucket.full_name()), 
 															ICoreDistributedServices.QUEUE_END_NAME)
 				;		
 		
