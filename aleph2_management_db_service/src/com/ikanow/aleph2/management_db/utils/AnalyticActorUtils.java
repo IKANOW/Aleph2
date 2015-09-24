@@ -16,9 +16,9 @@
 package com.ikanow.aleph2.management_db.utils;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
@@ -45,14 +45,21 @@ public class AnalyticActorUtils {
 		Map<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>> res1 = 
 			Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 						.stream()
-						.collect(Collectors.groupingBy(job -> 
-							Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type())));
+						.collect(Collectors
+								.
+								groupingBy(
+									job -> Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type())
+									,
+									() -> new LinkedHashMap<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>>()
+									,
+									Collectors.<AnalyticThreadJobBean>toList()
+								))
+								;
 		
 		return res1.entrySet()
 					.stream()
 					.collect(Collectors
-						.<Entry<Tuple3<String, String, MasterEnrichmentType>, 
-							List<AnalyticThreadJobBean>>, Tuple3<String, String, MasterEnrichmentType>, DataBucketBean>
+						.
 						toMap(
 							kv -> kv.getKey()
 							,
@@ -63,6 +70,9 @@ public class AnalyticActorUtils {
 										.done()
 									)
 									.done() 
+							,
+							(a, b) -> a, // (can't occur by construction)
+							() -> new LinkedHashMap<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean>()
 					));
 	}
 	

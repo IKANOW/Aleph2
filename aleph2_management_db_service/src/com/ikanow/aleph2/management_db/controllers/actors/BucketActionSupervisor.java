@@ -171,7 +171,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		final boolean has_streaming_analytics = !is_streaming_enrichment && bucketHasStreamingAnalytics(bucket);
 		final boolean has_harvester = hasHarvester(bucket);
 		
-		if (!is_streaming_enrichment && !has_harvester) {
+		if (!is_streaming_enrichment && !has_harvester && !has_streaming_analytics) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
 					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
@@ -341,11 +341,13 @@ public class BucketActionSupervisor extends UntypedActor {
 	}
 	
 	/** Returns whether a bucket has any streaming analytic components
+	 *  Note mutually exclusive with hasStreamingEnrichment by construction
 	 * @param bucket
 	 * @return
 	 */
 	public static boolean bucketHasStreamingAnalytics(final DataBucketBean bucket) {
-		return Optional.ofNullable(bucket.analytic_thread())
+		return !hasStreamingEnrichment(bucket) && 
+				Optional.ofNullable(bucket.analytic_thread())
 						.map(analytic -> analytic.jobs())
 						.flatMap(jobs -> jobs.stream()
 											.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))

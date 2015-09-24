@@ -1,0 +1,95 @@
+{
+	"full_name": "/test/analytic/splitting",
+    "aliases": [ "test" ],
+    "analytic_thread": {
+    	"enabled": true,
+        "jobs": [
+            {
+                "analytic_technology_name_or_id": "StreamingEnrichmentService",
+                "analytic_type": "streaming",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job1_group1"
+            },
+            {
+                "analytic_technology_name_or_id": "StreamingEnrichmentService",                
+                "entry_point": "test",
+                "analytic_type": "streaming",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job1_group2"
+            },
+            {
+                "analytic_technology_name_or_id": "StreamingEnrichmentService",
+                "analytic_type": "streaming",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job2_group1"
+            },
+            {
+                "analytic_technology_name_or_id": "StreamingEnrichmentService",
+                "analytic_type": "streaming_and_batch",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job1_group3"
+            },
+            {
+                "analytic_technology_name_or_id": "BatchEnrichmentService",                
+                "analytic_type": "streaming_and_batch",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job1_group4"
+            },
+            {
+                "analytic_technology_name_or_id": "BatchEnrichmentService",                
+                "analytic_type": "batch",
+                "entry_point": "something_different",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job1_group5"
+            },
+            {
+                "analytic_technology_name_or_id": "BatchEnrichmentService",                
+                "analytic_type": "streaming_and_batch",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "stream",
+                        "resource_name_or_id": ""
+                    }
+                ],
+                "name": "job2_group4"
+            }
+        ]
+    }
+}
