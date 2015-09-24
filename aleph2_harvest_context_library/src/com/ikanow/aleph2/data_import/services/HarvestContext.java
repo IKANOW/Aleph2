@@ -100,11 +100,11 @@ public class HarvestContext implements IHarvestContext {
 	protected final State _state_name;
 	
 	protected static class MutableState {
-		//TODO (ALEPH-19) logging information - will be genuinely mutable
-		SetOnce<DataBucketBean> bucket = new SetOnce<>();
-		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
-		SetOnce<Map<String, SharedLibraryBean>> module_config = new SetOnce<>();
+		final SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		final SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
+		final SetOnce<Map<String, SharedLibraryBean>> module_config = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
+		final SetOnce<Boolean> initialized_direct_output = new SetOnce<>();		
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -240,25 +240,11 @@ public class HarvestContext implements IHarvestContext {
 					;			
 			
 			// Only create final output services for buckets that have no streaming enrichment:
-			if (hasDirectStorageOutput(retrieve_bucket.get())) {
-				_batch_index_service = 
-						(_crud_index_service = _index_service
-													.flatMap(s -> s.getDataService())
-													.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
-						)
-						.flatMap(IDataWriteService::getBatchWriteSubservice)
-						;
+			// (otherwise can still create lazily if emitObject is called)
+			if (MasterEnrichmentType.none == Optional.ofNullable(retrieve_bucket.get().master_enrichment_type()).orElse(MasterEnrichmentType.none)) {
+				initializeOptionalOutput(Optional.empty());
 			}
-			if (hasSearchIndexOutput(retrieve_bucket.get())) {
-				_batch_storage_service = 
-						(_crud_storage_service = _storage_service.getDataService()
-													.flatMap(s -> 
-																s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), 
-																	Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
-						)
-						.flatMap(IDataWriteService::getBatchWriteSubservice)
-						;								
-			}
+			
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -266,6 +252,43 @@ public class HarvestContext implements IHarvestContext {
 			//System.out.println(ErrorUtils.getLongForm("{0}", e));			
 
 			throw new RuntimeException(e);
+		}
+	}
+	
+	/** Sets up the writers for optional output (not normally needed - only if enrichment is disabled)
+	 * @param bucket
+	 */
+	protected void initializeOptionalOutput(final Optional<DataBucketBean> bucket) {
+		
+		if (_mutable_state.initialized_direct_output.isSet()) {
+			return;
+		}
+		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		synchronized (this) {
+			_mutable_state.initialized_direct_output.trySet(true);
+			if (!_batch_index_service.isPresent()) {
+				if (hasDirectStorageOutput(my_bucket)) {
+					_batch_index_service = 
+							(_crud_index_service = _index_service
+														.flatMap(s -> s.getDataService())
+														.flatMap(s -> s.getWritableDataService(JsonNode.class, my_bucket, Optional.empty(), Optional.empty()))
+							)
+							.flatMap(IDataWriteService::getBatchWriteSubservice)
+							;
+				}
+			}
+			if (!_batch_storage_service.isPresent()) {
+				if (hasSearchIndexOutput(my_bucket)) {
+					_batch_storage_service = 
+							(_crud_storage_service = _storage_service.getDataService()
+														.flatMap(s -> 
+																	s.getWritableDataService(JsonNode.class, my_bucket, 
+																		Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
+							)
+							.flatMap(IDataWriteService::getBatchWriteSubservice)
+							;								
+				}			
+			}
 		}
 	}
 	
@@ -758,6 +781,8 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public void emitObject(Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object)
 	{
+		initializeOptionalOutput(bucket);
+		
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
 		
 		if (_batch_index_service.isPresent()) {
