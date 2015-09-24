@@ -116,15 +116,15 @@ public class HarvestContext implements IHarvestContext {
 	protected Optional<ISearchIndexService> _index_service; //(only need this sometimes)
 	protected GlobalPropertiesBean _globals;
 	
-	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service;
-	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_intermed_storage_service;	
+	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service = Optional.empty();
+	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_intermed_storage_service = Optional.empty();	
 	
 	// For writing objects out
 	// TODO (ALEPH-12): this needs to get moved into the object output library
-	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
-	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service;
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
+	protected Optional<IDataWriteService<JsonNode>> _crud_index_service = Optional.empty();
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service = Optional.empty();
+	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service = Optional.empty();
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service = Optional.empty();
 	
 	
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
@@ -142,16 +142,6 @@ public class HarvestContext implements IHarvestContext {
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
 		_globals = service_context.getGlobalProperties();
-
-		// Intermediate output:
-		_batch_intermed_storage_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
-		_crud_intermed_storage_service = Optional.empty();		
-		
-		// Final output:
-		_crud_index_service = Optional.empty();
-		_batch_index_service = Optional.empty();
-		_crud_storage_service = Optional.empty();
-		_batch_storage_service = Optional.empty();
 	}
 
 	/** In-module constructor
