@@ -113,7 +113,7 @@ public class HarvestContext implements IHarvestContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected IStorageService _storage_service;
-	protected ISearchIndexService _index_service; //(only need this sometimes)
+	protected Optional<ISearchIndexService> _index_service; //(only need this sometimes)
 	protected GlobalPropertiesBean _globals;
 	
 	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service;
@@ -215,7 +215,7 @@ public class HarvestContext implements IHarvestContext {
 				_globals = _service_context.getGlobalProperties();
 
 				// Only sometimes need this:
-				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
+				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty());
 			}			
 			// Get bucket 
 			
@@ -242,7 +242,8 @@ public class HarvestContext implements IHarvestContext {
 			// Only create final output services for buckets that have no streaming enrichment:
 			if (hasDirectStorageOutput(retrieve_bucket.get())) {
 				_batch_index_service = 
-						(_crud_index_service = _index_service.getDataService()
+						(_crud_index_service = _index_service
+													.flatMap(s -> s.getDataService())
 													.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
 						)
 						.flatMap(IDataWriteService::getBatchWriteSubservice)

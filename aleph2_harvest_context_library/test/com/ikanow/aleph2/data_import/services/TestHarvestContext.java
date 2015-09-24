@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -332,7 +333,10 @@ public class TestHarvestContext {
 	public void test_produceConsume() throws JsonProcessingException, IOException {
 		_logger.info("running test_produceConsume");
 		
-		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with("full_name", "/TEST/HARVEST/CONTEXT").done().get();
+		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
+																.with(DataBucketBean::full_name, "/TEST/HARVEST/CONTEXT")
+																.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+														.done().get();
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
