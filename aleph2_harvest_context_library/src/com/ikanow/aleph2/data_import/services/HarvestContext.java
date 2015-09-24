@@ -40,19 +40,24 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -108,10 +113,19 @@ public class HarvestContext implements IHarvestContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected IStorageService _storage_service;
+	protected ISearchIndexService _index_service; //(only need this sometimes)
 	protected GlobalPropertiesBean _globals;
 	
-	protected Optional<IDataWriteService<String>> _crud_storage_service;
-	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_storage_service;	
+	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service;
+	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_intermed_storage_service;	
+	
+	// For writing objects out
+	// TODO (ALEPH-12): this needs to get moved into the object output library
+	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
+	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service;
+	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
+	
 	
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
@@ -128,9 +142,16 @@ public class HarvestContext implements IHarvestContext {
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
 		_globals = service_context.getGlobalProperties();
+
+		// Intermediate output:
+		_batch_intermed_storage_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
+		_crud_intermed_storage_service = Optional.empty();		
 		
-		_batch_storage_service = Optional.empty(); //(can't call from IN_TECHNOLOGY)
-		_crud_storage_service = Optional.empty();		
+		// Final output:
+		_crud_index_service = Optional.empty();
+		_batch_index_service = Optional.empty();
+		_crud_storage_service = Optional.empty();
+		_batch_storage_service = Optional.empty();
 	}
 
 	/** In-module constructor
@@ -182,6 +203,9 @@ public class HarvestContext implements IHarvestContext {
 				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
+				
+				// Only sometimes need this:
+				_index_service = to_clone._index_service;
 			}
 			else {							
 				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
@@ -189,6 +213,9 @@ public class HarvestContext implements IHarvestContext {
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_storage_service = _service_context.getStorageService();
 				_globals = _service_context.getGlobalProperties();
+
+				// Only sometimes need this:
+				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
 			}			
 			// Get bucket 
 			
@@ -202,8 +229,9 @@ public class HarvestContext implements IHarvestContext {
 							.collect(Collectors.toMap(kv -> kv.getKey(), kv -> BeanTemplateUtils.from(kv.getValue(), SharedLibraryBean.class).get())));
 			}
 			
-			_batch_storage_service = 
-					(_crud_storage_service = _storage_service.getDataService()
+			// Always want intermediate output service:
+			_batch_intermed_storage_service = 
+					(_crud_intermed_storage_service = _storage_service.getDataService()
 												.flatMap(s -> 
 															s.getWritableDataService(String.class, retrieve_bucket.get(), 
 																Optional.of(IStorageService.StorageStage.json.toString()), Optional.empty()))
@@ -211,6 +239,25 @@ public class HarvestContext implements IHarvestContext {
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
 					;			
 			
+			// Only create final output services for buckets that have no streaming enrichment:
+			if (hasDirectStorageOutput(retrieve_bucket.get())) {
+				_batch_index_service = 
+						(_crud_index_service = _index_service.getDataService()
+													.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
+						)
+						.flatMap(IDataWriteService::getBatchWriteSubservice)
+						;
+			}
+			if (hasSearchIndexOutput(retrieve_bucket.get())) {
+				_batch_storage_service = 
+						(_crud_storage_service = _storage_service.getDataService()
+													.flatMap(s -> 
+																s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), 
+																	Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
+						)
+						.flatMap(IDataWriteService::getBatchWriteSubservice)
+						;								
+			}
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -235,18 +282,57 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public void sendObjectToStreamingPipeline(
 			Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object) {
-				
-		final String obj_str =  object.either(JsonNode::toString, map -> _mapper.convertValue(map, JsonNode.class).toString());
 		
-		if (_batch_storage_service.isPresent()) {
-			_batch_storage_service.get().storeObject(obj_str);
+		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get()); 
+
+		final boolean streaming_pipeline_disabled = 
+				(MasterEnrichmentType.none == Optional.ofNullable(this_bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
+		
+		final boolean emit_to_pipeline = Lambdas.get(() -> {
+			if  (streaming_pipeline_disabled) {
+				this.emitObject(bucket, object);
+				final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), Optional.empty());
+				return (_distributed_services.doesTopicExist(topic));				
+			}
+			else return true;
+		});
+		
+		if (emit_to_pipeline) {
+			final String obj_str =  object.either(JsonNode::toString, map -> _mapper.convertValue(map, JsonNode.class).toString());
+			
+			if (_batch_intermed_storage_service.isPresent()) {
+				_batch_intermed_storage_service.get().storeObject(obj_str);
+			}
+			else if (_crud_intermed_storage_service.isPresent()){ // (super slow)
+				_crud_intermed_storage_service.get().storeObject(obj_str);
+			}				
+			_distributed_services.produce(_distributed_services.generateTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name(), Optional.empty()), obj_str);
 		}
-		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_crud_storage_service.get().storeObject(obj_str);
-		}				
-		_distributed_services.produce(_distributed_services.generateTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name(), Optional.empty()), obj_str);
 	}
 
+	/** Whether the bucket needs direct output to file
+	 * @param bucket
+	 * @return
+	 */
+	public static boolean hasDirectStorageOutput(final DataBucketBean bucket) {
+		return (MasterEnrichmentType.none == Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none))
+				&&
+				Optionals.of(() -> bucket.data_schema().storage_schema().processed())
+						.map(p -> Optional.ofNullable(p.enabled()).orElse(true))
+						.orElse(false);
+	}
+	/** Whether the bucket needs direct output to the search index
+	 * @param bucket
+	 * @return
+	 */
+	public static boolean hasSearchIndexOutput(final DataBucketBean bucket) {
+		return (MasterEnrichmentType.none == Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none))
+				&&
+				Optionals.of(() -> bucket.data_schema().search_index_schema())
+						.map(p -> Optional.ofNullable(p.enabled()).orElse(true))
+						.orElse(false);
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getHarvestContextLibraries(java.util.Optional)
 	 */
@@ -294,6 +380,14 @@ public class HarvestContext implements IHarvestContext {
 							.flatMap(x -> x.stream())
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 							.collect(Collectors.toSet());
+			
+			if (_mutable_state.bucket.isSet()) {
+				if (hasSearchIndexOutput(_mutable_state.bucket.get())) {
+					_service_context.getSearchIndexService().ifPresent(search_index_service -> {
+						mandatory_service_class_files.add(LiveInjector.findPathJar(search_index_service.getClass(), ""));
+					});
+				}
+			}
 			
 			// Combine them together
 			final List<String> ret_val = ImmutableSet.<String>builder()
@@ -353,14 +447,25 @@ public class HarvestContext implements IHarvestContext {
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
 			final ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> complete_services_set = 
-					ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
-							.addAll(services.orElse(Collections.emptySet()))
-							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
-							.add(Tuples._2T(ISecurityService.class, Optional.empty()))
-							.add(Tuples._2T(IStorageService.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
-							.build();
+					Optional.of(
+						ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
+								.addAll(services.orElse(Collections.emptySet()))
+								.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
+								.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
+								.add(Tuples._2T(ISecurityService.class, Optional.empty()))
+								.add(Tuples._2T(IStorageService.class, Optional.empty()))
+								.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
+					)
+					// Optional services:
+					.map(sb -> 
+						(hasSearchIndexOutput(bucket.orElseGet(() -> _mutable_state.bucket.get())))
+								? 
+								sb.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
+									.add(Tuples._2T(ITemporalService.class, Optional.empty()))
+									.add(Tuples._2T(IColumnarService.class, Optional.empty()))
+								: 
+								sb)
+					.map(sb -> sb.build()).get();
 			
 			final Config config_no_services = full_config.withoutPath("service");
 			
@@ -651,7 +756,19 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public void emitObject(Optional<DataBucketBean> bucket, Either<JsonNode, Map<String, Object>> object)
 	{
-		//TODO (ALEPH-41, ALEPH-12): Fill this in later (this dumps the JSON into the ready directory, right?)
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
+		
+		if (_batch_index_service.isPresent()) {
+			_batch_index_service.get().storeObject(obj_json);
+		}
+		else if (_crud_index_service.isPresent()){ // (super slow)
+			_crud_index_service.get().storeObject(obj_json);
+		}
+		if (_batch_storage_service.isPresent()) {
+			_batch_storage_service.get().storeObject(obj_json);
+		}
+		else if (_crud_storage_service.isPresent()){ // (super slow)
+			_crud_storage_service.get().storeObject(obj_json);
+		}
 	}
 }
