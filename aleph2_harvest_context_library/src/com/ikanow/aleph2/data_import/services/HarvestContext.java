@@ -288,10 +288,11 @@ public class HarvestContext implements IHarvestContext {
 		final boolean streaming_pipeline_disabled = 
 				(MasterEnrichmentType.none == Optional.ofNullable(this_bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
 		
+		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), Optional.empty());
+		
 		final boolean emit_to_pipeline = Lambdas.get(() -> {
 			if  (streaming_pipeline_disabled) {
 				this.emitObject(bucket, object);
-				final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), Optional.empty());
 				return (_distributed_services.doesTopicExist(topic));				
 			}
 			else return true;
@@ -306,7 +307,7 @@ public class HarvestContext implements IHarvestContext {
 			else if (_crud_intermed_storage_service.isPresent()){ // (super slow)
 				_crud_intermed_storage_service.get().storeObject(obj_str);
 			}				
-			_distributed_services.produce(_distributed_services.generateTopicName(bucket.orElseGet(() -> _mutable_state.bucket.get()).full_name(), Optional.empty()), obj_str);
+			_distributed_services.produce(topic, obj_str);
 		}
 	}
 
