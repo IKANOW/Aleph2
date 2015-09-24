@@ -38,6 +38,7 @@ public class CoreSecurityModule extends ShiroModule {
     protected void configureShiro() {
         	bindRealms();
         	bind(CacheManager.class).to(EhCacheManager.class).asEagerSingleton();
+        	expose(CacheManager.class);
     }
 
     @Provides
