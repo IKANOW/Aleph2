@@ -66,6 +66,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeleti
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.module.CoreManagementDbModule;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils.SuccessfulNodeType;
 
 import fj.Unit;
 
@@ -383,7 +384,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 							)
 							.thenApply(msg -> msg.replies());
 					
-			return MgmtCrudUtils.getSuccessfulNodes(future_replies)
+			return MgmtCrudUtils.getSuccessfulNodes(future_replies, SuccessfulNodeType.all_technologies)
 					.thenCombine(future_replies, (hostnames, replies) -> {
 						final String reply_str = replies.stream().map(m -> m.message()).collect(Collectors.joining(";"));
 						//make sure there is at least 1 hostname result, otherwise throw error

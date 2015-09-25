@@ -201,15 +201,19 @@ public class MgmtCrudUtils {
 		});
 	}
 	
+	public enum SuccessfulNodeType { harvest_only, all_technologies };
+	
 	/** Quick utility function to extract a set of sources (hostnames) that returned with success==true
 	 * @param mgmt_results - management future including non-trivial side channel
+	 * @param include_analytics - for setting node affinity,
 	 * @return
 	 */
-	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final CompletableFuture<Collection<BasicMessageBean>> mgmt_results) {
+	static public <X> CompletableFuture<Set<String>> getSuccessfulNodes(final CompletableFuture<Collection<BasicMessageBean>> mgmt_results, final SuccessfulNodeType which_nodes) {
 		return mgmt_results.thenApply(list -> {
 			return list.stream()
 					.filter(msg -> msg.success())
-					.filter(msg -> (null == msg.command()) || !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
+					.filter(msg -> (SuccessfulNodeType.all_technologies == which_nodes) ||
+								(null == msg.command()) || !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
 					.map(msg -> msg.source())
 					.collect(Collectors.toSet());
 		});
@@ -230,7 +234,7 @@ public class MgmtCrudUtils {
 				return applyCrudPredicate(cursor, crud_predicate);
 		}));
 		
-		final CompletableFuture<Set<String>> part2 = getSuccessfulNodes(part1.getManagementResults());
+		final CompletableFuture<Set<String>> part2 = getSuccessfulNodes(part1.getManagementResults(), SuccessfulNodeType.harvest_only);
 		return Tuples._2T(part1, part2);
 	}
 	

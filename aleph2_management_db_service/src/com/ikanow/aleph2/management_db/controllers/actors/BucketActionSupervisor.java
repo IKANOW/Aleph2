@@ -350,7 +350,7 @@ public class BucketActionSupervisor extends UntypedActor {
 				Optional.ofNullable(bucket.analytic_thread())
 						.map(analytic -> analytic.jobs())
 						.flatMap(jobs -> jobs.stream()
-											.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
+											// (don't filter out by enabled:false ... those jobs get ignore or possibly suspended in the DataBucketChangeActor)
 											.map(job -> Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
 											.filter(type -> (type == MasterEnrichmentType.streaming) || (type == MasterEnrichmentType.streaming_and_batch))
 											.findFirst()											

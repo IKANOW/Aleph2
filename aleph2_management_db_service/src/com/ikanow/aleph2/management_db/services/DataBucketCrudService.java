@@ -99,6 +99,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils.SuccessfulNodeType;
 
 import fj.data.Validation;
 
@@ -1104,7 +1105,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Apply the affinity to the bucket status (which must exist, by construction):
 		// (node any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
-		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
+		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only));
 
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
@@ -1156,7 +1157,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
 		if (node_affinity.isEmpty()) {
-			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results));
+			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only));
 			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 		}
 		else {
