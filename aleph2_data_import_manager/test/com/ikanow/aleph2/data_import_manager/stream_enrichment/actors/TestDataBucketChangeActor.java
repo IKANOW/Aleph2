@@ -675,12 +675,17 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
-			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
-			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
 			assertEquals("test5a", test_reply.source());
-			final BasicMessageBean test_reply1 = test_reply.reply();
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
 			assertEquals("called onUpdatedThread: true", test_reply1.message());
 			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			// SUSPEND BECAUSE IT'S DISABLED
+			assertEquals("called suspendAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
 		}		
 		// Test 5b: suspend
 		{
@@ -749,6 +754,37 @@ public class TestDataBucketChangeActor {
 			assertEquals("called startAnalyticJobTest", test_reply2.message());
 			assertEquals(true, test_reply2.success());
 		}
+		// Test 8b: test - but with no enabled jobs
+		{
+			final DataBucketBean disabled_bucket = BeanTemplateUtils.clone(bucket)
+														.with(DataBucketBean::analytic_thread, 
+																BeanTemplateUtils.clone(bucket.analytic_thread())
+																	.with(AnalyticThreadBean::jobs, 
+																			bucket.analytic_thread().jobs().stream().map(j ->
+																				BeanTemplateUtils.clone(j).with(AnalyticThreadJobBean::enabled, false).done())
+																			.collect(Collectors.toList()))
+																.done()
+																)
+													.done();
+			
+			final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
+			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
+			
+			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketChangeActor.talkToAnalytics(
+					disabled_bucket, test,
+					"test8b", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+									
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
+			assertEquals("test8b", test_reply.source());
+			final BasicMessageBean test_reply1 = test_reply.reply();
+			assertEquals("called onTestThread", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+		}		
+
 		// Test X: unrecognized
 		{
 			// Use reflection to create a "raw" BucketActionMessage
