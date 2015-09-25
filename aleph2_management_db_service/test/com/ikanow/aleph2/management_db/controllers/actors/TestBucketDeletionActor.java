@@ -310,6 +310,8 @@ public class TestBucketDeletionActor {
 
 	@Test
 	public void test_bucketDeletionActor_purge_delayed() throws Exception {
+		_logger.info("Running test_bucketDeletionActor_purge_delayed");
+		
 		final Tuple2<String,ActorRef> host_actor = insertActor(TestActor_Accepter.class);
 		
 		final DataBucketBean bucket = createBucketInfrastructure("/test/purge/delayed", true);
@@ -318,27 +320,29 @@ public class TestBucketDeletionActor {
 
 		storeBucketAndStatus(bucket, true, host_actor._1());
 		
-		underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).deleteDatastore().get();
-		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
+		underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).deleteDatastore().get(30L, TimeUnit.SECONDS);
+		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get(30L, TimeUnit.SECONDS).intValue());
 		
 		// (in practice means will have to wait up to 10 seconds...)
 		final ManagementFuture<Boolean> res = _core_mgmt_db.purgeBucket(bucket, Optional.of(java.time.Duration.ofSeconds(1)));
 		
 		// check result
-		assertTrue("Purge called succeeded", res.get());
+		assertTrue("Purge called succeeded", res.get(30L, TimeUnit.SECONDS));
 		assertEquals(0, res.getManagementResults().get().size());
 		
 		// Wait for it to complete:
 		for (int i = 0; i < 5; ++i) {
 			Thread.sleep(1000L);
-			if (underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get() > 0) break;
+			if (underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get(30L, TimeUnit.SECONDS) > 0) break;
 		}
+		_logger.info("Stored deletion object");
 		assertEquals(1, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
 		for (int i = 0; i < 20; ++i) {
 			Thread.sleep(1000L);
-			if (underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get() == 0) break;
+			if (underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get(30L, TimeUnit.SECONDS) == 0) break;
 		}
-		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get().intValue());
+		assertEquals(0, underlying_mgmt_db.getBucketDeletionQueue(BucketDeletionMessage.class).countObjects().get(30L, TimeUnit.SECONDS).intValue());
+		_logger.info("deletion object processed");
 		
 		//check system state afterwards
 		
@@ -362,10 +366,13 @@ public class TestBucketDeletionActor {
 		_mock_index._handleBucketDeletionRequests.clear();
 		
 		shutdownActor(host_actor._2());		
+		
+		_logger.info("Completed test_bucketDeletionActor_purge_delayed");
 	}
 	
 	@After
 	public void cleanupTest() {
+		_logger.info("Shutting down actor context");
 		_actor_context.onTestComplete();
 	}
 	

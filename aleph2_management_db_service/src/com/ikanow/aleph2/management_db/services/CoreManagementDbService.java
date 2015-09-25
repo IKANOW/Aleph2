@@ -313,8 +313,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		if (!_read_only)
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
-		//TODO (ALEPH-23): decide .. only allow this if bucket is suspended?
-		
 		if (in.isPresent()) { // perform scheduled purge
 			
 			final Date to_purge_date = Timestamp.from(Instant.now().plus(in.get().getSeconds(), ChronoUnit.SECONDS));			
