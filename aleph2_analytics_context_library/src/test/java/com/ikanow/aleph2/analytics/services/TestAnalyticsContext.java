@@ -716,6 +716,9 @@ public class TestAnalyticsContext {
 
 		// Check that it fails if the bucket is not present (or not readable)
 		
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().deleteDatastore().get();
+		assertEquals(0, test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().countObjects().get().intValue());
+		
 		try {
 			test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2);
 			fail("Should have thrown exception");
