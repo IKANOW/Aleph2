@@ -745,9 +745,6 @@ public class TestBucketActionSupervisor {
 		assertEquals(1, BucketActionSupervisor.getTimeoutMultipler(TestActor.class));
 	}
 	
-	//TODO:
-	
-	@org.junit.Ignore
 	@Test
 	public void test_analyticsControlLogic() throws Exception {
 		_logger.info("Starting test_analyticsControlLogic");
@@ -782,7 +779,6 @@ public class TestBucketActionSupervisor {
 		}
 		
 		// Create bucket
-		//TODO: change this
 		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/management_db/utils/analytic_test_bucket.json"), Charsets.UTF_8);		
 		DataBucketBean bucket = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
 		
@@ -814,9 +810,9 @@ public class TestBucketActionSupervisor {
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
-		// Should contain no errors
-		assertEquals(1, reply.replies().size());
-		assertEquals(true, reply.replies().get(0).success());		
+		// Should contain no errors - 4 replies - ie everything except the batch
+		assertEquals("Replies: " + reply.replies().stream().map(m->m.message()).collect(Collectors.joining(" ; ")), 4, reply.replies().size());
+		assertEquals(true, reply.replies().stream().allMatch(m -> m.success()));		
 		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
 		
 	}

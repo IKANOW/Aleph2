@@ -290,7 +290,6 @@ public class BucketActionSupervisor extends UntypedActor {
 		// Split into sub-buckets
 		final Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> sub_buckets = AnalyticActorUtils.splitAnalyticBuckets(bucket);
 		
-		//TODO (ALEPH-12) streaming only? need a T3?
 		// Create a stream of requests
 		final List<CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>> results =
 			sub_buckets.entrySet().stream()
