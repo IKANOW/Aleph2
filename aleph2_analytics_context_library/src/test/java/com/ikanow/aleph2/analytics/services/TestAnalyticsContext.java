@@ -602,7 +602,7 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_inputAndOutputUtilities() {
+	public void test_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
 				
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
 		
@@ -713,6 +713,22 @@ public class TestAnalyticsContext {
 		
 		assertEquals(Optional.of(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test_name1"))), test_context.getOutputTopic(Optional.of(test_bucket), analytic_job1));
 		assertEquals(Optional.of(KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end"))), test_context.getOutputTopic(Optional.empty(), analytic_job2));
+
+		// Check that it fails if the bucket is not present (or not readable)
+		
+		try {
+			test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, "/test"), e.getMessage());
+		}
+		
+		// Add the bucket to the CRUD store:
+		
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(test_bucket).get();
+		
+		// Now do all the other checks:
 		
 		assertEquals(Arrays.asList(), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input1));
 		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test", Optional.of("test2"))), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2));

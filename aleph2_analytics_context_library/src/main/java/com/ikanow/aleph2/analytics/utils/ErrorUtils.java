@@ -26,4 +26,5 @@ public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 	final public static String SERVICE_RESTRICTIONS = "Can't call getAnalyticsContextSignature with different 'services' parameter; can't call getUnderlyingArtefacts without having called getEnrichmentContextSignature.";
 	final public static String TECHNOLOGY_NOT_MODULE = "Can only be called from technology, not module";
 	final public static String MODULE_NOT_TECHNOLOGY = "Can only be called from module, not technology";
+	final public static String BUCKET_NOT_FOUND_OR_NOT_READABLE = "Bucket {0} does not exist or is not readable";
 }

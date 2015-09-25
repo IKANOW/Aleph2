@@ -63,6 +63,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnr
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -122,6 +123,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	protected ICoreDistributedServices _distributed_services; 	
 	protected ISearchIndexService _index_service;
 	protected IStorageService _storage_service;
+	protected ISecurityService _security_service;
 	protected GlobalPropertiesBean _globals;
 
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());	
@@ -145,7 +147,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();		
 		_index_service = service_context.getService(ISearchIndexService.class, Optional.empty()).get();
-		_storage_service = _service_context.getStorageService();
+		_storage_service = service_context.getStorageService();
+		_security_service = service_context.getSecurityService();
 		_globals = service_context.getGlobalProperties();
 	}
 
@@ -202,6 +205,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			if (null != to_clone) { //copy the fields				
 				_service_context = to_clone._service_context;
 				_core_management_db = to_clone._core_management_db;
+				_security_service = to_clone._security_service;
 				_distributed_services = to_clone._distributed_services;	
 				_index_service = to_clone._index_service;
 				_storage_service = to_clone._storage_service;
@@ -215,6 +219,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty()).get();
 				_storage_service = _service_context.getStorageService();
+				_security_service = _service_context.getSecurityService();
 				_globals = _service_context.getGlobalProperties();
 			}			
 			// Get bucket 
@@ -434,9 +439,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 	{	
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		
+		final AuthorizationBean auth_bean = new AuthorizationBean(my_bucket.owner_id());
+		final ICrudService<DataBucketBean> secured_bucket_crud = _core_management_db.readOnlyVersion().getDataBucketStore().secured(_service_context, auth_bean);
+		
 		return Optional.of(job_input)
 				.filter(i -> "stream".equalsIgnoreCase(i.data_service()))
-				.map(i -> {					
+				.map(Lambdas.wrap_u(i -> {					
 					//Topic naming: 5 cases: 
 					// 1) i.resource_name_or_id is a bucket path, ie starts with "/", and then:
 					// 1.1) if it ends ":name" then it points to a specific point in the bucket processing
@@ -470,10 +478,26 @@ public class AnalyticsContext implements IAnalyticsContext {
 					})
 					.apply(i.resource_name_or_id())
 					;
+										
+					// Check this bucket exists and I have read access to it
+					if (my_bucket.full_name().equals(bucket_subchannel[0])) {
+						boolean found_bucket = secured_bucket_crud
+							.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_subchannel[0]),
+											Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
+											true
+									)
+							.get()
+							.isPresent()
+							;
+						if (!found_bucket) {
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, bucket_subchannel[0]));
+						}
+					}
+					
 					final String topic = _distributed_services.generateTopicName(bucket_subchannel[0], Optional.of(bucket_subchannel[1]).filter(s -> !s.isEmpty()));
 					_distributed_services.createTopic(topic, Optional.empty());
 					return topic;
-				})
+				}))
 				.map(i -> Arrays.asList(i))
 				.orElse(Collections.emptyList())
 				;
