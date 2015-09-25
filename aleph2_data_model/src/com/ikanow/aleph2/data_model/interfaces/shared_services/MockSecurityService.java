@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -74,8 +76,8 @@ public class MockSecurityService implements ISecurityService {
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#hasRole(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.String)
 	 */
 	@Override
-	public boolean hasRole(ISubject subject, String role) {
-		return true;
+	public boolean hasRole(ISubject subject, String role) {		
+		return _mock_role_map.getOrDefault(role, false);
 	}
 
 	/* (non-Javadoc)
@@ -83,7 +85,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public boolean isPermitted(ISubject subject, String string) {
-		return true;
+		return _mock_role_map.getOrDefault(string, false);
 	}
 
 	/* (non-Javadoc)
@@ -117,5 +119,18 @@ public class MockSecurityService implements ISecurityService {
 		return crud;
 	}
 
+	//////////////////////////
+	
+	// Some override code we'll add to as needed
+	
+	protected Map<String, Boolean> _mock_role_map = new HashMap<>();
 
+	/** Set a mock role
+	 * @param role
+	 * @param permission
+	 */
+	public void setGlobalMockRole(String role, boolean permission) {
+		_mock_role_map.put(role, permission);
+	}
+	
 }
