@@ -37,7 +37,9 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.Resources;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
@@ -463,7 +465,7 @@ public class TestBucketActionSupervisor {
 		
 		// Create a failing stream actor and a succeeding harvest actor
 		
-		// Failing stream actors
+		// Succeeding stream actors
 		for (int i = 0; i < 5; ++i) {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
@@ -517,7 +519,7 @@ public class TestBucketActionSupervisor {
 		
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
-		// Should contain an error
+		// Should contain no errors
 		assertEquals(1, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
 		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
@@ -741,5 +743,79 @@ public class TestBucketActionSupervisor {
 		assertEquals(5, BucketActionSupervisor.getTimeoutMultipler(BucketActionChooseActor.class));
 		assertEquals(2, BucketActionSupervisor.getTimeoutMultipler(BucketActionDistributionActor.class));
 		assertEquals(1, BucketActionSupervisor.getTimeoutMultipler(TestActor.class));
+	}
+	
+	@org.junit.Ignore
+	@Test
+	public void test_analyticsControlLogic() throws Exception {
+		_logger.info("Starting test_analyticsControlLogic");
+		
+		// We already check the "stage 1" not-present/succeeds/fails + "stage 2" not-present/succeeds/fails in all the 
+		// streaming enrichment related testing
+		// Here we just check that the correct number of messages are sent out and retrieved		
+		
+		// Create a succeeding stream actor and a succeeding harvest actor (not used)
+		
+		// Succeeding stream actors
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		}
+		// Succeeding harvest actors (not used)
+		final HashSet<String> uuids = new HashSet<String>();		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			uuids.add(uuid);
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Create bucket
+		//TODO: change this
+		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/management_db/utils/analytic_test_bucket.json"), Charsets.UTF_8);		
+		DataBucketBean bucket = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
+		
+		// Do the test
+		
+		// THIS WILL ALSO CHECK THAT THE NODE AFFINITY IS STRIPPED
+		
+		UpdateBucketActionMessage test_message = new UpdateBucketActionMessage(
+				bucket, false, bucket, ImmutableSet.<String>builder().add(UuidUtils.get().getRandomUuid()).build());
+		// (if the stream handler didn't strip the node affinity then it wouldn't get sent anywhere)		
+
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		// Should contain no errors
+		assertEquals(1, reply.replies().size());
+		assertEquals(true, reply.replies().get(0).success());		
+		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		
 	}
 }

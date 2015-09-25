@@ -122,6 +122,13 @@ public class KafkaUtils {
 		return (String) kafka_properties.get("zookeeper.connect");
 	}
 	
+	/** Returns the configured Kafka broker list
+	 * @return
+	 */
+	public static String getBrokers() {
+		return (String) kafka_properties.get("metadata.broker.list");
+	}
+	
 	/** Converts from a bucket path to a Kafka topic
 	 * @param bucket_path
 	 * @return

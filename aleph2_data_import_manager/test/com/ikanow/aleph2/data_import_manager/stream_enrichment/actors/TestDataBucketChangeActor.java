@@ -653,6 +653,35 @@ public class TestDataBucketChangeActor {
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());
 		}		
+		// Test 5a: update - but with no enabled jobs
+		{
+			final DataBucketBean disabled_bucket = BeanTemplateUtils.clone(bucket)
+														.with(DataBucketBean::analytic_thread, 
+																BeanTemplateUtils.clone(bucket.analytic_thread())
+																	.with(AnalyticThreadBean::jobs, 
+																			bucket.analytic_thread().jobs().stream().map(j ->
+																				BeanTemplateUtils.clone(j).with(AnalyticThreadJobBean::enabled, false).done())
+																			.collect(Collectors.toList()))
+																.done()
+																)
+													.done();
+			
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(disabled_bucket, true, disabled_bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+					disabled_bucket, update,
+					"test5a", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
+			assertEquals("test5a", test_reply.source());
+			final BasicMessageBean test_reply1 = test_reply.reply();
+			assertEquals("called onUpdatedThread: true", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+		}		
 		// Test 5b: suspend
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, false, bucket, Collections.emptySet());

@@ -25,9 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
 
 
 
@@ -82,6 +84,7 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -89,6 +92,7 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
 
 
 
@@ -600,6 +604,12 @@ public class DataBucketChangeActor extends AbstractActor {
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
 		
+		final UnaryOperator<Stream<AnalyticThreadJobBean>> perJobSetup = job_stream -> {
+			return job_stream
+					.filter(job -> Optional.ofNullable(job.enabled()).orElse(true)) //(WARNING: mutates context)
+					.peek(job -> setPerJobContextParams(job, context, libs));
+		};
+		
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
 		try {			
 			return err_or_tech_module.<CompletableFuture<BucketActionReplyMessage>>validation(
@@ -624,10 +634,10 @@ public class DataBucketChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onDeleteThread(bucket, jobs, context);
-							final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
-									.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
-									.map(job -> tech_module.stopAnalyticJob(bucket, jobs, job, context))
-									.collect(Collectors.toList());
+							final List<CompletableFuture<BasicMessageBean>> job_results = 
+									perJobSetup.apply(jobs.stream())
+										.map(job -> tech_module.stopAnalyticJob(bucket, jobs, job, context))
+										.collect(Collectors.toList());
 							
 							return combineResults(top_level_result, job_results, source);
 						})
@@ -638,8 +648,7 @@ public class DataBucketChangeActor extends AbstractActor {
 							final List<CompletableFuture<BasicMessageBean>> job_results =
 									msg.is_suspended()
 									? Collections.emptyList()
-									: jobs.stream()
-										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+									: perJobSetup.apply(jobs.stream()) 
 										.map(job -> tech_module.startAnalyticJob(bucket, jobs, job, context))
 										.collect(Collectors.toList());
 							
@@ -649,9 +658,7 @@ public class DataBucketChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
-							final List<CompletableFuture<BasicMessageBean>> job_results =
-									jobs.stream()
-										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream())
 										.map(job -> msg.is_enabled()												
 											? tech_module.resumeAnalyticJob(bucket, jobs, job, context)
 											: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
@@ -671,8 +678,7 @@ public class DataBucketChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onTestThread(bucket, jobs, msg.test_spec(), context);
-							final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
-										.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream())
 										.map(job -> tech_module.startAnalyticJobTest(bucket, jobs, job, msg.test_spec(), context))
 										.collect(Collectors.toList());
 							
