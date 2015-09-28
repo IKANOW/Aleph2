@@ -31,9 +31,13 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
  */
 public interface ISecurityService extends IUnderlyingService {
 		
-	public ISubject getSubject();
+	public String IKANOW_SYSTEM_LOGIN = "IKANOW_SECURITY_LOGIN";
+	public String IKANOW_SYSTEM_PASSWORD = "IKANOW_SECURITY_PASSWORD";
+
 
 	public ISubject login(String principalName, Object credentials);
+
+	public ISubject loginAsSystem();
 
 	public boolean hasRole(ISubject subject, String role);
 	

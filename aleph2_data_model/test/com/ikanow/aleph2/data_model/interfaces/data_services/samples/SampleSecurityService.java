@@ -60,13 +60,15 @@ public class SampleSecurityService implements ISecurityService {
 		return null;
 	}
 
+
 	@Override
-	public ISubject getSubject() {
+	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
 		return null;
 	}
 
 	@Override
-	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
+	public ISubject loginAsSystem() {
+		// TODO Auto-generated method stub
 		return null;
 	}
 

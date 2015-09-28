@@ -103,13 +103,6 @@ public class MockSecurityService implements ISecurityService {
 		return Collections.emptyList();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSubject()
-	 */
-	@Override
-	public ISubject getSubject() {
-		return new MockSubject();
-	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#secured(com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService, com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean)
@@ -131,6 +124,11 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	public void setGlobalMockRole(String role, boolean permission) {
 		_mock_role_map.put(role, permission);
+	}
+
+	@Override
+	public ISubject loginAsSystem() {
+		return new MockSubject();
 	}
 	
 }

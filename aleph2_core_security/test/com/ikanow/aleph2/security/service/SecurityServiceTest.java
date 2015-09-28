@@ -63,14 +63,14 @@ public class SecurityServiceTest {
 		this.securityService =  _service_context.getSecurityService();
 	}
 
-	@Test	
+	/*	@Test	
 	@Ignore
 	public void testUnauthenticated() {
 		ISubject subject = securityService.getSubject();
 		assertNotNull(subject);
 		assertEquals(false, subject.isAuthenticated());		
 	}
-
+*/
 	@Test
 	@Ignore
 	public void testAuthenticated() {        

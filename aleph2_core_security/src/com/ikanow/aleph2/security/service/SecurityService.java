@@ -18,6 +18,7 @@ package com.ikanow.aleph2.security.service;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,8 +27,17 @@ import org.apache.logging.log4j.Logger;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.realm.Realm;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.mgt.DefaultSessionManager;
+import org.apache.shiro.session.mgt.SessionManager;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
+import org.apache.shiro.util.ThreadContext;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -39,20 +49,35 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.security.interfaces.IClearableRealmCache;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
 	protected ISubject currentSubject = null;
 	private static final Logger logger = LogManager.getLogger(SecurityService.class);
-	@Inject
-	protected IServiceContext serviceContext;
+	
+	protected static String systemUsername = System.getProperty(IKANOW_SYSTEM_LOGIN, "4e3706c48d26852237078005");
+	protected static String systemPassword = System.getProperty(IKANOW_SYSTEM_PASSWORD, "not allowed!");
 
 	@Inject
-	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager) {
+	protected IServiceContext serviceContext;
+	protected CacheManager cacheManager;
+	Collection<Realm> realms = new HashSet<Realm>();
+
+
+	@Inject
+	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager, CacheManager cacheManager) {
 		this.serviceContext = serviceContext;
 		SecurityUtils.setSecurityManager(securityManager);
-		}
+		this.cacheManager = cacheManager;
+		if(securityManager instanceof DefaultSecurityManager){
+			SessionManager sessionManager = ((DefaultSecurityManager)securityManager).getSessionManager();
+			this.realms = ((DefaultSecurityManager)securityManager).getRealms();
+			logger.debug("Session manager:"+sessionManager);	
+		}		
+
+	}
 
 
 	protected void init(){
@@ -93,29 +118,64 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-	public ISubject getSubject() {
-		if(currentSubject == null){
-			init();
-		}
-		return currentSubject;
-	}
-
 	@Override
 	public ISubject login(String principalName, Object credentials) {
 		
 		String password = (String)credentials;
         UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
+        //token.setRememberMe(true);
 
-        ISubject subject = getSubject(); 
-		((Subject)subject.getSubject()).login((AuthenticationToken)token);
-		return subject;
+        ensureUserIsLoggedOut();
+        Subject shiroSubject = getShiroSubject();
+        shiroSubject.login((AuthenticationToken)token);
+        currentSubject = new SubjectWrapper(shiroSubject);
+		return currentSubject;
 	}
+
+	protected void ensureUserIsLoggedOut()
+	{
+	    try
+	    {
+	    	Subject shiroSubject = getShiroSubject();
+	        if (shiroSubject == null)
+	            return;
+
+	        // Log the user out and kill their session if possible.
+	        shiroSubject.logout();
+	        Session session = shiroSubject.getSession(false);
+	        if (session == null)
+	            return;
+
+	        session.stop();
+	    }
+	    catch (Exception e)
+	    {
+	        // Ignore all errors, as we're trying to silently 
+	        // log the user out.
+	    }
+	}
+
+	// Clean way to get the subject
+	protected Subject getShiroSubject()
+	{
+	    Subject currentUser = ThreadContext.getSubject();// SecurityUtils.getSubject();
+
+	    if (currentUser == null)
+	    {
+	        currentUser = SecurityUtils.getSubject();
+	    }
+
+	    return currentUser;
+	}
+	
 
 	@Override
 	public boolean hasRole(ISubject subject, String roleIdentifier) {
-		boolean ret = ((Subject)getSubject().getSubject()).hasRole(roleIdentifier);
+		boolean ret = ((Subject)subject.getSubject()).hasRole(roleIdentifier);
 		return ret;
 	}
+
+	
 
 	public static List<Module> getExtraDependencyModules() {
 		return Arrays.asList((Module)new CoreSecurityModule());
@@ -130,24 +190,11 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public boolean isPermitted(ISubject subject, String string) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean isPermitted(ISubject subject, String permission) {
+		boolean ret = ((Subject)subject.getSubject()).isPermitted(permission);
+		return ret;
 	}
 
-
-	@Override
-	public void runAs(ISubject subject, Collection<String> principals) {
-		// TODO Auto-generated method stub
-		
-	}
-
-
-	@Override
-	public Collection<String> releaseRunAs(ISubject subject) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 
 	@Override
@@ -156,6 +203,71 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+	@Override
+	public ISubject loginAsSystem() {
+		ISubject subject = login(systemUsername,systemPassword);			
+		return subject;
+	}
 
 
+	@Override
+	public void runAs(ISubject subject,Collection<String> principals) {
+		// TODO Auto-generated method stub
+		
+		((Subject)subject.getSubject()).runAs(new SimplePrincipalCollection(principals,getRealmName()));
+	}
+
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public Collection<String> releaseRunAs(ISubject subject) {
+		PrincipalCollection p = ((Subject)subject.getSubject()).releaseRunAs();	
+		return p.asList();
+	}
+
+
+
+	protected String getRealmName(){
+		String name = "SecurityService";
+		if(realms.iterator().hasNext()){
+			name = realms.iterator().next().getName();
+		}
+		return name;
+	}
+
+	public void invalidateAuthenticationCache(Collection<String> principalNames){
+		for (Realm realm : realms) {
+			if(realm instanceof IClearableRealmCache){
+				IClearableRealmCache ar = (IClearableRealmCache)realm;
+				ar.clearAuthorizationCached(principalNames);
+		} 
+			
+		}
+	}
+
+	/**
+	 * This function invalidates the whole cache
+	 */
+	public void invalidateCache(){
+		for (Realm realm : realms) {
+			if(realm instanceof IClearableRealmCache){
+				IClearableRealmCache ar = (IClearableRealmCache)realm;
+				ar.clearAllCaches();
+		} 
+			
+		}
+	}
+
+	public void setSessionTimeout(long globalSessionTimeout){
+		SecurityManager securityManager = SecurityUtils.getSecurityManager();
+		if(securityManager instanceof DefaultSecurityManager){
+			SessionManager sessionManager = ((DefaultSecurityManager)securityManager).getSessionManager();
+			if(sessionManager instanceof DefaultSessionManager){
+				((DefaultSessionManager)sessionManager).setGlobalSessionTimeout(globalSessionTimeout);
+			}
+			logger.debug("Session manager:"+sessionManager);	
+		}
+	}
+
+	
 }
