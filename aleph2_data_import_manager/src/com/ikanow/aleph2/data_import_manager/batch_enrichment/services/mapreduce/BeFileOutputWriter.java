@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduc
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -70,7 +71,7 @@ public class BeFileOutputWriter extends RecordWriter<String, Tuple2<Long, IBatch
 
 	protected void checkBatch(boolean flush){
 		if((batch.size()>=batchSize) || flush){
-			enrichmentBatchModule.onObjectBatch(batch);
+			enrichmentBatchModule.onObjectBatch(batch.stream(), Optional.empty(), Optional.empty());
 			batch.clear();
 		}		
 	}
@@ -78,7 +79,7 @@ public class BeFileOutputWriter extends RecordWriter<String, Tuple2<Long, IBatch
 	@Override
 	public void close(TaskAttemptContext context) throws IOException, InterruptedException {
 		checkBatch(true);
-		enrichmentBatchModule.onStageComplete();		
+		enrichmentBatchModule.onStageComplete(true);		
 	}
 
 }

@@ -15,13 +15,15 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.module;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -33,22 +35,18 @@ public class MockEnrichmentBatchModule implements IEnrichmentBatchModule {
 
 	@Override
 	public void onStageInitialize(IEnrichmentModuleContext context, DataBucketBean bucket, boolean final_stage) {
-		// TODO Auto-generated method stub
 		logger.debug("MockEnrichmentBatchModule.onStageInitialize:"+ context+", DataBucketBean:"+ bucket+", final_stage"+final_stage);
 
 	}
 
 	@Override
-	public void onObjectBatch(List<Tuple2<Long, IBatchRecord>> batch) {
-		// TODO Auto-generated method stub
-		logger.debug("MockEnrichmentBatchModule.onObjectBatch:"+ batch);
-
+	public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
+			Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {
+		
 	}
 
 	@Override
-	public void onStageComplete() {
-		// TODO Auto-generated method stub
-
+	public void onStageComplete(boolean is_original) {
 	}
 
 }

@@ -15,9 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.batch_enrichment.services;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,9 +58,9 @@ public class BatchEnrichmentModule implements IEnrichmentBatchModule {
 	}
 
 	@Override
-	public void onObjectBatch(List<Tuple2<Long, IBatchRecord>> batch) {
+	public void onObjectBatch(final Stream<Tuple2<Long, IBatchRecord>> batch, Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {
 		logger.debug("BatchEnrichmentModule.onObjectBatch:" + batch);
-		for (Tuple2<Long, IBatchRecord> t2 : batch) {
+		batch.forEach(t2 -> {
 			// if stream is not present data is inside the json object
 			if (!t2._2().getContent().isPresent()) {
 				if (mutable) {
@@ -85,11 +85,11 @@ public class BatchEnrichmentModule implements IEnrichmentBatchModule {
 				Long id = counter.addAndGet(1);				
 				context.emitImmutableObject(id, t2._2().getJson(), Optional.empty(), Optional.empty());				
 			}
-		} // for 
+		}); // for 
 	}
 
 	@Override
-	public void onStageComplete() {
+	public void onStageComplete(boolean is_original) {
 		logger.debug("BatchEnrichmentModule.onStageComplete()");
 	}
 
