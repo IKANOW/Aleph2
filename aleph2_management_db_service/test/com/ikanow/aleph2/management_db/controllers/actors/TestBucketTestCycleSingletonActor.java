@@ -120,8 +120,6 @@ public class TestBucketTestCycleSingletonActor {
 		//clear test queue
 		test_queue.deleteDatastore().get();
 		
-		BucketTestCycleSingletonActor.setTestMode(true);
-		
 		//add message to test queue that will expire now
 		System.out.println("TEST 1:");
 		test_queue.storeObject(createTestBucketTimeoutMessage(new Date()));				

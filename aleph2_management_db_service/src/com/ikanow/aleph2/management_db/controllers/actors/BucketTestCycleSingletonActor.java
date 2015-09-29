@@ -28,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.concurrent.duration.Duration;
+import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
@@ -42,6 +43,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.Bucke
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import fj.Unit;
+import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
 /** This actor is a singleton, ie runs on only one node in the cluster
@@ -56,12 +58,17 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 	protected final ManagementDbActorContext _system_context;
 	protected final IManagementDbService _underlying_management_db;
 	protected final SetOnce<ICrudService<BucketTimeoutMessage>> _bucket_test_queue = new SetOnce<>();
+	protected final SetOnce<Cancellable> _ticker = new SetOnce<>();
 	
 	public BucketTestCycleSingletonActor() {
 		_system_context = ManagementDbActorContext.get();
 		_underlying_management_db = _system_context.getServiceContext().getService(IManagementDbService.class, Optional.empty()).orElse(null);		
 		if (null != _underlying_management_db) {
-			scheduleNextCheck(1);			
+			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
+			final FiniteDuration poll_frequency = Duration.create(1, TimeUnit.SECONDS);
+			_ticker.set(this.context().system().scheduler()
+					.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
+			//scheduleNextCheck(1);			
 			_logger.info("BucketTestCycleSingletonActor has started on this node.");						
 		}	
 		
@@ -84,124 +91,82 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
 	 */
 	@Override
-	public void onReceive(Object arg0) throws Exception {
-		//TODO (ALEPH-25): should use Akka scheduler and then handle onReceive (has the advantage that you can send "pings" whenever you want from the test code)
-		//(instead of the horrible code I'm about to write..)
-	}
-	
-	private static boolean _test_mode = false;
-	/** Just runs more quickly...
-	 * @param test_mode
-	 */
-	protected static void setTestMode(final boolean test_mode) {
-		_test_mode = test_mode;
-	}
-	
-	/**
-	 * Schedules the next run for this actor
-	 * @param seconds
-	 */
-	private void scheduleNextCheck(final long seconds) {
-		//_logger.debug("Scheduling next TestCycleActor check for: " + seconds + "s from now.");
-		ManagementDbActorContext.get().getActorSystem().scheduler().scheduleOnce(
-				Duration.create(seconds, TimeUnit.SECONDS), 
-				new QueueCheckerRunnable(), 
-				_system_context.getActorSystem().dispatcher());
-	}
-	
-	/**
-	 * When this actors runs, checks for items in the timeout queue and acts upon them.
-	 * 
-	 * @author Burch
-	 *
-	 */
-	private class QueueCheckerRunnable implements Runnable
-	{
-		/**
-		 * Gets all bucket timeout messages that have expired.  Sends a stop message to actors for that bucket, then removes
-		 * that timeout message from the queue.
-		 * 
-		 */
-		@Override
-		public void run() {
-			//_logger.debug("TestCycleActor is running a check");
-			setup();
-			final Date now = new Date();
-			final QueryComponent<BucketTimeoutMessage> recent_messages = 
-					CrudUtils.allOf(BucketTimeoutMessage.class).rangeBelow(BucketTimeoutMessage::timeout_on, now, false);
-			
-			CompletableFuture<ICrudService.Cursor<BucketTimeoutMessage>> matches = _bucket_test_queue.get().getObjectsBySpec(recent_messages);
-			
-			matches.thenAccept(m -> {
-				final List<BucketTimeoutMessage> msgs = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());
-				if (!msgs.isEmpty()) {
-					//loop over each expired test item
-					msgs.stream().forEach(msg -> {
-						_logger.info("TestCycleActor found an expired test item, sending stop message");
-						
-						//(push 5 minutes away - will try to clean up later if anything goes wrong for any reason, but means next few iterations of this thread
-						// will work)
-						final UpdateComponent<BucketTimeoutMessage> update = CrudUtils.update(BucketTimeoutMessage.class)
-								.set(BucketTimeoutMessage::timeout_on, new Date(now.getTime() + 300L*1000L));
-						
-						final CompletableFuture<Boolean> update_message = _bucket_test_queue.get().updateObjectById(msg._id(), update);
-						
-						_logger.debug("Update message timeout: " + update.getAll());												
-						
-						//delete item from the queue after stop message returns successfully
-						update_message.thenCompose(__ -> {
-							
-							//send stop message
-							final UpdateBucketActionMessage stop_message = 
-									new UpdateBucketActionMessage(msg.bucket(), false, msg.bucket(), msg.handling_clients());  						
-							final CompletableFuture<BucketActionCollectedRepliesMessage> stop_future = BucketActionSupervisor.askDistributionActor(
-									_system_context.getBucketActionSupervisor(), 
-									_system_context.getActorSystem(), 
-									stop_message, 
-									Optional.empty());
-							_logger.debug("Sent stop message for bucket: " + msg.bucket().full_name());												
-						
-							return stop_future;
-						})
-						.thenApply(reply -> {	
-							//stop completed successfully
-							_bucket_test_queue.get().deleteObjectById(msg._id())
-								.thenApply(d -> { 
-									//item deleted successfully
-									_logger.debug("deleted test queue item successfully");
-									return Unit.unit();
-								}).exceptionally(t-> {
-									//failed to delete item
-									_logger.error("Error removing test item: " + msg.bucket().full_name() + " from test queue", t);								
-									return Unit.unit();
-								});
-							
-							return Unit.unit();
-						}).exceptionally(t -> {
-							//stop failed - will try again in 5 minutes
-							_logger.error("Error stopping job: " + msg.bucket().full_name(), t);
-							
-							return Unit.unit();
-						});
-					}); //end for each							
+	public void onReceive(Object message) throws Exception {
+		//Note: we don't bother checking what the message is, we always assume it means we should check
+		//i.e. we only think it's going to be the string "Tick" sent from the scheduler we setup in the c'tor
+		setup();
+		final Date now = new Date();
+		final QueryComponent<BucketTimeoutMessage> recent_messages = 
+				CrudUtils.allOf(BucketTimeoutMessage.class).rangeBelow(BucketTimeoutMessage::timeout_on, now, false);
+		
+		CompletableFuture<ICrudService.Cursor<BucketTimeoutMessage>> matches = _bucket_test_queue.get().getObjectsBySpec(recent_messages);
+		
+		matches.thenAccept(m -> {
+			final List<BucketTimeoutMessage> msgs = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());
+			if (!msgs.isEmpty()) {
+				//loop over each expired test item
+				msgs.stream().forEach(msg -> {
+					_logger.info("TestCycleActor found an expired test item, sending stop message");
 					
-					//finally, because we found an item, reschedule for 1s
-					scheduleNextCheck(1);
-				} else {
-					//no items in queue reschedule for 10s to not waste resources
-					scheduleNextCheck(_test_mode ? 2 : 10);
-				}
-			}).exceptionally(t -> {
-				return null;
-			});
-		}
-	}	
+					//(push 5 minutes away - will try to clean up later if anything goes wrong for any reason, but means next few iterations of this thread
+					// will work)
+					final UpdateComponent<BucketTimeoutMessage> update = CrudUtils.update(BucketTimeoutMessage.class)
+							.set(BucketTimeoutMessage::timeout_on, new Date(now.getTime() + 300L*1000L));
+					
+					final CompletableFuture<Boolean> update_message = _bucket_test_queue.get().updateObjectById(msg._id(), update);
+					
+					_logger.debug("Update message timeout: " + update.getAll());												
+					
+					//delete item from the queue after stop message returns successfully
+					update_message.thenCompose(__ -> {
+						
+						//send stop message
+						final UpdateBucketActionMessage stop_message = 
+								new UpdateBucketActionMessage(msg.bucket(), false, msg.bucket(), msg.handling_clients());  						
+						final CompletableFuture<BucketActionCollectedRepliesMessage> stop_future = BucketActionSupervisor.askDistributionActor(
+								_system_context.getBucketActionSupervisor(), 
+								_system_context.getActorSystem(), 
+								stop_message, 
+								Optional.empty());
+						_logger.debug("Sent stop message for bucket: " + msg.bucket().full_name());												
+					
+						return stop_future;
+					})
+					.thenApply(reply -> {	
+						//stop completed successfully
+						_bucket_test_queue.get().deleteObjectById(msg._id())
+							.thenApply(d -> { 
+								//item deleted successfully
+								_logger.debug("deleted test queue item successfully");
+								return Unit.unit();
+							}).exceptionally(t-> {
+								//failed to delete item
+								_logger.error("Error removing test item: " + msg.bucket().full_name() + " from test queue", t);								
+								return Unit.unit();
+							});
+						
+						return Unit.unit();
+					}).exceptionally(t -> {
+						//stop failed - will try again in 5 minutes
+						_logger.error("Error stopping job: " + msg.bucket().full_name(), t);
+						
+						return Unit.unit();
+					});
+				}); //end for each			
+			}
+		}).exceptionally(t -> {
+			return null;
+		});		
+	}
 	
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#postStop()
 	 */
 	@Override
 	public void postStop() {
+		if ( _ticker.isSet()) {
+			_ticker.get().cancel();
+		}
 		_logger.info("BucketDeletionSingletonActor has stopped on this node.");								
 	}
 }
