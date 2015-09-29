@@ -42,6 +42,8 @@ public class AnnotationBean implements Serializable {
 	
 	private Set<String> tags; //tags
 	
+	private Double sig; // a static estimate of the significance of the document based on the importance of the entities it contains
+	
 	// Entities and assocations
 	
 	private List<EntityBean> ee; //entities
@@ -75,6 +77,10 @@ public class AnnotationBean implements Serializable {
 		private Double es; // the aggregate sentiment of this entity mentions within this document
 		private Double er; // the overall relevance of this entity within the doc
 		private Double ec; // the overall confidence that the references refer to the disambiguated name
+		
+		private Double p; // an estimate of the probability that a random doc from the entity's context (app-specific: bucket or project) will contain this entity
+		
+		private GeoTemporalBean g; // persistent geo information about this entity (for transient ones, use the associations)
 		
 		private Map<String, String> attr; // an arbitrary set of attributes associated with this entity
 		private Set<String> e_auth; // entity-level authorizations		
