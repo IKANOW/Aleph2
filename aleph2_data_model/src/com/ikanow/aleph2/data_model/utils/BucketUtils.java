@@ -212,7 +212,7 @@ public class BucketUtils {
 						.orElseGet(() -> 
 									Optional.ofNullable(control_bean_get_module.get()) // Option 2: module specified .. use either batch or enrichment
 										.map(m -> library_beans.get(m))
-										.map(lib -> Optional.ofNullable(lib.batch_enrichment_entry_point()).orElse(lib.misc_entry_point()))										
+										.map(lib -> Optional.ofNullable(library_get_entry.apply(lib)).orElse(lib.misc_entry_point()))										
 								)
 						.map(Optional::of)
 						// Option 3: get the first library bean with a batch entry point

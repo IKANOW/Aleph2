@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.After;
@@ -25,7 +27,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public class TestBucketUtils {
 
@@ -78,6 +85,78 @@ public class TestBucketUtils {
 		assertEquals("test_extra_more_components_very__7768508661fc", BucketUtils.getUniqueSignature(path3, Optional.empty()));
 		assertEquals("test_extra_more_components_very_xx__7768508661fc", BucketUtils.getUniqueSignature(path3, Optional.of("XX__________")));
 	}
-	
+
+	@Test
+	public void test_getEntryPoints() {
+		
+		final SharedLibraryBean lib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+											.with(SharedLibraryBean::_id, "id1")											
+											.with(SharedLibraryBean::path_name, "path1")
+											.with(SharedLibraryBean::streaming_enrichment_entry_point, "stream_test1")
+											.with(SharedLibraryBean::misc_entry_point, "misc_test1")
+										.done().get();
+		
+		final SharedLibraryBean lib2 = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::_id, "id2")
+				.with(SharedLibraryBean::path_name, "path2")
+				.with(SharedLibraryBean::batch_enrichment_entry_point, "batch_test2")
+				.with(SharedLibraryBean::misc_entry_point, "misc_test2")
+			.done().get();
+
+		final SharedLibraryBean lib3 = BeanTemplateUtils.build(SharedLibraryBean.class)
+				.with(SharedLibraryBean::_id, "id3")
+				.with(SharedLibraryBean::path_name, "path3")
+			.done().get();		
+		
+		// Different cases:
+		
+		final Map<String, SharedLibraryBean> test_map = ImmutableMap.<String, SharedLibraryBean>builder()
+																.put("id1", lib1)
+																.put("path1", lib1)
+																.put("id2", lib2)
+																.put("path2", lib2)
+																.put("id3", lib3)
+																.put("path3", lib3)
+															.build();
+		
+		final EnrichmentControlMetadataBean entry_point_override = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+																		.with(EnrichmentControlMetadataBean::entry_point, "override_test")
+																	.done().get();
+		
+		final EnrichmentControlMetadataBean batch_case = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+																.with(EnrichmentControlMetadataBean::module_name_or_id, "id2")
+															.done().get();
+		
+		final EnrichmentControlMetadataBean streaming_case = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+				.with(EnrichmentControlMetadataBean::module_name_or_id, "id1")
+			.done().get();
+		
+		final AnalyticThreadJobBean misc_case = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::module_name_or_id, "id1")
+			.done().get();
+		
+		final HarvestControlMetadataBean libs_case = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+															.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("not_there", "id1", "path2"))
+														.done().get();
+
+		final HarvestControlMetadataBean libs_case2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+				.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id3"))
+			.done().get();		
+
+		final AnalyticThreadJobBean libs_case3 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("not_there", "id1", "path2"))
+			.done().get();		
+		
+		assertEquals("override_test", BucketUtils.getBatchEntryPoint(test_map, entry_point_override).get());
+		assertEquals("batch_test2", BucketUtils.getBatchEntryPoint(test_map, batch_case).get());
+		assertEquals("misc_test1", BucketUtils.getBatchEntryPoint(test_map, streaming_case).get());
+		assertEquals("misc_test2", BucketUtils.getStreamingEntryPoint(test_map, batch_case).get());
+		assertEquals("stream_test1", BucketUtils.getStreamingEntryPoint(test_map, streaming_case).get());
+		assertEquals("misc_test1", BucketUtils.getBatchEntryPoint(test_map, misc_case).get());
+		assertEquals("stream_test1", BucketUtils.getStreamingEntryPoint(test_map, misc_case).get());
+		assertEquals("misc_test1", BucketUtils.getEntryPoint(test_map, libs_case).get());
+		assertFalse("Entry point not found", BucketUtils.getEntryPoint(test_map, libs_case2).isPresent());
+		assertEquals("batch_test2", BucketUtils.getBatchEntryPoint(test_map, libs_case3).get());
+	}
 	
 }
