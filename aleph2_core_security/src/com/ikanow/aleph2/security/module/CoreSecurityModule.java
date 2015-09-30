@@ -24,18 +24,19 @@ import org.apache.shiro.config.Ini;
 import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.realm.text.IniRealm;
-import org.apache.shiro.session.mgt.DefaultSessionManager;
-import org.apache.shiro.session.mgt.SessionManager;
 
 import com.google.inject.Provides;
 import com.google.inject.binder.AnnotatedBindingBuilder;
+import com.ikanow.aleph2.security.service.CoreRealm;
 
 /** Core module for Security Service
  * @author Joern
  */
 public class CoreSecurityModule extends ShiroModule {
     protected void configureShiro() {
+			bindCredentialsMatcher();
+			bindAuthProviders();
+    		bindRoleProviders();
         	bindRealms();
         	bind(CacheManager.class).to(EhCacheManager.class).asEagerSingleton();
         	expose(CacheManager.class);
@@ -47,11 +48,25 @@ public class CoreSecurityModule extends ShiroModule {
     }
     
     protected void bindRealms(){
-       try {
-        bindRealm().toConstructor(IniRealm.class.getConstructor(Ini.class));
-        } catch (NoSuchMethodException e) {
-            addError(e);
-        }        	
+        	bindRealm().to(CoreRealm.class).asEagerSingleton();         
+     }
+
+    /** 
+     * Place holder to overwrite. 
+     */
+    protected void bindCredentialsMatcher(){
+    	
+    }
+    /** 
+     * Place holder to overwrite. 
+     */
+    protected void bindAuthProviders(){
+    }
+
+    /** 
+     * Place holder to overwrite. 
+     */
+    protected void bindRoleProviders(){
     }
     
     /**

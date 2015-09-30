@@ -23,6 +23,15 @@ import java.io.Serializable;
 public class AuthorizationBean implements Serializable {
 	private static final long serialVersionUID = 5344494019659648244L;
 	private String principalName;
+	private String credentials;
+	public String getCredentials() {
+		return credentials;
+	}
+
+	public void setCredentials(String credentials) {
+		this.credentials = credentials;
+	}
+
 	private ProjectBean project;
 	
 	public ProjectBean getProject() {
