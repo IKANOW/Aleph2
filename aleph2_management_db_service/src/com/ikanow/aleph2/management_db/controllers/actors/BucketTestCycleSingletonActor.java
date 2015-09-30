@@ -122,7 +122,9 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 						
 						//send stop message
 						final UpdateBucketActionMessage stop_message = 
-								new UpdateBucketActionMessage(msg.bucket(), false, msg.bucket(), msg.handling_clients());  						
+								new UpdateBucketActionMessage(msg.bucket(), false, msg.bucket(), msg.handling_clients());
+						
+						// (note this deliberately calls askDistributionActor (vs askBucketActionActor) because we don't know which node it's running on, so we'll send to all of them)
 						final CompletableFuture<BucketActionCollectedRepliesMessage> stop_future = BucketActionSupervisor.askDistributionActor(
 								_system_context.getBucketActionSupervisor(), 
 								_system_context.getActorSystem(), 
