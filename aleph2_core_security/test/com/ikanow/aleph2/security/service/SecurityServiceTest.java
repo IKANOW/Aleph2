@@ -15,15 +15,17 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 
-import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.shiro.authc.AuthenticationException;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Inject;
@@ -37,66 +39,108 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class SecurityServiceTest {
+	private static final Logger logger = LogManager.getLogger(SecurityServiceTest.class);
+
 	protected Config config = null;
 
 	@Inject
-	protected IServiceContext _service_context = null;
+	protected IServiceContext _temp_service_context = null;
+	protected static IServiceContext _service_context = null;
 
 	protected ISecurityService securityService = null;
+	
+
 	@Before
 	public void setupDependencies() throws Exception {
-		if (_service_context != null) {
-			return;
+		try {
+			if (null == _service_context) {
+
+				final String temp_dir = System.getProperty("java.io.tmpdir");
+
+				// OK we're going to use guice, it was too painful doing this by
+				config = ConfigFactory
+						.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("/test_core_security.properties")))
+						.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+						.withValue("globals.local_cached_jar_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+						.withValue("globals.distributed_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+						.withValue("globals.local_yarn_config_dir", ConfigValueFactory.fromAnyRef(temp_dir));
+
+				Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));
+				app_injector.injectMembers(this);
+				_service_context = _temp_service_context;
+			}
+			this.securityService = _service_context.getSecurityService();
+		} catch (Throwable e) {
+
+			e.printStackTrace();
 		}
 
-		final String temp_dir = System.getProperty("java.io.tmpdir");
-
-		// OK we're going to use guice, it was too painful doing this by hand...
-		config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("/test_core_security.properties")))
-				.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-				.withValue("globals.local_cached_jar_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-				.withValue("globals.distributed_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-				.withValue("globals.local_yarn_config_dir", ConfigValueFactory.fromAnyRef(temp_dir));
-
-		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));
-		app_injector.injectMembers(this);
-		this.securityService =  _service_context.getSecurityService();
 	}
 
-	/*	@Test	
-	@Ignore
-	public void testUnauthenticated() {
-		ISubject subject = securityService.getSubject();
-		assertNotNull(subject);
-		assertEquals(false, subject.isAuthenticated());		
-	}
-*/
 	@Test
-	@Ignore
-	public void testAuthenticated() {        
-        ISubject subject = securityService.login("lonestarr", "vespa");
+	public void testAuthenticated() {
+		ISubject subject = loginAsTestUser();
+        try {
+		} catch (AuthenticationException e) {
+			logger.info("Caught (expected) Authentication exception:"+e.getMessage());
+			
+		
 		assertEquals(true, subject.isAuthenticated());		
+		}
 	}
 	
 	@Test
-	@Ignore
 	public void testRole(){
-		String role = "schwartz";
-        UsernamePasswordToken token = new UsernamePasswordToken("lonestarr", "vespa");
-        token.setRememberMe(true);
-        ISubject subject = securityService.login("lonestarr", "vespa");
-		assertEquals(true,securityService.hasRole(subject,role));
-		
+		ISubject subject = loginAsAdmin();
+        //test a typed permission (not instance-level)
+		assertEquals(true,securityService.hasRole(subject,"admin"));
 	}
 
 	@Test
-	@Ignore
-	public void testSecondRealm(){
-		String role = "admin";
-        UsernamePasswordToken token = new UsernamePasswordToken();
-        token.setRememberMe(true);
-        ISubject subject = securityService.login("trojan", "none");
-		assertEquals(true,securityService.hasRole(subject,role));
-		
+	public void testPermission(){
+		ISubject subject = loginAsRegularUser();
+		String permission = "permission1";
+        //test a typed permission (not instance-level)
+		assertEquals(true,securityService.isPermitted(subject,permission));
 	}
+
+	@Test
+	public void testRunAs(){
+		ISubject subject = loginAsTestUser();
+		// system community
+		String runAsPrincipal = "user";
+		String runAsRole = "user";
+		String runAsPersonalPermission = "permission1";
+		
+		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
+		
+		assertEquals(true,securityService.hasRole(subject,runAsRole));
+        //test a typed permission (not instance-level)
+		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
+		Collection<String> p = securityService.releaseRunAs(subject);
+		logger.debug("Released Principals:"+p);
+		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
+		
+		assertEquals(true,securityService.hasRole(subject,runAsRole));
+        //test a typed permission (not instance-level)
+		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
+		p = securityService.releaseRunAs(subject);
+		logger.debug("Released Principals:"+p);
+	}
+	
+	protected ISubject loginAsTestUser() throws AuthenticationException{
+		ISubject subject = securityService.login("testUser","testUser123");			
+		return subject;
+	}
+
+	protected ISubject loginAsAdmin() throws AuthenticationException{
+		ISubject subject = securityService.login("admin","admin123");			
+		return subject;
+	}
+
+	protected ISubject loginAsRegularUser() throws AuthenticationException{
+		ISubject subject = securityService.login("user","user123");			
+		return subject;
+	}
+
 }

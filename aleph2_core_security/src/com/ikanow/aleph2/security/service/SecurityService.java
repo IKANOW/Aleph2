@@ -39,9 +39,7 @@ import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.ThreadContext;
 
-import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -82,11 +80,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 	protected void init(){
 		try {
-//		    SecurityManager securityManager = getInjector().getInstance(SecurityManager.class);
-//		    SecurityUtils.setSecurityManager(securityManager);Factory<SecurityManager> factory = new IniSecurityManagerFactory("classpath:shiro.ini");    
-//	        SecurityManager securityManager = factory.getInstance();
-//	        SecurityUtils.setSecurityManager(securityManager);
-
 
 	        // get the currently executing user:
 	        Subject currentUser = SecurityUtils.getSubject();
@@ -97,14 +90,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 			logger.error("Caught exception",e);
 		}
 
-	}
-	/**
-	 * Placeholder metgod for derived security services.
-	 * @return
-	 */
-	protected Injector getInjector(){
-		Injector injector = Guice.createInjector(new CoreSecurityModule());
-		return injector;
 	}
 	
 	@Override
