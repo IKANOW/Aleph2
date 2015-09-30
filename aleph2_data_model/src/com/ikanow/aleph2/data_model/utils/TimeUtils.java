@@ -197,7 +197,11 @@ public class TimeUtils {
 			return Validation.success(l2.get(0));
 		}
 		catch (Exception e) {
-			return getTimePeriod(human_readable_date).map(c -> c.getDuration().get(ChronoUnit.SECONDS)).map(l -> new Date(base_date.orElse(new Date()).getTime() + l*1000L));
+			final Pattern numChronoPattern = Pattern.compile("^([\\d]+)(.*)");			
+			final Matcher m = numChronoPattern.matcher(human_readable_date);
+			return m.find() 
+					? getTimePeriod(m.group(2)).map(c -> c.getDuration().get(ChronoUnit.SECONDS)).map(l -> new Date(base_date.orElse(new Date()).getTime() + Long.parseLong(m.group(1))*l*1000L))
+					: getTimePeriod(human_readable_date).map(c -> c.getDuration().get(ChronoUnit.SECONDS)).map(l -> new Date(base_date.orElse(new Date()).getTime() + l*1000L));		
 		}		
 	}
 	

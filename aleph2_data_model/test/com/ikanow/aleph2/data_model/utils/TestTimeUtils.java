@@ -88,9 +88,24 @@ public class TestTimeUtils {
 		
 		// Check failure
 		
-		Validation<String, Date> error = TimeUtils.getSchedule("banana", Optional.of(now));
-		assertTrue("Fails", error.isFail());
-		assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "banana"), error.fail());
+		Validation<String, Date> error1 = TimeUtils.getSchedule("banana", Optional.of(now));
+		assertTrue("Fails", error1.isFail());
+		assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "banana"), error1.fail());
+		
+		//check shorthand success
+		Validation<String, Date> result3 = TimeUtils.getSchedule("5w", Optional.of(now));
+		assertTrue("Passes", result3.isSuccess());
+		assertEquals(949730400000L, result3.success().getTime());
+		
+		//check shorthand no number success
+		Validation<String, Date> result4 = TimeUtils.getSchedule("w", Optional.of(now));		
+		assertTrue("Passes", result4.isSuccess());
+		assertEquals(947311200000L, result4.success().getTime());
+		
+		//check shorthand failure
+		Validation<String, Date> error2 = TimeUtils.getSchedule("5nonsense", Optional.of(now));		
+		assertTrue("Fails", error2.isFail());
+		assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "nonsense"), error2.fail());
 	}
 	
 	@SuppressWarnings("unused")
