@@ -178,7 +178,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 * @param collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then returns a directory of existing collections (clazz has to be AssetStateDirectoryBean.class)
 	 * @return a generic object repository visible to all users of this module
 	 */
-	<S> Optional<ICrudService<S>> getGlobalModuleObjectStore(final Class<S> clazz, final Optional<String> collection);
+	<S> Optional<ICrudService<S>> getLibraryObjectStore(final Class<S> clazz, final String name_or_id, final Optional<String> collection);
 	
 	/** (AnalyticsTechnology/Analytics Module) Returns an object repository that the harvester/module can use to store arbitrary internal state. 
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
@@ -201,13 +201,13 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	SharedLibraryBean getTechnologyConfig();
 	
-	/** (AnalyticsTechnology/Analytics Module) Returns the library bean optionally specified in the analytic job's module_name_or_id
-	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
+	/** (AnalyticsTechnology/Analytics Module) Returns the library beans optionally specified in the analytic job's module_name_or_id/library_name_or_ids
+	 *  The libraries bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state, and to get entry points into modular functionality
 	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
-	 *  This can also be used to obtain SharedLibraryBean.getStreamingEntryPoint or SharedLibraryBean.getBatchEntryPoint or SharedLibraryBean.getMiscEntryPoitn
+	 *  This can also be used to obtain BucketUtils.getStreamingEntryPoint or BucketUtils.getBatchEntryPoint or BucketUtils.getEntryPoint
 	 * @return the library bean that provided the user callback currently being executed
 	 */
-	Optional<SharedLibraryBean> getModuleConfig();
+	Map<String, SharedLibraryBean> getLibraryConfigs();
 	
 	/** (AnalyticsTechnology/Analytics Module) Returns the status bean for the specified bucket (whhch contains AnalyticThreadStatusBean) 
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

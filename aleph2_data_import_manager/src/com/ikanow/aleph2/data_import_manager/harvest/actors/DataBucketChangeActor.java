@@ -137,7 +137,7 @@ public class DataBucketChangeActor extends AbstractActor {
 												.map(hcfg -> Tuples._2T(hcfg.module_name_or_id(), map.get(hcfg.module_name_or_id())))
 												.collect(Collectors.toMap(t2 -> t2._1(), t2 -> t2._2()._1()));
 									
-									h_context.setModuleConfigs(module_configs);
+									h_context.setLibraryConfigs(module_configs);
 								});
 								
 								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);

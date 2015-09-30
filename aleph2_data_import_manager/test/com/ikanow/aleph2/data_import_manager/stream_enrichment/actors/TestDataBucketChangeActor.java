@@ -819,7 +819,7 @@ public class TestDataBucketChangeActor {
 		
 		final AnalyticsContext context = _actor_context.getNewAnalyticsContext(); 
 		
-		assertTrue("module config not present", !context.getModuleConfig().isPresent());
+		assertTrue("module config not present", context.getLibraryConfigs().isEmpty());
 		
 		// Check works
 		{
@@ -829,8 +829,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("Finds module config", context.getModuleConfig().isPresent());
-			assertEquals("/test1", context.getModuleConfig().get().path_name());
+			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test1"));
 		}
 		// Check works again
 		{
@@ -840,8 +839,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("Finds module config", context.getModuleConfig().isPresent());
-			assertEquals("/test2", context.getModuleConfig().get().path_name());
+			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test2"));
 		}
 		// Check unsets - no module name
 		{
@@ -850,7 +848,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("No module config", !context.getModuleConfig().isPresent());
+			assertTrue("module config not present", context.getLibraryConfigs().isEmpty());
 		}
 		// (and then works again)
 		{
@@ -860,8 +858,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("Finds module config", context.getModuleConfig().isPresent());
-			assertEquals("/test2", context.getModuleConfig().get().path_name());
+			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test2"));
 		}
 		// Check unsets - module name not found
 		{
@@ -871,7 +868,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("No module config", !context.getModuleConfig().isPresent());
+			assertTrue("module config not present", context.getLibraryConfigs().isEmpty());
 		}
 		// (and then works again)
 		{
@@ -881,8 +878,7 @@ public class TestDataBucketChangeActor {
 			
 			DataBucketChangeActor.setPerJobContextParams(test, context, map);
 
-			assertTrue("Finds module config", context.getModuleConfig().isPresent());
-			assertEquals("/test1", context.getModuleConfig().get().path_name());
+			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test1"));
 		}
 	}
 	

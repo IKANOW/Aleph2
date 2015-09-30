@@ -149,7 +149,7 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 * @param collection - arbitrary string, enables the user to split the per bucket state into multiple independent collections. If left empty then returns a directory of existing collections (clazz has to be AssetStateDirectoryBean.class)
 	 * @return a generic object repository visible to all users of this harvest technology
 	 */
-	<S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(final Class<S> clazz, final Optional<String> collection);
+	<S> Optional<ICrudService<S>> getGlobalEnrichmentModuleObjectStore(final Class<S> clazz, final Optional<String> collection);
 
 	/** (All Enrichment Types) Returns an object repository that the harvester/module can use to store arbitrary internal state
 	 * @param clazz The class of the bean or object type desired (needed so the repo can reason about the type when deciding on optimizations etc)
@@ -168,9 +168,9 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	/** (All Enrichment Types) Returns the library bean that provided the user callback currently being executed
 	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
 	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 
-	 * @return the library bean that provided the user callback currently being executed
+	 * @return the library bean that provided the user callback currently being executed - not present if no module_id_or_name is specified for the enrichment job
 	 */
-	SharedLibraryBean getModuleConfig();
+	Optional<SharedLibraryBean> getModuleConfig();
 	
 	/** (All Enrichment Types) Returns the status bean for the specified bucket
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 

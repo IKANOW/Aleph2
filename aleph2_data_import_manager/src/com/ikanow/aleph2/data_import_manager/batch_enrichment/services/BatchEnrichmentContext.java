@@ -454,15 +454,15 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLibraryConfig()
 	 */
 	@Override
-	public SharedLibraryBean getModuleConfig() {
-		return _mutable_state.library_config.get();
+	public Optional<SharedLibraryBean> getModuleConfig() {
+		return Optional.of(_mutable_state.library_config.get());
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getGlobalEnrichmentModuleObjectStore(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(
+	public <S> Optional<ICrudService<S>> getGlobalEnrichmentModuleObjectStore(
 			Class<S> clazz, Optional<String> collection) {
 		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
 	}

@@ -16,10 +16,12 @@
 package com.ikanow.aleph2.analytics.services;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -105,10 +107,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);	
 	
 	protected static class MutableState {
-		//TODO (ALEPH-12) logging information - will be genuinely mutable
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
-		SetOnce<SharedLibraryBean> module_config = new SetOnce<>();
+		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();		
 	};	
@@ -181,9 +182,17 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @returns whether the library bean has been updated (ie fails if it's already been set)
 	 */
 	@SuppressWarnings("deprecation")
-	public boolean resetModuleConfig(final SharedLibraryBean lib_config) {
-		_mutable_state.module_config.forceSet(lib_config);
-		return true;
+	public void resetLibraryConfigs(final Map<String, SharedLibraryBean> lib_configs) {
+		_mutable_state.library_configs.forceSet(lib_configs);
+	}	
+	
+	/** A very simple container for library beans
+	 * @author Alex
+	 */
+	public static class LibraryContainerBean {
+		LibraryContainerBean() {}
+		LibraryContainerBean(Collection<SharedLibraryBean> libs) { this.libs = new ArrayList<>(libs); }
+		List<SharedLibraryBean> libs;
 	}
 	
 	/** FOR DEBUGGING AND TESTING ONLY, inserts a copy of the current context into the saved "in module" versions
@@ -229,8 +238,22 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
 			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
-				final BeanTemplate<SharedLibraryBean> retrieve_module = BeanTemplateUtils.from(parsed_config.getString(__MY_MODULE_LIBRARY_ID), SharedLibraryBean.class);
-				_mutable_state.module_config.set(retrieve_module.get());				
+				final BeanTemplate<LibraryContainerBean> retrieve_module = BeanTemplateUtils.from(parsed_config.getString(__MY_MODULE_LIBRARY_ID), LibraryContainerBean.class);
+				_mutable_state.library_configs.set(
+						Optional.ofNullable(retrieve_module.get().libs).orElse(Collections.emptyList())
+									.stream()
+									// (split each lib bean into 2 tuples, ie indexed by _id and path_name)
+									.flatMap(mod -> Arrays.asList(Tuples._2T(mod._id(), mod), Tuples._2T(mod.path_name(), mod)).stream())
+									.collect(Collectors.toMap(
+											t2 -> t2._1()
+											, 
+											t2 -> t2._2()
+											,
+											(t1, t2) -> t1 // (can't happen, ignore if it does)
+											,
+											() -> new LinkedHashMap<String, SharedLibraryBean>()
+											))
+						);
 			}
 			
 			_batch_index_service = 
@@ -318,12 +341,19 @@ public class AnalyticsContext implements IAnalyticsContext {
 			
 			final Config last_call = 
 					Lambdas.get(() -> 
-						_mutable_state.module_config.isSet()
+						_mutable_state.library_configs.isSet()
 						?
 						config_subset_services
 							.withValue(__MY_MODULE_LIBRARY_ID, 
 									ConfigValueFactory
-										.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.module_config.get()).toString())
+										.fromAnyRef(BeanTemplateUtils.toJson(
+												new LibraryContainerBean(
+														_mutable_state.library_configs.get().entrySet().stream()
+															.filter(kv -> kv.getValue().path_name().equals(kv.getKey()))
+															.map(kv -> kv.getValue())
+															.collect(Collectors.toList())
+													)
+												).toString())
 										)
 						:
 						config_subset_services						
@@ -682,15 +712,14 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getGlobalModuleObjectStore(java.lang.Class, java.util.Optional)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLibraryObjectStore(java.lang.Class, java.util.Optional)
 	 */
 	@Override
-	public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
-			final Class<S> clazz, final Optional<String> collection) {
-		return this.getModuleConfig().map(module_lib -> 
-			_core_management_db.getPerLibraryState(clazz, module_lib, collection)
-		);
-	}	
+	public <S> Optional<ICrudService<S>> getLibraryObjectStore(final Class<S> clazz, final String name_or_id, final Optional<String> collection)
+	{
+		return Optional.ofNullable(this.getLibraryConfigs().get(name_or_id))
+				.map(module_lib -> _core_management_db.getPerLibraryState(clazz, module_lib, collection));
+	}
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
@@ -737,13 +766,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getModuleConfig()
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLibraryConfigs()
 	 */
 	@Override
-	public Optional<SharedLibraryBean> getModuleConfig() {
-		return _mutable_state.module_config.isSet()
-				? Optional.of(_mutable_state.module_config.get())
-				: Optional.empty();
+	public Map<String, SharedLibraryBean> getLibraryConfigs() {
+		return _mutable_state.library_configs.isSet()
+				? _mutable_state.library_configs.get()
+				: Collections.emptyMap();
 	}
 	
 	/* (non-Javadoc)

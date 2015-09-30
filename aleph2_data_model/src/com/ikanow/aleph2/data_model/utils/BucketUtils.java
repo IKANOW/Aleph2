@@ -15,9 +15,19 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 /**
  * Provides a set of util functions for DataBucketBean
@@ -121,6 +131,108 @@ public class BucketUtils {
 	}
 	private static String safeTruncate(final String in, final int max_len) {
 		return in.length() < max_len ? in : in.substring(0, max_len);
+	}
+	
+	/** Gets the entry point for modular batch processing (enrichment)
+	 * @param library_beans - the map of library beans from the context
+	 * @param control - the control metadata bean
+	 * @return
+	 */
+	public static Optional<String> getBatchEntryPoint(final Map<String, SharedLibraryBean> library_beans, final EnrichmentControlMetadataBean control) {
+		return getEntryPoint(library_beans, () -> control.entry_point(), () -> control.module_name_or_id(),
+				() -> new HashSet<String>(Optional.ofNullable(control.library_names_or_ids()).orElse(Collections.emptyList())),
+							(SharedLibraryBean library) -> library.batch_enrichment_entry_point());
+		
+	} 
+		
+	/** Gets the entry point for modular stream processing (enrichment)
+	 * @param library_beans - the map of library beans from the context
+	 * @param control - the control metadata bean
+	 * @return
+	 */
+	public static Optional<String> getStreamingEntryPoint(final Map<String, SharedLibraryBean> library_beans, final EnrichmentControlMetadataBean control) {
+		return getEntryPoint(library_beans, () -> control.entry_point(), () -> control.module_name_or_id(),
+				() -> new HashSet<String>(Optional.ofNullable(control.library_names_or_ids()).orElse(Collections.emptyList())),
+							(SharedLibraryBean library) -> library.streaming_enrichment_entry_point());
+		
+	} 
+	
+	/** Gets the entry point for modular batch processing (analytics)
+	 * @param library_beans - the map of library beans from the context
+	 * @param control - the control metadata bean
+	 * @return
+	 */
+	public static Optional<String> getBatchEntryPoint(final Map<String, SharedLibraryBean> library_beans, final AnalyticThreadJobBean control) {
+		return getEntryPoint(library_beans, () -> control.entry_point(), () -> control.module_name_or_id(),
+				() -> new HashSet<String>(Optional.ofNullable(control.library_names_or_ids()).orElse(Collections.emptyList())),
+							(SharedLibraryBean library) -> library.batch_enrichment_entry_point());
+		
+	} 
+		
+	/** Gets the entry point for modular stream processing (analytics)
+	 * @param library_beans - the map of library beans from the context
+	 * @param control - the control metadata bean
+	 * @return
+	 */
+	public static Optional<String> getStreamingEntryPoint(final Map<String, SharedLibraryBean> library_beans, final AnalyticThreadJobBean control) {
+		return getEntryPoint(library_beans, () -> control.entry_point(), () -> control.module_name_or_id(),
+				() -> new HashSet<String>(Optional.ofNullable(control.library_names_or_ids()).orElse(Collections.emptyList())),
+							(SharedLibraryBean library) -> library.streaming_enrichment_entry_point());
+		
+	} 
+	
+	/** Gets the entry point for modular harvest processing
+	 * @param library_beans - the map of library beans from the context
+	 * @param control - the control metadata bean
+	 * @return
+	 */
+	public static Optional<String> getEntryPoint(final Map<String, SharedLibraryBean> library_beans, final HarvestControlMetadataBean control) {
+		return getEntryPoint(library_beans, () -> control.entry_point(), () -> control.module_name_or_id(),
+				() -> new HashSet<String>(Optional.ofNullable(control.library_names_or_ids()).orElse(Collections.emptyList())),
+							(SharedLibraryBean library) -> null);
+		
+	} 
+	
+	
+	/** A generic function that provides the entry point for a harvest or enrichment control metadata bean
+	 * @param library_beans - the map of library beans from the context
+	 * @param control_bean_get_entry - returns the entry point from whatever the type of control bean is
+	 * @param control_bean_get_module - returns the module id/name from whatever the type of control bean is
+	 * @param control_bean_get_lib - returns a set of libraries from whatever the type of control bean is
+	 * @param library_get_entry - returns the batch or streaming enrichment entry point
+	 * @return
+	 */
+	protected static Optional<String> getEntryPoint(final Map<String, SharedLibraryBean> library_beans, 
+			final Supplier<String> control_bean_get_entry, final Supplier<String> control_bean_get_module, final Supplier<Set<String>> control_bean_get_lib, 
+			final Function<SharedLibraryBean, String> library_get_entry								
+			)
+	{		
+		final Set<String> library_ids_or_names = control_bean_get_lib.get();
+		return Optional.ofNullable(control_bean_get_entry.get()).map(Optional::of) // Option 1: entry point override specified
+						.orElseGet(() -> 
+									Optional.ofNullable(control_bean_get_module.get()) // Option 2: module specified .. use either batch or enrichment
+										.map(m -> library_beans.get(m))
+										.map(lib -> Optional.ofNullable(lib.batch_enrichment_entry_point()).orElse(lib.misc_entry_point()))										
+								)
+						.map(Optional::of)
+						// Option 3: get the first library bean with a batch entry point
+						.orElseGet(() ->
+									library_beans.entrySet().stream()
+										.filter(kv -> library_ids_or_names.contains(kv.getKey()))
+										.filter(kv -> (null != library_get_entry.apply(kv.getValue())))										
+										.findFirst()
+										.map(kv -> library_get_entry.apply(kv.getValue()))
+								)
+						.map(Optional::of)
+						// Option 4: get the first library bean with a misc entry point
+						.orElseGet(() -> 
+								library_beans.entrySet().stream()
+								.filter(kv -> library_ids_or_names.contains(kv.getKey()))
+								.filter(kv -> (null != kv.getValue().misc_entry_point()))
+								.findFirst()
+								.map(kv -> kv.getValue().misc_entry_point())
+								)
+						;
 	}
 	
 }

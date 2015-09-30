@@ -249,16 +249,15 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Map<String, SharedLibraryBean> getModuleConfigs() {
+		public <S> Optional<ICrudService<S>> getLibraryObjectStore(
+				Class<S> clazz, String name_or_id, Optional<String> collection) {
 			return null;
 		}
 
 		@Override
-		public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
-				Class<S> clazz, String module_name_or_id, Optional<String> collection) {
+		public Map<String, SharedLibraryBean> getLibraryConfigs() {
 			return null;
 		}
-		
 	}
 	public static class MockAnalyticsContext implements IAnalyticsContext {
 		
@@ -417,13 +416,13 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public Optional<SharedLibraryBean> getModuleConfig() {
+		public <S> Optional<ICrudService<S>> getLibraryObjectStore(
+				Class<S> clazz, String name_or_id, Optional<String> collection) {
 			return null;
 		}
 
 		@Override
-		public <S> Optional<ICrudService<S>> getGlobalModuleObjectStore(
-				Class<S> clazz, Optional<String> collection) {
+		public Map<String, SharedLibraryBean> getLibraryConfigs() {
 			return null;
 		}
 	}
@@ -536,20 +535,20 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public SharedLibraryBean getModuleConfig() {
+		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
+				Optional<DataBucketBean> bucket, Optional<String> collection,
+				Optional<StateDirectoryType> type) {
 			return null;
 		}
 
 		@Override
-		public <S> ICrudService<S> getGlobalEnrichmentModuleObjectStore(
+		public <S> Optional<ICrudService<S>> getGlobalEnrichmentModuleObjectStore(
 				Class<S> clazz, Optional<String> collection) {
 			return null;
 		}
 
 		@Override
-		public <S> ICrudService<S> getBucketObjectStore(Class<S> clazz,
-				Optional<DataBucketBean> bucket, Optional<String> collection,
-				Optional<StateDirectoryType> type) {
+		public Optional<SharedLibraryBean> getModuleConfig() {
 			return null;
 		}
 		

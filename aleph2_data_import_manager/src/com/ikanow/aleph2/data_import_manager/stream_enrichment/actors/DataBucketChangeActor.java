@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,8 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+
 
 
 
@@ -88,6 +91,8 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -95,6 +100,8 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
+
 
 
 
@@ -171,10 +178,6 @@ import fj.data.Validation;
 /** This actor is responsible for supervising the job of handling changes to data
  *  buckets on the "data import manager" end - specifically vs streaming enrichment (see harvest.DataBucketChangeActor for harvest related control)
  * @author acp
- */
-/**
- * @author Alex
- *
  */
 @SuppressWarnings("unused")
 public class DataBucketChangeActor extends AbstractActor {
@@ -719,12 +722,20 @@ public class DataBucketChangeActor extends AbstractActor {
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs
 			)
 	{
-		Optional.ofNullable(job.module_name_or_id())
-				.map(module_name -> libs.get(module_name))
-				.map(t2 -> {
-					return context.resetModuleConfig(t2._1());
-				})
-		.orElseGet(() -> context.resetModuleConfig(null)); // (unsets if can't find the module)
+		context.resetLibraryConfigs(
+				Stream.concat(
+						Optional.ofNullable(job.module_name_or_id()).map(Stream::of).orElseGet(Stream::empty),
+						Optional.ofNullable(job.library_names_or_ids()).map(l -> l.stream()).orElseGet(Stream::empty))
+					.map(lib -> libs.get(lib))
+					.filter(lib -> null != lib)
+					.map(lib -> lib._1())
+					.flatMap(lib -> Arrays.asList(Tuples._2T(lib._id(), lib), Tuples._2T(lib.path_name(), lib)).stream())
+					.collect(Collectors.toMap(
+								t2 -> t2._1(),
+								t2 -> t2._2(),
+								(a, b) -> a, // (can't happen(
+								() -> new LinkedHashMap<String, SharedLibraryBean>()))
+				);
 	}
 	
 	/** Combine the analytic thread level results and the per-job results into a single reply
