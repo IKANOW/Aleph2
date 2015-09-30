@@ -59,7 +59,7 @@ public class BeFileOutputWriter extends RecordWriter<String, Tuple2<Long, IBatch
 		this.ecMetadata = ecMetadata;
 		// TODO check where final_stage is defined
 		boolean final_stage = true;
-		enrichmentBatchModule.onStageInitialize(enrichmentContext, dataBucket, final_stage);
+		enrichmentBatchModule.onStageInitialize(enrichmentContext, dataBucket, ecMetadata, final_stage);
 
 	}
 

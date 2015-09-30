@@ -136,7 +136,7 @@ public class TestTimeUtils {
 			
 			final Validation<String, Duration> err1 = TimeUtils.getDuration("1x");
 			assertTrue("Fails", err1.isFail());
-			assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "1x"), err1.fail());
+			assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "x"), err1.fail());
 		}
 		// Check very simple
 		{

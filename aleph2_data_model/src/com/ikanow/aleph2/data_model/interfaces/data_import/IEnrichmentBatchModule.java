@@ -23,6 +23,7 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 
 /** The interface enrichment developers need to implement this interface to use JARs as enrichment modules in batch mode
  * @author acp
@@ -36,7 +37,7 @@ public interface IEnrichmentBatchModule {
 	 * @param bucket - the bucket for which this enrichment is taking place
 	 * @param final_stage - this is true if this is the final step before the object is stored
 	 */
-	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final boolean final_stage);
+	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final EnrichmentControlMetadataBean control, final boolean final_stage);
 	
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a stream of (id, object, lazy binary stream) for processing 
