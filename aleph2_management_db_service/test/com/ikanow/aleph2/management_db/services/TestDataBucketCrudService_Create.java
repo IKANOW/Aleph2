@@ -1352,6 +1352,78 @@ public class TestDataBucketCrudService_Create {
 		}
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 }
+	
+	@Test
+	public void test_SuccessfulBucketCreation_singleNode_PollFrequency() throws Exception {
+		cleanDatabases();
+
+		// Setup: register an accepting actor to listen:
+		final String accepting_host1 = insertActor(TestActor_Accepter.class);
+		final String accepting_host2 = insertActor(TestActor_Accepter.class);
+		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
+		
+		// 0) Start with a valid bucket:
+		
+		final DataBucketBean valid_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id1")
+				.with(DataBucketBean::full_name, "/name1/embedded/dir")
+				.with(DataBucketBean::display_name, "name1")
+				.with(DataBucketBean::created, new Date())
+				.with(DataBucketBean::modified, new Date())
+				.with(DataBucketBean::owner_id, "owner1")
+				.with(DataBucketBean::multi_node_enabled, false) 
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+				.with(DataBucketBean::poll_frequency, "in 5 minutes")
+				.with(DataBucketBean::harvest_configs, 
+						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.done().get()))
+				.done().get();
+
+		//(delete the file path)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
+		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		
+		//(add the status object and try)
+		final DataBucketStatusBean status = 
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+				.with(DataBucketStatusBean::_id, valid_bucket._id())
+				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+				.with(DataBucketStatusBean::suspended, false)
+				.done().get();
+		
+		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+		_bucket_status_crud.storeObject(status).get();
+		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+
+		// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
+		assertEquals(0L, (long)_bucket_crud.countObjects().get());
+		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
+		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
+		assertEquals(true, err_msg.success());
+		assertEquals(valid_bucket._id(), insert_future.get().get());
+		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+		assertEquals(1, status_after.node_affinity().size());
+		assertTrue("Check the node affinity is correct: ", status_after.node_affinity().contains(accepting_host1) || status_after.node_affinity().contains(accepting_host2));
+		assertEquals(false, status_after.suspended());
+		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+		assertEquals(1L, (long)_bucket_crud.countObjects().get());
+		
+		// Check the "Confirmed" bucket fields match the bucket now
+		assertEquals(false, status_after.confirmed_suspended());
+		assertEquals(false, status_after.confirmed_multi_node_enabled());
+		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());
+		
+		//finally check that next_poll_date was set
+		final DataBucketBean valid_bucket_retrieved = _bucket_crud.getObjectById(valid_bucket._id()).get().get();
+		assertTrue("Next poll date should not be set in the object we submitted", valid_bucket.next_poll_date() == null);
+		assertTrue("Next poll date should have been set during store", valid_bucket_retrieved.next_poll_date() != null);
+	}
 
 	@Test
 	public void test_SuccessfulBucketCreation_multiNode() throws Exception {

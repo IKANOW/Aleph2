@@ -67,8 +67,7 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
 			final FiniteDuration poll_frequency = Duration.create(1, TimeUnit.SECONDS);
 			_ticker.set(this.context().system().scheduler()
-					.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
-			//scheduleNextCheck(1);			
+					.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));			
 			_logger.info("BucketTestCycleSingletonActor has started on this node.");						
 		}	
 		

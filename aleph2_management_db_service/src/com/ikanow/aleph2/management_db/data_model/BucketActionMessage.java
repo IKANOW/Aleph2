@@ -171,4 +171,18 @@ public class BucketActionMessage implements Serializable {
 		}
 		protected ProcessingTestSpecBean test_spec;
 	}
+	
+	/** Send a poll frequency bucket action message to one (single node) or many (distributed node) buckets
+	 * @author burch
+	 */
+	public static class PollFreqBucketActionMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = 1018365226626559444L;
+		protected PollFreqBucketActionMessage() { super(null, null); }
+		/** User c'tor for creating a message to create a bucket
+		 * @param bucket - the bucket to create
+		 */
+		public PollFreqBucketActionMessage(final DataBucketBean bucket) {
+			super(bucket);
+		}
+	}
 }

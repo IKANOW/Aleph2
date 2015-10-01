@@ -436,6 +436,20 @@ public class TestDataBucketChangeActor {
 			assertEquals("10 / 1", test8_reply.reply().message());
 			assertEquals(true, test8_reply.reply().success());
 		}
+		// Test 9: poll
+		{
+			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
+			
+			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketChangeActor.talkToHarvester(
+					bucket, poll, "test9", _actor_context.getNewHarvestContext(), 
+					Validation.success(harvest_tech));		
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test9.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test9_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test9.get();
+			assertEquals("test9", test9_reply.source());
+			assertEquals("called onPeriodicPoll", test9_reply.reply().message());
+			assertEquals(true, test9_reply.reply().success());
+		}
 		// Test X: unrecognized
 		{
 			// Use reflection to create a "raw" BucketActionMessage

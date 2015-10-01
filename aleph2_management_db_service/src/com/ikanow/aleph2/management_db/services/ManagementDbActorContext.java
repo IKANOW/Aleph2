@@ -28,6 +28,7 @@ import java.util.Optional;
 
 
 
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -39,6 +40,7 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingletonActor;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketPollFreqSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
@@ -46,6 +48,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
 
 
 
@@ -85,6 +88,7 @@ public class ManagementDbActorContext {
 	private Optional<ActorRef> _delete_singleton = Optional.empty();
 	private Optional<ActorRef> _delete_worker = Optional.empty();
 	private Optional<ActorRef> _test_singleton = Optional.empty();
+	private Optional<ActorRef> _poll_freq_singleton = Optional.empty();
 	
 	/** Creates a new actor context (production manual, or guice) 
 	 */
@@ -122,12 +126,15 @@ public class ManagementDbActorContext {
 			.filter(name -> name.equals(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()))
 			.ifPresent(__ -> {
 				final Runnable on_akka_join = () -> {
-					_delete_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
+					 _test_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_TEST_CYCLE_SINGLETON_ACTOR, 
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketTestCycleSingletonActor.class));
-					_test_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
+					 _delete_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_DELETION_SINGLETON_ACTOR, 
 							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 							Props.create(BucketDeletionSingletonActor.class));
+					_poll_freq_singleton = _distributed_services.createSingletonActor(ActorUtils.BUCKET_POLL_FREQUENCY_SINGLETON_ACTOR, 
+							ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
+							Props.create(BucketPollFreqSingletonActor.class));
 		
 					// subscriber one worker per node
 					_delete_worker = Optional.of(_distributed_services.getAkkaSystem().actorOf(Props.create(BucketDeletionActor.class), ActorUtils.BUCKET_DELETION_WORKER_ACTOR));
@@ -152,6 +159,7 @@ public class ManagementDbActorContext {
 		_delete_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
 		_test_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
 		_delete_worker.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+		_poll_freq_singleton.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
 	}
 	
 	/** Returns the global service context

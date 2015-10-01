@@ -783,7 +783,25 @@ public class TestDataBucketChangeActor {
 			final BasicMessageBean test_reply1 = test_reply.reply();
 			assertEquals("called onTestThread", test_reply1.message());
 			assertEquals(true, test_reply1.success());
-		}		
+		}	
+		
+		// Test 9: poll
+		{
+			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
+			
+			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketChangeActor.talkToAnalytics(
+					bucket, poll,
+					"test9", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test9.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test9_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test9.get();		
+			
+			assertEquals("test9", test9_reply.source());
+			assertEquals("called onPeriodicPoll", test9_reply.reply().message());
+		}
 
 		// Test X: unrecognized
 		{

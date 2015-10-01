@@ -692,6 +692,13 @@ public class DataBucketChangeActor extends AbstractActor {
 							
 							return combineResults(top_level_result, job_results, source);
 						})
+						.when(BucketActionMessage.PollFreqBucketActionMessage.class, msg -> {
+							tech_module.onInit(context);
+							
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onPeriodicPoll(bucket, jobs, context);
+							
+							return combineResults(top_level_result, Collections.emptyList(), source);
+						})
 						.otherwise(msg -> { // return "command not recognized" error
 							tech_module.onInit(context);
 							return CompletableFuture.completedFuture(
