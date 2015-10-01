@@ -34,6 +34,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.security.utils.ProfilingUtility;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
@@ -49,6 +50,7 @@ public class SecurityServiceTest {
 
 	protected ISecurityService securityService = null;
 	
+	protected String regularUserId = "user";
 
 	@Before
 	public void setupDependencies() throws Exception {
@@ -142,5 +144,106 @@ public class SecurityServiceTest {
 		ISubject subject = securityService.login("user","user123");			
 		return subject;
 	}
+	
+	@Test
+	public void testCaching(){
+		ISubject subject = loginAsRegularUser();
+		// test personal community permission
+		String permission = "permission2";
+        //test a typed permission (not instance-level)
+		ProfilingUtility.timeStart("TU-permisssion0");
+		assertEquals(true,securityService.isPermitted(subject,permission));
+		ProfilingUtility.timeStopAndLog("TU-permisssion0");
+		for (int i = 0; i < 10; i++) {
+			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
+			assertEquals(true,securityService.isPermitted(subject,permission));			
+			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
+		}
+		subject = loginAsAdmin();
+		// test personal community permission
+		permission = "permission2";
+        //test a typed permission (not instance-level)
+		ProfilingUtility.timeStart("AU-permisssion0");
+		assertEquals(true,securityService.isPermitted(subject,permission));
+		ProfilingUtility.timeStopAndLog("AU-permisssion");
+		for (int i = 0; i < 10; i++) {
+			ProfilingUtility.timeStart("AU-permisssion"+i+1);
+			assertEquals(true,securityService.isPermitted(subject,permission));			
+			ProfilingUtility.timeStopAndLog("AU-permisssion"+i+1);
+		}
+		
+		for (int i = 0; i < 10; i++) {
+			ProfilingUtility.timeStart("TU2-permisssion_L"+(i+1));
+		subject = loginAsRegularUser();
+		ProfilingUtility.timeStopAndLog("TU2-permisssion_L"+(i+1));
+        //test a typed permission (not instance-level)
+		ProfilingUtility.timeStart("TU2-permisssion"+(i+1));
+		assertEquals(true,securityService.isPermitted(subject,permission));
+			ProfilingUtility.timeStopAndLog("TU2-permisssion"+(i+1));
+		}
+	}
+
+	@Test
+	public void testInvalidateAuthenticationCache(){
+		ISubject subject = loginAsTestUser();
+		
+		securityService.runAs(subject,Arrays.asList(regularUserId));
+
+		// test personal community permission
+		String permission = "permission1";
+        //test a typed permission (not instance-level)
+		ProfilingUtility.timeStart("TU-permisssion0");
+		assertEquals(true,securityService.isPermitted(subject,permission));
+		ProfilingUtility.timeStopAndLog("TU-permisssion0");
+		for (int i = 0; i < 10; i++) {
+			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
+			assertEquals(true,securityService.isPermitted(subject,permission));			
+			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
+			if(i==5){
+				securityService.invalidateAuthenticationCache(Arrays.asList(regularUserId));	
+				//loginAsRegularUser();
+			}
+		}
+	}
+
+	@Test
+	public void testInvalidateCache(){
+		ISubject subject = loginAsTestUser();
+		
+		securityService.runAs(subject,Arrays.asList(regularUserId));
+
+		// test personal community permission
+		String permission = "permission1";
+        //test a typed permission (not instance-level)
+		ProfilingUtility.timeStart("TU-permisssion0");
+		assertEquals(true,securityService.isPermitted(subject,permission));
+		ProfilingUtility.timeStopAndLog("TU-permisssion0");
+		for (int i = 0; i < 10; i++) {
+			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
+			assertEquals(true,securityService.isPermitted(subject,permission));			
+			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
+			if(i==5){
+				securityService.invalidateCache();	
+				//loginAsRegularUser();
+			}
+		}
+	}
+
+	@Test
+	public void testRunAsDemoted(){
+		ISubject subject = loginAsAdmin();
+		// system community
+		String runAsPrincipal = regularUserId; 
+		
+		assertEquals(true,securityService.hasRole(subject,"admin"));
+
+		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
+		
+		assertEquals(false,securityService.hasRole(subject,"admin"));
+		Collection<String> p = securityService.releaseRunAs(subject);
+		assertEquals(true,securityService.hasRole(subject,"admin"));
+		logger.debug("Released Principals:"+p);
+	}
+
 
 }

@@ -78,4 +78,8 @@ public interface ISecurityService extends IUnderlyingService {
     Collection<String> releaseRunAs(ISubject subject);
 
 	<O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean);
+	
+	void invalidateAuthenticationCache(Collection<String> principalNames);
+
+	void invalidateCache();
 }

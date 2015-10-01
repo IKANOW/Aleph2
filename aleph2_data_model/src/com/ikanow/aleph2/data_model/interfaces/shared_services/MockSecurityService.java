@@ -130,5 +130,17 @@ public class MockSecurityService implements ISecurityService {
 	public ISubject loginAsSystem() {
 		return new MockSubject();
 	}
+
+	@Override
+	public void invalidateAuthenticationCache(Collection<String> principalNames) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void invalidateCache() {
+		// TODO Auto-generated method stub
+		
+	}
 	
 }

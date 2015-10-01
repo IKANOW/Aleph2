@@ -72,5 +72,17 @@ public class SampleSecurityService implements ISecurityService {
 		return null;
 	}
 
+	@Override
+	public void invalidateAuthenticationCache(Collection<String> principalNames) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void invalidateCache() {
+		// TODO Auto-generated method stub
+		
+	}
+
 
 }
