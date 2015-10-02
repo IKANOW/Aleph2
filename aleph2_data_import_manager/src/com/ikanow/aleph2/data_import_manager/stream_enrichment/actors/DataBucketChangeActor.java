@@ -185,6 +185,9 @@ public class DataBucketChangeActor extends AbstractActor {
 	
 	///////////////////////////////////////////
 
+	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);	
+	private static final EnumSet<MasterEnrichmentType> _batch_types = EnumSet.of(MasterEnrichmentType.batch, MasterEnrichmentType.streaming_and_batch);		
+	
 	// Services
 	protected final DataImportActorContext _context;
 	protected final IManagementDbService _management_db;
@@ -193,11 +196,15 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected final GlobalPropertiesBean _globals;
 	protected final IStorageService _fs;
 	protected final Optional<IAnalyticsTechnologyService> _stream_analytics_tech;
+	protected final Optional<IAnalyticsTechnologyService> _batch_analytics_tech;
 	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
+	protected final SetOnce<AnalyticsContext> _batch_analytics_context = new SetOnce<>();
 	
 	// Streaming enrichment handling:
 	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService");
+	public static final Optional<String> BATCH_ENRICHMENT_DEFAULT = Optional.of("BatchEnrichmentService");
 	public static final String STREAMING_ENRICHMENT_TECH_NAME = STREAMING_ENRICHMENT_DEFAULT.get();
+	public static final String BATCH_ENRICHMENT_TECH_NAME = BATCH_ENRICHMENT_DEFAULT.get();
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -210,6 +217,7 @@ public class DataBucketChangeActor extends AbstractActor {
 		_fs = _context.getServiceContext().getStorageService();
 		
 		_stream_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, STREAMING_ENRICHMENT_DEFAULT);
+		_batch_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, BATCH_ENRICHMENT_DEFAULT);
 	}
 	
 	///////////////////////////////////////////
@@ -231,6 +239,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	    				// Streaming enrichment special case:
 	    				if (!_stream_analytics_context.isSet()) {
 	    					_stream_analytics_context.trySet(_context.getNewAnalyticsContext());
+	    					_batch_analytics_context.trySet(_stream_analytics_context.get());
 	    				}	    				
 	    				
 		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
@@ -242,15 +251,33 @@ public class DataBucketChangeActor extends AbstractActor {
 		    			
 						// (this isn't async so doesn't require any futures)
 						
-	    				final boolean accept_or_ignore =
-		    				 _stream_analytics_tech.map(tech -> {
-		    					 tech.onInit(_stream_analytics_context.get());
-		    					 return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
-		    				 })
-		    				 .orElseGet(() -> {
-		    					 _logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
-		    					 return false;
-		    				 });
+	    				final boolean accept_or_ignore = 
+	    	    				isEnrichmentType(m.bucket()) // ie has to be one of the 2
+	    	    				&&
+	    						(!isStreamingEnrichmentType(m.bucket()) // not streaming or streaming enabled
+	    								||
+	    								_stream_analytics_tech.map(tech -> {
+	    									tech.onInit(_stream_analytics_context.get());
+	    									return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
+	    								})
+	    								.orElseGet(() -> {
+	    									_logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
+	    									return false;
+	    								})
+	    						)
+	    						&&
+	    						(!isBatchEnrichmentType(m.bucket()) // not batch or batch enabled
+	    	    						||
+	    	    						_batch_analytics_tech.map(tech -> {
+	    	    							tech.onInit(_batch_analytics_context.get());
+	    	    							return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _batch_analytics_context.get());		    					 
+	    	    						})
+	    	    						.orElseGet(() -> {
+	    	    							_logger.warn(ErrorUtils.get("Actor {0} received batch enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
+	    	    							return false;
+	    	    						})
+	    	    				)    		
+	    						;
 	    				
 						final BucketActionReplyMessage reply = 						
 							accept_or_ignore
@@ -304,6 +331,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module =
 						getAnalyticsTechnology(message.bucket(), technology_name_or_id, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
+								_batch_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
 								message, hostname, err_or_map);
 				
 				err_or_map.forEach(map ->									
@@ -373,7 +401,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	protected BucketActionMessage convertEnrichmentToAnalytics(final BucketActionMessage message) {
 		
 		return BeanTemplateUtils.clone(message)
-					.with(BucketActionMessage::bucket, convertStreamingEnrichmentToAnalyticBucket(message.bucket()))
+					.with(BucketActionMessage::bucket, convertEnrichmentToAnalyticBucket(message.bucket()))
 					.done();
 	}
 
@@ -381,13 +409,9 @@ public class DataBucketChangeActor extends AbstractActor {
 	 * @param bucket
 	 * @return
 	 */
-	protected static DataBucketBean convertStreamingEnrichmentToAnalyticBucket(final DataBucketBean bucket) {
+	protected static DataBucketBean convertEnrichmentToAnalyticBucket(final DataBucketBean bucket) {
 		
-		if ((null == bucket.streaming_enrichment_topology()) || !isEnrichmentType(bucket))
-		{
-			return bucket;
-		}
-		else {
+		if ((null != bucket.streaming_enrichment_topology()) && isStreamingEnrichmentType(bucket)) {
 			final EnrichmentControlMetadataBean enrichment =  Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(false)
 					? bucket.streaming_enrichment_topology()
 					: BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
@@ -436,16 +460,87 @@ public class DataBucketChangeActor extends AbstractActor {
 					)
 					.done();
 		}
+		else if ((null != bucket.batch_enrichment_configs()) && isBatchEnrichmentType(bucket)) {
+			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
+					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
+							true, //(enabled) 
+							"", // (myself) 
+							"batch", 
+							null, // (no filter)
+							null // (no extra config)
+							);		
+			
+			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
+					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
+							false, // (not used for streaming) 
+							false, // (not transient, ie final output) 
+							null,  // (no sub-bucket path)
+							DataBucketBean.MasterEnrichmentType.batch // (not used for non-transient)
+							);					
+	
+			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
+					"batch_enrichment", //(name) 
+					true, // (enabled)
+					BATCH_ENRICHMENT_TECH_NAME, //(technology name or id)
+					null, // no concept of a single module for batch enrichment
+					bucket // collect _all_ the libraries and modules into the classpath, the BE logic will have to figure out how to sort them out later
+						.batch_enrichment_configs().stream()
+						.flatMap(cfg -> 
+							Stream.concat(Optional.ofNullable(cfg.module_name_or_id()).map(Stream::of).orElseGet(Stream::empty),
+											Optional.ofNullable(cfg.library_names_or_ids()).orElse(Collections.emptyList()).stream()
+										)
+						)
+						.collect(Collectors.toList())
+					,
+					null, // no concept of a single entry point for batch enrichment 
+					Maps.<String, Object>newLinkedHashMap(
+							bucket.batch_enrichment_configs().stream().collect(Collectors.toMap(cfg -> cfg.name(), cfg -> BeanTemplateUtils.toJson(cfg)))), //(config)
+					DataBucketBean.MasterEnrichmentType.batch, // (type) 
+					Collections.emptyList(), //(node rules)
+					false, //(multi node enabled)
+					Collections.emptyList(), // (dependencies) 
+					Arrays.asList(input), 
+					null, //(global input config)
+					output
+					);
+			
+			return BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+							.done().get()
+					)
+					.done();
+		}
+		else {
+			return bucket;
+		}
+		
 	}
 	
 	/** Quick utility to determine if a bucket has a streaming type
 	 * @param bucket
 	 * @return
 	 */
-	private static boolean isEnrichmentType(final DataBucketBean bucket) {
+	private static boolean isStreamingEnrichmentType(final DataBucketBean bucket) {
 		return _streaming_types.contains(Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
 	}
-	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);
+	
+	/** Quick utility to determine if a bucket has a batch type
+	 * @param bucket
+	 * @return
+	 */
+	private static boolean isBatchEnrichmentType(final DataBucketBean bucket) {
+		return _batch_types.contains(Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
+	}
+	
+	/** Quick utility to determine if a bucket has a batch or streaming type
+	 * @param bucket
+	 * @return
+	 */
+	private static boolean isEnrichmentType(final DataBucketBean bucket) {
+		return MasterEnrichmentType.none != Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none);
+	}
 	
 	/** Fills in the jobs' entry points in the streaming enrichment case
 	 * @param technology
@@ -465,7 +560,7 @@ public class DataBucketChangeActor extends AbstractActor {
 					if (STREAMING_ENRICHMENT_TECH_NAME.equals(technology) // enrichment is specified
 							&& (null != bucket.streaming_enrichment_topology()) // there is a streaming topology specified
 							&& Optional.ofNullable(bucket.streaming_enrichment_topology().enabled()).orElse(true) // it's enabled (otherwise entry_point==null)
-							&& isEnrichmentType(bucket) // it is an enrichment bucket
+							&& isStreamingEnrichmentType(bucket) // it is a streaming enrichment bucket
 							) 
 					{
 						// Check all modules and libs...
@@ -500,6 +595,14 @@ public class DataBucketChangeActor extends AbstractActor {
 											.done();									
 								})
 								.orElse(bucket); // (if anything fails just return the bucket)					
+					}
+					else if (BATCH_ENRICHMENT_TECH_NAME.equals(technology) // enrichment is specified
+							&& (null != bucket.batch_enrichment_configs()) // there is a batch topology specified
+							&& bucket.batch_enrichment_configs().stream().filter(cfg -> Optional.ofNullable(cfg.enabled()).orElse(true)).findAny().isPresent()
+							&& isBatchEnrichmentType(bucket) // it is a batch enrichment bucket
+							) 
+					{
+						return bucket; // nothing to do here the entry points are inferred from the configurations
 					}
 					else return bucket;
 				})
@@ -537,6 +640,7 @@ public class DataBucketChangeActor extends AbstractActor {
 			final String technology_name_or_id,
 			final boolean analytic_tech_only,
 			final Optional<IAnalyticsTechnologyModule> streaming_enrichment,
+			final Optional<IAnalyticsTechnologyModule> batch_enrichment,
 			final BucketActionMessage m, 
 			final String source,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
@@ -560,6 +664,11 @@ public class DataBucketChangeActor extends AbstractActor {
 											.when(t -> STREAMING_ENRICHMENT_TECH_NAME.equals(t), __ -> {
 												try { 
 													return Tuples._2T(streaming_enrichment.get().getClass().getName(), null); 
+												} catch (Throwable t) { return null; }
+											})
+											.when(t -> BATCH_ENRICHMENT_TECH_NAME.equals(t), __ -> {
+												try { 
+													return Tuples._2T(batch_enrichment.get().getClass().getName(), null); 
 												} catch (Throwable t) { return null; }
 											})
 											.otherwise(__ -> null);
@@ -593,6 +702,33 @@ public class DataBucketChangeActor extends AbstractActor {
 			
 		}
 	}
+
+	/** We'll only start batch jobs if they have no associated dependencies
+	 * @param job
+	 * @return
+	 */
+	private static final boolean isBatchJobWithDependencies(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		if (!isBatchEnrichmentType(bucket)) {
+			/**/
+			System.out.println("WUT");
+			return false; //(nice easy bypass)
+		}
+		// if present then trigger isn't manual unless disabled
+		final boolean trigger_non_manual = Optionals.of(() -> bucket.analytic_thread().trigger_config())
+											.map(cfg -> Optional.ofNullable(cfg.enabled()).orElse(true))
+											.orElse(false)
+											; 
+		
+		final boolean per_job = trigger_non_manual || // if the bucket contains no triggering, still need to ignore jobs with dependencies
+					(_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+						&& !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty());
+		
+		/**/
+		System.out.println("??????????????? " + per_job + " .. " + _batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+				+ " .. " + !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty());
+		
+		return per_job;
+	}
 	
 	/** Make various requests of the analytics module based on the message type
 	 * @param bucket
@@ -611,11 +747,15 @@ public class DataBucketChangeActor extends AbstractActor {
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
 		
+		//TODO (ALEPH-12): this doens't handle batch triggers yet
+		
 		final BiFunction<Stream<AnalyticThreadJobBean>, Boolean, Stream<AnalyticThreadJobBean>> perJobSetup = 
 				(job_stream, pass_suspended) -> {
 					return job_stream
-							.filter(job -> pass_suspended || Optional.ofNullable(job.enabled()).orElse(true)) //(WARNING: mutates context)
-							.peek(job -> setPerJobContextParams(job, context, libs));
+							.filter(job -> pass_suspended || Optional.ofNullable(job.enabled()).orElse(true))
+							//TODO (ALEPH-12): this doesn't quite work yet
+							.filter(job -> !Optional.ofNullable(job.enabled()).orElse(true) || !isBatchJobWithDependencies(bucket, job))
+							.peek(job -> setPerJobContextParams(job, context, libs)); //(WARNING: mutates context)
 				};
 		
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		

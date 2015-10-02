@@ -34,11 +34,17 @@ public class AnalyticThreadTriggerBean implements Serializable {
 	 * @param auto_calculate - whether the auto-calculate override is set
 	 * @param trigger - The complex trigger or triggers for this thread (optional)
 	 */
-	public AnalyticThreadTriggerBean(final String schedule, final Boolean auto_calculate, final AnalyticThreadComplexTriggerBean trigger) {
+	public AnalyticThreadTriggerBean(final Boolean enabled, final String schedule, final Boolean auto_calculate, final AnalyticThreadComplexTriggerBean trigger) {
+		this.enabled = enabled;
 		this.schedule = schedule;
 		this.auto_calculate = auto_calculate;
 		this.trigger = trigger;
 	}
+	
+	/** If true (default if a trigger object exists) then a trigger is specified, if false then this job will only be run manually
+	 * @return
+	 */
+	public Boolean enabled() { return enabled; }
 	
 	/** If no complex trigger is set, then the analytic thread is run on this frequency 
 	 *  (eg in some human readable format ("every 5 minutes", "hourly", "3600" etc)
@@ -48,7 +54,7 @@ public class AnalyticThreadTriggerBean implements Serializable {
 	 */
 	public String schedule() { return schedule; }
 	
-	/** If true (defaults to true if "trigger" is specified, false otherwise) ignores "trigger" and auto-generates the dependencies
+	/** If true (defaults to false if "trigger" is specified, true otherwise) ignores "trigger" and auto-generates the dependencies
 	 *  as a set of ANDs of the external inputs in the job list
 	 * @return whether the auto-calculate override is set
 	 */
@@ -158,6 +164,7 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		private LinkedHashMap<String, Object> config;
 	}
 	
+	private Boolean enabled;	
 	private AnalyticThreadComplexTriggerBean trigger;
 	private Boolean auto_calculate;	
 	private String schedule;
