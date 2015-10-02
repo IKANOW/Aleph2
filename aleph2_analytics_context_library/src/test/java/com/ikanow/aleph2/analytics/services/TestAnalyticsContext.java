@@ -608,7 +608,13 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
+	public void test_batch_inputAndOutputUtilities() {
+
+		//TODO (ALEPH-12): add tests here
+	}
+	
+	@Test
+	public void test_streaming_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
 				
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
 		
