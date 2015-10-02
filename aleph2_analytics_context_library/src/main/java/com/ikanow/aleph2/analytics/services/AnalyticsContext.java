@@ -533,21 +533,112 @@ public class AnalyticsContext implements IAnalyticsContext {
 				;
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getInputPaths(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean)
+	 */
 	@Override
 	public List<String> getInputPaths(
 			final Optional<DataBucketBean> bucket, 
 			final AnalyticThreadJobBean job,
 			final AnalyticThreadJobInputBean job_input) {
+
+		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		
-		// Handle diff cases like:
-		// 1) Analytics
-		//final String base_path = storage_service.getRootPath() + bucket.full_name() + IStorageService.ANALYTICS_TEMP_DATA_SUFFIX + input.resource_name_or_id();
-		// 2) Normal storage service input
-		// Like final String base_path = storage_service.getRootPath() + input.resource_name_or_id() + IStorageService.STORED_DATA_SUFFIX;
-		// except I think we need to pick the right sub-dir .. probably need to be able to spec raw/processed/json
+		final AuthorizationBean auth_bean = new AuthorizationBean(my_bucket.owner_id());
+		final ICrudService<DataBucketBean> secured_bucket_crud = _core_management_db.readOnlyVersion().getDataBucketStore().secured(_service_context, auth_bean);
 		
-		// TODO (ALEPH-12)
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		return Optional.of(job_input)
+				.filter(i -> null != i.data_service())
+				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || i.data_service().startsWith("storage_service"))
+				.map(Lambdas.wrap_u(i -> {					
+					if ("batch".equalsIgnoreCase(i.data_service())) {
+						final String[] bucket_subchannel = Lambdas.<String, String[]> wrap_u(s -> {
+							
+							// 1) If the resource starts with "/" then must point to an intermediate batch result of an external bucket
+							// 2) If the resource is a pointer then
+
+							if (null == s) { // (trivial case)
+								return new String[] { my_bucket.full_name(), "" };
+							}
+							else if (s.startsWith("/")) { //1.*
+								if (s.endsWith(":")) {
+									return new String[] { s.substring(0, s.length() - 1), "" }; // (1.2a)
+								}
+								else {
+									final String[] b_sc = s.split(":");
+									if (1 == b_sc.length) {
+										return new String[] { my_bucket.full_name(), "" };
+									}
+									else {
+										return b_sc; //(1.1)
+									}
+								}
+							}
+							else { //2.*
+								return new String[] { my_bucket.full_name(), s };
+							}
+						})
+						.apply(i.resource_name_or_id());
+
+						final Optional<DataBucketBean> bucket_to_check = Lambdas.get(Lambdas.wrap_u(() -> {
+							if (bucket_subchannel[0] == my_bucket.full_name()) {
+								return Optional.of(my_bucket);
+							}
+							else {
+								return secured_bucket_crud.getObjectBySpec(
+										CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_subchannel[0])
+										).get();
+							}
+						}));
+						return Lambdas.get(() -> {
+							if ((bucket_subchannel[0] != my_bucket.full_name()) || !bucket_subchannel[1].isEmpty())
+							{
+								bucket_to_check
+									.map(input_bucket -> input_bucket.analytic_thread())
+									.flatMap(a_thread -> Optional.ofNullable(a_thread.jobs()))
+									.flatMap(jobs -> jobs.stream()
+															.filter(j -> bucket_subchannel[1].equals(j.name()))
+															.findFirst())
+									.orElseThrow(() -> new RuntimeException(
+											ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH,
+													my_bucket.full_name(), job.name(), bucket_subchannel[0], bucket_subchannel[1])));
+					
+								return Arrays.asList(_storage_service.getBucketRootPath() + bucket_subchannel[0] + IStorageService.TRANSIENT_DATA_SUFFIX + bucket_subchannel[1]);
+							}
+							else { // This is my input directory
+								return Arrays.asList(_storage_service.getBucketRootPath() + my_bucket.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX);
+							}
+						});
+					}
+					else { // storage service ... 3 options :raw, :json, :processed (defaults to :processed)
+						
+						// Check we have authentication for this bucket:
+						
+						final boolean found_bucket = secured_bucket_crud
+								.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, i.resource_name_or_id()),
+												Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
+												true
+										)
+								.get()
+								.isPresent()
+								;
+						
+						if (!found_bucket) {
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, i.resource_name_or_id()));
+						}
+						final String sub_service = 
+										Patterns.match(i.data_service()).<String>andReturn()
+													.when(s -> "storage_service:raw".equals(s), __ -> "raw/")
+													.when(s -> "storage_service:json".equals(s), __ -> "json/")
+													.otherwise(__ -> "processed/");
+						
+						//TODO: ALEPH-12 enable time-based filtering
+						final String suffix = "**";
+						return Arrays.asList(_storage_service.getBucketRootPath() + i.resource_name_or_id() + IStorageService.STORED_DATA_SUFFIX + sub_service + suffix);
+					}
+				}))
+				.get()
+				;		
 	}
 
 	/* (non-Javadoc)

@@ -685,12 +685,6 @@ public class TestAnalyticsContext {
 		}
 		catch (Exception e) {}
 
-		try {
-			test_context.getInputPaths(Optional.empty(), analytic_job1, analytic_input1);
-			fail("Expected exception on getInputPaths");
-		}
-		catch (Exception e) {}
-		
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "test")
 				.with(DataBucketBean::full_name, "/test")
