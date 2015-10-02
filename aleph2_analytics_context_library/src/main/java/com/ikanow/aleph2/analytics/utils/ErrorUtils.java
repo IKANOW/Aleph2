@@ -27,5 +27,5 @@ public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 	final public static String TECHNOLOGY_NOT_MODULE = "Can only be called from technology, not module";
 	final public static String MODULE_NOT_TECHNOLOGY = "Can only be called from module, not technology";
 	final public static String BUCKET_NOT_FOUND_OR_NOT_READABLE = "Bucket {0} does not exist or is not readable";
-	final public static String INPUT_PATH_NOT_A_TRANSIENT_BATCH = "Bucket {0} job {1} pointing to bucket {0} job {1}: not a batch transient_output";
+	final public static String INPUT_PATH_NOT_A_TRANSIENT_BATCH = "Bucket {0} job {1} pointing to bucket {2} job {3}: not a batch transient_output (or bucket doesn't exist/not readable)";
 }

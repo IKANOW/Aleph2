@@ -105,6 +105,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	public static final String __MY_MODULE_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247cff";
 	
 	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);	
+	private static final EnumSet<MasterEnrichmentType> _batch_types = EnumSet.of(MasterEnrichmentType.batch, MasterEnrichmentType.streaming_and_batch);	
 	
 	protected static class MutableState {
 		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
@@ -549,18 +550,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		return Optional.of(job_input)
 				.filter(i -> null != i.data_service())
-				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || i.data_service().startsWith("storage_service"))
+				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || "storage_service".equalsIgnoreCase(i.data_service()))
 				.map(Lambdas.wrap_u(i -> {					
 					if ("batch".equalsIgnoreCase(i.data_service())) {
+						if (null != i.filter()) {
+							//(actually not sure if i ever plan to implement this?)
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
+						}						
+						
 						final String[] bucket_subchannel = Lambdas.<String, String[]> wrap_u(s -> {
 							
 							// 1) If the resource starts with "/" then must point to an intermediate batch result of an external bucket
 							// 2) If the resource is a pointer then
 
-							if (null == s) { // (trivial case)
-								return new String[] { my_bucket.full_name(), "" };
-							}
-							else if (s.startsWith("/")) { //1.*
+							if (s.startsWith("/")) { //1.*
 								if (s.endsWith(":")) {
 									return new String[] { s.substring(0, s.length() - 1), "" }; // (1.2a)
 								}
@@ -578,7 +581,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 								return new String[] { my_bucket.full_name(), s };
 							}
 						})
-						.apply(i.resource_name_or_id());
+						.apply(Optional.ofNullable(i.resource_name_or_id()).orElse(""));
 
 						final Optional<DataBucketBean> bucket_to_check = Lambdas.get(Lambdas.wrap_u(() -> {
 							if (bucket_subchannel[0] == my_bucket.full_name()) {
@@ -591,13 +594,15 @@ public class AnalyticsContext implements IAnalyticsContext {
 							}
 						}));
 						return Lambdas.get(() -> {
-							if ((bucket_subchannel[0] != my_bucket.full_name()) || !bucket_subchannel[1].isEmpty())
+							if (!bucket_subchannel[0].equals(my_bucket.full_name()) || !bucket_subchannel[1].isEmpty())
 							{
 								bucket_to_check
 									.map(input_bucket -> input_bucket.analytic_thread())
 									.flatMap(a_thread -> Optional.ofNullable(a_thread.jobs()))
 									.flatMap(jobs -> jobs.stream()
 															.filter(j -> bucket_subchannel[1].equals(j.name()))
+															.filter(j -> _batch_types.contains(Optionals.of(() -> j.output().transient_type()).orElse(MasterEnrichmentType.none)))
+															.filter(j -> Optionals.of(() -> j.output().is_transient()).orElse(false))
 															.findFirst())
 									.orElseThrow(() -> new RuntimeException(
 											ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH,
@@ -612,10 +617,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 					}
 					else { // storage service ... 3 options :raw, :json, :processed (defaults to :processed)
 						
+						final String bucket_name = i.resource_name_or_id().split(":")[0];
+						
 						// Check we have authentication for this bucket:
 						
 						final boolean found_bucket = secured_bucket_crud
-								.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, i.resource_name_or_id()),
+								.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_name),
 												Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
 												true
 										)
@@ -624,20 +631,23 @@ public class AnalyticsContext implements IAnalyticsContext {
 								;
 						
 						if (!found_bucket) {
-							throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, i.resource_name_or_id()));
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, bucket_name));
 						}
 						final String sub_service = 
-										Patterns.match(i.data_service()).<String>andReturn()
-													.when(s -> "storage_service:raw".equals(s), __ -> "raw/")
-													.when(s -> "storage_service:json".equals(s), __ -> "json/")
+										Patterns.match(i.resource_name_or_id()).<String>andReturn()
+													.when(s -> s.endsWith(":raw"), __ -> "raw/")
+													.when(s -> s.endsWith(":json"), __ -> "json/")
 													.otherwise(__ -> "processed/");
 						
 						//TODO: ALEPH-12 enable time-based filtering
-						final String suffix = "**";
-						return Arrays.asList(_storage_service.getBucketRootPath() + i.resource_name_or_id() + IStorageService.STORED_DATA_SUFFIX + sub_service + suffix);
+						if (null != i.filter()) {
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
+						}
+						final String suffix = "**/*";
+						return Arrays.asList(_storage_service.getBucketRootPath() + bucket_name + IStorageService.STORED_DATA_SUFFIX + sub_service + suffix);
 					}
 				}))
-				.get()
+				.orElse(Collections.emptyList())
 				;		
 	}
 

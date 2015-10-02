@@ -46,6 +46,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
@@ -55,6 +56,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -84,6 +86,9 @@ public class TestAnalyticsContext {
 	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
 	
+	@Inject
+	protected IServiceContext _service_context;
+	
 	@Before
 	public void injectModules() throws Exception {
 		_logger.info("run injectModules");
@@ -92,6 +97,7 @@ public class TestAnalyticsContext {
 		
 		try {
 			_app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));
+			_app_injector.injectMembers(this);
 		}
 		catch (Exception e) {
 			try {
@@ -608,9 +614,273 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_batch_inputAndOutputUtilities() {
+	public void test_batch_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
 
-		//TODO (ALEPH-12): add tests here
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output_stream_transient =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.streaming)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
+				.done().get();		
+
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output_batch_permanent =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.streaming_and_batch)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, false)
+				.done().get();		
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output_batch_transient =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::transient_type, MasterEnrichmentType.batch)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::is_transient, true)
+				.done().get();		
+		
+
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2a =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "test_transient_internal_missing")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2b =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/this_bucket:test_transient_internal_not_transient")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input3 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/this_bucket:")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input4a =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket:test_transient_external_present")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input4b =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket:test_transient_external_not_batch")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input5a =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input5b =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/this_bucket")
+				.done().get();
+
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_name1")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, 
+						analytic_input2a, analytic_input2b,
+						analytic_input3, 
+						analytic_input4a, analytic_input4b,
+						analytic_input5a, analytic_input5b))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+
+		final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_transient_internal_not_transient")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList())
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::output, analytic_output_batch_permanent)
+				.done().get();
+
+		final AnalyticThreadJobBean analytic_job_other_1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_transient_external_present")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList())
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::output, analytic_output_batch_transient)
+				.done().get();
+
+		final AnalyticThreadJobBean analytic_job_other_2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_transient_external_not_batch")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList())
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+				.with(AnalyticThreadJobBean::output, analytic_output_stream_transient)
+				.done().get();
+		
+		try {
+			test_context.getOutputPath(Optional.empty(), analytic_job1);
+			fail("Expected exception on getOutputPath");
+		}
+		catch (Exception e) {}
+
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "this_bucket")
+				.with(DataBucketBean::full_name, "/this_bucket")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1, analytic_job2)
+								)
+								.done().get()
+						)
+						.done().get();
+
+		final DataBucketBean other_bucket = BeanTemplateUtils.clone(test_bucket)
+				.with(DataBucketBean::_id, "other_bucket")
+				.with(DataBucketBean::full_name, "/other_bucket")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job_other_1, analytic_job_other_2)
+								)
+								.done().get()
+						)
+						.done();
+
+		test_context.setBucket(test_bucket);
+
+
+		// Check that it fails if the bucket is not present (or not readable)
+
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().deleteDatastore().get();
+		assertEquals(0, test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().countObjects().get().intValue());
+
+		try {
+			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH, 
+					"/this_bucket", "test_name1", "/other_bucket", "test_transient_external_present"), 
+					e.getMessage());
+		}
+
+		// Add the bucket to the CRUD store:
+
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(other_bucket).get();
+
+		// Now do all the other checks:
+
+		assertEquals(Arrays.asList(), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
+		try {
+			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2a);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH, 
+					"/this_bucket", "test_name1", "/this_bucket", "test_transient_internal_missing"), 
+					e.getMessage());
+		}
+		try {
+			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2b);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH, 
+					"/this_bucket", "test_name1", "/this_bucket", "test_transient_internal_not_transient"), 
+					e.getMessage());
+		}
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
+		try {
+			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4b);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH, 
+					"/this_bucket", "test_name1", "/other_bucket", "test_transient_external_not_batch"), 
+					e.getMessage());
+		}
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5a));
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5b));
+	}
+	
+	@Test
+	public void test_storageService_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
+		
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket:raw")
+				.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input2 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket:json")
+				.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input3 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket:processed")
+				.done().get();
+		
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input4 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/other_bucket")
+				.done().get();		
+
+		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_name1")
+				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, 
+						analytic_input2,
+						analytic_input3, 
+						analytic_input4))
+				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+				.done().get();
+
+		try {
+			test_context.getOutputPath(Optional.empty(), analytic_job1);
+			fail("Expected exception on getOutputPath");
+		}
+		catch (Exception e) {}
+
+		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "this_bucket")
+				.with(DataBucketBean::full_name, "/this_bucket")
+				.with(DataBucketBean::analytic_thread, 
+						BeanTemplateUtils.build(AnalyticThreadBean.class)
+						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
+								)
+								.done().get()
+						)
+						.done().get();
+
+		final DataBucketBean other_bucket = BeanTemplateUtils.clone(test_bucket)
+				.with(DataBucketBean::_id, "other_bucket")
+				.with(DataBucketBean::full_name, "/other_bucket")
+				.with(DataBucketBean::analytic_thread, null) 
+						.done();
+
+		test_context.setBucket(test_bucket);
+
+
+		// Check that it fails if the bucket is not present (or not readable)
+
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().deleteDatastore().get();
+		assertEquals(0, test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().countObjects().get().intValue());
+
+		try {
+			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1);
+			fail("Should have thrown exception");
+		}
+		catch (Exception e) {
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, "/other_bucket"), e.getMessage());
+		}
+
+		// Add the bucket to the CRUD store:
+
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(other_bucket).get();
+
+		// Now do all the other checks:
+
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/raw/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/json/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4));
 	}
 	
 	@Test
