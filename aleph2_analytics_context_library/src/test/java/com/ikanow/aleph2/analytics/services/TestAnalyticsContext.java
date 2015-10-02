@@ -608,7 +608,13 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
+	public void test_batch_inputAndOutputUtilities() {
+
+		//TODO (ALEPH-12): add tests here
+	}
+	
+	@Test
+	public void test_streaming_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
 				
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
 		
@@ -685,12 +691,6 @@ public class TestAnalyticsContext {
 		}
 		catch (Exception e) {}
 
-		try {
-			test_context.getInputPaths(Optional.empty(), analytic_job1, analytic_input1);
-			fail("Expected exception on getInputPaths");
-		}
-		catch (Exception e) {}
-		
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "test")
 				.with(DataBucketBean::full_name, "/test")

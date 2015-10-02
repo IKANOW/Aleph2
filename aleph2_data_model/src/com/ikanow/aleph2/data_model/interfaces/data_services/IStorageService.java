@@ -42,6 +42,10 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";
 	
+	/** This is for transient data, eg for intermediate analytic steps
+	 */
+	public static final String TRANSIENT_DATA_SUFFIX = "/managed_bucket/import/transient/";
+	
 	/** This is the top level directory for data that has actually been processed
 	 */
 	public static final String STORED_DATA_SUFFIX = "/managed_bucket/import/stored/";
