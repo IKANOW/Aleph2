@@ -96,7 +96,7 @@ public class BucketActionChooseActor extends AbstractActor {
 	
 	/** Should only ever be called by the actor system, not by users
 	 * @param timeout - the timeout for the request
-	 * @param zookeeper_path - currently either BUCKET_ACTION_ZOOKEEPER (talk to harvester) or STREAMING_ENRICHMENT_ZOOKEEPER (talk to streaming (storm) enrichment)
+	 * @param zookeeper_path - currently either BUCKET_ACTION_ZOOKEEPER (talk to harvester) or BUCKET_ANALYTICS_ZOOKEEPER (talk to streaming (storm) enrichment)
 	 */
 	public BucketActionChooseActor(final Optional<FiniteDuration> timeout, final String zookeeper_path) {
 		_zookeeper_path = zookeeper_path;

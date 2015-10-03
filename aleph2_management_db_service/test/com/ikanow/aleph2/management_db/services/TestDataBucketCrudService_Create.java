@@ -223,10 +223,10 @@ public class TestDataBucketCrudService_Create {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
 			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
-			.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
-		ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER);
+		ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 
 		return uuid;
 	}
@@ -1547,7 +1547,7 @@ public class TestDataBucketCrudService_Create {
 		final BasicMessageBean streaming_msg = it.next();
 		assertEquals(true, streaming_msg.success());
 		assertEquals(streaming_msg.source(), streaming_host);
-		assertEquals(streaming_msg.command(), ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER);
+		assertEquals(streaming_msg.command(), ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 		final BasicMessageBean err_msg1 = it.next();
 		assertEquals(true, err_msg1.success());
 		final BasicMessageBean err_msg2 = it.next();

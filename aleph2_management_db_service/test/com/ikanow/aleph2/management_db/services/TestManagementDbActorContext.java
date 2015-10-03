@@ -92,7 +92,7 @@ public class TestManagementDbActorContext {
 		assertTrue("Lazy initialization: streaming action bus", _actor_context._streaming_enrichment_bus.isSet());		
 		
 		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus3 = _actor_context.getMessageBus(ActorUtils.BUCKET_ACTION_EVENT_BUS);
-		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus4 = _actor_context.getMessageBus(ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus4 = _actor_context.getMessageBus(ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		
 		assertEquals(bus1, bus3);
 		assertEquals(bus2, bus4);

@@ -213,7 +213,7 @@ public class MgmtCrudUtils {
 			return list.stream()
 					.filter(msg -> msg.success())
 					.filter(msg -> (SuccessfulNodeType.all_technologies == which_nodes) ||
-								(null == msg.command()) || !msg.command().equals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
+								(null == msg.command()) || !msg.command().equals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
 					.map(msg -> msg.source())
 					.collect(Collectors.toSet());
 		});

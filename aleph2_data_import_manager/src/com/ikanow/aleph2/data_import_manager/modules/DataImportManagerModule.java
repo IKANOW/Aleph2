@@ -126,16 +126,16 @@ public class DataImportManagerModule {
 					Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketChangeActor.class), 
 					hostname + ".stream_enrichment.actors.DataBucketChangeActor");
 			
-			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS));
+			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 	
-			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, hostname));
+			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, hostname));
 			
 			for (int i = 0; i <= MAX_ZK_ATTEMPTS; ++i) {
 				try {
 					_core_distributed_services.getCuratorFramework().create()
-						.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+						.creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + hostname);
 					break;
 				}
 				catch (Exception e) {
@@ -145,7 +145,7 @@ public class DataImportManagerModule {
 			}
 			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
 				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=stream_enrichment");
-				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + hostname);
+				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + hostname);
 			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=stream_enrichment");
 		}

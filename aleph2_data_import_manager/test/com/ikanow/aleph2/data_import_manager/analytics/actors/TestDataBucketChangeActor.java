@@ -176,7 +176,7 @@ public class TestDataBucketChangeActor {
 		// Create an actor:
 		
 		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), "test_host");
-		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
 		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		
@@ -268,7 +268,7 @@ public class TestDataBucketChangeActor {
 		// Create an actor:
 		
 		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), "test_host");
-		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
 		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		

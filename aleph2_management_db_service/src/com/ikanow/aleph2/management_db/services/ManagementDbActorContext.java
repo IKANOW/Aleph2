@@ -200,7 +200,7 @@ public class ManagementDbActorContext {
 	 */
 	public synchronized LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getStreamingEnrichmentMessageBus() {
 		if (!_streaming_enrichment_bus.isSet()) {
-			_streaming_enrichment_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS));
+			_streaming_enrichment_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
 		}
 		return _streaming_enrichment_bus.get();
 	}
@@ -218,7 +218,7 @@ public class ManagementDbActorContext {
 	 * @return the designated message bus
 	 */
 	public LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getMessageBus(final String bus_name) {
-		if (bus_name.equals(ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS)) {
+		if (bus_name.equals(ActorUtils.BUCKET_ANALYTICS_EVENT_BUS)) {
 			return getStreamingEnrichmentMessageBus();
 		}
 		else if (bus_name.equals(ActorUtils.BUCKET_ACTION_EVENT_BUS)) {

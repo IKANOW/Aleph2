@@ -84,7 +84,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		protected final Class<? extends Actor> actor_type;
 		protected final BucketActionMessage message;
 		protected final Optional<FiniteDuration> timeout;
-		protected final String message_type; // ActorUtils.BUCKET_ACTION_ZOOKEEPER or STREAMING_ENRICHMENT_ZOOKEEPER 
+		protected final String message_type; // ActorUtils.BUCKET_ACTION_ZOOKEEPER or BUCKET_ANALYTICS_ZOOKEEPER 
 	}
 	
 	/** Send an action message to the appropriate distribution actor, get a future containing the reply 
@@ -255,7 +255,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	{
 		final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
 				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
-				ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, timeout);
+				ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, timeout);
 		// (note that I'm stripping the node_affinity for stream enrichment messages, they always get distributed across available nodes)
 
 		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
@@ -263,7 +263,7 @@ public class BucketActionSupervisor extends UntypedActor {
 				.thenApply(stream -> {
 					List<BasicMessageBean> replace = Optionals.ofNullable(stream.replies()).stream()
 							.map(r -> BeanTemplateUtils.clone(r)
-									.with(BasicMessageBean::command, ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER)
+									.with(BasicMessageBean::command, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER)
 									.done())
 									.collect(Collectors.toList());
 

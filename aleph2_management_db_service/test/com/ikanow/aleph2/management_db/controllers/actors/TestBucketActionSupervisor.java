@@ -224,10 +224,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Refuser.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -284,10 +284,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Error.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -331,7 +331,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(false, reply.replies().get(0).success());
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 
 	//1) "Needs to stream+harvest, and streaming fails - check never calls harvest"
@@ -347,10 +347,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Timeouter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -408,10 +408,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter_Error.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -455,7 +455,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(false, reply.replies().get(0).success());		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 
 	// 3) Stream only, streaming succeeds
@@ -470,10 +470,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -522,7 +522,7 @@ public class TestBucketActionSupervisor {
 		// Should contain no errors
 		assertEquals(1, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 	
 	// 4) "Stream+harvest, streaming+harvest succeed"
@@ -537,10 +537,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -584,9 +584,9 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(2, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 		assertEquals(true, reply.replies().get(1).success());		
-		assertTrue("2nd reply from harvest not stream", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER != reply.replies().get(1).command());		
+		assertTrue("2nd reply from harvest not stream", ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER != reply.replies().get(1).command());		
 	}
 	
 	// "5) Stream+harvest, streaming succeeds/harvest fails"
@@ -601,10 +601,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -648,7 +648,7 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(1, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 	}
 	
 	// "5) Stream+harvest, streaming succeeds/harvest fails"
@@ -664,10 +664,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -711,9 +711,9 @@ public class TestBucketActionSupervisor {
 		// Should contain an error
 		assertEquals(2, reply.replies().size());
 		assertEquals(true, reply.replies().get(0).success());		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 		assertEquals(false, reply.replies().get(1).success());		
-		assertTrue("2nd reply from harvest not stream", ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER != reply.replies().get(1).command());		
+		assertTrue("2nd reply from harvest not stream", ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER != reply.replies().get(1).command());		
 	}
 	
 	public static class TestActor extends UntypedActor {
@@ -760,10 +760,10 @@ public class TestBucketActionSupervisor {
 			String uuid = UuidUtils.get().getRandomUuid();
 			ManagementDbActorContext.get().getDistributedServices()
 				.getCuratorFramework().create().creatingParentsIfNeeded()
-				.forPath(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER + "/" + uuid);
+				.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 			
 			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_Accepter.class, uuid), uuid);
-			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS);
+			ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 		}
 		// Succeeding harvest actors (not used)
 		final HashSet<String> uuids = new HashSet<String>();		
@@ -813,7 +813,7 @@ public class TestBucketActionSupervisor {
 		// Should contain no errors - 4 replies - ie everything except the batch
 		assertEquals("Replies: " + reply.replies().stream().map(m->m.message()).collect(Collectors.joining(" ; ")), 4, reply.replies().size());
 		assertEquals(true, reply.replies().stream().allMatch(m -> m.success()));		
-		assertEquals(ActorUtils.STREAMING_ENRICHMENT_ZOOKEEPER, reply.replies().get(0).command());		
+		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
 		
 	}
 }
