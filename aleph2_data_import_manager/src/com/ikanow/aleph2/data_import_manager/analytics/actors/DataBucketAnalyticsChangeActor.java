@@ -707,13 +707,23 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	}
 
 	/** We'll only start batch jobs if they have no associated dependencies
+	 *  Here's a more detailed overview of the logic
+	 *  1) For new and test messages - don't do anything unless there's a bucket-wide _manual_ trigger
+	 *  2) For new and test messages - bypass jobs with dependencies
+	 *  (For new/test messages, have already bypassed jobs based on their activity)
+	 *  3a) For update message, global activate - always process "suspended jobs"
+	 *  3b) For update message, global activate - ignore active jobs if there's a bucket-wide _manual_ trigger
+	 *  3c) For update message, global active - otherwise process jobs with no dependencies
+	 *  4) For update message, global suspend - process all jobs
+	 *  5) For delete message - process all jobs
 	 * @param job
 	 * @return
 	 */
-	private static final boolean isBatchJobWithDependencies(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+	private static final boolean isBatchJobWithDependencies(final DataBucketBean bucket, 
+															final AnalyticThreadJobBean job,
+															final Tuple2<Boolean, Boolean> existingbucket_bucketactive)
+	{
 		if (!isBatchEnrichmentType(bucket)) {
-			/**/
-			System.out.println("WUT");
 			return false; //(nice easy bypass)
 		}
 		// if present then trigger isn't manual unless disabled
@@ -722,15 +732,24 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 											.orElse(false)
 											; 
 		
-		final boolean per_job = trigger_non_manual || // if the bucket contains no triggering, still need to ignore jobs with dependencies
+		final boolean job_has_dependency = 
 					(_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
 						&& !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty());
 		
-		/**/
-		System.out.println("??????????????? " + per_job + " .. " + _batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-				+ " .. " + !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty());
+		final boolean existing_bucket = existingbucket_bucketactive._1();
+		final boolean bucket_active = existingbucket_bucketactive._2();
+		final boolean job_active = Optional.ofNullable(job.enabled()).orElse(true);
 		
-		return per_job;
+		// true: means will skip, false: means will process
+		return Patterns.match().<Boolean>andReturn()
+			.when(__ -> !bucket_active, __ -> false) // 4 + 5, PASS
+			.when(__ -> !existing_bucket && trigger_non_manual, __ -> true) //1, STOP
+			.when(__ -> !existing_bucket && !trigger_non_manual, __ -> job_has_dependency) //2 PASS<=>no_dependency
+			.when(__ -> existing_bucket && !job_active, __ -> false) //3a PASS
+			.when(__ -> existing_bucket && trigger_non_manual, __ -> true) //3b FAIL
+			.when(__ -> existing_bucket && !trigger_non_manual, __ -> job_has_dependency) //3c PASS<=>no_dependency
+			.otherwise(__ -> true) //(shouldn't be possible)
+			;
 	}
 	
 	/** Make various requests of the analytics module based on the message type
@@ -750,14 +769,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
 		
-		//TODO (ALEPH-12): this doens't handle batch triggers yet
+		//TODO (ALEPH-12): this doens't handle batch triggers correctly yet (eg "thread starting" messages)
 		
-		final BiFunction<Stream<AnalyticThreadJobBean>, Boolean, Stream<AnalyticThreadJobBean>> perJobSetup = 
-				(job_stream, pass_suspended) -> {
+		final BiFunction<Stream<AnalyticThreadJobBean>, Tuple2<Boolean, Boolean>, Stream<AnalyticThreadJobBean>> perJobSetup = 
+				(job_stream, existingbucket_bucketactive) -> {
 					return job_stream
-							.filter(job -> pass_suspended || Optional.ofNullable(job.enabled()).orElse(true))
-							//TODO (ALEPH-12): this doesn't quite work yet
-							.filter(job -> !Optional.ofNullable(job.enabled()).orElse(true) || !isBatchJobWithDependencies(bucket, job))
+							.filter(job -> existingbucket_bucketactive._1() || Optional.ofNullable(job.enabled()).orElse(true))
+							.filter(job -> !isBatchJobWithDependencies(bucket, job, existingbucket_bucketactive))
 							.peek(job -> setPerJobContextParams(job, context, libs)); //(WARNING: mutates context)
 				};
 		
@@ -786,7 +804,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onDeleteThread(bucket, jobs, context);
 							final List<CompletableFuture<BasicMessageBean>> job_results = 
-									perJobSetup.apply(jobs.stream(), true)
+									perJobSetup.apply(jobs.stream(), Tuples._2T(true, false))
 										.map(job -> tech_module.stopAnalyticJob(bucket, jobs, job, context))
 										.collect(Collectors.toList());
 							
@@ -799,7 +817,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							final List<CompletableFuture<BasicMessageBean>> job_results =
 									msg.is_suspended()
 									? Collections.emptyList()
-									: perJobSetup.apply(jobs.stream(), false) 
+									: perJobSetup.apply(jobs.stream(), Tuples._2T(false, true)) 
 										.map(job -> tech_module.startAnalyticJob(bucket, jobs, job, context))
 										.collect(Collectors.toList());
 							
@@ -809,7 +827,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
-							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), true)
+							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), Tuples._2T(true, msg.is_enabled()))
 										.map(job -> (msg.is_enabled() && Optional.ofNullable(job.enabled()).orElse(true))
 											? tech_module.resumeAnalyticJob(bucket, jobs, job, context)
 											: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
@@ -829,7 +847,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onTestThread(bucket, jobs, msg.test_spec(), context);
-							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), false)
+							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), Tuples._2T(false, true))
 										.map(job -> tech_module.startAnalyticJobTest(bucket, jobs, job, msg.test_spec(), context))
 										.collect(Collectors.toList());
 							

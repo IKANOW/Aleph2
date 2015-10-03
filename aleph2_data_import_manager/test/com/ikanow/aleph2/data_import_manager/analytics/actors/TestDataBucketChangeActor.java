@@ -954,27 +954,26 @@ public class TestDataBucketChangeActor {
 			assertEquals(true, test_reply2.success());
 		}
 		// Test 5d: suspend batch (all jobs will be suspended)
-		//TODO (ALEPH-12) Not working yet
 		{
-//			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, false, bucket, Collections.emptySet());
-//			
-//			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketHarvestChangeActor.talkToAnalytics(
-//					bucket_batch, update,
-//					"test5d", 
-//					_actor_context.getNewAnalyticsContext(), 
-//					Collections.emptyMap(), 
-//					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
-//						
-//			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
-//			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
-//			assertEquals("test5d", test_reply.source());
-//			assertEquals(4, test_reply.replies().size());
-//			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
-//			assertEquals("called onUpdatedThread: false", test_reply1.message());
-//			assertEquals(true, test_reply1.success());
-//			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
-//			assertEquals("called suspendAnalyticJob", test_reply2.message());
-//			assertEquals(true, test_reply2.success());
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, false, bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					bucket_batch, update,
+					"test5d", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
+			assertEquals("test5d", test_reply.source());
+			assertEquals(4, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onUpdatedThread: false", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called suspendAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
 		}
 		// Test 5e: update bucket with triggers (should see no jobs)
 		// Test 5e.1: 
@@ -1263,9 +1262,9 @@ public class TestDataBucketChangeActor {
 	@Test
 	public void test_enrichToAnalyticsConversion() throws IOException {
 		// Simple functional test
-		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
-		final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
-		final String bucket_final_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/stream_enrichment/actors/stream_enrichment_test_final.json"), Charsets.UTF_8);
+		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
+		final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
+		final String bucket_final_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/stream_enrichment_test_final.json"), Charsets.UTF_8);
 		
 		final DataBucketBean in = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
 		final DataBucketBean out = BeanTemplateUtils.from(bucket_out_str, DataBucketBean.class).get();
