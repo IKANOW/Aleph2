@@ -958,7 +958,7 @@ public class TestDataBucketChangeActor {
 		{
 //			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, false, bucket, Collections.emptySet());
 //			
-//			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+//			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 //					bucket_batch, update,
 //					"test5d", 
 //					_actor_context.getNewAnalyticsContext(), 

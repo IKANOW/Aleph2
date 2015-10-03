@@ -94,10 +94,10 @@ public class DataImportManagerModule {
 		if (_service_config.harvest_enabled()) {
 			// Create a bucket change actor and register it vs the local message bus
 			final ActorRef handler = _local_actor_context.getActorSystem().actorOf(
-					Props.create(com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketChangeActor.class), 
+					Props.create(com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketAnalyticsChangeActor.class), 
 					hostname + ".harvest.actors.DataBucketChangeActor");
 			
-			_logger.info(ErrorUtils.get("Attaching harvest DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ACTION_EVENT_BUS));
+			_logger.info(ErrorUtils.get("Attaching harvest DataBucketAnalyticsChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ACTION_EVENT_BUS));
 			
 			_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 	
@@ -126,7 +126,7 @@ public class DataImportManagerModule {
 					Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketChangeActor.class), 
 					hostname + ".stream_enrichment.actors.DataBucketChangeActor");
 			
-			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
+			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketAnalyticsChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
 			
 			_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 	
