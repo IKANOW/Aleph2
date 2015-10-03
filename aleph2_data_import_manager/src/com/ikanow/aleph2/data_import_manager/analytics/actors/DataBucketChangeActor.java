@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.stream_enrichment.actors;
+package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import java.io.File;
 import java.util.Arrays;
@@ -61,8 +61,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -130,11 +132,12 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
+import com.ikanow.aleph2.data_import_manager.analytics.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.utils.StreamErrorUtils;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;

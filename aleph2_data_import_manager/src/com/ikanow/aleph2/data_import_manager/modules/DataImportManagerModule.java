@@ -123,7 +123,7 @@ public class DataImportManagerModule {
 		if (_service_config.streaming_enrichment_enabled()) {
 			// Create a bucket change actor and register it vs the local message bus
 			final ActorRef handler = _local_actor_context.getActorSystem().actorOf(
-					Props.create(com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor.class), 
+					Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketChangeActor.class), 
 					hostname + ".stream_enrichment.actors.DataBucketChangeActor");
 			
 			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketChangeActor {0} to bus {1}", handler, ActorUtils.STREAMING_ENRICHMENT_EVENT_BUS));

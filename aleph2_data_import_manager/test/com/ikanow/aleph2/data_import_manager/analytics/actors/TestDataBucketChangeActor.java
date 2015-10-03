@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.stream_enrichment.actors;
+package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -63,7 +63,7 @@ import com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologySer
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
-import com.ikanow.aleph2.data_import_manager.stream_enrichment.actors.DataBucketChangeActor;
+import com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketChangeActor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;

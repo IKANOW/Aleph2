@@ -13,7 +13,7 @@
 * You should have received a copy of the GNU Affero General Public License
 * along with this program. If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
-package com.ikanow.aleph2.data_import_manager.stream_enrichment.utils;
+package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 /** Streaming enrichment specific errors
  * @author Alex
