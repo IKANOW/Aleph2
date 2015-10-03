@@ -176,7 +176,7 @@ public class TestDataBucketChangeActor {
 		// Create an actor:
 		
 		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
-		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
+		_db_actor_context.getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
 		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		
@@ -210,7 +210,7 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
+			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
 			final Object msg = inbox.receive(Duration.create(5L, TimeUnit.SECONDS));
 		
@@ -231,7 +231,7 @@ public class TestDataBucketChangeActor {
 			
 			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
+			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
 			final Object msg = inbox.receive(Duration.create(5L, TimeUnit.SECONDS));
 		
@@ -268,7 +268,7 @@ public class TestDataBucketChangeActor {
 		// Create an actor:
 		
 		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
-		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
+		_db_actor_context.getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
 		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		
@@ -302,7 +302,7 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
+			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
 			final Object msg = inbox.receive(Duration.create(5L, TimeUnit.SECONDS));
 		
@@ -323,7 +323,7 @@ public class TestDataBucketChangeActor {
 			
 			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
+			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
 			final Object msg = inbox.receive(Duration.create(5L, TimeUnit.SECONDS));
 		

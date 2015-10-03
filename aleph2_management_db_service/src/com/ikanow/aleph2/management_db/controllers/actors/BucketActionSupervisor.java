@@ -167,8 +167,8 @@ public class BucketActionSupervisor extends UntypedActor {
 			final Optional<FiniteDuration> timeout)
 	{
 		final DataBucketBean bucket = message.bucket();
-		final boolean is_streaming_enrichment = hasStreamingEnrichment(bucket);
-		final boolean has_streaming_analytics = !is_streaming_enrichment && bucketHasStreamingAnalytics(bucket);
+		final boolean is_streaming_enrichment = hasEnrichment(bucket);
+		final boolean has_streaming_analytics = !is_streaming_enrichment && bucketHasAnalytics(bucket);
 		final boolean has_harvester = hasHarvester(bucket);
 		
 		if (!is_streaming_enrichment && !has_harvester && !has_streaming_analytics) {
@@ -181,10 +181,10 @@ public class BucketActionSupervisor extends UntypedActor {
 		else {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
 				if (is_streaming_enrichment) { // (streaming + ??)
-					return handleStreamingEnrichment(bucket, supervisor, actor_context, message, timeout);
+					return handleAnalyticsRequest(bucket, supervisor, actor_context, message, timeout);
 				}
 				else if (has_streaming_analytics) {
-					return handleStreamingAnalytics(bucket, supervisor, actor_context, message, timeout);
+					return handleAnalyticsRequests(bucket, supervisor, actor_context, message, timeout);
 				}
 				else { // (harvest only)
 					return CompletableFuture.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>completedFuture(null);
@@ -195,7 +195,7 @@ public class BucketActionSupervisor extends UntypedActor {
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
 							// Check if the stream succeeded or failed, only call if success when a create/update-enabled message
-							if (!shouldStopOnStreamingError(message) 
+							if (!shouldStopOnAnalyticsError(message) 
 								|| ((null == stream) 
 									||
 									(!stream.replies().isEmpty() && stream.replies().get(0).success())))
@@ -238,7 +238,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	// MIDDLE LEVEL UTILITIES
 	
-	/** Launches a streaming enrichment request (or a request for a single aspect of an analytic bucket)
+	/** Launches a single analytics job request
 	 * @param bucket
 	 * @param supervisor
 	 * @param actor_context
@@ -247,7 +247,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				handleStreamingEnrichment(
+				handleAnalyticsRequest(
 						DataBucketBean bucket,
 						final ActorRef supervisor, final ActorSystem actor_context,
 						final BucketActionMessage message, 
@@ -256,7 +256,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
 				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
 				ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, timeout);
-		// (note that I'm stripping the node_affinity for stream enrichment messages, they always get distributed across available nodes)
+		// (note that I'm stripping the node_affinity for analytics messages, they always get distributed across available nodes)
 
 		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
 				getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
@@ -271,7 +271,7 @@ public class BucketActionSupervisor extends UntypedActor {
 				});
 	}
 														
-	/** Launches a set of streaming analytics requests and aggregates their responses
+	/** Launches a set of analytics requests and aggregates their responses
 	 * @param bucket
 	 * @param supervisor
 	 * @param actor_context
@@ -280,7 +280,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @return
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage> 
-				handleStreamingAnalytics(
+				handleAnalyticsRequests(
 						DataBucketBean bucket,
 						final ActorRef supervisor, final ActorSystem actor_context,
 						final BucketActionMessage message, 
@@ -293,8 +293,8 @@ public class BucketActionSupervisor extends UntypedActor {
 		// Create a stream of requests
 		final List<CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>> results =
 			sub_buckets.entrySet().stream()
-					.filter(kv -> (kv.getKey()._3() == MasterEnrichmentType.streaming) || (kv.getKey()._3() == MasterEnrichmentType.streaming_and_batch))
-					.map(kv -> handleStreamingEnrichment(kv.getValue(), supervisor, actor_context, message, timeout))
+					.filter(kv -> kv.getKey()._3() != MasterEnrichmentType.none)
+					.map(kv -> handleAnalyticsRequest(kv.getValue(), supervisor, actor_context, message, timeout))
 					.collect(Collectors.toList());
 
 		// Aggregate the requests
@@ -322,7 +322,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @param message
 	 * @return
 	 */
-	public static boolean shouldStopOnStreamingError(final BucketActionMessage message) {
+	public static boolean shouldStopOnAnalyticsError(final BucketActionMessage message) {
 		return com.ikanow.aleph2.data_model.utils.Patterns.match(message).<Boolean>andReturn()
 				.when(BucketActionMessage.NewBucketActionMessage.class, __ -> true)
 				.when(BucketActionMessage.TestBucketActionMessage.class, __ -> true)
@@ -330,12 +330,12 @@ public class BucketActionSupervisor extends UntypedActor {
 				.otherwise(() -> false);
 	}
 	
-	/** Returns whether a bucket needs extra processing to set its streaming mode up
+	/** Returns whether a bucket needs extra enrichment processing
 	 * @param bucket
 	 */
-	public static boolean hasStreamingEnrichment(final DataBucketBean bucket) {
+	public static boolean hasEnrichment(final DataBucketBean bucket) {
 		return Optional.ofNullable(bucket.master_enrichment_type())
-						.map(type -> (type == MasterEnrichmentType.streaming) || (type == MasterEnrichmentType.streaming_and_batch))
+						.map(type -> type != MasterEnrichmentType.none)
 						.orElse(false); // (ie if null)
 	}
 	
@@ -344,14 +344,14 @@ public class BucketActionSupervisor extends UntypedActor {
 	 * @param bucket
 	 * @return
 	 */
-	public static boolean bucketHasStreamingAnalytics(final DataBucketBean bucket) {
-		return !hasStreamingEnrichment(bucket) && 
+	public static boolean bucketHasAnalytics(final DataBucketBean bucket) {
+		return !hasEnrichment(bucket) && 
 				Optional.ofNullable(bucket.analytic_thread())
 						.map(analytic -> analytic.jobs())
 						.flatMap(jobs -> jobs.stream()
 											// (don't filter out by enabled:false ... those jobs get ignore or possibly suspended in the DataBucketChangeActor)
 											.map(job -> Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-											.filter(type -> (type == MasterEnrichmentType.streaming) || (type == MasterEnrichmentType.streaming_and_batch))
+											.filter(type -> type != MasterEnrichmentType.none)
 											.findFirst()											
 							)
 						.map(__ -> true)

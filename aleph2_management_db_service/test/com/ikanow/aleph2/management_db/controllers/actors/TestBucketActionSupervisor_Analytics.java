@@ -40,16 +40,16 @@ public class TestBucketActionSupervisor_Analytics {
 		
 		DataBucketBean base_bucket = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
 		
-		assertTrue(BucketActionSupervisor.bucketHasStreamingAnalytics(base_bucket));
+		assertTrue(BucketActionSupervisor.bucketHasAnalytics(base_bucket));
 		
 		// Check some true negative cases:
 		{
 			DataBucketBean enrich_bucket = BeanTemplateUtils.clone(base_bucket).with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming).done();
-			assertFalse(BucketActionSupervisor.bucketHasStreamingAnalytics(enrich_bucket));
+			assertFalse(BucketActionSupervisor.bucketHasAnalytics(enrich_bucket));
 		}
 		{
 			DataBucketBean nothing_bucket = BeanTemplateUtils.clone(base_bucket).with(DataBucketBean::analytic_thread, null).done();
-			assertFalse(BucketActionSupervisor.bucketHasStreamingAnalytics(nothing_bucket));
+			assertFalse(BucketActionSupervisor.bucketHasAnalytics(nothing_bucket));
 		}
 		// Remove all the streaming jobs
 		{
@@ -59,13 +59,14 @@ public class TestBucketActionSupervisor_Analytics {
 																.with(AnalyticThreadBean::jobs,
 																		base_bucket.analytic_thread().jobs().stream()
 																			.filter(job -> job.analytic_type() != MasterEnrichmentType.streaming_and_batch 
+																						&& job.analytic_type() != MasterEnrichmentType.batch
 																						&& job.analytic_type() != MasterEnrichmentType.streaming)
 																			.collect(Collectors.toList())
 																		)
 															.done()
 															)
 												.done();
-			assertFalse(BucketActionSupervisor.bucketHasStreamingAnalytics(no_streaming_bucket));
+			assertFalse(BucketActionSupervisor.bucketHasAnalytics(no_streaming_bucket));
 			
 		}
 	}

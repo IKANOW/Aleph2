@@ -128,7 +128,7 @@ public class DataImportManagerModule {
 			
 			_logger.info(ErrorUtils.get("Attaching stream_enrichment DataBucketHarvestChangeActor {0} to bus {1}", handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
 			
-			_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
+			_db_actor_context.getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 	
 			_logger.info(ErrorUtils.get("Registering {1} with {0}", ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, hostname));
 			

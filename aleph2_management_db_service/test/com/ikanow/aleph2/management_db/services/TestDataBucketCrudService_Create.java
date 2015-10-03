@@ -226,7 +226,7 @@ public class TestDataBucketCrudService_Create {
 			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + uuid);
 		
 		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(actor_clazz, uuid), uuid);
-		ManagementDbActorContext.get().getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
+		ManagementDbActorContext.get().getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 
 		return uuid;
 	}
