@@ -1039,7 +1039,39 @@ public class TestDataBucketChangeActor {
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());
 		}
-		//TODO: check still disables even with trigger enabled
+		// Test 5e.3: 
+		{
+			// Automated trigger
+			final DataBucketBean trigger_batch_bucket = BeanTemplateUtils.clone(bucket_batch)
+															.with(DataBucketBean::analytic_thread, 
+																	BeanTemplateUtils.clone(bucket_batch.analytic_thread())
+																		.with(AnalyticThreadBean::trigger_config, 
+																				BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+																				.done().get()
+																				)
+																	.done()
+																	)
+															.done();
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(trigger_batch_bucket, false, bucket, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, update,
+					"test5e.3", 
+					_actor_context.getNewAnalyticsContext(), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
+			assertEquals("test5e.3", test_reply.source());
+			assertEquals(4, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onUpdatedThread: false", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called suspendAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
+		}
 		
 		// Test 6: update state - (a) resume, (b) suspend
 		{
