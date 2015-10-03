@@ -136,7 +136,7 @@ import akka.japi.pf.ReceiveBuilder;
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
-import com.ikanow.aleph2.data_import_manager.analytics.utils.StreamErrorUtils;
+import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticsErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
@@ -183,7 +183,7 @@ import fj.data.Validation;
  * @author acp
  */
 @SuppressWarnings("unused")
-public class DataBucketChangeActor extends AbstractActor {
+public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	private static final Logger _logger = LogManager.getLogger();	
 	
 	///////////////////////////////////////////
@@ -211,7 +211,7 @@ public class DataBucketChangeActor extends AbstractActor {
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
-	public DataBucketChangeActor() {
+	public DataBucketAnalyticsChangeActor() {
 		_context = DataImportActorContext.get(); 
 		_core_distributed_services = _context.getDistributedServices();
 		_actor_system = _core_distributed_services.getAkkaSystem();
@@ -374,7 +374,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				
 				final BasicMessageBean error_bean = 
 						SharedErrorUtils.buildErrorMessage(hostname, message,
-								ErrorUtils.getLongForm(StreamErrorUtils.STREAM_UNKNOWN_ERROR, e, message.bucket().full_name())
+								ErrorUtils.getLongForm(AnalyticsErrorUtils.STREAM_UNKNOWN_ERROR, e, message.bucket().full_name())
 								);
 				closing_sender.tell(new BucketActionHandlerMessage(hostname, error_bean), closing_self);			    				
 				return null;
@@ -846,7 +846,7 @@ public class DataBucketChangeActor extends AbstractActor {
 							tech_module.onInit(context);
 							return CompletableFuture.completedFuture(
 									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-										StreamErrorUtils.MESSAGE_NOT_RECOGNIZED, 
+										AnalyticsErrorUtils.MESSAGE_NOT_RECOGNIZED, 
 											bucket.full_name(), m.getClass().getSimpleName())));
 						});
 				});
@@ -929,7 +929,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				return (BucketActionReplyMessage) new BucketActionCollectedRepliesMessage(source, replies, Collections.emptySet());
 			})
 			.exceptionally(t -> {
-				return (BucketActionReplyMessage) new BucketActionHandlerMessage(source, ErrorUtils.buildErrorMessage(DataBucketChangeActor.class.getSimpleName(), source, ErrorUtils.getLongForm("{0}", t)));					
+				return (BucketActionReplyMessage) new BucketActionHandlerMessage(source, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class.getSimpleName(), source, ErrorUtils.getLongForm("{0}", t)));					
 			})
 			;					
 		}
@@ -960,7 +960,7 @@ public class DataBucketChangeActor extends AbstractActor {
 				// Note if we're here then err_or_tech_module must be "right"
 				return CompletableFuture.completedFuture(
 						new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-							ErrorUtils.getLongForm(StreamErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, t.getCause(), m.bucket().full_name(), err_or_tech_module.success()._1().getClass()))));
+							ErrorUtils.getLongForm(AnalyticsErrorUtils.NO_TECHNOLOGY_NAME_OR_ID, t.getCause(), m.bucket().full_name(), err_or_tech_module.success()._1().getClass()))));
 			}
 		}
 		//(else fall through to...)

@@ -63,7 +63,7 @@ import com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologySer
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
-import com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketChangeActor;
+import com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketAnalyticsChangeActor;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
@@ -175,7 +175,7 @@ public class TestDataBucketChangeActor {
 		
 		// Create an actor:
 		
-		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), "test_host");
+		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
 		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
@@ -229,7 +229,7 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			assertTrue(DataBucketChangeActor.isEnrichmentRequest(broadcast));			
+			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
 			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
@@ -267,7 +267,7 @@ public class TestDataBucketChangeActor {
 		
 		// Create an actor:
 		
-		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketChangeActor.class), "test_host");
+		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
 		_db_actor_context.getStreamingEnrichmentMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
 		// create the inbox:
@@ -321,7 +321,7 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
 					new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			assertTrue(DataBucketChangeActor.isEnrichmentRequest(broadcast));			
+			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
 			_db_actor_context.getStreamingEnrichmentMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
@@ -346,10 +346,10 @@ public class TestDataBucketChangeActor {
 		// Just check the streaming enrichment error and success cases
 		
 		{
-			final DataBucketBean bucket = createBucket(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
+			final DataBucketBean bucket = createBucket(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 			
-			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketChangeActor.getAnalyticsTechnology(
-					bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
+					bucket, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 					true, 
 					Optional.empty(), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket), "test1", 
@@ -357,10 +357,10 @@ public class TestDataBucketChangeActor {
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
 			
-			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2 = DataBucketChangeActor.getAnalyticsTechnology(
-					bucket, DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
+					bucket, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 					true, 
-					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.STREAMING_ENRICHMENT_DEFAULT)
+					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket), "test2", 
 					Validation.success(Collections.emptyMap()));
@@ -370,10 +370,10 @@ public class TestDataBucketChangeActor {
 		
 		
 		{
-			final DataBucketBean bucket = createBucket(DataBucketChangeActor.BATCH_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
+			final DataBucketBean bucket = createBucket(DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 			
-			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketChangeActor.getAnalyticsTechnology(
-					bucket, DataBucketChangeActor.BATCH_ENRICHMENT_TECH_NAME, 
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
+					bucket, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_TECH_NAME, 
 					true, 
 					Optional.empty(), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket), "test1", 
@@ -381,11 +381,11 @@ public class TestDataBucketChangeActor {
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
 			
-			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2 = DataBucketChangeActor.getAnalyticsTechnology(
-					bucket, DataBucketChangeActor.BATCH_ENRICHMENT_TECH_NAME, 
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
+					bucket, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_TECH_NAME, 
 					true, 
 					Optional.empty(),
-					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketChangeActor.BATCH_ENRICHMENT_DEFAULT)
+					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), 
 					new BucketActionMessage.BucketActionOfferMessage(bucket), "test2", 
 					Validation.success(Collections.emptyMap()));
@@ -415,7 +415,7 @@ public class TestDataBucketChangeActor {
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = 
-				DataBucketChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(), Optional.empty(),
+				DataBucketAnalyticsChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(), Optional.empty(),
 						new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
@@ -432,7 +432,7 @@ public class TestDataBucketChangeActor {
 					.put("test_tech_id_analytics_2b", Tuples._2T(null, null))
 					.build();
 
-		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2a = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2a = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
@@ -444,7 +444,7 @@ public class TestDataBucketChangeActor {
 		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_analytics_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
-		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2b = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2b = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
@@ -485,7 +485,7 @@ public class TestDataBucketChangeActor {
 							cached_file.success()))
 					.build();		
 		
-		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3 = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
@@ -526,7 +526,7 @@ public class TestDataBucketChangeActor {
 							cached_file.success()))
 					.build();		
 		
-		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3b = DataBucketChangeActor.getAnalyticsTechnology(
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3b = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				false, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3b", 
@@ -546,7 +546,7 @@ public class TestDataBucketChangeActor {
 			// Preamble:
 			// 0) Insert 2 library beans into the management db
 			
-			final DataBucketBean bucket = DataBucketChangeActor.convertEnrichmentToAnalyticBucket(createBucket("test_tech_id_stream"));		
+			final DataBucketBean bucket = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(createBucket("test_tech_id_stream"));		
 			
 			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -565,10 +565,10 @@ public class TestDataBucketChangeActor {
 			
 			// 0a) Check with no streaming, gets nothing
 			{			
-				final DataBucketBean bucket0 = DataBucketChangeActor.convertEnrichmentToAnalyticBucket(createBucket("broken"));		
+				final DataBucketBean bucket0 = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(createBucket("broken"));		
 				
 				CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-						LibraryCacheUtils.cacheJars(bucket0, DataBucketChangeActor.getQuery(bucket0, false),
+						LibraryCacheUtils.cacheJars(bucket0, DataBucketAnalyticsChangeActor.getQuery(bucket0, false),
 								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 								"test1_source", "test1_command"
 							);
@@ -589,7 +589,7 @@ public class TestDataBucketChangeActor {
 					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket2 =
-					DataBucketChangeActor.convertEnrichmentToAnalyticBucket(
+					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::streaming_enrichment_topology, enrichment_module)
@@ -599,7 +599,7 @@ public class TestDataBucketChangeActor {
 			// 1) Normal operation
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-					LibraryCacheUtils.cacheJars(bucket2, DataBucketChangeActor.getQuery(bucket2, false),
+					LibraryCacheUtils.cacheJars(bucket2, DataBucketAnalyticsChangeActor.getQuery(bucket2, false),
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 						"test1_source", "test1_command"
 					);
@@ -619,7 +619,7 @@ public class TestDataBucketChangeActor {
 					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = 
-					DataBucketChangeActor.convertEnrichmentToAnalyticBucket(
+					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::streaming_enrichment_topology, enrichment_module2)
@@ -627,7 +627,7 @@ public class TestDataBucketChangeActor {
 									.done());
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
-					LibraryCacheUtils.cacheJars(bucket3, DataBucketChangeActor.getQuery(bucket3, false),
+					LibraryCacheUtils.cacheJars(bucket3, DataBucketAnalyticsChangeActor.getQuery(bucket3, false),
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
@@ -646,7 +646,7 @@ public class TestDataBucketChangeActor {
 			// Preamble:
 			// 0) Insert 2 library beans into the management db
 
-			final DataBucketBean bucket = DataBucketChangeActor.convertEnrichmentToAnalyticBucket(createBucket("test_tech_id_batch"));		
+			final DataBucketBean bucket = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(createBucket("test_tech_id_batch"));		
 			
 			final String pathname1 = System.getProperty("user.dir") + "/misc_test_assets/simple-harvest-example.jar";
 			final Path path1 = FileContext.getLocalFSFileContext().makeQualified(new Path(pathname1));		
@@ -665,10 +665,10 @@ public class TestDataBucketChangeActor {
 			
 			// 0a) Check with no streaming, gets nothing
 			{			
-				final DataBucketBean bucket0 = DataBucketChangeActor.convertEnrichmentToAnalyticBucket(createBucket("broken"));		
+				final DataBucketBean bucket0 = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(createBucket("broken"));		
 				
 				CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-						LibraryCacheUtils.cacheJars(bucket0, DataBucketChangeActor.getQuery(bucket0, false),
+						LibraryCacheUtils.cacheJars(bucket0, DataBucketAnalyticsChangeActor.getQuery(bucket0, false),
 								_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 								"test1_source", "test1_command"
 							);
@@ -689,7 +689,7 @@ public class TestDataBucketChangeActor {
 					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket2 =
-					DataBucketChangeActor.convertEnrichmentToAnalyticBucket(
+					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::batch_enrichment_configs, Arrays.asList(enrichment_module))
@@ -699,7 +699,7 @@ public class TestDataBucketChangeActor {
 			// 1) Normal operation
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-					LibraryCacheUtils.cacheJars(bucket2, DataBucketChangeActor.getQuery(bucket2, false),
+					LibraryCacheUtils.cacheJars(bucket2, DataBucketAnalyticsChangeActor.getQuery(bucket2, false),
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 						"test1_source", "test1_command"
 					);
@@ -719,7 +719,7 @@ public class TestDataBucketChangeActor {
 					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id", "failtest"), null, new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = 
-					DataBucketChangeActor.convertEnrichmentToAnalyticBucket(
+					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
 						BeanTemplateUtils.clone(bucket)
 									.with(DataBucketBean::analytic_thread, null)
 									.with(DataBucketBean::batch_enrichment_configs, Arrays.asList(enrichment_module2))
@@ -727,7 +727,7 @@ public class TestDataBucketChangeActor {
 									.done());
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
-					LibraryCacheUtils.cacheJars(bucket3, DataBucketChangeActor.getQuery(bucket3, false),
+					LibraryCacheUtils.cacheJars(bucket3, DataBucketAnalyticsChangeActor.getQuery(bucket3, false),
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
@@ -764,7 +764,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 
-			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), 
 					"test1", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -782,7 +782,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, offer,
 					"test2", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -797,7 +797,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
 
-			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, delete,
 					"test3", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -819,7 +819,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, false);
 			
-			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, create,
 					"test4", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -841,7 +841,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
 			
-			final CompletableFuture<BucketActionReplyMessage> test4b = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test4b = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, create,
 					"test4b", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -857,7 +857,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, update,
 					"test5", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -890,7 +890,7 @@ public class TestDataBucketChangeActor {
 			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(disabled_bucket, true, disabled_bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					disabled_bucket, update,
 					"test5a", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -913,7 +913,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, false, bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, update,
 					"test5b", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -935,7 +935,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, true, bucket_batch, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket_batch, update,
 					"test5c", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -958,7 +958,7 @@ public class TestDataBucketChangeActor {
 		{
 //			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, false, bucket, Collections.emptySet());
 //			
-//			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
+//			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketHarvestChangeActor.talkToAnalytics(
 //					bucket_batch, update,
 //					"test5d", 
 //					_actor_context.getNewAnalyticsContext(), 
@@ -993,7 +993,7 @@ public class TestDataBucketChangeActor {
 			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, update,
 					"test5e.1", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1022,7 +1022,7 @@ public class TestDataBucketChangeActor {
 			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, update,
 					"test5e.2", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1050,7 +1050,7 @@ public class TestDataBucketChangeActor {
 		{
 			final PurgeBucketActionMessage purge_msg = new PurgeBucketActionMessage(bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, purge_msg,
 					"test7", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1068,7 +1068,7 @@ public class TestDataBucketChangeActor {
 			final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
 			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
 			
-			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, test,
 					"test8", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1102,7 +1102,7 @@ public class TestDataBucketChangeActor {
 			final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
 			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
 			
-			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					disabled_bucket, test,
 					"test8b", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1121,7 +1121,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
 			
-			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, poll,
 					"test9", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1142,7 +1142,7 @@ public class TestDataBucketChangeActor {
 			contructor.setAccessible(true);
 			BucketActionMessage bad_msg = contructor.newInstance(bucket);
 	
-			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketChangeActor.talkToAnalytics(
+			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, bad_msg,
 					"testX", 
 					_actor_context.getNewAnalyticsContext(), 
@@ -1177,7 +1177,7 @@ public class TestDataBucketChangeActor {
 												.with(AnalyticThreadJobBean::module_name_or_id, "/test1")
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test1"));
 		}
@@ -1187,7 +1187,7 @@ public class TestDataBucketChangeActor {
 												.with(AnalyticThreadJobBean::module_name_or_id, "/test2")
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test2"));
 		}
@@ -1196,7 +1196,7 @@ public class TestDataBucketChangeActor {
 			final AnalyticThreadJobBean test = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("module config not present", context.getLibraryConfigs().isEmpty());
 		}
@@ -1206,7 +1206,7 @@ public class TestDataBucketChangeActor {
 												.with(AnalyticThreadJobBean::module_name_or_id, "/test2")
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test2"));
 		}
@@ -1216,7 +1216,7 @@ public class TestDataBucketChangeActor {
 										.with(AnalyticThreadJobBean::module_name_or_id, "/test3")
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("module config not present", context.getLibraryConfigs().isEmpty());
 		}
@@ -1226,7 +1226,7 @@ public class TestDataBucketChangeActor {
 												.with(AnalyticThreadJobBean::module_name_or_id, "/test1")
 												.done().get();
 			
-			DataBucketChangeActor.setPerJobContextParams(test, context, map);
+			DataBucketAnalyticsChangeActor.setPerJobContextParams(test, context, map);
 
 			assertTrue("Finds module config", context.getLibraryConfigs().containsKey("/test1"));
 		}
@@ -1244,7 +1244,7 @@ public class TestDataBucketChangeActor {
 		BasicMessageBean top_level = ErrorUtils.buildMessage(true, "test1", "test1", "");
 		
 		BucketActionReplyMessage res1 = 
-				DataBucketChangeActor.combineResults(CompletableFuture.completedFuture(top_level), test1_jobs, "test1").join();
+				DataBucketAnalyticsChangeActor.combineResults(CompletableFuture.completedFuture(top_level), test1_jobs, "test1").join();
 		
 		assertTrue("Is a multi message type: " + res1.getClass(), res1 instanceof BucketActionReplyMessage.BucketActionCollectedRepliesMessage);
 		assertEquals("One reply", 1, ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)res1).replies().size());
@@ -1254,7 +1254,7 @@ public class TestDataBucketChangeActor {
 		BasicMessageBean top_level2 = ErrorUtils.buildMessage(false, "test1", "test1", "");
 		
 		BucketActionReplyMessage res2 = 
-				DataBucketChangeActor.combineResults(CompletableFuture.completedFuture(top_level2), test1_jobs, "test2").join();
+				DataBucketAnalyticsChangeActor.combineResults(CompletableFuture.completedFuture(top_level2), test1_jobs, "test2").join();
 		
 		assertTrue("Is a multi message type: " + res2.getClass(), res2 instanceof BucketActionReplyMessage.BucketActionCollectedRepliesMessage);
 		assertEquals("2 replies", 2, ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)res2).replies().size());
@@ -1272,7 +1272,7 @@ public class TestDataBucketChangeActor {
 		final DataBucketBean final_bucket = BeanTemplateUtils.from(bucket_final_str, DataBucketBean.class).get();
 		
 		{
-			final DataBucketBean res = DataBucketChangeActor.convertEnrichmentToAnalyticBucket(in);
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(in);
 			
 			assertEquals(BeanTemplateUtils.toJson(out).toString(), BeanTemplateUtils.toJson(res).toString());
 		}
@@ -1318,32 +1318,32 @@ public class TestDataBucketChangeActor {
 		
 		// Error with libs 
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.fail(ErrorUtils.buildErrorMessage("", "", "")));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.fail(ErrorUtils.buildErrorMessage("", "", "")));
 			assertEquals(res, out);
 		}
 		// No error, but not streaming
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion("NOT_STREAMING", out, Validation.success(map3));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion("NOT_STREAMING", out, Validation.success(map3));
 			assertEquals(res, out);
 		}
 		// Can't find item in map
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map1));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map1));
 			assertEquals(res, out);
 		}
 		// No entry point
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map2));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map2));
 			assertEquals(res, out);
 		}
 		// Misc entry point, success
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map3));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map3));
 			assertEquals(BeanTemplateUtils.toJson(final_bucket).toString(), BeanTemplateUtils.toJson(res).toString());
 		}
 		// Streaming entry point, success
 		{
-			final DataBucketBean res = DataBucketChangeActor.finalBucketConversion(DataBucketChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map4));
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.finalBucketConversion(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, out, Validation.success(map4));
 			assertEquals(BeanTemplateUtils.toJson(final_bucket).toString(), BeanTemplateUtils.toJson(res).toString());
 		}
 	}

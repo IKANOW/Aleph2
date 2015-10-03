@@ -18,7 +18,7 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 /** Streaming enrichment specific errors
  * @author Alex
  */
-public class StreamErrorUtils {
+public class AnalyticsErrorUtils {
 
 	public static final String STREAM_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";
 

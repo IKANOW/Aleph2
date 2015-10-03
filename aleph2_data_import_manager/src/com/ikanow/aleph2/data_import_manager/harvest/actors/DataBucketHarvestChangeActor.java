@@ -67,7 +67,7 @@ import akka.japi.pf.ReceiveBuilder;
  *  buckets on the "data import manager" end - specifically vs harvest (see stream_enrichment.DataBucketChangeActor for streaming enrichment related control)
  * @author acp
  */
-public class DataBucketAnalyticsChangeActor extends AbstractActor {
+public class DataBucketHarvestChangeActor extends AbstractActor {
 	private static final Logger _logger = LogManager.getLogger();	
 	
 	///////////////////////////////////////////
@@ -83,7 +83,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
-	public DataBucketAnalyticsChangeActor() {
+	public DataBucketHarvestChangeActor() {
 		_context = DataImportActorContext.get(); 
 		_core_distributed_services = _context.getDistributedServices();
 		_actor_system = _core_distributed_services.getAkkaSystem();

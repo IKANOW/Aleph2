@@ -183,7 +183,7 @@ public class TestDataBucketChangeActor {
 		
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
-		final Validation<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketAnalyticsChangeActor.getHarvestTechnology(bucket, true, 
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketHarvestChangeActor.getHarvestTechnology(bucket, true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
@@ -200,7 +200,7 @@ public class TestDataBucketChangeActor {
 					.put("test_tech_id_harvest_2b", Tuples._2T(null, null))
 					.build();
 
-		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketAnalyticsChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2a").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2a", 
@@ -212,7 +212,7 @@ public class TestDataBucketChangeActor {
 		assertEquals(ErrorUtils.get(SharedErrorUtils.SHARED_LIBRARY_NAME_NOT_FOUND, bucket.full_name(), "test_tech_id_harvest_2a"), // (cloned bucket above)
 						test2a.fail().message());
 		
-		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketAnalyticsChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2b").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source2b", 
@@ -253,7 +253,7 @@ public class TestDataBucketChangeActor {
 							cached_file.success()))
 					.build();		
 		
-		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketAnalyticsChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest").done(), 
 				true, 
 				new BucketActionMessage.BucketActionOfferMessage(bucket), "test_source3", 
@@ -298,7 +298,7 @@ public class TestDataBucketChangeActor {
 				"test_tech_name", true, null, Arrays.asList("test_module_id"), null, null
 				);
 		
-		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketAnalyticsChangeActor.getHarvestTechnology(
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3b = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket)
 					.with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
@@ -338,7 +338,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 			
-			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 
 					Validation.fail(error));
 	
@@ -353,7 +353,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket);
 			
-			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -365,7 +365,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, delete, "test3", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -379,7 +379,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
 			
-			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, create, "test4", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -393,7 +393,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, update, "test5", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -411,7 +411,7 @@ public class TestDataBucketChangeActor {
 		{
 			final PurgeBucketActionMessage purge_msg = new PurgeBucketActionMessage(bucket, Collections.emptySet());
 			
-			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, purge_msg, "test7", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 	
@@ -426,7 +426,7 @@ public class TestDataBucketChangeActor {
 			final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L);
 			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
 			
-			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, test, "test8", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -440,7 +440,7 @@ public class TestDataBucketChangeActor {
 		{
 			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
 			
-			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, poll, "test9", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -457,7 +457,7 @@ public class TestDataBucketChangeActor {
 			contructor.setAccessible(true);
 			BucketActionMessage bad_msg = contructor.newInstance(bucket);
 	
-			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketAnalyticsChangeActor.talkToHarvester(
+			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, bad_msg, "testX", _actor_context.getNewHarvestContext(), 
 					Validation.success(harvest_tech));		
 			
@@ -493,7 +493,7 @@ public class TestDataBucketChangeActor {
 		assertTrue("Ready to throw exception", return_value.isCompletedExceptionally());
 		
 		final CompletableFuture<BucketActionReplyMessage> test1 = 
-				DataBucketAnalyticsChangeActor.handleTechnologyErrors(bucket, 
+				DataBucketHarvestChangeActor.handleTechnologyErrors(bucket, 
 						new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", Validation.success(harvest_tech), 
 						return_value);
 		
@@ -544,7 +544,7 @@ public class TestDataBucketChangeActor {
 			// 1) Normal operation
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure =
-				LibraryCacheUtils.cacheJars(bucket, DataBucketAnalyticsChangeActor.getQuery(bucket, true), 
+				LibraryCacheUtils.cacheJars(bucket, DataBucketHarvestChangeActor.getQuery(bucket, true), 
 						_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 						"test1_source", "test1_command"
 					);
@@ -561,7 +561,7 @@ public class TestDataBucketChangeActor {
 			// 2) Normal operation - tech + module
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure2 =
-					LibraryCacheUtils.cacheJars(bucket, DataBucketAnalyticsChangeActor.getQuery(bucket2, false), 
+					LibraryCacheUtils.cacheJars(bucket, DataBucketHarvestChangeActor.getQuery(bucket2, false), 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
@@ -580,7 +580,7 @@ public class TestDataBucketChangeActor {
 			DataBucketBean bucket3 = BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id, "failtest").done();
 			
 			CompletableFuture<Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>>> reply_structure3 =
-					LibraryCacheUtils.cacheJars(bucket, DataBucketAnalyticsChangeActor.getQuery(bucket3, false), 
+					LibraryCacheUtils.cacheJars(bucket, DataBucketHarvestChangeActor.getQuery(bucket3, false), 
 							_service_context.getCoreManagementDbService(), _service_context.getGlobalProperties(), _service_context.getStorageService(), _service_context,
 							"test2_source", "test2_command"
 						);
@@ -620,7 +620,7 @@ public class TestDataBucketChangeActor {
 		
 		// Create an actor:
 		
-		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
+		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketHarvestChangeActor.class), "test_host");
 		_db_actor_context.getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
 
 		// create the inbox:
