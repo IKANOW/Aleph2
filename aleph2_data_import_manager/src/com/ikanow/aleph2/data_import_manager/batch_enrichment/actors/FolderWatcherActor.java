@@ -33,7 +33,6 @@ import akka.actor.Cancellable;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.core.shared.utils.DirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -42,9 +41,10 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
+/** THIS CODE IS GETTING MOVED INTO THE DATA ANALYTICS MANAGER TRIGGER LOGIC
+ * @author jfreydank
+ */
 public class FolderWatcherActor extends UntypedActor {
-	
-
     private static final Logger logger = LogManager.getLogger(FolderWatcherActor.class);
 
 	protected CuratorFramework _curator	;
@@ -57,13 +57,11 @@ public class FolderWatcherActor extends UntypedActor {
 	protected FileContext fileContext = null;
 	protected Path dataPath = null;
 
-	protected IBeJobService beJobService;
-
 	public static String MSG_START = "start";
 	public static String MSG_STOP = "stop";
 	public static String MSG_FOLDER_WATCH = "folderWatch";
 	
-    public FolderWatcherActor(IStorageService storage_service,IBeJobService beJobService){
+    public FolderWatcherActor(IStorageService storage_service){
     	this._context = DataImportActorContext.get();
     	this._global_properties_Bean = _context.getGlobalProperties();
     	logger.debug("_global_properties_Bean"+_global_properties_Bean);
@@ -71,7 +69,6 @@ public class FolderWatcherActor extends UntypedActor {
     	this._curator = _core_distributed_services.getCuratorFramework();
     	this._management_db = _context.getServiceContext().getCoreManagementDbService();
     	this._storage_service = storage_service;
-    	this.beJobService = beJobService;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class,Optional.of("hdfs://localhost:8020")).get();
 		this.dataPath = new Path(_global_properties_Bean.distributed_root_dir()+"/data");
 		this._bucket_paths = detectBucketPaths();
@@ -154,7 +151,7 @@ public class FolderWatcherActor extends UntypedActor {
 	    logger.debug("checkAndScheduleBucketAgent for Bucket Path: "+bucketPathStr+" ,Bucket id: "+bucketFullName);
 		try{
 			    String agentName = createAgentName(bucketFullName);
-				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service, beJobService),agentName);
+				ActorRef beActor = getContext().actorOf(Props.create(BeBucketActor.class,_storage_service),agentName);
 				String bucketZkPath = ActorUtils.BATCH_ENRICHMENT_ZOOKEEPER + bucketFullName;
 				beActor.tell(new BucketEnrichmentMessage(bucketPathStr, bucketFullName, bucketZkPath), getSelf());						
 		}

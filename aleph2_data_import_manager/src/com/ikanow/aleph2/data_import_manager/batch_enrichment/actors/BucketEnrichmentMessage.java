@@ -17,11 +17,10 @@ package com.ikanow.aleph2.data_import_manager.batch_enrichment.actors;
 
 import java.io.Serializable;
 
+/** THIS CODE IS GETTING MOVED INTO THE DATA ANALYTICS MANAGER TRIGGER LOGIC
+ * @author jfreydank
+ */
 public class BucketEnrichmentMessage implements Serializable{
-	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	private String bucketPathStr;
 	public String getBucketPathStr() {

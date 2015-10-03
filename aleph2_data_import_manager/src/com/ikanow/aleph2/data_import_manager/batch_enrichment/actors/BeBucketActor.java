@@ -32,7 +32,6 @@ import akka.actor.ActorRef;
 import akka.actor.PoisonPill;
 import akka.actor.UntypedActor;
 
-import com.ikanow.aleph2.data_import_manager.batch_enrichment.services.mapreduce.IBeJobService;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -41,10 +40,14 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
+/** THIS CODE IS GETTING MOVED INTO THE DATA ANALYTICS MANAGER TRIGGER LOGIC
+ * @author jfreydank
+ */
 public class BeBucketActor extends UntypedActor {
 
 	private static final Logger logger = LogManager.getLogger(BeBucketActor.class);
@@ -59,13 +62,9 @@ public class BeBucketActor extends UntypedActor {
 	protected String bucketZkPath = null;
 	protected FileContext fileContext = null;
 
-	private IBeJobService beJobService;
-
-
-	
 	// not null means agent has been initialized.
 
-	public BeBucketActor(IStorageService storage_service, IBeJobService beJobService) {
+	public BeBucketActor(IStorageService storage_service) {
 		this._actor_context = DataImportActorContext.get();
 		this._global_properties_Bean = _actor_context.getGlobalProperties();
 		logger.debug("_global_properties_Bean" + _global_properties_Bean);
@@ -74,8 +73,6 @@ public class BeBucketActor extends UntypedActor {
 		this._management_db = _actor_context.getServiceContext().getCoreManagementDbService();
 		this.storage_service = storage_service;
 		this.fileContext = storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.of("hdfs://localhost:8020")).get();
-		this.beJobService = beJobService;
-		
 	}
 
 	@Override
@@ -109,7 +106,7 @@ public class BeBucketActor extends UntypedActor {
 				// bucket is not registered yet, grab it and do the processing
 				// on this node
 				_curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(bucketZkPath);
-				launchReadyJobs(fileContext,bem.getBuckeFullName(), bem.getBucketPathStr(),beJobService,_management_db,this.self());
+				launchReadyJobs(fileContext,bem.getBuckeFullName(), bem.getBucketPathStr(),_management_db,this.self());
 
 				// stop actor after all the processing
 				getContext().stop(getSelf());
@@ -125,7 +122,7 @@ public class BeBucketActor extends UntypedActor {
 	}
 
 
-	public  static List<String> launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IBeJobService beJobService,IManagementDbService managementDbService,ActorRef closingSelf) {
+	public  static List<String> launchReadyJobs(FileContext fileContext, String bucketFullName, String bucketPathStr,IManagementDbService managementDbService,ActorRef closingSelf) {
 		List<String> jobNames = new ArrayList<String>();
 		try {
 			Path bucketReady = new Path(bucketPathStr + "/managed_bucket/import/ready");
@@ -148,7 +145,9 @@ public class BeBucketActor extends UntypedActor {
 											logger.info("starting batch enhancment job: "+bucketFullName+" for "+ec.name());
 											// run enhancement job
 											
-											String jobName = beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());
+											//TODO (ALEPH-12): this now should communicate with the enrichment actors
+											//String jobName = beJobService.runEnhancementJob(bucketFullName, bucketPathStr, ec.name());
+											String jobName = Lambdas.get(() -> null);
 											if(jobName!=null){
 												jobNames.add(jobName);
 												logger.info("Enrichment job for , no enrichment enabled:"+bucketFullName +" ec:"+ec.name() +" launched unsuccessfully, jobName = "+jobName);
