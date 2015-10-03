@@ -153,7 +153,7 @@ public class BucketActionSupervisor extends UntypedActor {
 		}
 	}
 	
-	/** Control logic to handle either bucket type and streaming?/harvest?
+	/** Control logic to handle either bucket type and analytics?/enrichment?/harvest?
 	 * @param supervisor
 	 * @param actor_context
 	 * @param message
@@ -167,11 +167,11 @@ public class BucketActionSupervisor extends UntypedActor {
 			final Optional<FiniteDuration> timeout)
 	{
 		final DataBucketBean bucket = message.bucket();
-		final boolean is_streaming_enrichment = hasEnrichment(bucket);
-		final boolean has_streaming_analytics = !is_streaming_enrichment && bucketHasAnalytics(bucket);
+		final boolean has_enrichment = hasEnrichment(bucket);
+		final boolean has_analytics = !has_enrichment && bucketHasAnalytics(bucket);
 		final boolean has_harvester = hasHarvester(bucket);
 		
-		if (!is_streaming_enrichment && !has_harvester && !has_streaming_analytics) {
+		if (!has_enrichment && !has_harvester && !has_analytics) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
 					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
@@ -180,10 +180,10 @@ public class BucketActionSupervisor extends UntypedActor {
 		}
 		else {
 			return Lambdas.<Object, CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>>wrap_u(__ -> {
-				if (is_streaming_enrichment) { // (streaming + ??)
+				if (has_enrichment) { // (enrichment + ??)
 					return handleAnalyticsRequest(bucket, supervisor, actor_context, message, timeout);
 				}
-				else if (has_streaming_analytics) {
+				else if (has_analytics) { // (analytics + ??)
 					return handleAnalyticsRequests(bucket, supervisor, actor_context, message, timeout);
 				}
 				else { // (harvest only)
@@ -191,7 +191,7 @@ public class BucketActionSupervisor extends UntypedActor {
 				}				
 			})
 			.andThen(cf -> {
-				if (has_harvester) { // (streaming/analytics + harvest) 
+				if (has_harvester) { // (enrichment/analytics + harvest) 
 					final RequestMessage m = new RequestMessage(actor_type, message, ActorUtils.BUCKET_ACTION_ZOOKEEPER, timeout);
 					return cf.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>thenCompose(stream -> {							
 							// Check if the stream succeeded or failed, only call if success when a create/update-enabled message
@@ -226,7 +226,7 @@ public class BucketActionSupervisor extends UntypedActor {
 							}
 						} );
 				}
-				else { // (streaming only)					
+				else { // (analyics/enrichment only)					
 					return cf;
 				}
 			})
@@ -318,7 +318,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	// LOW LEVEL UTILITIES
 	
-	/** If a streaming enrichment message fails and the resulting action is "positive", ie "Test"
+	/** If an enrichment/analytics message fails and the resulting action is "positive", ie "Test"
 	 * @param message
 	 * @return
 	 */
@@ -339,8 +339,8 @@ public class BucketActionSupervisor extends UntypedActor {
 						.orElse(false); // (ie if null)
 	}
 	
-	/** Returns whether a bucket has any streaming analytic components
-	 *  Note mutually exclusive with hasStreamingEnrichment by construction
+	/** Returns whether a bucket has any analytic components
+	 *  Note mutually exclusive with hasEnrichment by construction
 	 * @param bucket
 	 * @return
 	 */
