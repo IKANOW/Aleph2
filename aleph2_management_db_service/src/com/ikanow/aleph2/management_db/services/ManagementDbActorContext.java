@@ -81,7 +81,7 @@ public class ManagementDbActorContext {
 	protected final ICoreDistributedServices _distributed_services;
 	
 	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus;
-	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _streaming_enrichment_bus;
+	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _analytics_bus;
 	protected final SetOnce<LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String>> _delete_round_robin_bus;
 	
 	// Some mutable state just used for cleaning up in tests
@@ -119,7 +119,7 @@ public class ManagementDbActorContext {
 			_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 			
 			_bucket_action_bus = new SetOnce<>();
-			_streaming_enrichment_bus = new SetOnce<>();
+			_analytics_bus = new SetOnce<>();
 			_delete_round_robin_bus = new SetOnce<>();
 						
 			_distributed_services.getApplicationName()
@@ -147,7 +147,7 @@ public class ManagementDbActorContext {
 			_distributed_services = _singleton.get()._distributed_services;
 			
 			_bucket_action_bus = _singleton.get()._bucket_action_bus;
-			_streaming_enrichment_bus = _singleton.get()._streaming_enrichment_bus;
+			_analytics_bus = _singleton.get()._analytics_bus;
 			_delete_round_robin_bus = _singleton.get()._delete_round_robin_bus;			
 		}		
 	}
@@ -199,10 +199,10 @@ public class ManagementDbActorContext {
 	 * @return the streaming enrichment message bus
 	 */
 	public synchronized LookupEventBus<BucketActionEventBusWrapper, ActorRef, String> getAnalyticsMessageBus() {
-		if (!_streaming_enrichment_bus.isSet()) {
-			_streaming_enrichment_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
+		if (!_analytics_bus.isSet()) {
+			_analytics_bus.set(_distributed_services.getBroadcastMessageBus(BucketActionEventBusWrapper.class, BucketActionMessage.class, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS));
 		}
-		return _streaming_enrichment_bus.get();
+		return _analytics_bus.get();
 	}
 	
 	/** Returns a static accessor to the deletion round robin message bus

@@ -83,13 +83,13 @@ public class TestManagementDbActorContext {
 	@Test
 	public void test__buses() {
 		assertTrue("Lazy initialization: bucket action bus", !_actor_context._bucket_action_bus.isSet());
-		assertTrue("Lazy initialization: streaming action bus", !_actor_context._streaming_enrichment_bus.isSet());
+		assertTrue("Lazy initialization: streaming action bus", !_actor_context._analytics_bus.isSet());
 		
 		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus1 = _actor_context.getBucketActionMessageBus();
 		assertTrue("Lazy initialization: bucket action bus", _actor_context._bucket_action_bus.isSet());
 		
 		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus2 = _actor_context.getAnalyticsMessageBus();
-		assertTrue("Lazy initialization: streaming action bus", _actor_context._streaming_enrichment_bus.isSet());		
+		assertTrue("Lazy initialization: streaming action bus", _actor_context._analytics_bus.isSet());		
 		
 		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus3 = _actor_context.getMessageBus(ActorUtils.BUCKET_ACTION_EVENT_BUS);
 		LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>  bus4 = _actor_context.getMessageBus(ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);

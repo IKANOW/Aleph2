@@ -87,8 +87,6 @@ import org.apache.zookeeper.CreateMode;
 
 import scala.Tuple2;
 
-//TODO test bucket validation
-
 public class TestDataBucketCrudService_Create {
 
 	public static final Logger _logger = LogManager.getLogger(TestDataBucketCrudService_Create.class);	
@@ -219,7 +217,7 @@ public class TestDataBucketCrudService_Create {
 		}		
 	}	
 	
-	public String insertStreamingActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
+	public String insertAnalyticsActor(Class<? extends UntypedActor> actor_clazz) throws Exception {
 		String uuid = UuidUtils.get().getRandomUuid();
 		ManagementDbActorContext.get().getDistributedServices()
 			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
@@ -1281,7 +1279,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, false) 
-				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -1324,7 +1322,7 @@ public class TestDataBucketCrudService_Create {
 		// Check the "Confirmed" bucket fields match the bucket now
 		assertEquals(false, status_after.confirmed_suspended());
 		assertEquals(false, status_after.confirmed_multi_node_enabled());
-		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());
+		assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());
 		
 		// Since it worked, let's quickly try adding again with same full name but different id and check it fails...
 		
@@ -1373,7 +1371,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, false) 
-				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::poll_frequency, "in 5 minutes")
 				.with(DataBucketBean::harvest_configs, 
@@ -1417,7 +1415,7 @@ public class TestDataBucketCrudService_Create {
 		// Check the "Confirmed" bucket fields match the bucket now
 		assertEquals(false, status_after.confirmed_suspended());
 		assertEquals(false, status_after.confirmed_multi_node_enabled());
-		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());
+		assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());
 		
 		//finally check that next_poll_date was set
 		final DataBucketBean valid_bucket_retrieved = _bucket_crud.getObjectById(valid_bucket._id()).get().get();
@@ -1445,7 +1443,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::modified, new Date())
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
-				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -1476,7 +1474,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(0L, (long)_bucket_crud.countObjects().get());
 		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
 		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
-		assertEquals(true, err_msg.success());
+		assertEquals("Store should succeed: " + err_msg.message(), true, err_msg.success());
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(2, status_after.node_affinity().size());
@@ -1488,7 +1486,7 @@ public class TestDataBucketCrudService_Create {
 		// Check the "Confirmed" bucket fields match the bucket now
 		assertEquals(false, status_after.confirmed_suspended());
 		assertEquals(true, status_after.confirmed_multi_node_enabled());
-		assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());		
+		assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());		
 	}
 
 	@Test
@@ -1496,7 +1494,7 @@ public class TestDataBucketCrudService_Create {
 		cleanDatabases();
 
 		// Setup: register an accepting actor to listen:
-		final String streaming_host = insertStreamingActor(TestActor_Accepter.class);
+		final String streaming_host = insertAnalyticsActor(TestActor_Accepter.class);
 		final String accepting_host1 = insertActor(TestActor_Accepter.class);
 		final String accepting_host2 = insertActor(TestActor_Accepter.class);
 		assertFalse("created actors on different hosts", accepting_host1.equals(accepting_host2));
@@ -1571,6 +1569,9 @@ public class TestDataBucketCrudService_Create {
 		
 		// Insert a bucket:
 		test_SuccessfulBucketCreation_multiNode();		
+
+		// (add analytics bucket to handle batch enrichment changes)
+		insertAnalyticsActor(TestActor_Accepter.class);
 		
 		// Try to update it
 		
@@ -1593,7 +1594,6 @@ public class TestDataBucketCrudService_Create {
 				fail("Should have thrown exception");
 			}
 			catch (Exception e) {
-				//TODO: need to check this is a dup key error and not something else...
 				assertTrue("Dup key error", e.getCause() instanceof MongoException);
 			}
 		
@@ -1612,7 +1612,7 @@ public class TestDataBucketCrudService_Create {
 		
 		// Third attempt, succeed with different update
 		final DataBucketBean mod_bucket3 = BeanTemplateUtils.clone(bucket)
-				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
+				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 				.with(DataBucketBean::display_name, "Something else")
 				.done();
 
@@ -1658,7 +1658,7 @@ public class TestDataBucketCrudService_Create {
 				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 				assertEquals(true, status_after.confirmed_suspended());
 				assertEquals(true, status_after.confirmed_multi_node_enabled());
-				assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());		
+				assertEquals(MasterEnrichmentType.batch, status_after.confirmed_master_enrichment_type());		
 			}
 			catch (Exception e) {
 				update_future3.getManagementResults().get().stream().map(msg -> msg.command()).collect(Collectors.joining());
@@ -1690,14 +1690,14 @@ public class TestDataBucketCrudService_Create {
 			// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 			assertEquals(true, status_after3.confirmed_suspended());
 			assertEquals(true, status_after3.confirmed_multi_node_enabled());
-			assertEquals(MasterEnrichmentType.none, status_after3.confirmed_master_enrichment_type());					
+			assertEquals(MasterEnrichmentType.batch, status_after3.confirmed_master_enrichment_type());					
 		}		
 		
 		// OK check that if moving to single node then it resets the affinity
 		{
 			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
 					.with(DataBucketBean::display_name, "Something else")
-					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
+					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 					.with(DataBucketBean::multi_node_enabled, false)
 					.done();
 			
@@ -1747,7 +1747,7 @@ public class TestDataBucketCrudService_Create {
 				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 				assertEquals(true, status_after4.confirmed_suspended());
 				assertEquals(false, status_after4.confirmed_multi_node_enabled());
-				assertEquals(MasterEnrichmentType.none, status_after4.confirmed_master_enrichment_type());					
+				assertEquals(MasterEnrichmentType.batch, status_after4.confirmed_master_enrichment_type());					
 				
 			}		
 		}
