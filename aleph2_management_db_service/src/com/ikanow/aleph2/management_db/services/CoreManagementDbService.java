@@ -428,4 +428,13 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
 		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
 	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getAnalyticBucketTriggerState(java.lang.Class)
+	 */
+	@Override
+	public <T> ICrudService<T> getAnalyticBucketTriggerState(
+			Class<T> trigger_state_clazz) {
+		return _underlying_management_db.getAnalyticBucketTriggerState(trigger_state_clazz);
+	}
 }

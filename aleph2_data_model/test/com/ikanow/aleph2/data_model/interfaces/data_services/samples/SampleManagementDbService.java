@@ -140,5 +140,11 @@ public class SampleManagementDbService implements IManagementDbService {
 		return null;
 	}
 
+	@Override
+	public <T> ICrudService<T> getAnalyticBucketTriggerState(
+			Class<T> trigger_state_clazz) {
+		return null;
+	}
+
 
 }

@@ -174,6 +174,12 @@ public interface IManagementDbService extends IUnderlyingService {
 	 */
 	<T> ICrudService<T> getBucketTestQueue(final Class<T> test_queue_clazz);
 	
+	/** This datastore contains information needed to determine when analytic jobs and buckets should be triggered
+	 * @param trigger_state_clazz - the class of the (internal) bean containing the job's trigger details
+	 * @return a CRUD service from the underlying technology
+	 */
+	<T> ICrudService<T> getAnalyticBucketTriggerState(final Class<T> trigger_state_clazz);
+		
 	/** Returns a list of all the "user" state objects
 	 * @param bucket_filter - if enabled then only returns CRUD datastores for the designated buckets
 	 * @param type_filter - if enabled then only returns CRUD datastores for the designated type (harvest/analytic_thread/enrichment/library)
