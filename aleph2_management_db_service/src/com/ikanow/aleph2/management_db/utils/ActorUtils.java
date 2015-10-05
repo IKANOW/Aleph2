@@ -27,7 +27,7 @@ public class ActorUtils {
 	public final static String BUCKET_ACTION_EVENT_BUS = BUCKET_ACTION_ZOOKEEPER;
 	public final static String BUCKET_ANALYTICS_EVENT_BUS = BUCKET_ANALYTICS_ZOOKEEPER;
 	public final static String BUCKET_DELETION_BUS = "/app/aleph2/deletion_round_robin";
-
+	public final static String ANALYTICS_TRIGGER_BUS = "/app/aleph2/analytics_trigger_round_robin";
 	
 	public final static String BUCKET_ACTION_SUPERVISOR = "bucket_actions_supervisor";
 	public final static String BUCKET_ACTION_HANDLER = "bucket_actions_handler";

@@ -196,23 +196,6 @@
 	    <scope>system</scope>
 	    <systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>
 	</dependency>
-  	<dependency>
-  		<groupId>org.apache.hadoop</groupId>
-  		<artifactId>hadoop-mapreduce-client-core</artifactId>
-  		<version>${aleph2.hadoop}</version>
-  	</dependency>
-	<dependency>
-		<groupId>org.apache.hadoop</groupId>
-		<artifactId>hadoop-minicluster</artifactId>
-  		<version>${aleph2.hadoop}</version>
-		<scope>test</scope>
-		</dependency>
-  	<dependency>
-  		<groupId>org.apache.hadoop</groupId>
-  		<artifactId>hadoop-client</artifactId>
-  		<version>${aleph2.hadoop}</version>
-  		<scope>provided</scope>
-  	</dependency>
 	<dependency>
 		<groupId>org.mockito</groupId>
 		<artifactId>mockito-core</artifactId>
