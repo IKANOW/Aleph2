@@ -57,7 +57,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.analytics.hadoop.services.MockHadoopAnalyticTechnologyService;
+import com.ikanow.aleph2.analytics.hadoop.services.MockHadoopTechnologyService;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.analytics.storm.services.MockStormAnalyticTechnologyService;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
@@ -293,7 +293,7 @@ public class TestDataBucketChangeActor {
 		//(bypass this - this logic is now managed by the storm analytic services)
 		{
 			try {
-				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + MockHadoopAnalyticTechnologyService.DISABLE_FILE).createNewFile();
+				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + MockHadoopTechnologyService.DISABLE_FILE).createNewFile();
 			}
 			catch (Exception e) {
 				//(don't care if fails, probably just first time through)
@@ -312,7 +312,7 @@ public class TestDataBucketChangeActor {
 		// 2b) Send an offer (accepted, create file)
 		{
 			try {
-				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + MockHadoopAnalyticTechnologyService.DISABLE_FILE).delete();
+				new File(_service_context.getGlobalProperties().local_yarn_config_dir() + File.separator + MockHadoopTechnologyService.DISABLE_FILE).delete();
 			}
 			catch (Exception e) {
 				//(don't care if fails, probably just first time through)
