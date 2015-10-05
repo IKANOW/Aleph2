@@ -17,6 +17,9 @@ package com.ikanow.aleph2.data_import_manager.data_model;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.HashSet;
+
 import org.junit.Test;
 
 public class TestDataImportConfigurationBean {
@@ -27,44 +30,49 @@ public class TestDataImportConfigurationBean {
 		assertEquals("DataImportManager", DataImportConfigurationBean.PROPERTIES_ROOT);
 		
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, false, true);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, false, true, new HashSet<String>());
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
+			assertEquals(0, x.node_rules().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, false);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, false, new HashSet<String>(Arrays.asList("a","b")));
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(true, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(false, x.governance_enabled());
+			assertEquals(2, x.node_rules().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, null);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, null, new HashSet<String>(Arrays.asList("a")));
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(true, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
+			assertEquals(1, x.node_rules().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, false, true);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, false, true, new HashSet<String>(Arrays.asList("a","b","a")));
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.streaming_enrichment_enabled());
 			assertEquals(false, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
+			assertEquals(2, x.node_rules().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null, null);
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(true, x.streaming_enrichment_enabled());
 			assertEquals(true, x.batch_enrichment_enabled());
 			assertEquals(true, x.governance_enabled());
+			assertEquals(0, x.node_rules().size());
 		}
 		
 	}

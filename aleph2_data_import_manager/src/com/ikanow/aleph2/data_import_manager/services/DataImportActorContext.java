@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
+import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -35,6 +36,7 @@ public class DataImportActorContext {
 	protected final ICoreDistributedServices _distributed_services;
 	protected final IServiceContext _service_context;
 	protected final GeneralInformationService _information_service;
+	protected final DataImportConfigurationBean _dim_config;
 	
 	@Inject 
 	protected Injector _injector; // (used to generate harvest contexts)
@@ -42,12 +44,14 @@ public class DataImportActorContext {
 	/** Creates a new actor context
 	 */
 	@Inject
-	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service)
+	public DataImportActorContext(final IServiceContext service_context, final GeneralInformationService information_service,
+			final DataImportConfigurationBean dim_config)
 	{
 		_service_context = service_context;
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_singleton = this;
 		_information_service = information_service;
+		_dim_config = dim_config;
 	}
 
 	/** Returns the global properties bean
@@ -97,6 +101,14 @@ public class DataImportActorContext {
 	 */
 	public ICoreDistributedServices getDistributedServices() {
 		return _distributed_services;
+	}
+	
+	/**
+	 * Returns the node configuration bean
+	 * @return
+	 */
+	public DataImportConfigurationBean getDataImportConfigurationBean() {
+		return _dim_config;
 	}
 	
 	/** Gets the actor context

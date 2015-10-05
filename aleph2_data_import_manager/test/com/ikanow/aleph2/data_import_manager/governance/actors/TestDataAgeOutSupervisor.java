@@ -192,7 +192,7 @@ public class TestDataAgeOutSupervisor {
 		
 		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
 		
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService()); 
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null); 
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		

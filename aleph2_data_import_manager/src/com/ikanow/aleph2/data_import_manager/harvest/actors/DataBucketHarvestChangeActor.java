@@ -16,10 +16,13 @@
 package com.ikanow.aleph2.data_import_manager.harvest.actors;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,9 +31,11 @@ import org.apache.logging.log4j.Logger;
 
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.services.HarvestContext;
+import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
+import com.ikanow.aleph2.data_import_manager.utils.PatternUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
@@ -140,7 +145,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 									h_context.setLibraryConfigs(module_configs);
 								});
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module);
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, err_or_tech_module, _context);
 								return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
 								
 	    					})
@@ -234,6 +239,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	 * @param bucket
 	 * @param tech_module
 	 * @param m
+	 * @param context 
 	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Validation finally)
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage> talkToHarvester(
@@ -241,7 +247,9 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 			final BucketActionMessage m,
 			final String source,
 			final IHarvestContext context,
-			final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
+			final Validation<BasicMessageBean, 
+			IHarvestTechnologyModule> err_or_tech_module, // "pipeline element"
+			final DataImportActorContext dim_context
 			)
 	{
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
@@ -258,7 +266,9 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
 							tech_module.onInit(context);
-							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, context);
+							final boolean accept_or_ignore =
+									canRunOnThisNode(bucket, dim_context) &&
+									tech_module.canRunOnThisNode(bucket, context);
 							return CompletableFuture.completedFuture(accept_or_ignore
 									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
 									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
@@ -310,6 +320,73 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		finally {
 			Thread.currentThread().setContextClassLoader(saved_current_classloader);
 		}
+	}
+
+	/**
+	 * Checks to see if the current node matches the requested node rules
+	 * @param bucket 
+	 * 
+	 * @return
+	 */
+	private static boolean canRunOnThisNode(final DataBucketBean bucket, 
+			final DataImportActorContext context) {
+		final DataImportConfigurationBean config = context.getDataImportConfigurationBean();		
+		final Set<String> bucket_rules = bucket.node_list_rules() != null ? bucket.node_list_rules().stream().collect(Collectors.toSet()) : new HashSet<String>();
+		_logger.debug("Bucket has " + bucket_rules.size() + " rules");
+		//if we don't have any rules to follow, just allow it to run
+		if ( bucket_rules.isEmpty() )
+			return true;
+		
+		//check if the bucket rules match the config rules
+		final String hostname = context.getInformationService().getHostname(); //this is my hostname for comparing globs/regex to
+		_logger.debug("Node hostname is: " + hostname);
+		//loop iteratively so we can kick out early if we find a match
+		for ( final String rule : bucket_rules ) {
+			_logger.debug("Testing rule: " + rule);
+			if ( testNodeRule(rule, hostname, config.node_rules()) ) {
+				_logger.debug("Rule passed!");
+				return true;
+			}
+		}
+		
+		//we fell the whole way through, not a single rule was passed therefore
+		_logger.debug("fell through, failing");
+		return false;
+	}
+
+	/**
+	 * Tests a node rule to see if it passes
+	 * 1. EXCLUSIVE (starts with -) or INCLUSIVE (starts with + or something else)
+	 * 2. glob or regex (/pattern/flags) for hostnames OR $(glob or regex) for rule
+	 * 3. We pass if ANY rule is accepted
+	 * 
+	 * @param rule
+	 * @param hostname
+	 * @return
+	 */
+	private static boolean testNodeRule(final String rule, final String hostname, final Set<String> node_rules) {
+		final boolean exclusive = rule.startsWith("-");		
+		final String rule_wo_exclusive = rule.substring((rule.startsWith("-") || rule.startsWith("+")) ? 1 : 0); 
+		final boolean is_node_rule = rule_wo_exclusive.startsWith("$");
+		final String rule_wo_exclusive_hostname = rule_wo_exclusive.substring(rule_wo_exclusive.startsWith("$") ? 1 : 0);
+		final Pattern pattern = PatternUtils.createPatternFromRegexOrGlob(rule_wo_exclusive_hostname);
+		_logger.debug("ex: " + exclusive + " is_node: " + is_node_rule + " rule: " + rule_wo_exclusive_hostname);
+		
+		if ( is_node_rule ) {	
+			_logger.debug("Rule is a node rule");
+			//is node rule, check against all known node rules for a match		
+			for ( String n_r : node_rules ) {
+				//check if matches rule and we want to match on this (or opposite)
+				if (pattern.matcher(n_r).find() == !exclusive)
+					return true;
+			}				
+		} else {
+			_logger.debug("Rule is a hostname rule");
+			//is hostname rule, check if matches hostname and we want to match on this (or opposite)
+			if (pattern.matcher(hostname).find() == !exclusive)
+				return true;			
+		}
+		return false;
 	}
 
 	/** Wraps the communications with the tech module so that calls to completeExceptionally are handled
