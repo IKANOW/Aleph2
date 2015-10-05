@@ -30,6 +30,8 @@ import java.util.Optional;
 
 
 
+
+
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -43,13 +45,16 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketPollFreqSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
+import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
-import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionRoundRobinWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
+
+
 
 
 
@@ -86,7 +91,7 @@ public class ManagementDbActorContext {
 	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _bucket_action_bus;
 	protected final SetOnce<LookupEventBus<BucketActionEventBusWrapper, ActorRef, String>> _analytics_bus;
 	protected final SetOnce<LookupEventBus<BucketMgmtEventBusWrapper, ActorRef, String>> _delete_round_robin_bus;
-	protected final SetOnce<LookupEventBus<BucketActionRoundRobinWrapper, ActorRef, String>> _analytics_trigger_round_robin_bus;
+	protected final SetOnce<LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String>> _analytics_trigger_round_robin_bus;
 	
 	// Some mutable state just used for cleaning up in tests
 	private Optional<ActorRef> _delete_singleton = Optional.empty();
@@ -224,9 +229,9 @@ public class ManagementDbActorContext {
 	/** Returns a static accessor to the analytics trigger round robin message bus
 	 * @return the analytics trigger round robin message bus
 	 */
-	public synchronized LookupEventBus<BucketActionRoundRobinWrapper, ActorRef, String> getAnalyticsTriggerBus() {
+	public synchronized LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String> getAnalyticsTriggerBus() {
 		if (!_analytics_trigger_round_robin_bus.isSet()) {
-			_analytics_trigger_round_robin_bus.set(_distributed_services.getRoundRobinMessageBus(BucketActionRoundRobinWrapper.class, BucketActionMessage.class, ActorUtils.ANALYTICS_TRIGGER_BUS));
+			_analytics_trigger_round_robin_bus.set(_distributed_services.getRoundRobinMessageBus(AnalyticsTriggerEventBusWrapper.class, AnalyticsTriggerMessage.class, ActorUtils.ANALYTICS_TRIGGER_BUS));
 		}
 		return _analytics_trigger_round_robin_bus.get();
 	}

@@ -24,7 +24,6 @@ import akka.actor.ActorRef;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
-import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
 
 /** Just a top level message type for handling bucket actions 
  * @author acp
@@ -54,29 +53,6 @@ public class BucketActionMessage implements Serializable {
 		 * @param message - the message to be wrapped
 		 */
 		public BucketActionEventBusWrapper(final ActorRef sender, final BucketActionMessage message) {
-			this.sender = sender;
-			this.message = message;
-		}	
-		@Override
-		public ActorRef sender() { return sender; };
-		@Override
-		public BucketActionMessage message() { return message; };
-		
-		protected ActorRef sender;
-		protected BucketActionMessage message;
-	}	
-
-	/** An internal class used to wrap broadcast event bus publications
-	 * @author acp
-	 */
-	public static class BucketActionRoundRobinWrapper implements IRoundRobinEventBusWrapper<BucketActionMessage>,Serializable {
-		private static final long serialVersionUID = -8827429574835836017L;
-		protected BucketActionRoundRobinWrapper() { }
-		/** User c'tor for wrapping a BucketActionMessage to be sent over the bus
-		 * @param sender - the sender of the message
-		 * @param message - the message to be wrapped
-		 */
-		public BucketActionRoundRobinWrapper(final ActorRef sender, final BucketActionMessage message) {
 			this.sender = sender;
 			this.message = message;
 		}	

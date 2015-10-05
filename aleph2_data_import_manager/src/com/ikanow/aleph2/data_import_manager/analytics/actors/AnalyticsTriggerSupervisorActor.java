@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -26,11 +27,12 @@ import scala.concurrent.duration.FiniteDuration;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerStateBean;
-import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
-import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionRoundRobinWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import akka.actor.ActorRef;
@@ -49,7 +51,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	protected final ManagementDbActorContext _actor_context;
 	protected final SetOnce<Cancellable> _ticker = new SetOnce<>();
 	
-	protected final LookupEventBus<BucketActionRoundRobinWrapper, ActorRef, String> _analytics_trigger_bus;
+	protected final LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String> _analytics_trigger_bus;
 	
 	// These aren't currently used, but might want to make the logic more sophisticated in the future 
 	protected final IServiceContext _context;
@@ -66,7 +68,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });
 
 		if (null != _core_management_db) {
-			final FiniteDuration poll_delay = Duration.create(5, TimeUnit.SECONDS);
+			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
 			final FiniteDuration poll_frequency = Duration.create(5, TimeUnit.SECONDS);
 			_ticker.set(this.context().system().scheduler()
 						.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
@@ -84,8 +86,10 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		}
 		_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class));
 
-		// ensure bucket deletion queue is optimized:
-		//TODO (ALEPH-12)
+		// ensure analytic queue is optimized:
+
+		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticsTriggerStateBean.class).field(AnalyticsTriggerStateBean::is_active)));
+		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticsTriggerStateBean.class).field(AnalyticsTriggerStateBean::next_check)));
 	}
 	
 	/* (non-Javadoc)
@@ -98,10 +102,10 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		final ActorRef self = this.self();
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
 			
-			final BucketActionMessage.PollFreqBucketActionMessage msg = new BucketActionMessage.PollFreqBucketActionMessage(null);
+			final AnalyticsTriggerMessage msg = new AnalyticsTriggerMessage(new AnalyticsTriggerMessage.AnalyticsTriggerActionMessage());
 			
 			// Send a message to a worker:
-			_analytics_trigger_bus.publish(new BucketActionMessage.BucketActionRoundRobinWrapper(self, msg));
+			_analytics_trigger_bus.publish(new AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
 		}
 	}
 	
