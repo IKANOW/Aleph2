@@ -159,6 +159,18 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
   	</dependency>
+  	<dependency>
+  		<groupId>org.apache.hadoop</groupId>
+  		<artifactId>hadoop-common</artifactId>
+  		<version>${aleph2.hadoop}</version>
+  		<scope>provided</scope>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_hadoop_dependencies</artifactId>
+  		<version>${aleph2.version}</version>
+		<scope>${aleph2.scope}</scope>
+  	</dependency>
    	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_storage_service_hdfs</artifactId>
@@ -208,11 +220,6 @@
   		<version>4.12</version>
   		<scope>test</scope>
   	</dependency>
-	<dependency>
-		<groupId>org.yaml</groupId>
-		<artifactId>snakeyaml</artifactId>
-		<version>1.15</version>
-	</dependency>
   </dependencies>
   
 </project>
