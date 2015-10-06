@@ -47,6 +47,7 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerStateBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -62,6 +63,7 @@ public class TestAnalyticsTriggerSupervisorActor {
 	
 	protected ICoreDistributedServices _cds = null;
 	protected IManagementDbService _core_mgmt_db = null;
+	protected IManagementDbService _under_mgmt_db = null;
 	protected ManagementDbActorContext _actor_context = null;
 	
 	protected static AtomicLong _num_received = new AtomicLong();
@@ -107,6 +109,7 @@ public class TestAnalyticsTriggerSupervisorActor {
 		_actor_context = ManagementDbActorContext.get();
 		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
+		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 	}
 
 	Optional<ActorRef> _test_actor;
@@ -136,10 +139,12 @@ public class TestAnalyticsTriggerSupervisorActor {
 		_test_actor.get().tell("Ping!", test_deleter);
 		_test_actor.get().tell("Ping!", test_deleter);
 		
-		Thread.sleep(6000L);
+		for (int ii = 0; (ii < 12) && (_num_received.get() <= 2); ++ii) Thread.sleep(500L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 		
-		//TODO (ALEPH-12): check the DB has been optimized
+		// Check the DB was optimized:
+		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("is_active")));
+		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("next_check")));
 	}	
 	
 	@After
