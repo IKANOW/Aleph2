@@ -332,25 +332,21 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 			final DataImportActorContext context) {
 		final DataImportConfigurationBean config = context.getDataImportConfigurationBean();		
 		final Set<String> bucket_rules = bucket.node_list_rules() != null ? bucket.node_list_rules().stream().collect(Collectors.toSet()) : new HashSet<String>();
-		_logger.debug("Bucket has " + bucket_rules.size() + " rules");
+
 		//if we don't have any rules to follow, just allow it to run
 		if ( bucket_rules.isEmpty() )
 			return true;
 		
 		//check if the bucket rules match the config rules
 		final String hostname = context.getInformationService().getHostname(); //this is my hostname for comparing globs/regex to
-		_logger.debug("Node hostname is: " + hostname);
 		//loop iteratively so we can kick out early if we find a match
 		for ( final String rule : bucket_rules ) {
-			_logger.debug("Testing rule: " + rule);
 			if ( testNodeRule(rule, hostname, config.node_rules()) ) {
-				_logger.debug("Rule passed!");
 				return true;
 			}
 		}
 		
 		//we fell the whole way through, not a single rule was passed therefore
-		_logger.debug("fell through, failing");
 		return false;
 	}
 
@@ -370,10 +366,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		final boolean is_node_rule = rule_wo_exclusive.startsWith("$");
 		final String rule_wo_exclusive_hostname = rule_wo_exclusive.substring(rule_wo_exclusive.startsWith("$") ? 1 : 0);
 		final Pattern pattern = PatternUtils.createPatternFromRegexOrGlob(rule_wo_exclusive_hostname);
-		_logger.debug("ex: " + exclusive + " is_node: " + is_node_rule + " rule: " + rule_wo_exclusive_hostname);
 		
 		if ( is_node_rule ) {	
-			_logger.debug("Rule is a node rule");
 			//is node rule, check against all known node rules for a match		
 			for ( String n_r : node_rules ) {
 				//check if matches rule and we want to match on this (or opposite)
@@ -381,7 +375,6 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 					return true;
 			}				
 		} else {
-			_logger.debug("Rule is a hostname rule");
 			//is hostname rule, check if matches hostname and we want to match on this (or opposite)
 			if (pattern.matcher(hostname).find() == !exclusive)
 				return true;			
