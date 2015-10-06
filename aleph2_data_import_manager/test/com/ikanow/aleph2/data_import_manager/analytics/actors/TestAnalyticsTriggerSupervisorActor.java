@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -108,6 +109,8 @@ public class TestAnalyticsTriggerSupervisorActor {
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 	}
 
+	Optional<ActorRef> _test_actor;
+	
 	@Test
 	public void test_analyticsTriggerSupervisor() throws InterruptedException {
 		_cds.waitForAkkaJoin(Optional.of(Duration.create(10, TimeUnit.SECONDS)));
@@ -120,23 +123,27 @@ public class TestAnalyticsTriggerSupervisorActor {
 
 		// wake up the supervisor
 		
-		Optional<ActorRef> test_actor = _cds.createSingletonActor(ActorUtils.ANALYTICS_TRIGGER_SINGLETON_ACTOR,
+		_test_actor = _cds.createSingletonActor(ActorUtils.ANALYTICS_TRIGGER_SINGLETON_ACTOR,
 					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 					Props.create(AnalyticsTriggerSupervisorActor.class));
 				
-		assertTrue("Created singleton actor", test_actor.isPresent());
+		assertTrue("Created singleton actor", _test_actor.isPresent());
 		Thread.sleep(1000L); // (wait a second or so for it to start up)
 		System.out.println("Sending messages");
 		
 		// send it a couple of pings
 		
-		test_actor.get().tell("Ping!", test_deleter);
-		test_actor.get().tell("Ping!", test_deleter);
+		_test_actor.get().tell("Ping!", test_deleter);
+		_test_actor.get().tell("Ping!", test_deleter);
 		
 		Thread.sleep(6000L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 		
 		//TODO (ALEPH-12): check the DB has been optimized
-	}
+	}	
 	
+	@After
+	public void cleanupTest() {
+		_test_actor.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+	}	
 }
