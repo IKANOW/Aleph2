@@ -52,6 +52,12 @@ public class JVMSecurityManager extends SecurityManager {
 	public JVMSecurityManager(ISecurityService securityService) {
 		super();
 		this.securityService = securityService;
+		String policy = System.getProperty("securirty.policy");
+		if(policy!=null){
+			setAlsoCheckSuper(true);
+		}
+		
+		
 	}
 
 	public void setSecureFlag(boolean isJavascript) {
@@ -94,9 +100,9 @@ public class JVMSecurityManager extends SecurityManager {
 
 			// Always do this: so we're the union of configured restrictions+the
 			// above custom restrictions
-			if(alsoCheckSuper){
-				super.checkConnect(host, port);
-			}
+		} //enabled
+		if(alsoCheckSuper){
+			super.checkConnect(host, port);
 		}
 	}
 
@@ -110,9 +116,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!securityService.isPermitted(tlSubject.get(), check)) {
 				throwSecurityException(tlSubject, file);
 			}
-			if(alsoCheckSuper){
-				super.checkRead(file);
-			}
+		} 
+		if(alsoCheckSuper){
+			super.checkRead(file);
 		}
 	}
 
@@ -124,9 +130,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, file);
 			}
-			if(alsoCheckSuper){
-				super.checkRead(file, context);
-			}
+		}
+		if(alsoCheckSuper){
+			super.checkRead(file, context);
 		}
 	}
 
@@ -137,9 +143,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, file);
 			}
-			if(alsoCheckSuper){
-				super.checkWrite(file);
-			}
+		}
+		if(alsoCheckSuper){
+			super.checkWrite(file);
 		}
 	}
 
@@ -150,9 +156,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, file);
 			}
-			if(alsoCheckSuper){
-				super.checkDelete(file);
-			}
+		}
+		if(alsoCheckSuper){
+			super.checkDelete(file);
 		}
 	}
 
@@ -163,9 +169,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, cmd);
 			}
-			if(alsoCheckSuper){
-				super.checkExec(cmd);
-			}
+		}
+		if(alsoCheckSuper){
+			super.checkExec(cmd);
 		}
 	}
 
@@ -176,9 +182,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, packageName);
 			}
-			if(alsoCheckSuper){
-				super.checkPackageAccess(packageName);
-			}
+		}
+		if(alsoCheckSuper){
+			super.checkPackageAccess(packageName);
 		}
 	}// TESTED (by hand)
 
@@ -189,9 +195,11 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!isPermitted( check)) {
 				throwSecurityException(tlSubject, check);
 			}
+		}
+		if(alsoCheckSuper){
 			super.checkPermission(permission);
 		}
-	}// TESTED (by hand)
+	}
 
 	protected boolean isEnabled() {
 		Boolean lock = tlEnabled.get();
