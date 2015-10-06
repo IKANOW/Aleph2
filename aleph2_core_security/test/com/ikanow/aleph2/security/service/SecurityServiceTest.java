@@ -17,6 +17,7 @@ package com.ikanow.aleph2.security.service;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
@@ -26,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.shiro.authc.AuthenticationException;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Inject;
@@ -243,6 +245,19 @@ public class SecurityServiceTest {
 		Collection<String> p = securityService.releaseRunAs(subject);
 		assertEquals(true,securityService.hasRole(subject,"admin"));
 		logger.debug("Released Principals:"+p);
+	}
+
+	@Test
+	@Ignore
+	public void testJvmSecurity(){
+		ISubject subject = loginAsRegularUser();
+		securityService.enableJvmSecurityManager(true);
+		try {
+			File f =  new File("/tmp/data/");
+			
+		} catch (Throwable t) {
+			logger.error(" Caught Exception:",t);
+		}
 	}
 
 

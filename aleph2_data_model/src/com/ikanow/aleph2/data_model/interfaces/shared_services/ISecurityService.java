@@ -82,4 +82,18 @@ public interface ISecurityService extends IUnderlyingService {
 	void invalidateAuthenticationCache(Collection<String> principalNames);
 
 	void invalidateCache();
+
+	/** 
+	 * This function enables the Jvm Security Manager in the system.
+	 * @param enabled
+	 */
+	void enableJvmSecurityManager(boolean enabled);
+
+	/** 
+	 * This function enables the JVM Security on a per thread basis and can be used to wrap function calls. 
+	 * @param enabled
+	 */
+	void enableJvmSecurity(boolean enabled);
+
+	
 }
