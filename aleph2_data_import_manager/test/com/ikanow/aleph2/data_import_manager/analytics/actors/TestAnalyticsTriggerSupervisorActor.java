@@ -125,13 +125,15 @@ public class TestAnalyticsTriggerSupervisorActor {
 					Props.create(AnalyticsTriggerSupervisorActor.class));
 				
 		assertTrue("Created singleton actor", test_actor.isPresent());
+		Thread.sleep(1000L); // (wait a second or so for it to start up)
+		System.out.println("Sending messages");
 		
 		// send it a couple of pings
 		
 		test_actor.get().tell("Ping!", test_deleter);
 		test_actor.get().tell("Ping!", test_deleter);
 		
-		Thread.sleep(3000L);
+		Thread.sleep(6000L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 		
 		//TODO (ALEPH-12): check the DB has been optimized
