@@ -84,5 +84,17 @@ public class SampleSecurityService implements ISecurityService {
 		
 	}
 
+	@Override
+	public void enableJvmSecurityManager(boolean enabled) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void enableJvmSecurity(boolean enabled) {
+		// TODO Auto-generated method stub
+		
+	}
+
 
 }

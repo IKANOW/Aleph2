@@ -16,14 +16,12 @@
 package com.ikanow.aleph2.security.service;
 
 import java.security.Permission;
-import java.util.Arrays;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
-import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.utils.ErrorUtils;
 //
 //system permission use together with JVMRolePovider:
@@ -39,22 +37,42 @@ public class JVMSecurityManager extends SecurityManager {
 	private static final Logger logger = LogManager.getLogger(JVMSecurityManager.class);
 
 	protected ThreadLocal<Boolean> tlEnabled = new ThreadLocal<Boolean>();
-	protected ThreadLocal<AuthorizationBean> tlAuthBean;
 	protected ISecurityService securityService;
 	protected ThreadLocal<ISubject> tlSubject = new ThreadLocal<ISubject>();
+	protected boolean alsoCheckSuper =  false;
+	
+	public boolean isAlsoCheckSuper() {
+		return alsoCheckSuper;
+	}
+
+	public void setAlsoCheckSuper(boolean alsoCheckSuper) {
+		this.alsoCheckSuper = alsoCheckSuper;
+	}
 
 	public JVMSecurityManager(ISecurityService securityService) {
 		super();
 		this.securityService = securityService;
-		tlSubject.set(securityService.loginAsSystem());
-	}
-
-	public void setAuthBean(AuthorizationBean authBean) {
-		tlAuthBean.set(authBean);
+		String policy = System.getProperty("securirty.policy");
+		if(policy!=null){
+			setAlsoCheckSuper(true);
+		}
+		
+		
 	}
 
 	public void setSecureFlag(boolean isJavascript) {
 		tlEnabled.set(isJavascript);
+	}
+
+	public void setSubject(ISubject subject) {
+		tlSubject.set(subject);
+	}
+
+	/** call this to dispose of the ThreadLocal subject before nullifying the security manager
+	 * 
+	 */
+	public void releaseSubject() {
+		tlSubject.remove();
 	}
 
 	@Override
@@ -80,10 +98,12 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, " connect host:" + port);
 			}
 
+			// Always do this: so we're the union of configured restrictions+the
+			// above custom restrictions
+		} //enabled
+		if(alsoCheckSuper){
+			super.checkConnect(host, port);
 		}
-		// Always do this: so we're the union of configured restrictions+the
-		// above custom restrictions
-		super.checkConnect(host, port);
 	}
 
 
@@ -96,8 +116,10 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!securityService.isPermitted(tlSubject.get(), check)) {
 				throwSecurityException(tlSubject, file);
 			}
+		} 
+		if(alsoCheckSuper){
+			super.checkRead(file);
 		}
-		super.checkRead(file);
 	}
 
 
@@ -109,7 +131,9 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, file);
 			}
 		}
-		super.checkRead(file, context);
+		if(alsoCheckSuper){
+			super.checkRead(file, context);
+		}
 	}
 
 	@Override
@@ -120,7 +144,9 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, file);
 			}
 		}
-		super.checkWrite(file);
+		if(alsoCheckSuper){
+			super.checkWrite(file);
+		}
 	}
 
 	@Override
@@ -131,7 +157,9 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, file);
 			}
 		}
-		super.checkDelete(file);
+		if(alsoCheckSuper){
+			super.checkDelete(file);
+		}
 	}
 
 	@Override
@@ -142,7 +170,9 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, cmd);
 			}
 		}
-		super.checkExec(cmd);
+		if(alsoCheckSuper){
+			super.checkExec(cmd);
+		}
 	}
 
 	@Override
@@ -153,7 +183,9 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, packageName);
 			}
 		}
-		super.checkPackageAccess(packageName);
+		if(alsoCheckSuper){
+			super.checkPackageAccess(packageName);
+		}
 	}// TESTED (by hand)
 
 	@Override
@@ -164,8 +196,10 @@ public class JVMSecurityManager extends SecurityManager {
 				throwSecurityException(tlSubject, check);
 			}
 		}
-		super.checkPermission(permission);
-	}// TESTED (by hand)
+		if(alsoCheckSuper){
+			super.checkPermission(permission);
+		}
+	}
 
 	protected boolean isEnabled() {
 		Boolean lock = tlEnabled.get();
@@ -196,13 +230,10 @@ public class JVMSecurityManager extends SecurityManager {
 	}
 
 	protected boolean isPermitted(String permission) {
-		AuthorizationBean a = tlAuthBean.get();
 		ISubject subject = tlSubject.get();
 		boolean permitted = false;
 		if (subject != null) {
-			securityService.runAs(subject, Arrays.asList(a.getPrincipalName()));
 			permitted = securityService.isPermitted(tlSubject.get(), permission);
-			securityService.releaseRunAs(subject);
 		}
 		return permitted;
 	}

@@ -63,6 +63,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	protected CacheManager cacheManager;
 	Collection<Realm> realms = new HashSet<Realm>();
 
+	protected JVMSecurityManager jvmSecurityManager;
 
 	@Inject
 	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager, CacheManager cacheManager) {
@@ -78,7 +79,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-	protected void init(){
+/*	protected void init(){
 		try {
 
 	        // get the currently executing user:
@@ -91,7 +92,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		}
 
 	}
-	
+	*/
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		return Collections.emptyList();
@@ -114,6 +115,9 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
         Subject shiroSubject = getShiroSubject();
         shiroSubject.login((AuthenticationToken)token);
         currentSubject = new SubjectWrapper(shiroSubject);
+        if(jvmSecurityManager!=null){
+        	jvmSecurityManager.setSubject(currentSubject);
+        }
 		return currentSubject;
 	}
 
@@ -197,9 +201,12 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 	@Override
 	public void runAs(ISubject subject,Collection<String> principals) {
-		// TODO Auto-generated method stub
-		
+		// TODO Auto-generated method stub	
 		((Subject)subject.getSubject()).runAs(new SimplePrincipalCollection(principals,getRealmName()));
+        if(jvmSecurityManager!=null){
+        	jvmSecurityManager.setSubject(subject);
+        }
+
 	}
 
 
@@ -254,5 +261,43 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		}
 	}
 
+
+	@Override
+	public void enableJvmSecurityManager(boolean enabled) {
+		if (enabled) {			
+			if (jvmSecurityManager == null) {
+				Object currSysManager = System.getSecurityManager();
+				if (currSysManager instanceof JVMSecurityManager) {
+					this.jvmSecurityManager = (JVMSecurityManager) currSysManager;
+				} else {
+					this.jvmSecurityManager = new JVMSecurityManager(this);
+					this.jvmSecurityManager.setSubject(currentSubject);
+					System.setSecurityManager(jvmSecurityManager);
+				}
+				this.jvmSecurityManager.setSecureFlag(true);
+			}
+
+		} else {
+			// disable security manager if it is our's
+			Object currSysManager = System.getSecurityManager();
+			if (currSysManager instanceof JVMSecurityManager) {				
+				System.setSecurityManager(null);
+				this.jvmSecurityManager.releaseSubject();				
+				this.jvmSecurityManager = null;
+			}
+		}
+	}
+
+
+	@Override
+	public void enableJvmSecurity(boolean enabled) {
+		if(enabled){
+			enableJvmSecurityManager(true);
+		}else{
+			if (jvmSecurityManager != null) {
+				jvmSecurityManager.setSecureFlag(false);
+			} 
+		}
+	}
 	
 }

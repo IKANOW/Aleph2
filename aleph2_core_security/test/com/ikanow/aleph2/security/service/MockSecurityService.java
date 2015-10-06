@@ -37,7 +37,7 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 		authMap.put("testUser",ab3);
 		
 		permissionsMap.put("admin", new HashSet<String>(Arrays.asList("*")));
-		permissionsMap.put("user", new HashSet<String>(Arrays.asList("permission1","permission2","permission3")));
+		permissionsMap.put("user", new HashSet<String>(Arrays.asList("permission1","permission2","permission3","read:tmp:data:misc")));
 		permissionsMap.put("testUser", new HashSet<String>(Arrays.asList("t1","t2","t3")));
 
 		rolesMap.put("admin", new HashSet<String>(Arrays.asList("admin")));
