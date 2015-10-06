@@ -45,9 +45,9 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -76,7 +76,7 @@ public class TestAnalyticsTriggerSupervisorActor {
 		public void onReceive(Object arg0) throws Exception {
 			_logger.info("Received message from singleton! " + arg0.getClass().toString());
 			
-			if (arg0 instanceof AnalyticsTriggerMessage) {
+			if (arg0 instanceof AnalyticTriggerMessage) {
 				_num_received.incrementAndGet();
 			}
 		}
@@ -143,8 +143,8 @@ public class TestAnalyticsTriggerSupervisorActor {
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 		
 		// Check the DB was optimized:
-		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("is_active")));
-		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("next_check")));
+		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("is_active")));
+		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("next_check")));
 	}	
 	
 	@After

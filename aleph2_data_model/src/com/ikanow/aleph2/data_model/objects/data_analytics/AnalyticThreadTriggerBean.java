@@ -81,8 +81,9 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		 * @param op
 		 * @param dependency_list
 		 */
-		public AnalyticThreadComplexTriggerBean(final TriggerOperator op, final List<AnalyticThreadComplexTriggerBean> dependency_list) {
+		public AnalyticThreadComplexTriggerBean(final TriggerOperator op, final Boolean enabled, final List<AnalyticThreadComplexTriggerBean> dependency_list) {
 			this.op = op;
+			this.enabled = enabled;
 			this.dependency_list = dependency_list; 
 		}
 		
@@ -91,13 +92,19 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		 * @param resource_name_or_id
 		 * @param config
 		 */
-		public AnalyticThreadComplexTriggerBean(final TriggerType type, 
+		public AnalyticThreadComplexTriggerBean(final TriggerType type, final Boolean enabled, 
 				final String custom_analytic_technology_name_or_id, final List<String> custom_module_name_or_ids,
-				final String resource_name_or_id, final LinkedHashMap<String, Object> config) {
+				final String data_service,
+				final String resource_name_or_id,
+				final Long resource_trigger_limit,
+				final LinkedHashMap<String, Object> config) {			
 			this.type = type;
+			this.enabled = enabled;
 			this.custom_analytic_technology_name_or_id = custom_analytic_technology_name_or_id;
 			this.custom_module_name_or_ids = custom_module_name_or_ids;
+			this.data_service = data_service;
 			this.resource_name_or_id = resource_name_or_id;
+			this.resource_trigger_limit = resource_trigger_limit;
 			this.config = config;
 		}
 		
@@ -129,6 +136,11 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		
 		// Single trigger configuration
 		
+		/** Whether this trigger is enabled (defaults to true)
+		 * @return
+		 */
+		public Boolean enabled() { return enabled; }
+		
 		public enum TriggerType { bucket, custom, file }
 		
 		/** The type of trigger dependency - bucket (if the specified bucket has updated its output), custom (calls the analytic technology to decide whether to trigger), 
@@ -146,21 +158,37 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		 * @return  any additional nodules required on the classpath by this custom trigger
 		 */
 		public List<String> custom_module_name_or_ids() { return null == custom_module_name_or_ids ? custom_module_name_or_ids : Collections.unmodifiableList(custom_module_name_or_ids); } 
+
+		/** By default, a dependency will trigger whenever a batch bucket completes a batch. Alternatively (eg for streaming buckets)
+		 *  it is possible to specify a data service, and that's resource will be polled to determine when to trigger
+		 * @return the optional data service to check against
+		 */
+		public String data_service() { return data_service; }
 		
 		/** The resource name or id for the trigger (eg bucket name/id, file path, arbitrary String passed to analytic technology module for custom) 
 		 * @return The resource name or id for the trigger 
 		 */
 		public String resource_name_or_id() { return resource_name_or_id; }
 		
+		/** If comparing against a data service, this is the trigger threshold to use
+		 *  It indicates #MB for the storage service, #records for other services
+		 *  Defaults to 0 (ie trigger on any change)
+		 * @return the trigger threshold for data services
+		 */
+		public Long resource_trigger_limit() { return resource_trigger_limit; }
+		
 		/** For custom triggers, any custom configuration to be passed to the analytic modle
 		 * @return For custom triggers, any custom configuration to be passed to the analytic modle
 		 */
 		public Map<String, Object> config() { return null == config ? config : Collections.unmodifiableMap(config); }
 		
+		private Boolean enabled;
 		private TriggerType type;		
 		private String custom_analytic_technology_name_or_id;
 		private List<String> custom_module_name_or_ids;
+		private String data_service;
 		private String resource_name_or_id;
+		private Long resource_trigger_limit;
 		private LinkedHashMap<String, Object> config;
 	}
 	

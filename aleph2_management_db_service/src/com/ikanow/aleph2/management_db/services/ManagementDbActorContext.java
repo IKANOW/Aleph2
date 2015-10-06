@@ -45,8 +45,8 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketPollFreqSingletonActor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketTestCycleSingletonActor;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage;
@@ -231,7 +231,7 @@ public class ManagementDbActorContext {
 	 */
 	public synchronized LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String> getAnalyticsTriggerBus() {
 		if (!_analytics_trigger_round_robin_bus.isSet()) {
-			_analytics_trigger_round_robin_bus.set(_distributed_services.getRoundRobinMessageBus(AnalyticsTriggerEventBusWrapper.class, AnalyticsTriggerMessage.class, ActorUtils.ANALYTICS_TRIGGER_BUS));
+			_analytics_trigger_round_robin_bus.set(_distributed_services.getRoundRobinMessageBus(AnalyticsTriggerEventBusWrapper.class, AnalyticTriggerMessage.class, ActorUtils.ANALYTICS_TRIGGER_BUS));
 		}
 		return _analytics_trigger_round_robin_bus.get();
 	}
