@@ -34,6 +34,7 @@ import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.utils.BeanDiffUtils;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.data_import_manager.utils.PatternUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
@@ -285,7 +286,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 						})
 						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
 							tech_module.onInit(context);
-							return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), Optional.empty(), context)
+							return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), BeanDiffUtils.createDiffBean(bucket, msg.old_bucket()), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.PurgeBucketActionMessage.class, msg -> {
