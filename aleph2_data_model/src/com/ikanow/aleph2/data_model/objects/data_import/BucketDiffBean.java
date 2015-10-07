@@ -16,6 +16,8 @@
 package com.ikanow.aleph2.data_model.objects.data_import;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
 
 /** Placeholder object for representing the differences in a bucket update, to help
  *  harvest/enrichment authors decide how best to handle them
@@ -26,4 +28,18 @@ public class BucketDiffBean implements Serializable {
 	private static final long serialVersionUID = -5936448294402600187L;
 
 	protected BucketDiffBean() {}
+	
+	/**
+	 * Returns a diff of every top level field in DataBucketBean
+	 * @return
+	 */
+	public Map<String, Boolean> diffs(){ return this.diffs; }
+	/**
+	 * Returns a set of shared libraries that have been modified.
+	 * @return
+	 */
+	public Set<String> lib_diffs() { return this.lib_diffs; }
+	
+	private Map<String, Boolean> diffs;
+	private Set<String> lib_diffs;
 }

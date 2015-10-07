@@ -33,6 +33,13 @@ public interface IDataServiceProvider {
 	 */
 	public static interface IGenericDataService {
 		
+		/** Special secondary buffer case, very useful for batch analytics
+		 */
+		public static final String SECONDARY_PING = "__ping";
+		/** Special secondary buffer case, very useful for batch analytics
+		 */
+		public static final String SECONDARY_PONG = "__pong";
+		
 		/** Returns an IDataWriteService that can be written to. For more complex write operations (eg updates) on data services that support it, IDataWriteService.getCrudService can be used
 		 * @param clazz - the class of the bean to use, or JsonNode.class for schema-less writes
 		 * @param bucket - the bucket for which to write data (cannot be a multi bucket or alias)
@@ -56,12 +63,20 @@ public interface IDataServiceProvider {
 		 */
 		Collection<String> getSecondaryBufferList(final DataBucketBean bucket);
 		
-		/** For "ping pong" buffers (or when atomically modifying the contents of any bucket), switches the "active" read buffer to the designated secondary buffer 
+		/** Provides the primary name if it can be deduced, else Optional.empty (ie if symlinks aren't supported ... in this case you can infer what the primary buffer is
+		 *  based on the fact it will be missing from the secondary buffer)
+		 * @param bucket
+		 * @return
+		 */
+		Optional<String> getPrimaryBufferName(final DataBucketBean bucket);
+		
+		/** For "ping pong" buffers (or when atomically modifying the contents of any bucket), switches the "active" read buffer to the designated secondary buffer
+		 *  The current primary bucket is returned to its previous name if possible, else uses the designated string, else deletes it 
 		 * @param bucket - the bucket to switch
 		 * @param secondary_buffer - the name of the buffer
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
-		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, final Optional<String> secondary_buffer);
+		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary);
 				
 		/** Indicates that this service should examine the data in this bucket and delete any old data
 		 * @param bucket - the bucket to be checked

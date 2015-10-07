@@ -164,7 +164,7 @@ public class TestBucketPollFreqSingletonActor {
 		storeBucketAndStatus(bucket_no_poll, true, underlying_crud_status, underlying_crud);
 				
 		//actor checks every second, give it long enough to hit a cycle
-		Thread.sleep(5000);
+		Thread.sleep(10000);
 		
 		//get the (hopefully) updated bucket		
 		final DataBucketBean bucket_poll_now_updated = underlying_crud.getObjectById(bucket_poll_now._id()).get().get();

@@ -24,24 +24,24 @@ import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrap
 /** Wrapper for bulk or targeted triggers 
  * @author Alex
  */
-public class AnalyticsTriggerMessage implements Serializable {
+public class AnalyticTriggerMessage implements Serializable {
 	private static final long serialVersionUID = 5554439532398833149L;
 
 	/** Jackson c'tor
 	 */
-	protected AnalyticsTriggerMessage() {}
+	protected AnalyticTriggerMessage() {}
 
 	/** User c'tor - a bucket has changed, recheck triggers
 	 * @param bucket_action_msg
 	 */
-	public AnalyticsTriggerMessage(final BucketActionMessage bucket_action_msg) {		
+	public AnalyticTriggerMessage(final BucketActionMessage bucket_action_msg) {		
 		bucket_action_message = bucket_action_msg;
 	}
 	
 	/** User c'tor - recheck all triggers periodically
 	 * @param trigger_action_msg
 	 */
-	public AnalyticsTriggerMessage(final AnalyticsTriggerActionMessage trigger_action_msg) {		
+	public AnalyticTriggerMessage(final AnalyticsTriggerActionMessage trigger_action_msg) {		
 		trigger_action_message = trigger_action_msg;
 	}
 	
@@ -74,7 +74,7 @@ public class AnalyticsTriggerMessage implements Serializable {
 	/** An internal class used to wrap broadcast event bus publications
 	 * @author acp
 	 */
-	public static class AnalyticsTriggerEventBusWrapper implements IRoundRobinEventBusWrapper<AnalyticsTriggerMessage>,Serializable {
+	public static class AnalyticsTriggerEventBusWrapper implements IRoundRobinEventBusWrapper<AnalyticTriggerMessage>,Serializable {
 		private static final long serialVersionUID = -1930975525984244358L;
 		
 		protected AnalyticsTriggerEventBusWrapper() { }
@@ -82,17 +82,17 @@ public class AnalyticsTriggerMessage implements Serializable {
 		 * @param sender - the sender of the message
 		 * @param message - the message to be wrapped
 		 */
-		public AnalyticsTriggerEventBusWrapper(final ActorRef sender, final AnalyticsTriggerMessage message) {
+		public AnalyticsTriggerEventBusWrapper(final ActorRef sender, final AnalyticTriggerMessage message) {
 			this.sender = sender;
 			this.message = message;
 		}	
 		@Override
 		public ActorRef sender() { return sender; };
 		@Override
-		public AnalyticsTriggerMessage message() { return message; };
+		public AnalyticTriggerMessage message() { return message; };
 		
 		protected ActorRef sender;
-		protected AnalyticsTriggerMessage message;
+		protected AnalyticTriggerMessage message;
 	}	
 
 }

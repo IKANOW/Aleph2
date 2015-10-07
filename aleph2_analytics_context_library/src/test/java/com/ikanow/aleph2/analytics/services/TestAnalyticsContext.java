@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
@@ -70,6 +71,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ContextUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -783,7 +785,7 @@ public class TestAnalyticsContext {
 					e.getMessage());
 		}
 		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/current/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
 		try {
 			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4b);
 			fail("Should have thrown exception");
@@ -877,10 +879,10 @@ public class TestAnalyticsContext {
 
 		// Now do all the other checks:
 
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/raw/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/json/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/raw/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/json/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4));
 	}
 	
 	@Test
@@ -994,18 +996,30 @@ public class TestAnalyticsContext {
 		
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().deleteDatastore().get();
 		assertEquals(0, test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().countObjects().get().intValue());
-		
+
+		// This should pass:
+		assertTrue("Can always getInputTopics on myself", !test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2).isEmpty());
+	
 		try {
-			test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input2);
+			test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input3);
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {
-			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, "/test"), e.getMessage());
+			assertEquals("java.lang.RuntimeException: " + ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, "/test3"), e.getMessage());
 		}
 		
 		// Add the bucket to the CRUD store:
 		
-		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(test_bucket).get();
+		Stream.of("/test3", "/test4", "/test5", "/test6").forEach(Lambdas.wrap_consumer_u(bucket_path -> {
+			test_context._service_context.getService(IManagementDbService.class, 
+					Optional.empty()).get().getDataBucketStore().storeObject(
+							BeanTemplateUtils.clone(test_bucket)
+								.with(DataBucketBean::_id, bucket_path.substring(1))
+								.with(DataBucketBean::full_name, bucket_path)
+							.done(), true).get();
+		}));
+		
+		assertEquals(Arrays.asList(KafkaUtils.bucketPathToTopicName("/test3", Optional.empty())), test_context.getInputTopics(Optional.of(test_bucket), analytic_job1, analytic_input3));
 		
 		// Now do all the other checks:
 		

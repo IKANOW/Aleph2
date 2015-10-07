@@ -21,12 +21,12 @@ import java.util.Date;
 /** Contains the state necessary to determine when analytic buckets and jobs should trigger
  * @author Alex
  */
-public class AnalyticsTriggerStateBean implements Serializable {
+public class AnalyticTriggerStateBean implements Serializable {
 	private static final long serialVersionUID = 4835760952601844653L;
 
 	/** Jackson c'tor
 	 */
-	protected AnalyticsTriggerStateBean() {}
+	protected AnalyticTriggerStateBean() {}
 	
 	/**
 	 * @param is_active - whether the job/input is part of a bucket that is currently active
@@ -40,13 +40,14 @@ public class AnalyticsTriggerStateBean implements Serializable {
 	 * @param last_resource_size - the last resource size that triggered
 	 * @param new_resource_size - the current resource size
 	 */
-	public AnalyticsTriggerStateBean(Boolean is_active, Date last_checked,
+	public AnalyticTriggerStateBean(Boolean is_active, Boolean is_pending, Date last_checked,
 			Date next_check, String bucket_id, String bucket_name,
 			String job_name, String input_data_service,
 			String input_resource_name_or_id, Long last_resource_size,
 			Long curr_resource_size) {
 		super();
 		this.is_active = is_active;
+		this.is_pending = is_pending;
 		this.last_checked = last_checked;
 		this.next_check = next_check;
 		this.bucket_id = bucket_id;
@@ -62,6 +63,12 @@ public class AnalyticsTriggerStateBean implements Serializable {
 	 * @return  whether the job/input is part of a bucket that is currently active
 	 */
 	public Boolean is_active() { return is_active; }
+	
+	/** If a bucket is active then can't edit its trigger until its done - we store the state here and then overwrite 
+	 * @return  whether the job/input is an update to an active bucket
+	 */
+	public Boolean is_pending() { return is_pending; }	
+	
 	/** the last time the trigger state was checked
 	 * @return the last time the trigger state was checked
 	 */
@@ -100,6 +107,7 @@ public class AnalyticsTriggerStateBean implements Serializable {
 	public Long curr_resource_size() { return curr_resource_size; }	
 	
 	protected Boolean is_active;
+	protected Boolean is_pending;
 	protected Date last_checked;
 	protected Date next_check;
 	protected String bucket_id;

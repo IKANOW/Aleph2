@@ -30,9 +30,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper;
-import com.ikanow.aleph2.management_db.data_model.AnalyticsTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import akka.actor.ActorRef;
@@ -56,7 +56,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	// These aren't currently used, but might want to make the logic more sophisticated in the future 
 	protected final IServiceContext _context;
 	protected final IManagementDbService _core_management_db;
-	protected final SetOnce<ICrudService<AnalyticsTriggerStateBean>> _analytics_trigger_state = new SetOnce<>();
+	protected final SetOnce<ICrudService<AnalyticTriggerStateBean>> _analytics_trigger_state = new SetOnce<>();
 	
 	/** Akka c'tor
 	 */
@@ -84,12 +84,12 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		if ((null == _core_management_db) || (_analytics_trigger_state.isSet())) {
 			return;
 		}
-		_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticsTriggerStateBean.class));
+		_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class));
 
 		// ensure analytic queue is optimized:
 
-		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticsTriggerStateBean.class).field(AnalyticsTriggerStateBean::is_active)));
-		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticsTriggerStateBean.class).field(AnalyticsTriggerStateBean::next_check)));
+		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::is_active)));
+		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::next_check)));
 	}
 	
 	/* (non-Javadoc)
@@ -102,10 +102,10 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		final ActorRef self = this.self();
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
 			
-			final AnalyticsTriggerMessage msg = new AnalyticsTriggerMessage(new AnalyticsTriggerMessage.AnalyticsTriggerActionMessage());
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
 			// Send a message to a worker:
-			_analytics_trigger_bus.publish(new AnalyticsTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
+			_analytics_trigger_bus.publish(new AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
 		}
 	}
 	

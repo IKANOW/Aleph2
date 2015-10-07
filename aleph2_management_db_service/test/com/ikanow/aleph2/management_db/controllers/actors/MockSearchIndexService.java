@@ -79,7 +79,7 @@ public class MockSearchIndexService implements ISearchIndexService {
 
 		@Override
 		public CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(
-				DataBucketBean bucket, Optional<String> secondary_buffer) {
+				DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary) {
 			return null;
 		}
 
@@ -95,6 +95,11 @@ public class MockSearchIndexService implements ISearchIndexService {
 				boolean bucket_getting_deleted) {
 			_handleBucketDeletionRequests.put("handleBucketDeletionRequest", Tuples._2T(bucket.full_name(), bucket_getting_deleted));
 			return CompletableFuture.completedFuture(new BasicMessageBean(new Date(), true, "MockSearchIndexService", "handleBucketDeletionRequest", null, bucket.full_name() + ":" + bucket_getting_deleted, null));
+		}
+
+		@Override
+		public Optional<String> getPrimaryBufferName(DataBucketBean bucket) {
+			return null;
 		}
 		
 	}
