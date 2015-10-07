@@ -15,7 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.InputStreamReader;
@@ -248,15 +248,16 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	@Ignore
 	public void testJvmSecurity(){
 		ISubject subject = loginAsRegularUser();
 		securityService.enableJvmSecurityManager(true);
+		File f =  new File("/tmp/data/misc");
+		f.list();
 		try {
-			File f =  new File("/tmp/data/");
-			
-		} catch (Throwable t) {
-			logger.error(" Caught Exception:",t);
+			f =  new File("/tmp/data/");
+			f.list();
+			fail("Read Access to "+f.getName()+" is not allowed.");
+		} catch (Throwable t) {			
 		}
 	}
 

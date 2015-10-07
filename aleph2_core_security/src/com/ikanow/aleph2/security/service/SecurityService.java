@@ -274,7 +274,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 					this.jvmSecurityManager.setSubject(currentSubject);
 					System.setSecurityManager(jvmSecurityManager);
 				}
-				this.jvmSecurityManager.setSecureFlag(true);
+				this.jvmSecurityManager.setEnabled(true);
 			}
 
 		} else {
@@ -295,7 +295,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 			enableJvmSecurityManager(true);
 		}else{
 			if (jvmSecurityManager != null) {
-				jvmSecurityManager.setSecureFlag(false);
+				jvmSecurityManager.setEnabled(false);
 			} 
 		}
 	}

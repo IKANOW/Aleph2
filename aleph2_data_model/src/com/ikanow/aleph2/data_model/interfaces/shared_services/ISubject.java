@@ -20,4 +20,7 @@ public interface ISubject
 	public Object getSubject();
 
 	public boolean isAuthenticated();
+	
+	public String getName();
+	
 }

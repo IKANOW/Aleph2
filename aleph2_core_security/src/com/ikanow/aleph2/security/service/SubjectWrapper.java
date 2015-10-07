@@ -37,4 +37,13 @@ public class SubjectWrapper implements ISubject {
 		return subject.isAuthenticated();
 	}
 
+	@Override
+	public String getName() {
+		if(subject instanceof Subject){
+			return ""+((Subject)subject).getPrincipal();
+		}else
+			return null;
+		
+	}
+
 }

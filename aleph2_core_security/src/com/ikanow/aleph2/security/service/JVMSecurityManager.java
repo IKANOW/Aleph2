@@ -22,7 +22,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
-import com.ikanow.aleph2.security.utils.ErrorUtils;
+
 //
 //system permission use together with JVMRolePovider:
 //"connect:<*|host>:[*|<port>]"
@@ -30,8 +30,9 @@ import com.ikanow.aleph2.security.utils.ErrorUtils;
 //"write:<filePath having '/' replaced with ':'>"
 //"delete:<filePath having '/' replaced with ':'>"
 //"exec:<filePath having '/' replaced with ':'>"
-//"package  is mapped as is
-// permisson is mapped as is
+//"exec:<filePath having '/' replaced with ':'>"
+//"package:<package name having '.' replaced with ':'>"
+// permisson:<permissionName'>"
 
 public class JVMSecurityManager extends SecurityManager {
 	private static final Logger logger = LogManager.getLogger(JVMSecurityManager.class);
@@ -39,14 +40,18 @@ public class JVMSecurityManager extends SecurityManager {
 	protected ThreadLocal<Boolean> tlEnabled = new ThreadLocal<Boolean>();
 	protected ISecurityService securityService;
 	protected ThreadLocal<ISubject> tlSubject = new ThreadLocal<ISubject>();
-	protected boolean alsoCheckSuper =  false;
+	protected ThreadLocal<Boolean> tlCheckSuper =  new ThreadLocal<Boolean>();
 	
-	public boolean isAlsoCheckSuper() {
-		return alsoCheckSuper;
+	protected static String JAVA_HOME = System.getProperty("java.home"); 
+
+	public boolean checkSuper() {
+		Boolean lock = tlCheckSuper.get();
+		return (lock != null && lock);
+
 	}
 
-	public void setAlsoCheckSuper(boolean alsoCheckSuper) {
-		this.alsoCheckSuper = alsoCheckSuper;
+	public void setAlsoCheckSuper(boolean checkSuper) {
+		this.tlCheckSuper.set(checkSuper);
 	}
 
 	public JVMSecurityManager(ISecurityService securityService) {
@@ -56,12 +61,10 @@ public class JVMSecurityManager extends SecurityManager {
 		if(policy!=null){
 			setAlsoCheckSuper(true);
 		}
-		
-		
 	}
 
-	public void setSecureFlag(boolean isJavascript) {
-		tlEnabled.set(isJavascript);
+	public void setEnabled(boolean enabled) {
+		tlEnabled.set(enabled);
 	}
 
 	public void setSubject(ISubject subject) {
@@ -95,13 +98,13 @@ public class JVMSecurityManager extends SecurityManager {
 			String check = "connect:" + convertHostToWildcardPermission(host) + ":" + port;
 			if (!isPermitted(check))
 			{
-				throwSecurityException(tlSubject, " connect host:" + port);
+				throwSecurityException(tlSubject,"checkConnect", " connect host:" + port);
 			}
 
 			// Always do this: so we're the union of configured restrictions+the
 			// above custom restrictions
 		} //enabled
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkConnect(host, port);
 		}
 	}
@@ -109,29 +112,42 @@ public class JVMSecurityManager extends SecurityManager {
 
 
 	@Override
-	public synchronized void checkRead(String file) {
+	public void checkRead(String file) {
 
 		if (isEnabled()) {
-			String check = "read:" + convertPathToWildcardPermission(file);
-			if (!securityService.isPermitted(tlSubject.get(), check)) {
-				throwSecurityException(tlSubject, file);
+			// Allow JRE access, and classes and JAR files/native libs and that's it...
+			if (!file.startsWith(JAVA_HOME)) {
+				if (!(file.endsWith(".class") || file.endsWith(".jar") || file.endsWith(".dll") || file.endsWith(".so"))) {
+					String check = "read:" + convertPathToWildcardPermission(file);
+					if (!securityService.isPermitted(tlSubject.get(), check)) {
+						throwSecurityException(tlSubject,"checkRead", file);
+					}
+				}
 			}
 		} 
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkRead(file);
 		}
 	}
 
+	// Infinite loop workaround: http://jira.smartfrog.org/jira/browse/SFOS-236
+	protected boolean inReadCheck = false;
 
 	@Override
 	public void checkRead(String file, Object context) {
+		
 		if (isEnabled()) {
 			String check = "read:" + convertPathToWildcardPermission(file);
-			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, file);
+			// Allow JRE access, and classes and JAR files/native libs and that's it...
+			if (!file.startsWith(JAVA_HOME)) {
+				if (!(file.endsWith(".class") || file.endsWith(".jar") || file.endsWith(".dll") || file.endsWith(".so"))) {
+					if (!isPermitted(check)) {
+						throwSecurityException(tlSubject, "checkRead",file);
+					} // permitted
+				}
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkRead(file, context);
 		}
 	}
@@ -141,10 +157,10 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "write:" + convertPathToWildcardPermission(file);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, file);
+				throwSecurityException(tlSubject,"checkWrite", file);
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkWrite(file);
 		}
 	}
@@ -154,10 +170,10 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "delete:" + convertPathToWildcardPermission(file);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, file);
+				throwSecurityException(tlSubject,"checkDelete" ,file);
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkDelete(file);
 		}
 	}
@@ -167,10 +183,10 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "exec:" + convertPathToWildcardPermission(cmd);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, cmd);
+				throwSecurityException(tlSubject, "checkExec",cmd);
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkExec(cmd);
 		}
 	}
@@ -178,12 +194,12 @@ public class JVMSecurityManager extends SecurityManager {
 	@Override
 	public void checkPackageAccess(String packageName) {
 		if (isEnabled()) {
-			String check = packageName;
+			String check =  "package:" +convertPackageToWildcardPermission(packageName);			
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, packageName);
+				throwSecurityException(tlSubject, "checkPackageAccess",packageName);
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkPackageAccess(packageName);
 		}
 	}// TESTED (by hand)
@@ -191,12 +207,12 @@ public class JVMSecurityManager extends SecurityManager {
 	@Override
 	public void checkPermission(Permission permission) {
 		if (isEnabled()) {
-			String check = permission.getName();
+			String check = "permission:"+permission.getName();
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, check);
+				throwSecurityException(tlSubject, "checkPermission",check);
 			}
 		}
-		if(alsoCheckSuper){
+		if(checkSuper()){
 			super.checkPermission(permission);
 		}
 	}
@@ -206,15 +222,16 @@ public class JVMSecurityManager extends SecurityManager {
 		return (lock != null && lock);
 	}
 
-	protected static void throwSecurityException(ThreadLocal<ISubject> tlSubject, String message) throws SecurityException {
-		String errorMsg = ErrorUtils.get(ErrorUtils.SECURITY_ERROR, tlSubject.get().getSubject(), message);
+	protected static void throwSecurityException(ThreadLocal<ISubject> tlSubject,String source,  String message) throws SecurityException {
+		// we do not want to acces outside packages here, so we do not use Errorutils.
+		String errorMsg = "Security Error in "+source +" for "+tlSubject.get().getName()+" accessing "+message;
 		logger.error(errorMsg);
-		throw new SecurityException("Read Access is not allowed");
+		throw new SecurityException(errorMsg);
 	}
 	
 	protected static String convertPathToWildcardPermission(String path) {
 		if (path != null) {
-			path = path.replaceAll("/", ":");
+			path = path.replace("/", ":");
 			if (path.startsWith(":")) {
 				path = path.substring(1);
 			}
@@ -224,7 +241,14 @@ public class JVMSecurityManager extends SecurityManager {
 
 	protected static String convertHostToWildcardPermission(String host) {
 		if (host != null) {
-			host = host.replaceAll(".", ":");
+			host = host.replace(".", ":");
+		}
+		return host;
+	}
+
+	protected static String convertPackageToWildcardPermission(String host) {
+		if (host != null) {
+			host = host.replace(".", ":");
 		}
 		return host;
 	}
@@ -233,7 +257,20 @@ public class JVMSecurityManager extends SecurityManager {
 		ISubject subject = tlSubject.get();
 		boolean permitted = false;
 		if (subject != null) {
-			permitted = securityService.isPermitted(tlSubject.get(), permission);
+			// prevent recursive calls while checking
+			boolean enabled = isEnabled();
+			setEnabled(false);
+			boolean checkSuperEnabled = checkSuper();
+			setAlsoCheckSuper(false);
+			logger.trace("isPermitted*"+enabled+"*"+permission);
+			try {
+				permitted = securityService.isPermitted(tlSubject.get(), permission);				
+			} catch (Throwable t) {
+				logger.error(t);
+			}
+			// restore previous state
+			setEnabled(enabled);
+			setAlsoCheckSuper(checkSuperEnabled);
 		}
 		return permitted;
 	}

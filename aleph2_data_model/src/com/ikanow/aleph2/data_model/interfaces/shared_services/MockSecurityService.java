@@ -44,6 +44,12 @@ public class MockSecurityService implements ISecurityService {
 		public boolean isAuthenticated() {
 			return true;
 		}
+
+		@Override
+		public String getName() {
+			// TODO Auto-generated method stub
+			return null;
+		}
 		
 	}
 	
