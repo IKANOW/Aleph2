@@ -42,9 +42,14 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";
 	
-	/** This is for transient data, eg for intermediate analytic steps
+	/** This is for transient data, eg for intermediate analytic steps (the name follows this suffix)
 	 */
-	public static final String TRANSIENT_DATA_SUFFIX = "/managed_bucket/import/transient/";
+	public static final String TRANSIENT_DATA_SUFFIX = "/managed_bucket/import/transient/current/";
+	
+	/** This is for transient data, eg for intermediate analytic steps
+	 *  (where secondary buffers are stored)
+	 */
+	public static final String TRANSIENT_DATA_SUFFIX_SECONDARY = "/managed_bucket/import/transient/";
 	
 	/** This is the top level directory for data that has actually been processed
 	 */
@@ -53,26 +58,43 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	/** This is the directory where the raw data is stored (ie copied from the /ready/ directory without being changed)
 	 *  (Batch only)
 	 */
-	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/";
-	/** This suffix is where data is placed if there are no temporal considerations
-	 */
-	public static final String NO_TIME_SUFFIX = "/all_time/";
+	public static final String STORED_DATA_SUFFIX_RAW = "/managed_bucket/import/stored/raw/current/";
 	
+	/** This is the directory where the raw data is stored (ie copied from the /ready/ directory without being changed)
+	 *  (where secondary buffers are stored)
+	 *  (Batch only)
+	 */
+	public static final String STORED_DATA_SUFFIX_RAW_SECONDARY = "/managed_bucket/import/stored/raw/";
 	
 	/** For non JSON input files (CSV/binary), the data immediately after it has been converted to JSON but before any other enrichment has occurred  
 	 *  (It is not expected that this directory will be commonly used)
 	 *  (Batch only)
 	 */
-	public static final String STORED_DATA_SUFFIX_JSON = "/managed_bucket/import/stored/json/";
+	public static final String STORED_DATA_SUFFIX_JSON = "/managed_bucket/import/stored/json/current/";
+	
+	/** For non JSON input files (CSV/binary), the data immediately after it has been converted to JSON but before any other enrichment has occurred  
+	 *  (It is not expected that this directory will be commonly used)
+	 *  (where secondary buffers are stored)
+	 *  (Batch only)
+	 */
+	public static final String STORED_DATA_SUFFIX_JSON_SECONDARY = "/managed_bucket/import/stored/json/";
 	
 	/** Data from batch or streaming data after all enrichment has occurred 
 	 */
-	public static final String STORED_DATA_SUFFIX_PROCESSED = "/managed_bucket/import/stored/processed/";
+	public static final String STORED_DATA_SUFFIX_PROCESSED = "/managed_bucket/import/stored/processed/current/";
 	
-	/** For analytics buckets, the output data of intermediate jobs is stored here, under the name of the job
-	 *  (or the content UUID of the job if no name is specified)
+	/** Data from batch or streaming data after all enrichment has occurred (where secondary buffers are stored) 
 	 */
-	public static final String ANALYTICS_TEMP_DATA_SUFFIX = "/managed_bucket/analytics/temp/"; // (then name)
+	public static final String STORED_DATA_SUFFIX_PROCESSED_SECONDARY = "/managed_bucket/import/stored/processed/";
+	
+	/** This suffix is where data is placed if there are no temporal considerations
+	 */
+	public static final String NO_TIME_SUFFIX = "/all_time/";
+		
+	/** The suffix (included in other constants unless otherwise specified) that points to the current set of data 
+	 *  where there are multiple buffers (eg for ping/pong type operations)
+	 */
+	public static final String PRIMARY_BUFFER_SUFFIX = "/current/";
 	
 	/** The storage service  retains data from 0-3 different stages of the processing:
 	 *  "raw" - is the unprocessed data, "json" is the data after serialization but otherwise untouched (eg before enrichment/analytics), "processed" is post-processing/analytics
