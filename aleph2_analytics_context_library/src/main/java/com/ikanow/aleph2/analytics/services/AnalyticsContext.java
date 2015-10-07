@@ -511,7 +511,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 					;
 										
 					// Check this bucket exists and I have read access to it
-					if (my_bucket.full_name().equals(bucket_subchannel[0])) {
+					if (!my_bucket.full_name().equals(bucket_subchannel[0])) {
 						boolean found_bucket = secured_bucket_crud
 							.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_subchannel[0]),
 											Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
@@ -635,7 +635,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 						}
 						final String sub_service = 
 										Patterns.match(i.resource_name_or_id()).<String>andReturn()
-													.when(s -> s.endsWith(":raw"), __ -> "raw/current/")
+													.when(s -> s.endsWith(":raw"), __ -> "raw/current/") // (input paths are always from primary)
 													.when(s -> s.endsWith(":json"), __ -> "json/current/")
 													.otherwise(__ -> "processed/current/");
 						

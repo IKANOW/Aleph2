@@ -73,7 +73,7 @@ public class SampleSearchIndexService implements ISearchIndexService {
 
 		@Override
 		public CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(
-				DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary) {
+				DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary) {
 			return null;
 		}
 

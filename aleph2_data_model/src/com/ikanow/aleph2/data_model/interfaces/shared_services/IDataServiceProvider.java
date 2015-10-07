@@ -76,7 +76,7 @@ public interface IDataServiceProvider {
 		 * @param secondary_buffer - the name of the buffer
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
-		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, final Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary);
+		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary);
 				
 		/** Indicates that this service should examine the data in this bucket and delete any old data
 		 * @param bucket - the bucket to be checked
