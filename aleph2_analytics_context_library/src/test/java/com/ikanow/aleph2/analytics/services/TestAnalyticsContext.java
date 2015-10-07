@@ -783,7 +783,7 @@ public class TestAnalyticsContext {
 					e.getMessage());
 		}
 		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/current/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
 		try {
 			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4b);
 			fail("Should have thrown exception");
@@ -877,10 +877,10 @@ public class TestAnalyticsContext {
 
 		// Now do all the other checks:
 
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/raw/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/json/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/raw/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/json/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input2));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/stored/processed/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4));
 	}
 	
 	@Test

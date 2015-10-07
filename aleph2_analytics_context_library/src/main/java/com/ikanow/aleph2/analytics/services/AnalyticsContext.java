@@ -635,9 +635,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 						}
 						final String sub_service = 
 										Patterns.match(i.resource_name_or_id()).<String>andReturn()
-													.when(s -> s.endsWith(":raw"), __ -> "raw/")
-													.when(s -> s.endsWith(":json"), __ -> "json/")
-													.otherwise(__ -> "processed/");
+													.when(s -> s.endsWith(":raw"), __ -> "raw/current/")
+													.when(s -> s.endsWith(":json"), __ -> "json/current/")
+													.otherwise(__ -> "processed/current/");
 						
 						//TODO: ALEPH-12 enable time-based filtering
 						if (null != i.filter()) {
