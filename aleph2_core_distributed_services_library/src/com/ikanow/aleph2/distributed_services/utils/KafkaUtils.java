@@ -104,7 +104,8 @@ public class KafkaUtils {
 		final Properties new_properties = 
 				consumer_name
 					.map(name -> {
-						final Properties np = new Properties(kafka_properties);
+						final Properties np = new Properties();
+						kafka_properties.forEach((key, val) -> np.put(key, val));
 						np.put("group.id", name);
 						return np;
 					})
