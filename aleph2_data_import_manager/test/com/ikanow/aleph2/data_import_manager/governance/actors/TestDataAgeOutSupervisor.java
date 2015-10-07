@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -108,7 +109,7 @@ public class TestDataAgeOutSupervisor {
 			}
 
 			@Override
-			public Collection<String> getSecondaryBufferList(
+			public Set<String> getSecondaryBuffers(
 					DataBucketBean bucket) {
 				return null;
 			}
