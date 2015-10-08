@@ -139,7 +139,7 @@ public class TestAnalyticsTriggerSupervisorActor {
 		_test_actor.get().tell("Ping!", test_deleter);
 		_test_actor.get().tell("Ping!", test_deleter);
 		
-		for (int ii = 0; (ii < 12) && (_num_received.get() <= 2); ++ii) Thread.sleep(500L);
+		for (int ii = 0; (ii < 20) && (_num_received.get() <= 2); ++ii) Thread.sleep(500L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 		
 		// Check the DB was optimized:
@@ -149,6 +149,8 @@ public class TestAnalyticsTriggerSupervisorActor {
 	
 	@After
 	public void cleanupTest() {
+		System.out.println("Shutting down actor: " + _test_actor.toString());
 		_test_actor.ifPresent(actor -> actor.tell(akka.actor.PoisonPill.getInstance(), actor));
+		try { Thread.sleep(1000L); } catch (Exception e) {}
 	}	
 }

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,6 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
@@ -58,6 +60,8 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	protected final IManagementDbService _core_management_db;
 	protected final SetOnce<ICrudService<AnalyticTriggerStateBean>> _analytics_trigger_state = new SetOnce<>();
 	
+	protected final AtomicLong _ping_count = new AtomicLong(0);
+	
 	/** Akka c'tor
 	 */
 	public AnalyticsTriggerSupervisorActor() {		
@@ -81,15 +85,22 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	 *  so do it here instead
 	 */
 	protected void setup() {
-		if ((null == _core_management_db) || (_analytics_trigger_state.isSet())) {
-			return;
+		try {
+			if ((null == _core_management_db) || (_analytics_trigger_state.isSet())) {
+				return;
+			}
+			_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class));
+	
+			// ensure analytic queue is optimized:
+	
+			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::is_active)));
+			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::next_check)));
+			
+			_logger.info("Initialized AnalyticsTriggerSupervisorActor");
 		}
-		_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class));
-
-		// ensure analytic queue is optimized:
-
-		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::is_active)));
-		_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::next_check)));
+		catch (Throwable t) {
+			_logger.error(ErrorUtils.getLongForm("AnalyticsTriggerSupervisorActor initialize error: {0}", t));									
+		}
 	}
 	
 	/* (non-Javadoc)
@@ -101,6 +112,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		
 		final ActorRef self = this.self();
 		if (String.class.isAssignableFrom(message.getClass())) { // tick!
+			_ping_count.incrementAndGet();
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
@@ -117,6 +129,6 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		if (_ticker.isSet()) {
 			_ticker.get().cancel();
 		}
-		_logger.info("AnalyticsTriggerSupervisorActor has stopped on this node.");								
+		_logger.info("AnalyticsTriggerSupervisorActor has stopped on this node, processed " + _ping_count.get() + " pings");								
 	}
 }

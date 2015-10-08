@@ -71,6 +71,28 @@ public class TestClassloaderUtils {
 		catch (ClassNotFoundException e) {
 			//expected!
 		}
+		
+		// Check if it gets cached:
+		
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val_2 = 
+				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology",
+						Optional.of(path2.toString()),
+						Collections.emptyList(), "test1", new TestMessageBean());						
+		
+		assertEquals(ret_val.success().getClass().getClassLoader(), ret_val_2.success().getClass().getClassLoader());
+	
+		// Clear cache and check we get another classloader:
+		
+		ClassloaderUtils.clearCache();
+		
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val_3 = 
+				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology",
+						Optional.of(path2.toString()),
+						Collections.emptyList(), "test1", new TestMessageBean());						
+		
+		assertNotEquals(ret_val.success().getClass().getClassLoader(), ret_val_3.success().getClass().getClassLoader());
 	}
 	
 	@Test

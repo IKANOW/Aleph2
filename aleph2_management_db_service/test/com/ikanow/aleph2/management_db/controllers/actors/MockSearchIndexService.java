@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
@@ -73,7 +74,7 @@ public class MockSearchIndexService implements ISearchIndexService {
 		}
 
 		@Override
-		public Collection<String> getSecondaryBufferList(DataBucketBean bucket) {
+		public Set<String> getSecondaryBuffers(DataBucketBean bucket) {
 			return null;
 		}
 

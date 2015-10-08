@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -61,7 +62,7 @@ public interface IDataServiceProvider {
 		 * @param bucket
 		 * @return
 		 */
-		Collection<String> getSecondaryBufferList(final DataBucketBean bucket);
+		Set<String> getSecondaryBuffers(final DataBucketBean bucket);
 		
 		/** Provides the primary name if it can be deduced, else Optional.empty (ie if symlinks aren't supported ... in this case you can infer what the primary buffer is
 		 *  based on the fact it will be missing from the secondary buffer)
@@ -74,6 +75,7 @@ public interface IDataServiceProvider {
 		 *  The current primary bucket is returned to its previous name if possible, else uses the designated string, else deletes it 
 		 * @param bucket - the bucket to switch
 		 * @param secondary_buffer - the name of the buffer
+		 * @param new_name_for_ex_primary - if empty then deletes the old index (this can be unsafe if a long running MR job is still running on the older collection), else renames to this
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
 		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary);
