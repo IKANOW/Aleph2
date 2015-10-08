@@ -279,7 +279,7 @@ public class TestBucketDeletionActor {
 		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + "/managed_bucket").exists());
 		
 		// Data directories no longer exist
-		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX_PROCESSED + "/test").exists());
 		
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
@@ -350,7 +350,7 @@ public class TestBucketDeletionActor {
 		assertTrue("The file path has *not* been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + "/managed_bucket").exists());
 		
 		// Data directories no longer exist
-		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+		assertFalse("The data path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name() + IStorageService.STORED_DATA_SUFFIX_PROCESSED + "/test").exists());
 		
 		// check state directory _not_ cleaned in this case (the harvester can always do this once that's been wired up):
 		checkStateDirectoriesNotCleaned(bucket);
@@ -462,8 +462,8 @@ public class TestBucketDeletionActor {
 			DataBucketCrudService.createFilePaths(bucket, _service_context.getStorageService());
 			final String bucket_path = System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + bucket.full_name();
 			assertTrue("The file path has been created", new File(bucket_path + "/managed_bucket").exists());
-			FileUtils.writeStringToFile(new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test"), "");
-			assertTrue("The extra file path has been created", new File(bucket_path + IStorageService.STORED_DATA_SUFFIX + "/test").exists());
+			FileUtils.writeStringToFile(new File(bucket_path + IStorageService.STORED_DATA_SUFFIX_PROCESSED + "/test"), "");
+			assertTrue("The extra file path has been created", new File(bucket_path + IStorageService.STORED_DATA_SUFFIX_PROCESSED + "/test").exists());
 		}
 		
 		// Also create a state directory object so we can check that gets deleted
