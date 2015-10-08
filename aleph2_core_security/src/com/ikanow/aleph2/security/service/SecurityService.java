@@ -215,9 +215,9 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	@SuppressWarnings("unchecked")
 	@Override
 	public Collection<String> releaseRunAs(ISubject subject) {
-		PrincipalCollection p = ((Subject)subject.getSubject()).releaseRunAs();	
-		return p.asList();
-	}
+		PrincipalCollection p = ((Subject)subject.getSubject()).releaseRunAs();
+		return (p!=null)? p.asList(): null;
+		}
 
 
 

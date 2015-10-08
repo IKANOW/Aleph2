@@ -287,4 +287,13 @@ public class SecurityServiceTest {
 	}
 
 
+	
+	@Test
+	public void testSystemLogin() {
+		ISubject subject = securityService.loginAsSystem();			
+		securityService.releaseRunAs(subject);		
+		securityService.runAs(subject, Arrays.asList("testUser"));
+		
+	}
+
 }
