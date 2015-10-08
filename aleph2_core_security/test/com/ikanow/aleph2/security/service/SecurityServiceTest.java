@@ -258,7 +258,32 @@ public class SecurityServiceTest {
 			f.list();
 			fail("Read Access to "+f.getName()+" is not allowed.");
 		} catch (Throwable t) {			
+			logger.debug("This is correct we want to see a read a security exception here:"+t);
 		}
+	}
+
+	@Test
+	@Ignore
+	public void testSecurityServiceMultiThreading(){
+		ISubject subject = securityService.loginAsSystem();
+		long timeNow = System.currentTimeMillis();
+		long timeOut = timeNow+3000L;
+		boolean hasAdminRole = false;
+		while(timeNow < timeOut){
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			hasAdminRole  = securityService.hasRole(subject, "admin");
+			if(hasAdminRole){
+				fail("Subject received admin rights");
+				break;
+			}
+			timeNow = System.currentTimeMillis();
+		} // while
+	
 	}
 
 

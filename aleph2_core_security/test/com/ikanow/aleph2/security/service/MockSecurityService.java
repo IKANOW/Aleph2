@@ -25,7 +25,9 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	protected static Map<String, AuthorizationBean> authMap = new HashMap<String, AuthorizationBean>();
 	
 	static{
-		
+		System.setProperty(IKANOW_SYSTEM_LOGIN, "system");
+		System.setProperty(IKANOW_SYSTEM_PASSWORD, "system123");
+
 		AuthorizationBean ab1 = new AuthorizationBean("admin");
 		ab1.setCredentials("admin123");
 		authMap.put("admin",ab1);
@@ -35,6 +37,9 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 		AuthorizationBean ab3 = new AuthorizationBean("testUser");
 		ab3.setCredentials("testUser123");
 		authMap.put("testUser",ab3);
+		AuthorizationBean ab4 = new AuthorizationBean("system");
+		ab4.setCredentials("system123");
+		authMap.put("system",ab4);
 		
 		permissionsMap.put("admin", new HashSet<String>(Arrays.asList("*")));
 		permissionsMap.put("user", new HashSet<String>(Arrays.asList("permission1","permission2","permission3","read:tmp:data:misc","package:*","permission:*")));

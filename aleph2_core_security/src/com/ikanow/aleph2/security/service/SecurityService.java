@@ -55,8 +55,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	protected ISubject currentSubject = null;
 	private static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
-	protected static String systemUsername = System.getProperty(IKANOW_SYSTEM_LOGIN, "4e3706c48d26852237078005");
-	protected static String systemPassword = System.getProperty(IKANOW_SYSTEM_PASSWORD, "not allowed!");
+	protected static String systemUsername = null;
+	protected static String systemPassword = null;
 
 	@Inject
 	protected IServiceContext serviceContext;
@@ -76,6 +76,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 			logger.debug("Session manager:"+sessionManager);	
 		}		
 
+		systemUsername = System.getProperty(IKANOW_SYSTEM_LOGIN, "4e3706c48d26852237078005");
+		systemPassword = System.getProperty(IKANOW_SYSTEM_PASSWORD, "not allowed!");
 	}
 
 
