@@ -890,6 +890,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs
 			)
 	{
+		context.resetJob(job);
 		context.resetLibraryConfigs(
 				Stream.concat(
 						Optional.ofNullable(job.module_name_or_id()).map(Stream::of).orElseGet(Stream::empty),
