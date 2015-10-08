@@ -197,6 +197,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 		_mutable_state.job.forceSet(job);
 	}
 	
+	/** Gets the job if one has been set else is empty
+	 * @return
+	 */
+	public Optional<AnalyticThreadJobBean> getJob() {
+		return Optional.of(_mutable_state.job).filter(SetOnce::isSet).map(SetOnce::get);
+	}
+	
 	/** A very simple container for library beans
 	 * @author Alex
 	 */
@@ -325,16 +332,19 @@ public class AnalyticsContext implements IAnalyticsContext {
 											))
 						);
 			}
-			final String job_name = parsed_config.getString(__MY_JOB_ID); // (exists by construction)
-			_mutable_state.job.trySet(
-					retrieve_bucket.get().analytic_thread().jobs()
-						.stream()
-						.filter(job -> job_name.equals(job.name()))
-						.findFirst()
-						.get()); //(exists by construction)
-			
-			setupOutputs(_mutable_state.bucket.get(), _mutable_state.job.get());
-			
+			if (parsed_config.hasPath(__MY_JOB_ID)) {
+				final String job_name = parsed_config.getString(__MY_JOB_ID);
+				
+				Optionals.of(() -> retrieve_bucket.get().analytic_thread().jobs()).orElse(Collections.emptyList())
+					.stream()
+					.filter(job -> job_name.equals(job.name()))
+					.findFirst()
+					.ifPresent(job -> _mutable_state.job.trySet(job));
+
+				getJob().ifPresent(job -> 
+					setupOutputs(_mutable_state.bucket.get(), job)
+				);
+			}			
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -406,10 +416,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
 			
 			final Config last_call = 
-					Lambdas.get(() -> 
+					Lambdas.<Config, Config>wrap_u(config_pipeline -> 
 						_mutable_state.library_configs.isSet()
 						?
-						config_subset_services
+						config_pipeline
 							.withValue(__MY_MODULE_LIBRARY_ID, 
 									ConfigValueFactory
 										.fromAnyRef(BeanTemplateUtils.toJson(
@@ -422,8 +432,19 @@ public class AnalyticsContext implements IAnalyticsContext {
 												).toString())
 										)
 						:
-						config_subset_services						
+						config_pipeline						
 					)
+					.andThen(Lambdas.wrap_u(config_pipeline ->
+						getJob().isPresent()
+						?
+						config_pipeline
+							.withValue(__MY_JOB_ID, 
+									ConfigValueFactory
+									.fromAnyRef(getJob().get().name()) //(exists by above "if")
+									)
+						: config_pipeline
+					))
+					.apply(config_subset_services)
 					.withValue(__MY_BUCKET_ID, 
 								ConfigValueFactory
 									.fromAnyRef(BeanTemplateUtils.toJson(my_bucket).toString())
@@ -432,10 +453,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 								ConfigValueFactory
 									.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
 									)
-					.withValue(__MY_JOB_ID, 
-									ConfigValueFactory
-									.fromAnyRef(_mutable_state.job.get().name())
-									)
 									;
 			
 			final String ret1 = last_call.root().render(ConfigRenderOptions.concise());
@@ -443,23 +460,24 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final String ret = this.getClass().getName() + ":" + ret1;
 
 			// Finally this is a good central place to sort out deleting ping pong buffers
-			final boolean need_ping_pong_buffer = 
-					Optionals.of(() -> _mutable_state.job.get().output().preserve_existing_data()).orElse(false)
-					&&
-					_batch_types.contains(Optional.ofNullable(_mutable_state.job.get().analytic_type()).orElse(MasterEnrichmentType.none))
-				;
-
-			if (need_ping_pong_buffer) {
-				setupOutputs(_mutable_state.bucket.get(), _mutable_state.job.get());
-
-				_crud_index_service.ifPresent(outputter -> {
-					outputter.deleteDatastore().join();
-				});
-				_crud_storage_service.ifPresent(outputter -> {
-					outputter.deleteDatastore().join();
-				});
-			}
-			
+			getJob().ifPresent(job -> {
+				final boolean need_ping_pong_buffer = 
+						Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
+						&&
+						_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+					;
+	
+				if (need_ping_pong_buffer) {
+					setupOutputs(_mutable_state.bucket.get(), job);
+	
+					_crud_index_service.ifPresent(outputter -> {
+						outputter.deleteDatastore().join();
+					});
+					_crud_storage_service.ifPresent(outputter -> {
+						outputter.deleteDatastore().join();
+					});
+				}
+			});		
 			return ret;
 		}
 		else {

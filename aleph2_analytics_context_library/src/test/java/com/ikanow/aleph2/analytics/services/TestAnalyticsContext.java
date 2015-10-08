@@ -174,6 +174,10 @@ public class TestAnalyticsContext {
 			
 			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
 	
+			final AnalyticThreadJobBean test_job = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+					.with(AnalyticThreadJobBean::name, "test_job")
+				.done().get();
+
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 													.with(DataBucketBean::_id, "test")
 													.with(DataBucketBean::full_name, "/test/external-context/creation")
@@ -226,7 +230,8 @@ public class TestAnalyticsContext {
 								.put(module_library._id(), module_library)
 								.build()
 					);
-
+			test_context2.resetJob(test_job); //(note won't match against the bucket - will test that logic implicitly in test_objectEmitting)
+			
 			final String signature2 = test_context2.getAnalyticsContextSignature(Optional.of(test_bucket),
 					Optional.of(
 							ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
@@ -237,7 +242,7 @@ public class TestAnalyticsContext {
 					);
 			
 			
-			final String expected_sig2 = "com.ikanow.aleph2.analytics.services.AnalyticsContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7e\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"3fdb4bfa-2024-11e5-b5f7-727283247cff\":\"{\\\"libs\\\":[{\\\"_id\\\":\\\"_test_module\\\",\\\"path_name\\\":\\\"/test/module\\\"}]}\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"SecurityService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService\",\"service\":\"com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
+			final String expected_sig2 = "com.ikanow.aleph2.analytics.services.AnalyticsContext:{\"3fdb4bfa-2024-11e5-b5f7-727283247c7e\":\"{\\\"_id\\\":\\\"test\\\",\\\"modified\\\":1436194933000,\\\"full_name\\\":\\\"/test/external-context/creation\\\",\\\"data_schema\\\":{\\\"search_index_schema\\\":{}}}\",\"3fdb4bfa-2024-11e5-b5f7-727283247c7f\":\"{\\\"path_name\\\":\\\"/test/lib\\\"}\",\"3fdb4bfa-2024-11e5-b5f7-727283247cff\":\"{\\\"libs\\\":[{\\\"_id\\\":\\\"_test_module\\\",\\\"path_name\\\":\\\"/test/module\\\"}]}\",\"3fdb4bfa-2024-11e5-b5f7-7272832480f0\":\"test_job\",\"CoreDistributedServices\":{},\"MongoDbManagementDbService\":{\"mongodb_connection\":\"localhost:9999\"},\"globals\":{\"local_cached_jar_dir\":\"file://temp/\"},\"service\":{\"CoreDistributedServices\":{\"interface\":\"com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices\",\"service\":\"com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices\"},\"CoreManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.services.CoreManagementDbService\"},\"ManagementDbService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"},\"SearchIndexService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService\",\"service\":\"com.ikanow.aleph2.search_service.elasticsearch.services.MockElasticsearchIndexService\"},\"SecurityService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService\",\"service\":\"com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService\"},\"StorageService\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService\",\"service\":\"com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService\"},\"test\":{\"interface\":\"com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService\",\"service\":\"com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService\"}}}"; 
 			assertEquals(expected_sig2, signature2);
 			
 			final IAnalyticsContext test_external1a = ContextUtils.getAnalyticsContext(signature);		
@@ -1044,10 +1049,14 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
 				.done().get();
 
-		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class).done().get();
+		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  
+				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::preserve_existing_data, true)
+				.done().get();
 
 		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 				.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
+				.with(AnalyticThreadJobBean::name, "test_analytic_tech_name")				
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
 				.with(AnalyticThreadJobBean::output, analytic_output)
 				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
@@ -1072,6 +1081,7 @@ public class TestAnalyticsContext {
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
 		test_context.setTechnologyConfig(library);
+		test_context.resetJob(analytic_job1);
 		
 		// Empty service set:
 		final String signature = test_context.getAnalyticsContextSignature(Optional.of(test_bucket), Optional.empty());
@@ -1141,6 +1151,8 @@ public class TestAnalyticsContext {
 		assertEquals(1, kafka.size());
 	}
 
+	//TODO (ALEPH-12): have a version of the above test in which we run via the ping pong buffer instead 
+	
 	@Test
 	public void test_streamingPipeline() throws JsonProcessingException, IOException {
 		_logger.info("running test_streamingPipeline");
