@@ -88,11 +88,11 @@ public interface IDataServiceProvider {
 		
 		/** Deletes or purges the bucket
 		 * @param bucket - the bucket to be deleted/purged
-		 * @param secondary_buffer - if this is specified then only the designated secondary buffer for the bucket is deleted
-		 * @param bucket_getting_deleted - whether this operation is part of a full deletion of the bucket
+		 * @param secondary_buffer - if this is specified then only the designated secondary buffer for the bucket is deleted (if bucket getting deleted then they all do)
+		 * @param bucket_or_buffer_getting_deleted - whether this operation is part of a full deletion of the bucket (if it's a secondary buffer then refers just to the buffer)
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
-		CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(final DataBucketBean bucket, final Optional<String> secondary_buffer, final boolean bucket_getting_deleted);
+		CompletableFuture<BasicMessageBean> handleBucketDeletionRequest(final DataBucketBean bucket, final Optional<String> secondary_buffer, final boolean bucket_or_buffer_getting_deleted);
 	};
 	
 	/** If this service instance has a data service associated with it, then return an interface that enables its use 
