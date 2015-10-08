@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -103,12 +104,14 @@ public class AnalyticsContext implements IAnalyticsContext {
 	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
 	public static final String __MY_TECH_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
 	public static final String __MY_MODULE_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247cff";
+	public static final String __MY_JOB_ID = "3fdb4bfa-2024-11e5-b5f7-7272832480f0";
 	
 	private static final EnumSet<MasterEnrichmentType> _streaming_types = EnumSet.of(MasterEnrichmentType.streaming, MasterEnrichmentType.streaming_and_batch);	
 	private static final EnumSet<MasterEnrichmentType> _batch_types = EnumSet.of(MasterEnrichmentType.batch, MasterEnrichmentType.streaming_and_batch);	
 	
 	protected static class MutableState {
-		SetOnce<DataBucketBean> bucket = new SetOnce<DataBucketBean>();
+		SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		SetOnce<AnalyticThreadJobBean> job = new SetOnce<>();
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
@@ -179,13 +182,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the optional module library bean for this context instance
-	 * @param this_bucket - the library bean to be associated
-	 * @returns whether the library bean has been updated (ie fails if it's already been set)
+	 * @param lib_configs - the library beans to be associated
 	 */
 	@SuppressWarnings("deprecation")
 	public void resetLibraryConfigs(final Map<String, SharedLibraryBean> lib_configs) {
 		_mutable_state.library_configs.forceSet(lib_configs);
 	}	
+	
+	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the job for this context
+	 * @param job - the job for this context
+	 */
+	@SuppressWarnings("deprecation")
+	public void resetJob(final AnalyticThreadJobBean job) {
+		_mutable_state.job.forceSet(job);
+	}
 	
 	/** A very simple container for library beans
 	 * @author Alex
@@ -200,6 +210,65 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	public void overrideSavedContext() {
 		static_instances.put(_mutable_state.signature_override.get(), this);
+	}
+
+	/** Gets the secondary buffer
+	 * @param bucket
+	 * @param need_ping_pong_buffer - based on the job.output
+	 * @param data_service
+	 * @return
+	 */
+	protected static Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
+	{
+		if (need_ping_pong_buffer) {
+			final Optional<String> primary_buffer = data_service.getPrimaryBufferName(bucket);
+			
+			final String new_primary = 
+					primary_buffer.map(curr_pri -> { // easy case, just switch between buffers
+						if (IGenericDataService.SECONDARY_PING.equals(curr_pri)) {
+							return IGenericDataService.SECONDARY_PONG;
+						}
+						else return IGenericDataService.SECONDARY_PING;							
+					})
+					.orElseGet(() -> { // if we don't know what the primary is then it's not listed in the primaries
+						final Set<String> secondary_buffers = data_service.getSecondaryBuffers(bucket);
+						if (secondary_buffers.contains(IGenericDataService.SECONDARY_PONG)) {
+							return IGenericDataService.SECONDARY_PONG;
+						}
+						else return IGenericDataService.SECONDARY_PING;
+					});
+			
+			return Optional.of(new_primary);			
+		}
+		else return Optional.empty();						
+	};
+	
+	/** Setup the outputs for the given bucket
+	 */
+	protected void setupOutputs(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		final boolean need_ping_pong_buffer = 
+				Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
+				&&
+				_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+				;
+
+		_batch_index_service = 
+				(_crud_index_service = _index_service.getDataService()
+											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
+													getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
+				)
+				.flatMap(IDataWriteService::getBatchWriteSubservice)
+				;
+
+		_batch_storage_service = 
+				(_crud_storage_service = _storage_service.getDataService()
+											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
+															Optional.of(IStorageService.StorageStage.processed.toString()), 
+																getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
+				)
+				.flatMap(IDataWriteService::getBatchWriteSubservice)
+				;
+		
 	}
 	
 	/* (non-Javadoc)
@@ -256,22 +325,16 @@ public class AnalyticsContext implements IAnalyticsContext {
 											))
 						);
 			}
+			final String job_name = parsed_config.getString(__MY_JOB_ID); // (exists by construction)
+			_mutable_state.job.trySet(
+					retrieve_bucket.get().analytic_thread().jobs()
+						.stream()
+						.filter(job -> job_name.equals(job.name()))
+						.findFirst()
+						.get()); //(exists by construction)
 			
-			_batch_index_service = 
-					(_crud_index_service = _index_service.getDataService()
-												.flatMap(s -> s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), Optional.empty(), Optional.empty()))
-					)
-					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					;
-
-			_batch_storage_service = 
-					(_crud_storage_service = _storage_service.getDataService()
-												.flatMap(s -> 
-															s.getWritableDataService(JsonNode.class, retrieve_bucket.get(), 
-																Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
-					)
-					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					;
+			setupOutputs(_mutable_state.bucket.get(), _mutable_state.job.get());
+			
 			static_instances.put(signature, this);
 		}
 		catch (Exception e) {
@@ -288,6 +351,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	@Override
 	public String getAnalyticsContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 		if (_state_name == State.IN_TECHNOLOGY) {
+			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+			
 			// Returns a config object containing:
 			// - set up for any of the services described
 			// - all the rest of the configuration
@@ -361,11 +426,15 @@ public class AnalyticsContext implements IAnalyticsContext {
 					)
 					.withValue(__MY_BUCKET_ID, 
 								ConfigValueFactory
-									.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
+									.fromAnyRef(BeanTemplateUtils.toJson(my_bucket).toString())
 									)
 					.withValue(__MY_TECH_LIBRARY_ID, 
 								ConfigValueFactory
 									.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
+									)
+					.withValue(__MY_JOB_ID, 
+									ConfigValueFactory
+									.fromAnyRef(_mutable_state.job.get().name())
 									)
 									;
 			
@@ -373,6 +442,24 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_mutable_state.signature_override.set(ret1);
 			final String ret = this.getClass().getName() + ":" + ret1;
 
+			// Finally this is a good central place to sort out deleting ping pong buffers
+			final boolean need_ping_pong_buffer = 
+					Optionals.of(() -> _mutable_state.job.get().output().preserve_existing_data()).orElse(false)
+					&&
+					_batch_types.contains(Optional.ofNullable(_mutable_state.job.get().analytic_type()).orElse(MasterEnrichmentType.none))
+				;
+
+			if (need_ping_pong_buffer) {
+				setupOutputs(_mutable_state.bucket.get(), _mutable_state.job.get());
+
+				_crud_index_service.ifPresent(outputter -> {
+					outputter.deleteDatastore().join();
+				});
+				_crud_storage_service.ifPresent(outputter -> {
+					outputter.deleteDatastore().join();
+				});
+			}
+			
 			return ret;
 		}
 		else {
