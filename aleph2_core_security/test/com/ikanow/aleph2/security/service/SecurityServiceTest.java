@@ -248,6 +248,7 @@ public class SecurityServiceTest {
 	}
 
 	@Test
+	@Ignore
 	public void testJvmSecurity(){
 		ISubject subject = loginAsRegularUser();
 		securityService.enableJvmSecurityManager(true);
