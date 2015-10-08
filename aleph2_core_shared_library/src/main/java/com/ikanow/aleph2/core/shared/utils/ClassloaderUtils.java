@@ -18,12 +18,18 @@ package com.ikanow.aleph2.core.shared.utils;
 import java.net.URL;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
 
 import scala.Tuple2;
 
+import com.codepoetics.protonpack.StreamUtils;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
@@ -32,8 +38,13 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import fj.data.Validation;
 
 public class ClassloaderUtils {
-
-	//TODO (ALEPH-19): want a cache in here to avoid doing it over and over again (but reloading whenever anything changes)
+	protected final static Cache<String, JarClassLoader> _classloader_cache = CacheBuilder.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).build();
+	
+	/** Clear the entire cache
+	 */
+	public static synchronized void clearCache() {
+		_classloader_cache.invalidateAll();
+	}
 	
 	/** Returns an instance of the requested class from the designated classpath (union of the libs below)
 	 * @param primary_lib - optionally, a single library
@@ -58,7 +69,7 @@ public class ClassloaderUtils {
 	 * @param secondary_libs - optionally a set of other libraries
 	 * @return an instance of the desired function
 	 */
-	public static <R, M> Validation<BasicMessageBean, Tuple2<R, ClassLoader>> getFromCustomClasspath_withClassloader(
+	public synchronized static <R, M> Validation<BasicMessageBean, Tuple2<R, ClassLoader>> getFromCustomClasspath_withClassloader(
 													final Class<R> interface_clazz,
 													final String implementation_classname,
 													final Optional<String> primary_lib, 
@@ -68,11 +79,15 @@ public class ClassloaderUtils {
 													)
 	{
 		try {
-			final JarClassLoader jcl = new JarClassLoader();
-			if (primary_lib.isPresent()) {
-				jcl.add(new URL(primary_lib.get()));
-			}
-			secondary_libs.forEach(Lambdas.wrap_consumer_u(j -> jcl.add(new URL(j)))); 
+			final String cache_signature = getCacheSignature(primary_lib, secondary_libs);
+			
+			final JarClassLoader jcl = _classloader_cache.get(cache_signature, 
+						() -> {
+							final JarClassLoader jcl_int = new JarClassLoader();
+							primary_lib.ifPresent(Lambdas.wrap_consumer_u(pl -> jcl_int.add(new URL(pl))));
+							secondary_libs.forEach(Lambdas.wrap_consumer_u(j -> jcl_int.add(new URL(j)))); 
+							return jcl_int;
+						});
 			
 			final JclObjectFactory factory = JclObjectFactory.getInstance();
 		
@@ -96,4 +111,21 @@ public class ClassloaderUtils {
 							));
 		}
 	}	
+	
+	/** Returns a string that is used to access the object cache
+	 * @param primary_lib
+	 * @param secondary_libs
+	 * @return
+	 */
+	protected static String getCacheSignature(													
+			final Optional<String> primary_lib, 
+			final List<String> secondary_libs)
+	{
+		return Stream.concat(
+				StreamUtils.stream(primary_lib),
+				secondary_libs.stream()
+				)
+				.sorted()
+				.collect(Collectors.joining(":"));		
+	}
 }
