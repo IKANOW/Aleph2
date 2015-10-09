@@ -261,6 +261,9 @@ public class SecurityServiceTest {
 		} catch (Throwable t) {			
 			logger.debug("This is correct we want to see a read a security exception here:"+t);
 		}
+		finally {
+			securityService.enableJvmSecurityManager(false);
+		} 
 	}
 
 	@Test
