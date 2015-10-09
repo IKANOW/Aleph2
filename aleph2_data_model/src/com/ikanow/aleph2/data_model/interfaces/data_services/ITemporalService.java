@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import scala.Tuple2;
 
@@ -35,12 +34,5 @@ public interface ITemporalService extends IUnderlyingService, IDataServiceProvid
 	 * @param schema - the schema to validate
 	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
 	 */
-	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.TemporalSchemaBean schema, final DataBucketBean bucket);
-	
-	/** This is called when there is likely data to age out for the service
-	 * @param bucket - the bucket to age out
-	 * @return a future containing the results of the age-out request for this service
-	 */
-	CompletableFuture<BasicMessageBean> handleAgeOutRequest(final DataBucketBean bucket);
-	
+	Tuple2<String, List<BasicMessageBean>> validateSchema(final DataSchemaBean.TemporalSchemaBean schema, final DataBucketBean bucket);	
 }

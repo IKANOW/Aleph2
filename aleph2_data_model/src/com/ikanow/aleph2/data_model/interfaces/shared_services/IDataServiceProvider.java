@@ -74,11 +74,12 @@ public interface IDataServiceProvider {
 		/** For "ping pong" buffers (or when atomically modifying the contents of any bucket), switches the "active" read buffer to the designated secondary buffer
 		 *  The current primary bucket is returned to its previous name if possible, else uses the designated string, else deletes it 
 		 * @param bucket - the bucket to switch
-		 * @param secondary_buffer - the name of the buffer
-		 * @param new_name_for_ex_primary - if empty then deletes the old index (this can be unsafe if a long running MR job is still running on the older collection), else renames to this
+		 * @param secondary_buffer - the name of the buffer (if not present then moves back to the default secondary)
+		 * @param new_name_for_ex_primary - if empty then uses a technology specific term (can be referenced subsequently by using Optional.empty() in secondary_buffer) 
+		 *        if "" then deletes the old index (this can be unsafe if a long running MR job is still running on the older collection), else renames to this
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
-		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, String secondary_buffer, final Optional<String> new_name_for_ex_primary);
+		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary);
 				
 		/** Indicates that this service should examine the data in this bucket and delete any old data
 		 * @param bucket - the bucket to be checked

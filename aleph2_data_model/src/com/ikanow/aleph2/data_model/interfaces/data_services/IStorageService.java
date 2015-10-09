@@ -96,6 +96,10 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	public static final String PRIMARY_BUFFER_SUFFIX = "/current/";
 	
+	/** A recommended secondary name for the optional "original primary" if it is moved to the secondary  
+	 */
+	public static final String EX_PRIMARY_BUFFER_SUFFIX = "/former_current/";
+	
 	/** The storage service  retains data from 0-3 different stages of the processing:
 	 *  "raw" - is the unprocessed data, "json" is the data after serialization but otherwise untouched (eg before enrichment/analytics), "processed" is post-processing/analytics
 	 *  "transient_output" - for analytic engines, temporary storage shared between jobs within an analytic thread (and with external analytic threads)
