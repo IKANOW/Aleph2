@@ -250,9 +250,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 								final Optional<String> curr_primary = Optional.of(IGenericDataService.SECONDARY_PING);
 								final CompletableFuture<BasicMessageBean> future_res = data_service.switchCrudServiceToPrimaryBuffer(bucket, curr_primary, Optional.empty());							
 								future_res.thenAccept(res -> {
-									/**/
-									System.out.println("?? "  + res.success() + ": switching between ping/pong buffers: " + res.message() + ": " + data_service.getPrimaryBufferName(bucket));
-									//TODO: ^
 									if (!res.success()) {
 										_logger.error("Error switching between ping/pong buffers: " + res.message());
 									}
