@@ -56,6 +56,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -1041,10 +1042,10 @@ public class TestAnalyticsContext {
 		test_objectEmitting(true);
 	}
 	
-	//@Test
+	@Test
 	public void test_objectEmitting_pingPong() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		//TODO (ALEPH-12): have a version of the above test in which we run via the ping pong buffer instead (run twice? one for ping and once for pong?)
 		test_objectEmitting(false);
+		//TODO (ALEPH-12): 1) check multiple paths through ping/pong, 2) also check file output 
 	}
 	
 	public void test_objectEmitting(boolean preserve_out) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
@@ -1107,22 +1108,28 @@ public class TestAnalyticsContext {
 		assertEquals(1L, (long)raw_mock_db.countObjects().get());
 		
 		final IAnalyticsContext test_external1a = ContextUtils.getAnalyticsContext(signature);		
+		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
 
+		if (!preserve_out) {
+			Thread.sleep(1000L);
+			assertEquals(Optional.of(IGenericDataService.SECONDARY_PING), check_index.getDataService().get().getPrimaryBufferName(test_bucket));
+		}
+		Optional<String> write_buffer = check_index.getDataService().get().getPrimaryBufferName(test_bucket)
+				.map(name -> name.equals(IGenericDataService.SECONDARY_PING) ? IGenericDataService.SECONDARY_PONG: IGenericDataService.SECONDARY_PING);
+		
+		System.out.println("GET WRITE BUFFER NAME = " + write_buffer);		
+		
 		//(internal)
 //		ISearchIndexService check_index = test_context.getService(ISearchIndexService.class, Optional.empty()).get();
 		//(external)
-		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
 		final ICrudService<JsonNode> crud_check_index = 
 				check_index.getDataService()
-					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), s.getPrimaryBufferName(test_bucket)))
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), write_buffer))
 					.flatMap(IDataWriteService::getCrudService)
 					.get();
 		crud_check_index.deleteDatastore();
 		Thread.sleep(2000L); // (wait for datastore deletion to flush)
 		assertEquals(0, crud_check_index.countObjects().get().intValue());
-		
-		System.out.println("GET PRIMARY BUFFER NAME = " + check_index.getDataService().get().getPrimaryBufferName(test_bucket));		
-		//TODO: this is optional empty because it needs to be switched to this...
 		
 		final JsonNode jn1 = _mapper.createObjectNode().put("test", "test1");
 		final JsonNode jn2 = _mapper.createObjectNode().put("test", "test2");

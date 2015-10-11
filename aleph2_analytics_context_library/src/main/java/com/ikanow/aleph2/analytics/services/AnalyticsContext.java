@@ -219,7 +219,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 		static_instances.put(_mutable_state.signature_override.get(), this);
 	}
 
-	/** Gets the secondary buffer
+	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
 	 * @param bucket
 	 * @param need_ping_pong_buffer - based on the job.output
 	 * @param data_service
@@ -228,24 +228,46 @@ public class AnalyticsContext implements IAnalyticsContext {
 	protected static Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
 	{
 		if (need_ping_pong_buffer) {
-			final Optional<String> primary_buffer = data_service.getPrimaryBufferName(bucket);
+			final Optional<String> write_buffer = 
+					data_service.getPrimaryBufferName(bucket).map(Optional::of)
+						.orElseGet(() -> { // Two cases:
+							
+							final Set<String> secondaries = data_service.getSecondaryBuffers(bucket);
+							final int ping_pong_count = (secondaries.contains(IGenericDataService.SECONDARY_PING) ? 1 : 0)
+													+ (secondaries.contains(IGenericDataService.SECONDARY_PONG) ? 1 : 0);
+							
+							if (1 == ping_pong_count) { // 1) one of ping/pong exists but not the other ... this is the file case where we can't tell what the primary actually is
+								if (secondaries.contains(IGenericDataService.SECONDARY_PONG)) { //(eg pong is secondary so ping must be primary)
+									return Optional.of(IGenericDataService.SECONDARY_PING);
+								}
+								else return Optional.of(IGenericDataService.SECONDARY_PONG);
+							}
+							else { // 2) all other cases: this is the ES case where we haven't built
+								if (0 == ping_pong_count) { // first time through, create the buffers:
+									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PONG));
+									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PING));
+								}								
+								final Optional<String> curr_primary = Optional.of(IGenericDataService.SECONDARY_PING);
+								final CompletableFuture<BasicMessageBean> future_res = data_service.switchCrudServiceToPrimaryBuffer(bucket, curr_primary, Optional.empty());							
+								future_res.thenAccept(res -> {
+									/**/
+									System.out.println("?? "  + res.success() + ": switching between ping/pong buffers: " + res.message() + ": " + data_service.getPrimaryBufferName(bucket));
+									//TODO: ^
+									if (!res.success()) {
+										_logger.error("Error switching between ping/pong buffers: " + res.message());
+									}
+								});
+								return curr_primary;
+							}
+						})
+						.map(curr_pri -> { // then just pick the buffer that isn't the primary
+							if (IGenericDataService.SECONDARY_PING.equals(curr_pri)) {
+								return IGenericDataService.SECONDARY_PONG;
+							}
+							else return IGenericDataService.SECONDARY_PING;							
+						});			
 			
-			final String new_primary = 
-					primary_buffer.map(curr_pri -> { // easy case, just switch between buffers
-						if (IGenericDataService.SECONDARY_PING.equals(curr_pri)) {
-							return IGenericDataService.SECONDARY_PONG;
-						}
-						else return IGenericDataService.SECONDARY_PING;							
-					})
-					.orElseGet(() -> { // if we don't know what the primary is then it's not listed in the primaries
-						final Set<String> secondary_buffers = data_service.getSecondaryBuffers(bucket);
-						if (secondary_buffers.contains(IGenericDataService.SECONDARY_PONG)) {
-							return IGenericDataService.SECONDARY_PONG;
-						}
-						else return IGenericDataService.SECONDARY_PING;
-					});
-			
-			return Optional.of(new_primary);			
+			return write_buffer;			
 		}
 		else return Optional.empty();						
 	};
@@ -462,6 +484,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				if (need_ping_pong_buffer) {
 					setupOutputs(_mutable_state.bucket.get(), job);
 	
+					// Clean the data out from the buffers we're about to write into
 					_crud_index_service.ifPresent(outputter -> {
 						outputter.deleteDatastore().join();
 					});
