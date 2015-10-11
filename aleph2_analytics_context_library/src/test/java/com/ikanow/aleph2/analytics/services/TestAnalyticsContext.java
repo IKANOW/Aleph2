@@ -1076,7 +1076,7 @@ public class TestAnalyticsContext {
 
 		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::_id, "test")
-				.with(DataBucketBean::full_name, "/test")
+				.with(DataBucketBean::full_name, "/test/" + (preserve_out?"preserve":"temporary"))
 				.with(DataBucketBean::analytic_thread, 
 						BeanTemplateUtils.build(AnalyticThreadBean.class)
 						.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job1)
@@ -1146,7 +1146,7 @@ public class TestAnalyticsContext {
 		test_external1a.emitObject(Optional.of(test_bucket), analytic_job1, Either.left(jn1), Optional.empty());
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.left(jn2), Optional.empty());
 		// (create topic now)
-		String topic = KafkaUtils.bucketPathToTopicName("/test", Optional.of("$end"));
+		String topic = KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.of("$end"));
 		test_context._distributed_services.createTopic(topic, Optional.empty());
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
