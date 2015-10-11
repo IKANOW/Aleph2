@@ -1039,18 +1039,23 @@ public class TestAnalyticsContext {
 	
 	@Test
 	public void test_objectEmitting_normal() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		test_objectEmitting(true);
+		test_objectEmitting(true, true);
 	}
 	
 	@Test
 	public void test_objectEmitting_pingPong() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		test_objectEmitting(false);
-		//TODO (ALEPH-12): 1) check multiple paths through ping/pong, 2) also check file output 
+		//(will start by writing into pong)
+		Tuple2<DataBucketBean, IGenericDataService> saved = test_objectEmitting(false, true); //(ping)
+		test_objectEmitting(false, false); //(ping)
+		saved._2().switchCrudServiceToPrimaryBuffer(saved._1(), Optional.of(IGenericDataService.SECONDARY_PONG), Optional.empty());
+		test_objectEmitting(false, false); //(pong)
 	}
 	
-	public void test_objectEmitting(boolean preserve_out) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public Tuple2<DataBucketBean, IGenericDataService> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 		_logger.info("run test_objectEmitting: " + preserve_out);
 
+		//TODO (ALEPH-12): also check file output 		
+		
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
 		
 		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input1 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
@@ -1112,7 +1117,7 @@ public class TestAnalyticsContext {
 
 		if (!preserve_out) {
 			Thread.sleep(1000L);
-			assertEquals(Optional.of(IGenericDataService.SECONDARY_PING), check_index.getDataService().get().getPrimaryBufferName(test_bucket));
+			assertTrue(check_index.getDataService().get().getPrimaryBufferName(test_bucket).isPresent()); // (one of pong or ping)
 		}
 		Optional<String> write_buffer = check_index.getDataService().get().getPrimaryBufferName(test_bucket)
 				.map(name -> name.equals(IGenericDataService.SECONDARY_PING) ? IGenericDataService.SECONDARY_PONG: IGenericDataService.SECONDARY_PING);
@@ -1167,9 +1172,11 @@ public class TestAnalyticsContext {
 		assertEquals(3, crud_check_index.countObjects().get().intValue());
 		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
 				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
-
+	
 		List<String> kafka = Optionals.streamOf(test_context._distributed_services.consumeAs(topic, Optional.empty()), false).collect(Collectors.toList());
-		assertEquals(1, kafka.size());
+		assertEquals(first_time ? 1 : 3, kafka.size()); //(second time through the topic exists so all 3 emits work)
+
+		return Tuples._2T(test_bucket, check_index.getDataService().get());
 	}
 
 	@Test
