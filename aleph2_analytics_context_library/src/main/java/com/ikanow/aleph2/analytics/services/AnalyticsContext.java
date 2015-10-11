@@ -253,11 +253,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	/** Setup the outputs for the given bucket
 	 */
 	protected void setupOutputs(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
-		final boolean need_ping_pong_buffer = 
-				Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
-				&&
-				_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-				;
+		final boolean need_ping_pong_buffer = needPingPongBuffer(job);
 
 		_batch_index_service = 
 				(_crud_index_service = _index_service.getDataService()
@@ -461,11 +457,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 
 			// Finally this is a good central place to sort out deleting ping pong buffers
 			getJob().ifPresent(job -> {
-				final boolean need_ping_pong_buffer = 
-						Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
-						&&
-						_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-					;
+				final boolean need_ping_pong_buffer = needPingPongBuffer(job);
 	
 				if (need_ping_pong_buffer) {
 					setupOutputs(_mutable_state.bucket.get(), job);
@@ -1134,4 +1126,18 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 		//(else nothing to do)
 	}
+
+	/** Util to check if we're using a ping pong buffer to change over data "atomically"
+	 * @param job
+	 * @return
+	 */
+	protected static boolean needPingPongBuffer(final AnalyticThreadJobBean job) {
+		final boolean need_ping_pong_buffer = 
+				!Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
+				&&
+				_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
+			;
+		return need_ping_pong_buffer;
+	}
+	
 }

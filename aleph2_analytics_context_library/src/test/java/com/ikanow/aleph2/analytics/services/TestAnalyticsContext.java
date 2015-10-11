@@ -1037,8 +1037,18 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_objectEmitting() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
-		_logger.info("run test_objectEmitting");
+	public void test_objectEmitting_normal() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		test_objectEmitting(true);
+	}
+	
+	//@Test
+	public void test_objectEmitting_pingPong() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		//TODO (ALEPH-12): have a version of the above test in which we run via the ping pong buffer instead (run twice? one for ping and once for pong?)
+		test_objectEmitting(false);
+	}
+	
+	public void test_objectEmitting(boolean preserve_out) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+		_logger.info("run test_objectEmitting: " + preserve_out);
 
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
 		
@@ -1051,7 +1061,7 @@ public class TestAnalyticsContext {
 
 		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  
 				BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class)
-					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::preserve_existing_data, true)
+					.with(AnalyticThreadJobBean.AnalyticThreadJobOutputBean::preserve_existing_data, preserve_out)
 				.done().get();
 
 		final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
@@ -1059,6 +1069,7 @@ public class TestAnalyticsContext {
 				.with(AnalyticThreadJobBean::name, "test_analytic_tech_name")				
 				.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input1, analytic_input2))
 				.with(AnalyticThreadJobBean::output, analytic_output)
+				.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch) // (matters in the ping/pong case, only supported in batch)
 				.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
 				.done().get();
 
@@ -1080,6 +1091,7 @@ public class TestAnalyticsContext {
 		final SharedLibraryBean library = BeanTemplateUtils.build(SharedLibraryBean.class)
 				.with(SharedLibraryBean::path_name, "/test/lib")
 				.done().get();
+		test_context.setBucket(test_bucket);
 		test_context.setTechnologyConfig(library);
 		test_context.resetJob(analytic_job1);
 		
@@ -1102,13 +1114,15 @@ public class TestAnalyticsContext {
 		final ISearchIndexService check_index = test_external1a.getServiceContext().getService(ISearchIndexService.class, Optional.empty()).get();		
 		final ICrudService<JsonNode> crud_check_index = 
 				check_index.getDataService()
-					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), Optional.empty()))
+					.flatMap(s -> s.getWritableDataService(JsonNode.class, test_bucket, Optional.empty(), s.getPrimaryBufferName(test_bucket)))
 					.flatMap(IDataWriteService::getCrudService)
 					.get();
 		crud_check_index.deleteDatastore();
 		Thread.sleep(2000L); // (wait for datastore deletion to flush)
 		assertEquals(0, crud_check_index.countObjects().get().intValue());
 		
+		System.out.println("GET PRIMARY BUFFER NAME = " + check_index.getDataService().get().getPrimaryBufferName(test_bucket));		
+		//TODO: this is optional empty because it needs to be switched to this...
 		
 		final JsonNode jn1 = _mapper.createObjectNode().put("test", "test1");
 		final JsonNode jn2 = _mapper.createObjectNode().put("test", "test2");
@@ -1151,8 +1165,6 @@ public class TestAnalyticsContext {
 		assertEquals(1, kafka.size());
 	}
 
-	//TODO (ALEPH-12): have a version of the above test in which we run via the ping pong buffer instead 
-	
 	@Test
 	public void test_streamingPipeline() throws JsonProcessingException, IOException {
 		_logger.info("running test_streamingPipeline");
