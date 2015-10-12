@@ -47,7 +47,7 @@ public class AnalyticTriggerUtils {
 	 * @param job
 	 * @return
 	 */
-	public static Stream<AnalyticTriggerStateBean> generateTriggerStateStream(final DataBucketBean bucket) {		
+	public static Stream<AnalyticTriggerStateBean> generateTriggerStateStream(final DataBucketBean bucket, Optional<String> locked_to_host) {		
 		
 		Optional<AnalyticThreadTriggerBean> trigger_info = Optionals.of(() -> bucket.analytic_thread().trigger_config());
 				
@@ -89,6 +89,7 @@ public class AnalyticTriggerUtils {
 									.with(AnalyticTriggerStateBean::input_data_service, trigger.data_service())
 									.with(AnalyticTriggerStateBean::input_resource_name_or_id, trigger.resource_name_or_id())
 									//(more transient counts)									
+									.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 								.done().get();
 					})
 					;
@@ -121,6 +122,7 @@ public class AnalyticTriggerUtils {
 							.with(AnalyticTriggerStateBean::input_data_service, job_trigger._2().get().data_service())
 							.with(AnalyticTriggerStateBean::input_resource_name_or_id, job_trigger._2().get().resource_name_or_id())
 							//(more transient counts)									
+							.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 						.done().get();				
 				})
 				;
@@ -129,6 +131,7 @@ public class AnalyticTriggerUtils {
 	}
 	
 	/** Builds a set of trigger beans from the internal inputs
+	 *  TODO (ALEPH-12): not sure if this is still needed?
 	 * @return
 	 */
 	public static List<AnalyticThreadComplexTriggerBean> getInternalTriggerList(final DataBucketBean bucket) {
@@ -148,7 +151,7 @@ public class AnalyticTriggerUtils {
 	 * @param input
 	 * @return
 	 */
-	public static Optional<AnalyticThreadComplexTriggerBean> convertInternalInputToComplexTrigger(final DataBucketBean bucket, final AnalyticThreadJobInputBean input) {
+	protected static Optional<AnalyticThreadComplexTriggerBean> convertInternalInputToComplexTrigger(final DataBucketBean bucket, final AnalyticThreadJobInputBean input) {
 		
 		final String resource_name_or_id = Optional.ofNullable(input.resource_name_or_id()).orElse("");
 		if (resource_name_or_id.startsWith("/") && !bucket.full_name().equals(resource_name_or_id.split(":")[0])) {

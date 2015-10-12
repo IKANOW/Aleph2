@@ -54,6 +54,16 @@ public interface IAnalyticsTechnologyModule {
 	 */
 	boolean canRunOnThisNode(final DataBucketBean analytic_bucket, final Collection<AnalyticThreadJobBean> jobs, final IAnalyticsContext context);
 	
+	/** Whether this engine can be run in multi-node (defaults to false)
+	 * @param analytic_bucket - the bucket containing the analytic thread to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
+	 * @param jobs - the list of jobs from the analytic thread that this technology actually handles (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
+	 * @return true if this node can run this module's functionality
+	 * @return whether this engine can be run in multi-node (defaults to false)
+	 */
+	default boolean supportsMultiNode(final DataBucketBean analytic_bucket, final Collection<AnalyticThreadJobBean> jobs, final IAnalyticsContext context) {
+		return false;
+	}
+	
 	//////////////////////////////////////////////////////////
 	
 	// THREAD-WIDE MAJOR OPERATIONS		

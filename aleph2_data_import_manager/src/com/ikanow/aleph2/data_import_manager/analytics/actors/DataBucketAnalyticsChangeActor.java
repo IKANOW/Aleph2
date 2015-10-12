@@ -790,18 +790,28 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					final IAnalyticsTechnologyModule tech_module = techmodule_classloader._1();
 					_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
 					Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
+					tech_module.onInit(context);
+					
+					// One final check before we do anything: are we allowed to run multi-node if we're trying
+					//TODO (ALEPH-12): add test coverage for this
+					if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
+						if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
+							if (!tech_module.supportsMultiNode(bucket, jobs, context)) {
+								return CompletableFuture.completedFuture(
+										new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+											ErrorUtils.get(AnalyticsErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
+							}
+						}
+					}
 					
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-							tech_module.onInit(context);
 							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, jobs, context);
 							return CompletableFuture.completedFuture(accept_or_ignore
 									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
 									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
 						})
 						.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onDeleteThread(bucket, jobs, context);
 							final List<CompletableFuture<BasicMessageBean>> job_results = 
 									perJobSetup.apply(jobs.stream(), Tuples._2T(true, false))
@@ -811,8 +821,6 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							return combineResults(top_level_result, job_results, source);
 						})
 						.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onNewThread(bucket, jobs, context, !msg.is_suspended());
 							final List<CompletableFuture<BasicMessageBean>> job_results =
 									msg.is_suspended()
@@ -824,8 +832,6 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							return combineResults(top_level_result, job_results, source);
 						})
 						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
 							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), Tuples._2T(true, msg.is_enabled()))
 										.map(job -> (msg.is_enabled() && Optional.ofNullable(job.enabled()).orElse(true))
@@ -837,15 +843,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							return combineResults(top_level_result, job_results, source);
 						})
 						.when(BucketActionMessage.PurgeBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onPurge(bucket, jobs, context);
 							
 							return combineResults(top_level_result, Collections.emptyList(), source);
 						})
 						.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onTestThread(bucket, jobs, msg.test_spec(), context);
 							final List<CompletableFuture<BasicMessageBean>> job_results = perJobSetup.apply(jobs.stream(), Tuples._2T(false, true))
 										.map(job -> tech_module.startAnalyticJobTest(bucket, jobs, job, msg.test_spec(), context))
@@ -854,14 +856,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							return combineResults(top_level_result, job_results, source);
 						})
 						.when(BucketActionMessage.PollFreqBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
-							
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onPeriodicPoll(bucket, jobs, context);
 							
 							return combineResults(top_level_result, Collections.emptyList(), source);
 						})
 						.otherwise(msg -> { // return "command not recognized" error
-							tech_module.onInit(context);
 							return CompletableFuture.completedFuture(
 									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
 										AnalyticsErrorUtils.MESSAGE_NOT_RECOGNIZED, 

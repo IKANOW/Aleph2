@@ -263,10 +263,20 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 				tech_module -> {
 					_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
 					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
+					tech_module.onInit(context);
+					
+					// One final check before we do anything: are we allowed to run multi-node if we're trying
+					//TODO (ALEPH-12): add test coverage for this
+					if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
+						if (!tech_module.supportsMultiNode(bucket, context)) {
+							return CompletableFuture.completedFuture(
+									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+										ErrorUtils.get(HarvestErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
+						}
+					}
 					
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-							tech_module.onInit(context);
 							final boolean accept_or_ignore =
 									canRunOnThisNode(bucket, dim_context) &&
 									tech_module.canRunOnThisNode(bucket, context);
@@ -275,37 +285,30 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
 						})
 						.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onDelete(bucket, context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onNewSource(bucket, context, !msg.is_suspended())  
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onUpdatedSource(msg.old_bucket(), bucket, msg.is_enabled(), BeanDiffUtils.createDiffBean(bucket, msg.old_bucket()), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.PurgeBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onPurge(msg.bucket(), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.TestBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onTestSource(bucket, msg.test_spec(), context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.when(BucketActionMessage.PollFreqBucketActionMessage.class, msg -> {
-							tech_module.onInit(context);
 							return tech_module.onPeriodicPoll(bucket, context)
 									.thenApply(reply -> new BucketActionHandlerMessage(source, reply));
 						})
 						.otherwise(msg -> { // return "command not recognized" error
-							tech_module.onInit(context);
 							return CompletableFuture.completedFuture(
 									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
 										HarvestErrorUtils.MESSAGE_NOT_RECOGNIZED, 

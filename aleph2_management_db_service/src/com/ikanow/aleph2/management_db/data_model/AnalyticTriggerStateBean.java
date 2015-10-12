@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.data_model;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.Optional;
 
 /** Contains the state necessary to determine when analytic buckets and jobs should trigger
  * @author Alex
@@ -44,7 +45,9 @@ public class AnalyticTriggerStateBean implements Serializable {
 			Date next_check, String bucket_id, String bucket_name,
 			String job_name, String input_data_service,
 			String input_resource_name_or_id, Long last_resource_size,
-			Long curr_resource_size) {
+			Long curr_resource_size,
+			String locked_to_host
+			) {
 		super();
 		this.is_active = is_active;
 		this.is_pending = is_pending;
@@ -57,8 +60,24 @@ public class AnalyticTriggerStateBean implements Serializable {
 		this.input_resource_name_or_id = input_resource_name_or_id;
 		this.last_resource_size = last_resource_size;
 		this.curr_resource_size = curr_resource_size;
+		this.locked_to_host = locked_to_host;
+		
+		this._id = buildId(bucket_name, job_name, Optional.ofNullable(locked_to_host), Optional.ofNullable(is_pending));
 	}
 
+	/** Builds this id
+	 * @param bean
+	 * @return
+	 */
+	public static String buildId(final String bucket_name, final String job_name, final Optional<String> locked_to_host, final Optional<Boolean> is_pending) {
+		return bucket_name + ":" + job_name + ":" + locked_to_host.orElse("") + ":" + is_pending.orElse(false);
+	}
+	
+	/** The bucket _id in the database
+	 * @return
+	 */
+	public String _id() { return _id; }
+	
 	/** whether the job/input is part of a bucket that is currently active
 	 * @return  whether the job/input is part of a bucket that is currently active
 	 */
@@ -106,6 +125,13 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 */
 	public Long curr_resource_size() { return curr_resource_size; }	
 	
+	/** For multi-node analytic jobs the copy of this state locked to this host
+	 * @return For multi-node analytic jobs the copy of this state locked to this host
+	 */
+	public String locked_to_host() { return locked_to_host; }
+	
+	protected String _id;
+	
 	protected Boolean is_active;
 	protected Boolean is_pending;
 	protected Date last_checked;
@@ -117,4 +143,5 @@ public class AnalyticTriggerStateBean implements Serializable {
 	protected String input_resource_name_or_id;
 	protected Long last_resource_size;
 	protected Long curr_resource_size;	
+	protected String locked_to_host;
 }

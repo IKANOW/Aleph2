@@ -60,13 +60,17 @@ public class JarCacheUtils {
 				// if the local version exists then overwrite it
 				
 				if (file_status.getModificationTime() > local_file_status.getModificationTime()) {
-
+					// (it gets kinda complicated here so just invalidate the entire classloader cache..)
+					// TODO (ALEPH-12): add a coverage test for this
+					ClassloaderUtils.clearCache();
+					
 					lfs.util().copy(original_jar_file, cached_jar_file, false, true);
 				}
 			}
 			catch (FileNotFoundException f) {
 				
 				// 2) if the local version doesn't exist then just copy the distributed file across
+				// (note: don't need to do anything with the classloader cache here since the file doesn't exist so can't have a cache key)
 				
 				lfs.util().copy(original_jar_file, cached_jar_file);
 			}

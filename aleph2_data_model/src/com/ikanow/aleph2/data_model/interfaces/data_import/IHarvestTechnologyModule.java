@@ -44,9 +44,19 @@ public interface IHarvestTechnologyModule {
 	 *  (eg is the external software installed? are the environment variables set up correctly etc) and return 
 	 *  true/false as quickly as possibly. (Will often default to just 'return true;') 
 	 * @param bucket - the bucket to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
+	 * @param context - the context for which an instance of this module has been created
 	 * @return true if this node can run this module's functionality
 	 */
 	boolean canRunOnThisNode(final DataBucketBean bucket, final IHarvestContext context);
+	
+	/** Whether this engine can be run in multi-node (defaults to true)
+	 * @param bucket - the bucket to check against (mostly this will be ignored, ie the function will just decide based on the technology module alone - but this enables the code to be cleverer, eg check the sub-modules as well)
+	 * @param context - the context for which an instance of this module has been created
+	 * @return whether this engine can be run in multi-node (defaults to true)
+	 */
+	default boolean supportsMultiNode(final DataBucketBean bucket, final IHarvestContext context) {
+		return true;
+	}
 	
 	/**
 	 * Handles either a new bucket associated with this harvester, or an existing bucket

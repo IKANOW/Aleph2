@@ -25,4 +25,5 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";
 	public static final String HARVEST_TECH_ERROR = "Harvest technology from bucket {1} (harvest tech {2}) manually called exception: {0}";
 	public static final String HARVEST_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";	 
+	public static final String TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH = "Tried to create a multi-node bucket {0} but technology {1} does not support multi-node: set 'multi_node_enabled' field to 'false'";
 }

@@ -25,5 +25,5 @@ public class AnalyticsErrorUtils {
 	public static final String NO_TECHNOLOGY_NAME_OR_ID = "No analytic technology name or id in bucket {0}";
 	public static final String TOPOLOGY_NAME_NOT_FOUND = "No valid topology {0} found for bucket {1}";
 	public static final String MESSAGE_NOT_RECOGNIZED = "Message type {1} not recognized for bucket {0}";	
-	public static final String TOPOLOGY_NULL_ERROR = "Topology from {0} (bucket {0}) was null";
+	public static final String TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH = "Tried to create a multi-node bucket {0} but technology {1} does not support multi-node: set 'multi_node_enabled' field to 'false'";
 }
