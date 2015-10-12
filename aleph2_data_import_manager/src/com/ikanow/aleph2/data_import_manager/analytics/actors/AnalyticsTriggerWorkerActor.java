@@ -18,12 +18,17 @@ package com.ikanow.aleph2.data_import_manager.analytics.actors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import akka.actor.AbstractActor;
+import com.ikanow.aleph2.data_model.utils.Patterns;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+
+import akka.actor.UntypedActor;
 
 /** This actor is responsible for checking the 
  * @author Alex
  */
-public class AnalyticsTriggerWorkerActor extends AbstractActor {
+public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected static final Logger _logger = LogManager.getLogger();	
 
 	// Messages I can receive:
@@ -32,4 +37,42 @@ public class AnalyticsTriggerWorkerActor extends AbstractActor {
 	// BucketActionMessage - update that specific bucket's jobs
 	
 	//TODO (ALEPH-12) Implementation
+	
+	/* (non-Javadoc)
+	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
+	 */
+	@Override
+	public void onReceive(Object message) throws Exception {		
+		Patterns.match(message).andAct()
+			.when(BucketActionMessage.class, msg -> onBucketChanged(msg))
+			.when(AnalyticTriggerMessage.class, 
+					msg -> null != msg.trigger_action_message(), 
+						msg -> onAnalyticTrigger(msg.trigger_action_message()))
+			.when(AnalyticTriggerMessage.class, 
+					msg -> null != msg.bucket_action_message(), 
+						msg -> onAnalyticBucketEvent(msg.bucket_action_message()))
+			;
+		
+	}	
+	
+	/** The bucket has changed so update the trigger state database
+	 * @param message
+	 */
+	protected void onBucketChanged(final BucketActionMessage message) {
+		//TODO (ALEPH-12)
+	}
+	
+	/** Regular trigger event messages, check for things we're supposed to check
+	 * @param message
+	 */
+	protected void onAnalyticTrigger(final AnalyticsTriggerActionMessage message) {
+		//TODO (ALEPH-12)		
+	}
+
+	/** Instruction to check a specific state
+	 * @param message
+	 */
+	protected void onAnalyticBucketEvent(final BucketActionMessage message) {
+		//TODO (ALEPH-12)		
+	}
 }

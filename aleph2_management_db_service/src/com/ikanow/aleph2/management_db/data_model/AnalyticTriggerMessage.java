@@ -53,7 +53,7 @@ public class AnalyticTriggerMessage implements Serializable {
 	/** Only one of this and bucket_action_message can be specified - if it's this then indicates that the set of triggers should be checked
 	 * @return if present 
 	 */
-	protected AnalyticsTriggerActionMessage trigger_action_message() { return trigger_action_message; }	
+	public AnalyticsTriggerActionMessage trigger_action_message() { return trigger_action_message; }	
 	
 	protected BucketActionMessage bucket_action_message;
 	protected AnalyticsTriggerActionMessage trigger_action_message;
