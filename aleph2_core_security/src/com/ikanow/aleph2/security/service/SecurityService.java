@@ -97,7 +97,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	*/
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Collections.emptyList();
+		return Arrays.asList(new PermissionExtractor()); 
+			//(not sure if "this" object is safe to use or if it will point to derived class, so just using random class that i know is from this JAR)
 	}
 
 	@Override
