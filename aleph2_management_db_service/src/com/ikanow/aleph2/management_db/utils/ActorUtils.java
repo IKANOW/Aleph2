@@ -23,6 +23,7 @@ public class ActorUtils {
 	public final static String BUCKET_ACTION_ZOOKEEPER = "/app/aleph2/bucket_actions";
 	public final static String BATCH_ENRICHMENT_ZOOKEEPER = "/app/aleph2/batch_enrichment";
 	public final static String BUCKET_ANALYTICS_ZOOKEEPER = "/app/aleph2/bucket_analytics";
+	public final static String BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER = "/app/aleph2/analytics_triggers/";
 	
 	public final static String BUCKET_ACTION_EVENT_BUS = BUCKET_ACTION_ZOOKEEPER;
 	public final static String BUCKET_ANALYTICS_EVENT_BUS = BUCKET_ANALYTICS_ZOOKEEPER;

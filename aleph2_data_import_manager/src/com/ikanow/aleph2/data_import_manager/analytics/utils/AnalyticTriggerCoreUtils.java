@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
@@ -32,7 +34,10 @@ import com.google.common.cache.CacheBuilder;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 /** A set of utilities for retrieving and updating the trigger state
  * @author Alex
@@ -61,16 +66,25 @@ public class AnalyticTriggerCoreUtils {
 			final Map<String, List<AnalyticTriggerStateBean>> all_triggers, 
 			final String process_id,
 			final CuratorFramework curator, 
-			final Tuple2<Duration, Runnable> mutex_fail_handler
+			final Tuple2<Duration, Consumer<String>> mutex_fail_handler
 			)
 	{		
-		//TODO (ALEPH-12) .. hmm i don't think this is gonna work is it? if i receive a one-off bucket message
-		// then i can't just ignore it because a trigger is running .. would have to dump to a temp database and then read back ugh
-		// alternative would be to use mutexes....i think maybe i prefer that to start with
-		
-		//TODO: need to be pretty aggressive with try/catches in here to make sure we don't leak away a mutex...
-		
-		return all_triggers;
+		return all_triggers.entrySet()
+			.stream() //(can't be parallel - has to happen in the same thread)
+			.map(kv -> Tuples._2T(kv, ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + kv.getKey()))
+			.flatMap(Lambdas.flatWrap_i(kv_path -> 
+						Tuples._2T(kv_path._1(), _mutex_cache.get(kv_path._2(), () -> { return new InterProcessMutex(curator, kv_path._2()); }))))
+			.flatMap(Lambdas.flatWrap_i(kv_mutex -> {
+				if (kv_mutex._2().acquire(mutex_fail_handler._1().getSeconds(), TimeUnit.SECONDS)) {
+					return kv_mutex._1();
+				}
+				else {
+					mutex_fail_handler._2().accept(kv_mutex._1().getKey()); // (run this synchronously, the callable can always run in a different thread if it wants to)
+					throw new RuntimeException(""); // (leaves the flatWrap empty)
+				}
+			}))
+			.collect(Collectors.toMap(kv -> kv.getKey(), kv -> kv.getValue()))
+			;
 	}
 	
 	/** Deregister interest in triggers once we have completed processing them
@@ -78,13 +92,48 @@ public class AnalyticTriggerCoreUtils {
 	 * @param curator
 	 */
 	public static void deregisterOwnershipOfTriggers(final Collection<String> path_names, CuratorFramework curator) {
-		//TODO (ALEPH-12)
+		path_names.stream() //(can't be parallel - has to happen in the same thread)
+			.map(path -> ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + path)
+			.map(path -> Tuples._2T(path, _mutex_cache.getIfPresent(path)))
+			.filter(path_mutex -> null != path_mutex._2())
+			.forEach(Lambdas.wrap_consumer_i(path_mutex -> path_mutex._2().release()));
 	}
 	
-	public static boolean isAnalyticJobActive(final DataBucketBean analytic_bucket, final AnalyticThreadJobBean job) {
-		//TODO (ALEPH-12)
+	/** TODO (ALEPH-12)
+	 * @param analytic_bucket
+	 * @param job
+	 * @return
+	 */
+	public static boolean isAnalyticJobActive(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name) {
 		return false;
 	}
 	
-	//TODO (ALEPH-12): overwrite old logic with pending logic once a job is complete
+	/** TODO (ALEPH-12): 
+	 * @param trigger_crud
+	 * @param triggers
+	 */
+	public static void storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<String, List<AnalyticTriggerStateBean>> triggers) {
+		
+		triggers.values().stream()
+			.flatMap(l -> l.stream())
+			.collect(Collectors.groupingBy(v -> Tuples._2T(v.bucket_name(), v.job_name())))
+			.entrySet()
+			.stream()
+			.forEach(kv -> {
+				// Step 1: is the bucket/job active?
+				final boolean is_active = isAnalyticJobActive(trigger_crud, kv.getKey()._1(), kv.getKey()._2());
+				// Step 2: write out the transformed job, with instructions to check in <5s and last_checked == now
+				//TODO (ALEPH-12)
+				// Step 3: then remove any existing entries with lesser last_checked
+				//TODO (ALEPH-12)
+			});
+			;
+	}
+
+	/** TODO (ALEPH-12): 
+	 * 
+	 */
+	public static void updateCompletedJob() {
+		// check if there's anything pending, if so copy over, else just unset active
+	}
 }
