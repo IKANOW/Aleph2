@@ -413,6 +413,7 @@ public class HarvestContext implements IHarvestContext {
 						Arrays.asList(
 								_distributed_services.getUnderlyingArtefacts(),
 								_service_context.getStorageService().getUnderlyingArtefacts(),
+								_service_context.getSecurityService().getUnderlyingArtefacts(),
 								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
 								)
 							.stream()
@@ -491,8 +492,8 @@ public class HarvestContext implements IHarvestContext {
 								.addAll(services.orElse(Collections.emptySet()))
 								.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 								.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
-								.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 								.add(Tuples._2T(IStorageService.class, Optional.empty()))
+								.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 								.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 					)
 					// Optional services:

@@ -396,8 +396,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 							.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
-							.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 							.add(Tuples._2T(IStorageService.class, Optional.empty()))
+							.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 							.build();
 			
@@ -829,6 +829,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 						Arrays.asList(
 								_distributed_services.getUnderlyingArtefacts(),
 								_service_context.getStorageService().getUnderlyingArtefacts(),
+								_service_context.getSecurityService().getUnderlyingArtefacts(),
 								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
 								)
 							.stream()
