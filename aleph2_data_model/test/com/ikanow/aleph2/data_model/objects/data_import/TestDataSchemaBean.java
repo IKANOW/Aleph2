@@ -37,19 +37,22 @@ public class TestDataSchemaBean {
 				true,
 				"raw_grouping_time_period",
 				"raw_exist_age_max",
-				"raw_codec"
+				"raw_codec",
+				null
 				);
 		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean json = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
 				false,
 				"json_grouping_time_period",
 				"json_exist_age_max",
+				null,
 				null
 				);
 		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean processed = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
 				null,
 				"processed_grouping_time_period",
 				"processed_exist_age_max",
-				"processed_codec"
+				"processed_codec",
+				null
 				);
 		
 		DataSchemaBean.StorageSchemaBean storage_bean =

@@ -130,13 +130,15 @@ public class DataSchemaBean implements Serializable {
 					final Boolean enabled,
 					final String grouping_time_period,
 					final String exist_age_max,
-					final String codec
+					final String codec,
+					final WriteSettings target_write_settings
 					) 
 			{
 				this.enabled = enabled;
 				this.grouping_time_period = grouping_time_period;
 				this.exist_age_max = exist_age_max;
 				this.codec = codec;
+				this.target_write_settings = target_write_settings;
 			}
 			
 			/** Describes if the archive service is used for this storage context (Raw/processed/json) in this bucket
@@ -168,10 +170,18 @@ public class DataSchemaBean implements Serializable {
 				return codec;
 			}
 			
+			/** The write settings for this sub-storage
+			 * @return
+			 */
+			public WriteSettings target_write_settings() {
+				return target_write_settings;
+			}			
+			
 			private Boolean enabled;
 			private String grouping_time_period;
 			private String exist_age_max;
 			private String codec;			
+			private WriteSettings target_write_settings;
 		}
 		
 		/** User constructor
