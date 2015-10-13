@@ -141,7 +141,7 @@ public class AnalyticThreadTriggerBean implements Serializable {
 		 */
 		public Boolean enabled() { return enabled; }
 		
-		public enum TriggerType { bucket, custom, file }
+		public enum TriggerType { bucket, custom, file, none }
 		
 		/** The type of trigger dependency - bucket (if the specified bucket has updated its output), custom (calls the analytic technology to decide whether to trigger), 
 		 *  file (checks if the specified directory has new data)

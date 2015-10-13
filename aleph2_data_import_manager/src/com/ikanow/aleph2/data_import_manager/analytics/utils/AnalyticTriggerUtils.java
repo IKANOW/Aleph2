@@ -78,6 +78,10 @@ public class AnalyticTriggerUtils {
 		
 		// 1.2) Convert them to state beans
 		
+		//TODO (ALEPH-12): normalize resource_namr_or_id and subchannel as below
+		
+		//TODO (ALEPH-12): set limits if they exist (else 1)
+		
 		final Stream<AnalyticTriggerStateBean> external_state_beans =
 				bucket_dependencies.map(List::stream).orElseGet(Stream::empty)
 					.map(trigger -> {
@@ -86,6 +90,7 @@ public class AnalyticTriggerUtils {
 									.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 									.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
 									//(no job for these global params)
+									.with(AnalyticTriggerStateBean::trigger_type, trigger.type())
 									.with(AnalyticTriggerStateBean::input_data_service, trigger.data_service())
 									.with(AnalyticTriggerStateBean::input_resource_name_or_id, trigger.resource_name_or_id())
 									//(more transient counts)									
@@ -114,13 +119,16 @@ public class AnalyticTriggerUtils {
 					return deps_filter.contains(job_trigger._2().get().resource_name_or_id().split(":")[1]);
 				})
 				.map(job_trigger -> {
+					final String[] resource_subchannel = job_trigger._2().get().resource_name_or_id().split(":");
+					
 					return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 							//(add the transient params later)
 							.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 							.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
 							.with(AnalyticTriggerStateBean::job_name, job_trigger._1().name())
 							.with(AnalyticTriggerStateBean::input_data_service, job_trigger._2().get().data_service())
-							.with(AnalyticTriggerStateBean::input_resource_name_or_id, job_trigger._2().get().resource_name_or_id())
+							.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
+							.with(AnalyticTriggerStateBean::input_resource_subchannel, resource_subchannel[1].isEmpty() ? null : resource_subchannel[1])
 							//(more transient counts)									
 							.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 						.done().get();				

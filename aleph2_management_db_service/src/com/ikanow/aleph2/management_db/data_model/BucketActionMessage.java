@@ -17,10 +17,12 @@ package com.ikanow.aleph2.management_db.data_model;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import akka.actor.ActorRef;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
@@ -184,5 +186,31 @@ public class BucketActionMessage implements Serializable {
 		public PollFreqBucketActionMessage(final DataBucketBean bucket) {
 			super(bucket);
 		}
+	}
+	public static class BucketActionAnalyticJobMessage extends BucketActionMessage implements Serializable {
+		private static final long serialVersionUID = -8638417014896946076L;
+
+		protected BucketActionAnalyticJobMessage() { super(null, null); }
+		public enum JobMessageType { starting, stopping, check_completion };
+		
+		public BucketActionAnalyticJobMessage(final DataBucketBean bucket, final List<AnalyticThreadJobBean> jobs, final JobMessageType type) {
+			super(bucket);
+			this.jobs = jobs;
+			this.type = type;
+		}
+		
+		/** The jobs affected by the message
+		 * @return
+		 */
+		public List<AnalyticThreadJobBean> jobs() { return jobs; }
+		
+		
+		/** Whether the message indicates that jobs have stopped or started (if started, by manual trigger)
+		 * @return
+		 */
+		public JobMessageType type() { return type; }
+		
+		protected List<AnalyticThreadJobBean> jobs;
+		protected JobMessageType type;
 	}
 }

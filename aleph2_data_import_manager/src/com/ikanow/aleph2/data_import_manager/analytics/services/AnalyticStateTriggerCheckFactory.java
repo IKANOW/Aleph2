@@ -18,4 +18,5 @@ package com.ikanow.aleph2.data_import_manager.analytics.services;
 public class AnalyticStateTriggerCheckFactory {
 
 	//TODO (ALEPH-12): return various analytic triggers
+	// hmm one thing is there's the concept of a static check (just recheck the values) vs a dynamic check (retrieve the values) 
 }

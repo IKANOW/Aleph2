@@ -19,6 +19,8 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
+
 /** Contains the state necessary to determine when analytic buckets and jobs should trigger
  * @author Alex
  */
@@ -29,7 +31,7 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 */
 	protected AnalyticTriggerStateBean() {}
 	
-	/**
+	/** A c'tor for an analytic state trigger
 	 * @param is_active - whether the job/input is part of a bucket that is currently active
 	 * @param last_checked - the last time the trigger state was checked
 	 * @param next_check - the next scheduled check
@@ -43,7 +45,8 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 */
 	public AnalyticTriggerStateBean(Boolean is_active, Boolean is_pending, Date last_checked,
 			Date next_check, String bucket_id, String bucket_name,
-			String job_name, String input_data_service,
+			String job_name, 
+			TriggerType trigger_type, String input_data_service,
 			String input_resource_name_or_id, Long last_resource_size,
 			Long curr_resource_size,
 			String locked_to_host
@@ -57,6 +60,7 @@ public class AnalyticTriggerStateBean implements Serializable {
 		this.bucket_name = bucket_name;
 		this.job_name = job_name;
 		this.input_data_service = input_data_service;
+		this.trigger_type = trigger_type;
 		this.input_resource_name_or_id = input_resource_name_or_id;
 		this.last_resource_size = last_resource_size;
 		this.curr_resource_size = curr_resource_size;
@@ -116,6 +120,12 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 * @return the resource_name_or_id of the input
 	 */
 	public String input_resource_name_or_id() { return input_resource_name_or_id; }
+	
+	/** If the dependency is on a sub-channel of the resource, it is noted here
+	 * @return sub-channel of the resource, if present
+	 */
+	public String input_resource_subchannel() { return input_resource_subchannel; }
+	
 	/** the last resource size that triggered
 	 * @return the last resource size that triggered
 	 */
@@ -125,13 +135,22 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 */
 	public Long curr_resource_size() { return curr_resource_size; }	
 	
+	/** If populated, enables a quick check of the 2 resource values to determine whether to trigger (without hitting the DB)
+	 * @return the limit to compare last-curr resource size
+	 */
+	public Long resource_limit() { return resource_limit; }
+	
 	/** For multi-node analytic jobs the copy of this state locked to this host
 	 * @return For multi-node analytic jobs the copy of this state locked to this host
 	 */
 	public String locked_to_host() { return locked_to_host; }
 	
-	protected String _id;
+	/** The type of the trigger ("none" if it's an active job notification)
+	 * @return The type of the trigger ("none" if it's an active job notification)
+	 */
+	public TriggerType trigger_type() { return trigger_type; } 
 	
+	protected String _id;	
 	protected Boolean is_active;
 	protected Boolean is_pending;
 	protected Date last_checked;
@@ -141,7 +160,10 @@ public class AnalyticTriggerStateBean implements Serializable {
 	protected String job_name;
 	protected String input_data_service;
 	protected String input_resource_name_or_id;
+	protected String input_resource_subchannel;
 	protected Long last_resource_size;
 	protected Long curr_resource_size;	
+	protected Long resource_limit;
 	protected String locked_to_host;
+	protected TriggerType trigger_type;
 }

@@ -29,6 +29,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
@@ -93,8 +94,17 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	
 			// ensure analytic queue is optimized:
 	
-			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::is_active)));
-			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::next_check)));
+			final MethodNamingHelper<AnalyticTriggerStateBean> state_clazz = BeanTemplateUtils.from(AnalyticTriggerStateBean.class);
+			
+			//TODO (ALEPH-12): lots of other optimizations required here:
+			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(state_clazz.field(AnalyticTriggerStateBean::next_check)));
+			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(state_clazz.field(AnalyticTriggerStateBean::last_checked)));
+			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(
+					state_clazz.field(AnalyticTriggerStateBean::bucket_name),
+					state_clazz.field(AnalyticTriggerStateBean::job_name),
+					state_clazz.field(AnalyticTriggerStateBean::locked_to_host),
+					state_clazz.field(AnalyticTriggerStateBean::is_active)
+				));
 			
 			_logger.info("Initialized AnalyticsTriggerSupervisorActor");
 		}
