@@ -116,7 +116,7 @@ public class TestDataBucketChangeActor {
 		
 		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
 		
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(),null);
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(),null, null);
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		

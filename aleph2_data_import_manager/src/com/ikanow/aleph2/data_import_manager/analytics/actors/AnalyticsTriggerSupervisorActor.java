@@ -102,8 +102,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(
 					state_clazz.field(AnalyticTriggerStateBean::bucket_name),
 					state_clazz.field(AnalyticTriggerStateBean::job_name),
-					state_clazz.field(AnalyticTriggerStateBean::locked_to_host),
-					state_clazz.field(AnalyticTriggerStateBean::is_active)
+					state_clazz.field(AnalyticTriggerStateBean::locked_to_host)
 				));
 			
 			_logger.info("Initialized AnalyticsTriggerSupervisorActor");

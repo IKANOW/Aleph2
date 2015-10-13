@@ -15,8 +15,30 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.services;
 
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+
+import scala.Tuple2;
+
+/** Factory class for generating
+ * @author Alex
+ */
 public class AnalyticStateTriggerCheckFactory {
 
-	//TODO (ALEPH-12): return various analytic triggers
-	// hmm one thing is there's the concept of a static check (just recheck the values) vs a dynamic check (retrieve the values) 
+	/** Interface for performing the trigger check
+	 * @author Alex
+	 */
+	public static interface AnalyticStateChecker {
+		CompletableFuture<Tuple2<Boolean, Long>> check(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final AnalyticTriggerStateBean trigger);
+	}
+	
+	public AnalyticStateChecker getChecker(final TriggerType trigger_type) {
+		//TODO (ALEPH-12): return various analytic triggers
+		return null;
+	}
 }

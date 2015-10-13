@@ -15,7 +15,9 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,6 +36,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
+import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 
@@ -47,9 +50,9 @@ public class AnalyticTriggerUtils {
 	 * @param job
 	 * @return
 	 */
-	public static Stream<AnalyticTriggerStateBean> generateTriggerStateStream(final DataBucketBean bucket, Optional<String> locked_to_host) {		
-		
-		Optional<AnalyticThreadTriggerBean> trigger_info = Optionals.of(() -> bucket.analytic_thread().trigger_config());
+	public static Stream<AnalyticTriggerStateBean> generateTriggerStateStream(final DataBucketBean bucket, final boolean is_suspended, Optional<String> locked_to_host)
+	{				
+		final Optional<AnalyticThreadTriggerBean> trigger_info = Optionals.of(() -> bucket.analytic_thread().trigger_config());
 				
 		// There are 2 types of dependency:
 		
@@ -78,22 +81,25 @@ public class AnalyticTriggerUtils {
 		
 		// 1.2) Convert them to state beans
 		
-		//TODO (ALEPH-12): normalize resource_namr_or_id and subchannel as below
-		
-		//TODO (ALEPH-12): set limits if they exist (else 1)
-		
 		final Stream<AnalyticTriggerStateBean> external_state_beans =
 				bucket_dependencies.map(List::stream).orElseGet(Stream::empty)
 					.map(trigger -> {
+						final String[] resource_subchannel = trigger.resource_name_or_id().split(":");						
+						
 						return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 									//(add the transient params later)
 									.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 									.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
+									.with(AnalyticTriggerStateBean::is_bucket_active, false)
+									.with(AnalyticTriggerStateBean::is_job_active, false)
+									.with(AnalyticTriggerStateBean::is_bucket_suspended, is_suspended)
 									//(no job for these global params)
 									.with(AnalyticTriggerStateBean::trigger_type, trigger.type())
 									.with(AnalyticTriggerStateBean::input_data_service, trigger.data_service())
-									.with(AnalyticTriggerStateBean::input_resource_name_or_id, trigger.resource_name_or_id())
-									//(more transient counts)									
+									.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
+									.with(AnalyticTriggerStateBean::input_resource_combined, trigger.resource_name_or_id())
+									//(more transient counts)
+									.with(AnalyticTriggerStateBean::resource_limit, trigger.resource_trigger_limit())
 									.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 								.done().get();
 					})
@@ -116,7 +122,8 @@ public class AnalyticTriggerUtils {
 				.map(job_input -> Tuples._2T(job_input._1(), convertInternalInputToComplexTrigger(bucket, job_input._2())))
 				.filter(job_trigger -> job_trigger._2().isPresent())
 				.filter(job_trigger -> { // (note that have ensured the "rid" is in form external:internal by this point
-					return deps_filter.contains(job_trigger._2().get().resource_name_or_id().split(":")[1]);
+					final String[] resource_subchannel = job_trigger._2().get().resource_name_or_id().split(":");
+					return deps_filter.contains(resource_subchannel[1]);
 				})
 				.map(job_trigger -> {
 					final String[] resource_subchannel = job_trigger._2().get().resource_name_or_id().split(":");
@@ -125,10 +132,11 @@ public class AnalyticTriggerUtils {
 							//(add the transient params later)
 							.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 							.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
+							.with(AnalyticTriggerStateBean::is_bucket_active, false)
 							.with(AnalyticTriggerStateBean::job_name, job_trigger._1().name())
 							.with(AnalyticTriggerStateBean::input_data_service, job_trigger._2().get().data_service())
 							.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
-							.with(AnalyticTriggerStateBean::input_resource_subchannel, resource_subchannel[1].isEmpty() ? null : resource_subchannel[1])
+							.with(AnalyticTriggerStateBean::input_resource_combined, job_trigger._2().get().resource_name_or_id())
 							//(more transient counts)									
 							.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 						.done().get();				
@@ -138,22 +146,9 @@ public class AnalyticTriggerUtils {
 		return Stream.concat(external_state_beans, internal_state_beans);
 	}
 	
-	/** Builds a set of trigger beans from the internal inputs
-	 *  TODO (ALEPH-12): not sure if this is still needed?
-	 * @return
-	 */
-	public static List<AnalyticThreadComplexTriggerBean> getInternalTriggerList(final DataBucketBean bucket) {
-		
-		return Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
-			.stream()
-			.flatMap(job -> job.inputs().stream())
-			.filter(input -> Optional.ofNullable(input.enabled()).orElse(true))
-			.map(input -> convertInternalInputToComplexTrigger(bucket, input))
-			.filter(opt_input -> opt_input.isPresent())
-			.map(opt_input -> opt_input.get())
-			.collect(Collectors.toList())
-			;
-	}
+	///////////////////////////////////////////////////////////////////////////
+	
+	// UTILS FOR DECIDING WHETHER TO TRIGGER 
 	
 	/** Converts an analytic input to an optional trigger bean
 	 * @param input
@@ -247,6 +242,9 @@ public class AnalyticTriggerUtils {
 		}
 	}
 	
+	///////////////////////////////////////////////////////////////////////////
+	
+	// UTILS FOR DECIDING WHETHER TO TRIGGER 
 	
 	/** Checks a set of triggered resources against the complex trigger "equation" in the bucket
 	 * @param trigger
@@ -276,4 +274,61 @@ public class AnalyticTriggerUtils {
 			}
 		}
 	}
+	
+	/** Just gets the manual trigger if present else builds an automatic one
+	 * @return the trigger to be used (or empty if the bucket doesn't have one)
+	 */
+	public static Optional<AnalyticThreadComplexTriggerBean> getManualOrAutomatedTrigger(final DataBucketBean bucket) {
+		
+		final Optional<AnalyticThreadComplexTriggerBean> trigger_info = 
+				Optionals.of(() -> bucket.analytic_thread().trigger_config())
+				.map(info -> {
+					if (Optional.ofNullable(info.auto_calculate()).orElse(null != info.trigger())) {
+						return new AnalyticThreadComplexTriggerBean(null, null, getFullyAutomaticTriggerList(bucket));
+					}
+					else {
+						return info.trigger();
+					}					
+				});
+				;
+				
+		return trigger_info;
+	}
+	
+	/** Simple utility to compare a few longs to decide if an updated trigger has activated 
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean checkTriggerLimits(final AnalyticTriggerStateBean trigger) {
+		if ((null != trigger.curr_resource_size())
+				&&
+			(null != trigger.last_resource_size()))
+		{
+			return (trigger.last_resource_size() - trigger.curr_resource_size())
+					> Optional.ofNullable(trigger.resource_limit()).orElse(0L);
+		}
+		else return false;																
+	}
+
+	///////////////////////////////////////////////////////////////////////////
+	
+	// TIMING UTILS
+	
+	/** Uses the bucket params and the time utils to select a next check time for the bucket triggers
+	 * @param from
+	 * @param bucket
+	 * @return
+	 */
+	public static Date getNextCheckTime(final Date from, DataBucketBean bucket) {
+		final String check_time =
+				Optionals.of(() -> bucket.analytic_thread().trigger_config()).map(cfg -> cfg.schedule()).map(Optional::of)
+				.orElse(Optional.ofNullable(bucket.poll_frequency()))
+				.orElse("")
+				;
+		
+		return TimeUtils.getSchedule(check_time, Optional.of(from))
+				.validation(fail -> Date.from(from.toInstant().plus(10L, ChronoUnit.MINUTES)), success -> success);
+	}
+	
+
 }

@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
@@ -32,8 +34,10 @@ import scala.Tuple2;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
@@ -45,22 +49,59 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 public class AnalyticTriggerCoreUtils {
 	protected final static Cache<String, InterProcessMutex> _mutex_cache = CacheBuilder.newBuilder().expireAfterAccess(2, TimeUnit.HOURS).build();
 
-	/** Get a list of triggers indexed by bucket to examine
+	/** Get a list of triggers indexed by bucket (plus host for host-locked jobs) to examine for completion/triggering
+	 *  May at some point need to update the next_check time on the underlying database records (currently doesn't, we'll let the interprocess mutex sort that out)
+	 *  Here's the set of triggers that we want to get
+	 *  1) External triggers for inactive buckets
+	 *  2) Internal triggers for active buckets 
+	 *  3) Active jobs
 	 * @param trigger_crud
 	 * @return
 	 */
 	public static CompletableFuture<Map<String, List<AnalyticTriggerStateBean>>> getTriggersToCheck(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {		
-		//TODO (ALEPH-12)
+		//TODO (ALEPH-12) - add these to the optimized list in singleton
 		
-		return null;
+		//TODO (ALEPH-12): errr pretty sure all these need to include a "date" term....
+		
+		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
+				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.when(AnalyticTriggerStateBean::is_job_active, true)
+					.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none);
+		
+		final QueryComponent<AnalyticTriggerStateBean> external_query =
+				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.when(AnalyticTriggerStateBean::is_bucket_active, false)
+					.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
+					.withNotPresent(AnalyticTriggerStateBean::job_name);
+				
+		final QueryComponent<AnalyticTriggerStateBean> internal_query =
+				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.when(AnalyticTriggerStateBean::is_bucket_active, true)
+					.withPresent(AnalyticTriggerStateBean::job_name);
+						
+		final QueryComponent<AnalyticTriggerStateBean> query = CrudUtils.anyOf(Arrays.asList(active_job_query, external_query, internal_query));
+		
+		return trigger_crud.getObjectsBySpec(query).thenApply(cursor -> 
+				StreamSupport.stream(cursor.spliterator(), false)
+							.collect(Collectors.<AnalyticTriggerStateBean, String>
+								groupingBy(trigger -> trigger.bucket_name() + ":" + trigger.locked_to_host())));		
+	}
+	
+	/** Just deletes everything for a deleted bucket
+	 *  May need to make this cleverer at some point
+	 * @param trigger_crud
+	 * @param bucket
+	 */
+	public static void deleteTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+		trigger_crud.deleteObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class).when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()));
 	}
 	
 	/** Removes any triggers other users might have ownership over and grabs ownership
-	 * @param all_triggers
+	 * @param all_triggers - triggers indexed by bucket (+host for host-locked jobs)
 	 * @param process_id
 	 * @param curator
 	 * @param mutex_fail_handler - sets the duration of the mutex wait, and what to do if it fails (ie for triggers, short wait and do nothing; for bucket message wait for longer and save them to a retry queue)
-	 * @return
+	 * @return - filtered trigger set, still indexed by bucket
 	 */
 	public static Map<String, List<AnalyticTriggerStateBean>> registerOwnershipOfTriggers(
 			final Map<String, List<AnalyticTriggerStateBean>> all_triggers, 

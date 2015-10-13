@@ -32,27 +32,38 @@ public class AnalyticTriggerStateBean implements Serializable {
 	protected AnalyticTriggerStateBean() {}
 	
 	/** A c'tor for an analytic state trigger
-	 * @param is_active - whether the job/input is part of a bucket that is currently active
+	 * @param is_active - whether the job/input is part of a bucket that is currently active //TODO: needs to be split between bucket and job
+	 * @param is_pending - whether this trigger hasn't been applied because it's waiting for the current job to complete first
 	 * @param last_checked - the last time the trigger state was checked
 	 * @param next_check - the next scheduled check
 	 * @param bucket_id - the _id of the bucket
 	 * @param bucket_name - the full_name of the bucket
-	 * @param job_name - the name of the job 
+	 * @param job_name - the name of the job (not present for external triggers)
 	 * @param input_data_service - the data_service of the input
+	 * @param trigger_type - the trigger type (can be manually specified for 
 	 * @param input_resource_name_or_id - the resource_name_or_id of the input
 	 * @param last_resource_size - the last resource size that triggered
 	 * @param new_resource_size - the current resource size
+	 * @param resource_limit - enables quick trigger checks
+	 * @param locked_to_host - if this job is associated with a specific host (supports multi-node analytic technologies)
 	 */
-	public AnalyticTriggerStateBean(Boolean is_active, Boolean is_pending, Date last_checked,
-			Date next_check, String bucket_id, String bucket_name,
+	public AnalyticTriggerStateBean(
+			Boolean is_bucket_active, Boolean is_job_active, 
+			Boolean is_bucket_suspended, Boolean is_pending, 
+			Date last_checked, Date next_check, 
+			String bucket_id, String bucket_name,
 			String job_name, 
 			TriggerType trigger_type, String input_data_service,
-			String input_resource_name_or_id, Long last_resource_size,
+			String input_resource_name_or_id, 
+			String input_resource_combined,
+			Long last_resource_size,
 			Long curr_resource_size,
+			Long resource_limit,
 			String locked_to_host
 			) {
-		super();
-		this.is_active = is_active;
+		this.is_bucket_active = is_bucket_active;
+		this.is_job_active = is_job_active;
+		this.is_bucket_suspended = is_bucket_suspended;
 		this.is_pending = is_pending;
 		this.last_checked = last_checked;
 		this.next_check = next_check;
@@ -62,8 +73,10 @@ public class AnalyticTriggerStateBean implements Serializable {
 		this.input_data_service = input_data_service;
 		this.trigger_type = trigger_type;
 		this.input_resource_name_or_id = input_resource_name_or_id;
+		this.input_resource_combined = input_resource_combined;
 		this.last_resource_size = last_resource_size;
 		this.curr_resource_size = curr_resource_size;
+		this.resource_limit = resource_limit;
 		this.locked_to_host = locked_to_host;
 		
 		this._id = buildId(bucket_name, job_name, Optional.ofNullable(locked_to_host), Optional.ofNullable(is_pending));
@@ -82,10 +95,20 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 */
 	public String _id() { return _id; }
 	
-	/** whether the job/input is part of a bucket that is currently active
+	/** whether the job/input is part of a _bucket_ that is currently active
 	 * @return  whether the job/input is part of a bucket that is currently active
 	 */
-	public Boolean is_active() { return is_active; }
+	public Boolean is_bucket_active() { return is_bucket_active; }
+	
+	/** whether the job/input is part of a _bucket_ that is currently suspended (ie inactive)
+	 * @return  whether the job/input is part of a bucket that is currently active
+	 */
+	public Boolean is_bucket_suspended() { return is_bucket_suspended; }
+	
+	/** whether the job/input is part of a _job_ that is currently active
+	 * @return  whether the job/input is part of a bucket that is currently active
+	 */
+	public Boolean is_job_active() { return is_job_active; }
 	
 	/** If a bucket is active then can't edit its trigger until its done - we store the state here and then overwrite 
 	 * @return  whether the job/input is an update to an active bucket
@@ -116,15 +139,16 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 * @return the data_service of the input
 	 */
 	public String input_data_service() { return input_data_service; }
-	/** the resource_name_or_id of the input
+	
+	/** the resource_name_or_id of the input - note _doesn't_ include any sub-channel information
 	 * @return the resource_name_or_id of the input
 	 */
 	public String input_resource_name_or_id() { return input_resource_name_or_id; }
 	
-	/** If the dependency is on a sub-channel of the resource, it is noted here
-	 * @return sub-channel of the resource, if present
+	/** For cases where the trigger depends on an intermediate result, this is in the form resource_name_or_id:subchannel
+	 * @return combined resource-id or sub-channel of the resource, if present
 	 */
-	public String input_resource_subchannel() { return input_resource_subchannel; }
+	public String input_resource_combined() { return input_resource_combined; }
 	
 	/** the last resource size that triggered
 	 * @return the last resource size that triggered
@@ -151,7 +175,9 @@ public class AnalyticTriggerStateBean implements Serializable {
 	public TriggerType trigger_type() { return trigger_type; } 
 	
 	protected String _id;	
-	protected Boolean is_active;
+	protected Boolean is_job_active;
+	protected Boolean is_bucket_active;
+	protected Boolean is_bucket_suspended;
 	protected Boolean is_pending;
 	protected Date last_checked;
 	protected Date next_check;
@@ -160,7 +186,7 @@ public class AnalyticTriggerStateBean implements Serializable {
 	protected String job_name;
 	protected String input_data_service;
 	protected String input_resource_name_or_id;
-	protected String input_resource_subchannel;
+	protected String input_resource_combined;
 	protected Long last_resource_size;
 	protected Long curr_resource_size;	
 	protected Long resource_limit;

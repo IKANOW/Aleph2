@@ -89,7 +89,7 @@ public class TestDataBucketChangeActorNodeRules {
 				.with(DataImportConfigurationBean::node_rules, node_rules)
 				.done().get();
 		
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), dim_config);
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), dim_config, null);
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		
