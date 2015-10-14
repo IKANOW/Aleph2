@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 
 import scala.Tuple2;
 
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
@@ -107,41 +106,32 @@ public class AnalyticTriggerUtils {
 		
 		// 2) Internal dependencies between jobs in active buckets
 		
-		final Set<String> deps_filter = 
-				Optionals.of(() -> bucket.analytic_thread().jobs()).map(List::stream).orElseGet(Stream::empty)
-				.filter(job -> job.enabled())
-				.flatMap(job -> Optionals.ofNullable(job.dependencies()).stream())
-				.collect(Collectors.toSet())
-				;
-		
+		// (OK I think at some point soon what i'll want to do is enable complex triggers for jobs
+		//  but for now all you can do is specify jobs ... each time a job updates it will increment a count)
+
 		final Stream<AnalyticTriggerStateBean> internal_state_beans =
-			Optionals.of(() -> bucket.analytic_thread().jobs()).map(List::stream).orElseGet(Stream::empty)
-				.filter(job -> job.enabled())
-				.<Tuple2<AnalyticThreadJobBean, AnalyticThreadJobInputBean>>
-					flatMap(job -> Optionals.ofNullable(job.inputs()).stream().filter(i -> i.enabled()).map(i -> Tuples._2T(job, i)))
-				.map(job_input -> Tuples._2T(job_input._1(), convertInternalInputToComplexTrigger(bucket, job_input._2())))
-				.filter(job_trigger -> job_trigger._2().isPresent())
-				.filter(job_trigger -> { // (note that have ensured the "rid" is in form external:internal by this point
-					final String[] resource_subchannel = job_trigger._2().get().resource_name_or_id().split(":");
-					return deps_filter.contains(resource_subchannel[1]);
-				})
-				.map(job_trigger -> {
-					final String[] resource_subchannel = job_trigger._2().get().resource_name_or_id().split(":");
-					
-					return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
-							//(add the transient params later)
-							.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
-							.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
-							.with(AnalyticTriggerStateBean::is_bucket_active, false)
-							.with(AnalyticTriggerStateBean::job_name, job_trigger._1().name())
-							.with(AnalyticTriggerStateBean::input_data_service, job_trigger._2().get().data_service())
-							.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
-							.with(AnalyticTriggerStateBean::input_resource_combined, job_trigger._2().get().resource_name_or_id())
-							//(more transient counts)									
-							.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
-						.done().get();				
-				})
-				;
+				Optionals.of(() -> bucket.analytic_thread().jobs()).map(List::stream).orElseGet(Stream::empty)
+					.map(job -> {
+						return Optionals.ofNullable(job.dependencies()).stream()
+								.<AnalyticTriggerStateBean>map(dep -> {
+									return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
+											.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
+											.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
+											.with(AnalyticTriggerStateBean::job_name, job.name())
+											.with(AnalyticTriggerStateBean::is_bucket_active, false)
+											.with(AnalyticTriggerStateBean::is_job_active, false)
+											.with(AnalyticTriggerStateBean::is_bucket_suspended, is_suspended)
+											.with(AnalyticTriggerStateBean::trigger_type, TriggerType.bucket)
+											// (no resources)
+											.with(AnalyticTriggerStateBean::curr_resource_size, 0L)
+											.with(AnalyticTriggerStateBean::last_resource_size, 0L)
+											.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))												
+											.done().get();
+								})
+						;
+					})
+					.flatMap(s -> s)
+					;
 		
 		return Stream.concat(external_state_beans, internal_state_beans);
 	}

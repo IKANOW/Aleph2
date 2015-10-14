@@ -16,8 +16,10 @@
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -61,21 +63,24 @@ public class AnalyticTriggerCoreUtils {
 	public static CompletableFuture<Map<String, List<AnalyticTriggerStateBean>>> getTriggersToCheck(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {		
 		//TODO (ALEPH-12) - add these to the optimized list in singleton
 		
-		//TODO (ALEPH-12): errr pretty sure all these need to include a "date" term....
+		final Date now = Date.from(Instant.now());
 		
 		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.rangeBelow(AnalyticTriggerStateBean::next_check, now, false)
 					.when(AnalyticTriggerStateBean::is_job_active, true)
 					.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none);
 		
 		final QueryComponent<AnalyticTriggerStateBean> external_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.rangeBelow(AnalyticTriggerStateBean::next_check, now, false)
 					.when(AnalyticTriggerStateBean::is_bucket_active, false)
 					.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
 					.withNotPresent(AnalyticTriggerStateBean::job_name);
 				
 		final QueryComponent<AnalyticTriggerStateBean> internal_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.rangeBelow(AnalyticTriggerStateBean::next_check, now, false)
 					.when(AnalyticTriggerStateBean::is_bucket_active, true)
 					.withPresent(AnalyticTriggerStateBean::job_name);
 						
