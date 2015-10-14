@@ -16,10 +16,13 @@
 package com.ikanow.aleph2.management_db.utils;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -41,10 +44,14 @@ public class AnalyticActorUtils {
 	 * @param bucket
 	 * @return
 	 */
-	public static Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> splitAnalyticBuckets(final DataBucketBean bucket) {
-		Map<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>> res1 = 
+	public static Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> splitAnalyticBuckets(final DataBucketBean bucket, final Optional<DataBucketBean> old_bucket) {
+		
+		final HashSet<Tuple3<String, String, MasterEnrichmentType>> mutable_tech_set = new HashSet<>();
+		
+		final Map<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>> res1 = 
 			Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 						.stream()
+						.peek(job -> mutable_tech_set.add(Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type()))) //INTERNAL SIDE EFFECT!
 						.collect(Collectors
 								.
 								groupingBy(
@@ -56,8 +63,25 @@ public class AnalyticActorUtils {
 								))
 								;
 		
-		return res1.entrySet()
-					.stream()
+		// If there's an update bucket we're going to look for analytic techs that aren't present in the new bucket so we can send "empty" messages to the DIM
+		
+		final Map<Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>> res2 = old_bucket.map(old -> {
+			return Optionals.of(() -> old.analytic_thread().jobs()).orElse(Collections.emptyList())
+								.stream()
+								.filter(job -> !mutable_tech_set.contains(Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type()))) // (ie only things that no longer appear)
+								.collect(Collectors
+										.<AnalyticThreadJobBean, Tuple3<String, String, MasterEnrichmentType>, List<AnalyticThreadJobBean>>
+										toMap((AnalyticThreadJobBean job) -> Tuples._3T(job.analytic_technology_name_or_id(), job.entry_point(), job.analytic_type())
+												,
+												job -> Collections.emptyList()
+												,
+												(acc1, acc2) -> Collections.emptyList()
+												))
+										;
+		})
+		.orElse(Collections.emptyMap());
+		
+		return Stream.concat(res1.entrySet().stream(), res2.entrySet().stream())
 					.collect(Collectors
 						.
 						toMap(

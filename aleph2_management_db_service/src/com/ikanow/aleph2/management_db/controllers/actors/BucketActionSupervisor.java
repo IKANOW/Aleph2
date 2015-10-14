@@ -52,7 +52,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
-import akka.pattern.Patterns;
 
 /** This actor just exists to manage the child actors that actually do work
  * @author acp
@@ -63,7 +62,7 @@ public class BucketActionSupervisor extends UntypedActor {
 	
 	//TODO (ALEPH-19): Need different timeouts to handle "found harvester it's taking its time" vs "waiting internally for harvesters"
 	// this is larger than it needs to be to handle that case
-	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(888, TimeUnit.SECONDS);
+	public static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(240, TimeUnit.SECONDS);
 	
 	/** Internal request message for forwarding from the supervisor to its children
 	 * @author acp
@@ -201,7 +200,7 @@ public class BucketActionSupervisor extends UntypedActor {
 									(!stream.replies().isEmpty() && stream.replies().get(0).success())))
 							{
 								return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>
-									efficientWrap(Patterns.ask(supervisor, m, 
+									efficientWrap(akka.pattern.Patterns.ask(supervisor, m, 
 										getTimeoutMultipler(actor_type)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
 											.thenApply(harvest -> {
 												if (null != stream) {
@@ -258,7 +257,7 @@ public class BucketActionSupervisor extends UntypedActor {
 				ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, timeout);
 		// (note that I'm stripping the node_affinity for analytics messages, they always get distributed across available nodes)
 
-		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(Patterns.ask(supervisor, m, 
+		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(akka.pattern.Patterns.ask(supervisor, m, 
 				getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())
 				.thenApply(stream -> {
 					List<BasicMessageBean> replace = Optionals.ofNullable(stream.replies()).stream()
@@ -287,8 +286,12 @@ public class BucketActionSupervisor extends UntypedActor {
 						final Optional<FiniteDuration> timeout)
 	{
 
+		final Optional<DataBucketBean> old_bucket = com.ikanow.aleph2.data_model.utils.Patterns.match(message).<Optional<DataBucketBean>>andReturn()
+													.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> Optional.of(msg.old_bucket()))
+													.otherwise(__ -> Optional.empty());
+		
 		// Split into sub-buckets
-		final Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> sub_buckets = AnalyticActorUtils.splitAnalyticBuckets(bucket);
+		final Map<Tuple3<String, String, MasterEnrichmentType>, DataBucketBean> sub_buckets = AnalyticActorUtils.splitAnalyticBuckets(bucket, old_bucket);
 		
 		// Create a stream of requests
 		final List<CompletableFuture<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>> results =
