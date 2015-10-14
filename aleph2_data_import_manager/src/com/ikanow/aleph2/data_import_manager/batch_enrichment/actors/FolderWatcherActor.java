@@ -94,7 +94,7 @@ public class FolderWatcherActor extends UntypedActor {
 			.scheduler()
 			.schedule(Duration.create(1000, TimeUnit.MILLISECONDS),
 					Duration.create(8000, TimeUnit.MILLISECONDS), getSelf(),
-					"tick", getContext().dispatcher(), null);				
+					MSG_FOLDER_WATCH, getContext().dispatcher(), null);				
 
 		}else
 		if (MSG_FOLDER_WATCH.equals(message)) {

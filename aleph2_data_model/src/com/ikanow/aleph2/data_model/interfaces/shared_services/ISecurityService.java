@@ -95,5 +95,13 @@ public interface ISecurityService extends IUnderlyingService {
 	 */
 	void enableJvmSecurity(boolean enabled);
 
+	/**
+	 * This function is a placeholder of the implementing security service to provide a callback for monitoring modifications etc.
+	 * @return boolean - true if changes to policies have been performed and need to be re-loaded
+	 */
+	default boolean isCacheInvalid(){
+		return false;
+	}
+
 	
 }
