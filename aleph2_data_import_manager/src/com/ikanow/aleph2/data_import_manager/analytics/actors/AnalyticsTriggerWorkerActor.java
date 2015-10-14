@@ -32,10 +32,10 @@ import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.common.collect.ImmutableSet;
 
 import scala.Tuple2;
 
+import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerCoreUtils;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerUtils;
