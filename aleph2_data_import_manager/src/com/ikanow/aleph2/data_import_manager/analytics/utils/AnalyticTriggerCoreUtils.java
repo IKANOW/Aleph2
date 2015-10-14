@@ -48,8 +48,8 @@ public class AnalyticTriggerCoreUtils {
 	 * @param mutex_fail_handler - sets the duration of the mutex wait, and what to do if it fails (ie for triggers, short wait and do nothing; for bucket message wait for longer and save them to a retry queue)
 	 * @return - filtered trigger set, still indexed by bucket
 	 */
-	public static Map<String, List<AnalyticTriggerStateBean>> registerOwnershipOfTriggers(
-			final Map<String, List<AnalyticTriggerStateBean>> all_triggers, 
+	public static Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> registerOwnershipOfTriggers(
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> all_triggers, 
 			final String process_id,
 			final CuratorFramework curator, 
 			final Tuple2<Duration, Consumer<String>> mutex_fail_handler
@@ -65,7 +65,7 @@ public class AnalyticTriggerCoreUtils {
 					return kv_mutex._1();
 				}
 				else {
-					mutex_fail_handler._2().accept(kv_mutex._1().getKey()); // (run this synchronously, the callable can always run in a different thread if it wants to)
+					mutex_fail_handler._2().accept(kv_mutex._1().getKey().toString()); // (run this synchronously, the callable can always run in a different thread if it wants to)
 					throw new RuntimeException(""); // (leaves the flatWrap empty)
 				}
 			}))
@@ -77,7 +77,7 @@ public class AnalyticTriggerCoreUtils {
 	 * @param job_names 
 	 * @param curator
 	 */
-	public static void deregisterOwnershipOfTriggers(final Collection<String> path_names, CuratorFramework curator) {
+	public static void deregisterOwnershipOfTriggers(final Collection<Tuple2<String, String>> path_names, CuratorFramework curator) {
 		path_names.stream() //(can't be parallel - has to happen in the same thread)
 			.map(path -> ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + path)
 			.map(path -> Tuples._2T(path, _mutex_cache.getIfPresent(path)))

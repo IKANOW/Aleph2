@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
@@ -73,7 +75,9 @@ public class AnalyticTriggerCrudUtils {
 					.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 				.done().get();
 		
-		trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)		
+		trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
+		
+		// Also: update the is_job_active for all other triggers
 	}
 	
 	//TODO (ALEPH-12): what happens if an updated bucket has no jobs left? need to make sure the existing jobs get erased?!
@@ -94,7 +98,7 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 * @param triggers
 	 */
-	public static void storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<String, List<AnalyticTriggerStateBean>> triggers) {
+	public static void storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
 		
 		final Date now = Date.from(Instant.now());
 		
@@ -152,7 +156,7 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 * @return
 	 */
-	public static CompletableFuture<Map<String, List<AnalyticTriggerStateBean>>> getTriggersToCheck(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {		
+	public static CompletableFuture<Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>>> getTriggersToCheck(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {		
 		
 		final Date now = Date.from(Instant.now());
 		
@@ -182,8 +186,8 @@ public class AnalyticTriggerCrudUtils {
 		
 		return trigger_crud.getObjectsBySpec(query).thenApply(cursor -> 
 				StreamSupport.stream(cursor.spliterator(), false)
-							.collect(Collectors.<AnalyticTriggerStateBean, String>
-								groupingBy(trigger -> trigger.bucket_name() + ":" + trigger.locked_to_host())));		
+							.collect(Collectors.<AnalyticTriggerStateBean, Tuple2<String, String>>
+								groupingBy(trigger -> Tuples._2T(trigger.bucket_name(), trigger.locked_to_host()))));		
 	}
 	
 	/** Checks the DB to see whether a bucket job is currently active
@@ -286,12 +290,12 @@ public class AnalyticTriggerCrudUtils {
 						.set(AnalyticTriggerStateBean::next_check, next_check))
 					.map(q -> change_activation.map(change -> {
 						if (change) {
-							return q.set(AnalyticTriggerStateBean::is_job_active, true)
-									.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
+							// (note: don't set the status to active until we get back a message from the technology)
+							return q.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
 									;							
 						}
 						else {
-							return q.set(AnalyticTriggerStateBean::is_job_active, false)
+							return q.set(AnalyticTriggerStateBean::is_job_active, false) //(do de-activate though, we don't care about the tech's opinion on that!)
 									;							
 						}
 					}).orElse(q))
@@ -335,14 +339,19 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 * @param bucket
 	 */
-	public static void updateTriggersWithBucketActivation(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+	public static void updateTriggersWithBucketOrJobActivation(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final Optional<List<AnalyticThreadJobBean>> jobs) {
 		final QueryComponent<AnalyticTriggerStateBean> update_query = 
-				CrudUtils.allOf(AnalyticTriggerStateBean.class)
-						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name());
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()))
+						.map(q -> jobs.map(js -> q.when(AnalyticTriggerStateBean::job_name, js.stream().map(j -> j.name()).collect(Collectors.toList()))).orElse(q))
+						.get()
+						;
 		
 		final UpdateComponent<AnalyticTriggerStateBean> update = 
-				CrudUtils.update(AnalyticTriggerStateBean.class)
-						.set(AnalyticTriggerStateBean::is_bucket_active, true)
+				Optional.of(CrudUtils.update(AnalyticTriggerStateBean.class)
+						.set(AnalyticTriggerStateBean::is_bucket_active, true))
+						.map(u -> jobs.map(__ -> u.set(AnalyticTriggerStateBean::is_bucket_active, true)).orElse(u))
+						.get()
 						;
 		
 		trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);

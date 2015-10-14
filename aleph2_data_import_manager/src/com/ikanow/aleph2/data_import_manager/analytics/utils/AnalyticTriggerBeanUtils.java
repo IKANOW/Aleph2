@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 
 import scala.Tuple2;
 
+import com.google.common.collect.ImmutableSet;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
@@ -38,6 +40,8 @@ import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 
 /** Utilities for converting analytic jobs into trigger state beans
  * @author Alex
@@ -318,6 +322,25 @@ public class AnalyticTriggerBeanUtils {
 		
 		return TimeUtils.getSchedule(check_time, Optional.of(from))
 				.validation(fail -> Date.from(from.toInstant().plus(10L, ChronoUnit.MINUTES)), success -> success);
+	}
+	
+	///////////////////////////////////////////////////////////////////////////
+	
+	// MESSAGING UTILS
+	
+	public static BucketActionMessage buildInternalEventMessage(final DataBucketBean bucket, final List<AnalyticThreadJobBean> jobs, final JobMessageType message_type, final Optional<String> locked_to_host) {
+		final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
+				new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, jobs, message_type);
+		
+		final BucketActionMessage.BucketActionAnalyticJobMessage message_with_node_affinity =
+				Lambdas.get(() -> {
+					if (!locked_to_host.isPresent()) return new_message;
+					else return BeanTemplateUtils.clone(new_message)
+									.with(BucketActionMessage::handling_clients, ImmutableSet.builder().add(locked_to_host.get()).build())
+								.done();
+				});
+		
+		return message_with_node_affinity;
 	}
 	
 
