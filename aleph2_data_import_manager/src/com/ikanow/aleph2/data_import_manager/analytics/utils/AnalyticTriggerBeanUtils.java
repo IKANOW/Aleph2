@@ -42,7 +42,7 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 /** Utilities for converting analytic jobs into trigger state beans
  * @author Alex
  */
-public class AnalyticTriggerUtils {
+public class AnalyticTriggerBeanUtils {
 	
 	/** Generates a list of analytic trigger states from a job
 	 * @param bucket

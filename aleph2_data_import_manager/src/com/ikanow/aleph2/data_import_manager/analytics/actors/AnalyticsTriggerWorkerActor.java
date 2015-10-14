@@ -38,7 +38,8 @@ import scala.Tuple2;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerCoreUtils;
-import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerUtils;
+import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerCrudUtils;
+import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerBeanUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -48,9 +49,6 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTrigger
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
-import com.ikanow.aleph2.data_model.utils.CrudUtils;
-import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
-import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -71,15 +69,9 @@ import akka.actor.UntypedActor;
 /** This actor is responsible for checking the state of the various active and inactive triggers in the system
  * @author Alex
  */
-/**
- * @author Alex
- *
- */
 public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected static final Logger _logger = LogManager.getLogger();	
 
-	public final static long ACTIVE_CHECK_FREQ_SECS = 10L;
-	
 	final DataImportActorContext _actor_context;
 	final IServiceContext _service_context;
 	final ICoreDistributedServices _distributed_services;
@@ -136,7 +128,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				.otherwise(__ -> false);
 		
 		final Stream<AnalyticTriggerStateBean> state_beans = 
-			AnalyticTriggerUtils.generateTriggerStateStream(message.bucket(), 
+			AnalyticTriggerBeanUtils.generateTriggerStateStream(message.bucket(), 
 					is_suspended,
 					Optional.ofNullable(message.bucket().multi_node_enabled())
 										.filter(enabled -> enabled)
@@ -169,7 +161,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			AnalyticTriggerCoreUtils.storeOrUpdateTriggerStage(trigger_crud, triggers);
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers);
 		}
 		finally { // ie always run this:
 			// Unset the mutexes
@@ -186,7 +178,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		
-		AnalyticTriggerCoreUtils.deleteTriggers(trigger_crud, message.bucket());
+		AnalyticTriggerCrudUtils.deleteTriggers(trigger_crud, message.bucket());
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////
@@ -204,7 +196,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		// 1) Get all state beans that need to be checked, update their "next time"
 		
 		final CompletableFuture<Map<String, List<AnalyticTriggerStateBean>>> triggers_in = 
-				AnalyticTriggerCoreUtils.getTriggersToCheck(trigger_crud);		
+				AnalyticTriggerCrudUtils.getTriggersToCheck(trigger_crud);		
 		
 		triggers_in.thenAccept(triggers_to_check -> {
 			
@@ -282,139 +274,12 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 										//(don't care about any other cases)
 								});
 
-								//TODO (ALEPH-12): put all this in a separate function:
-								
-								// 0) Nice and quick, just update all the active beans
-								// (there are no decisions to make because we receive the replies asyncronously via bucket action analytic event messages)
-								
-								if (!mutable_active_jobs.isEmpty()) {
-									final QueryComponent<AnalyticTriggerStateBean> update_query = 
-											CrudUtils.allOf(AnalyticTriggerStateBean.class)
-													.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-													.when(AnalyticTriggerStateBean::bucket_name, bucket_to_check.full_name())
-													;
-											
-									final Instant now = Instant.now();
-									
-									final UpdateComponent<AnalyticTriggerStateBean> update = 
-											CrudUtils.update(AnalyticTriggerStateBean.class)
-													.set(AnalyticTriggerStateBean::last_checked, Date.from(now))
-													.set(AnalyticTriggerStateBean::next_check, Date.from(now.plusSeconds(ACTIVE_CHECK_FREQ_SECS)))
-													;												
-									
-									trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);
-								}
-								
-								// 1) OK (in theory only one of these 2 things should occur)
-								
-								// 1.1) should we activate a bucket based on external dependencies
-								
-								final Date next_check = AnalyticTriggerUtils.getNextCheckTime(Date.from(Instant.now()), bucket_to_check);
-								
-								if (!mutable_external_triggers_active.isEmpty()) {
-									
-									final Optional<AnalyticThreadComplexTriggerBean> trigger_checker = 
-											AnalyticTriggerUtils.getManualOrAutomatedTrigger(bucket_to_check);
-																		
-									final boolean external_bucket_activate =
-											trigger_checker.map(checker -> {
-												final Set<Tuple2<String, String>> resources_dataservices = 
-														mutable_external_triggers_active.stream()
-														.map(t -> Tuples._2T(t.input_resource_combined(), t.input_data_service()))
-														.collect(Collectors.toSet())
-														;
-														
-												return AnalyticTriggerUtils.checkTrigger(checker,resources_dataservices);
-											})
-											.orElse(false);
-									
-									if (external_bucket_activate) {
-										// 2 things to do
-										
-										// 1) Send a notification to the technologies
-									
-										final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
-												new BucketActionMessage.BucketActionAnalyticJobMessage(bucket_to_check, null, JobMessageType.starting);
-										
-										BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
-												ManagementDbActorContext.get().getBucketActionSupervisor(), 
-												ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
-										//(don't wait for a reply or anything)
-										
-										// 2) Update all the jobs
-										
-										final QueryComponent<AnalyticTriggerStateBean> update_query = 
-												CrudUtils.allOf(AnalyticTriggerStateBean.class)
-														.when(AnalyticTriggerStateBean::bucket_name, bucket_to_check.full_name());
-										
-										final UpdateComponent<AnalyticTriggerStateBean> update = 
-												CrudUtils.update(AnalyticTriggerStateBean.class)
-														.set(AnalyticTriggerStateBean::is_bucket_active, true)
-														;
-										
-										trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);
-										
-										// 3) Also update the states:
-										mutable_external_triggers_active.stream().parallel().forEach(t -> {
-											final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
-													CrudUtils.update(AnalyticTriggerStateBean.class)
-														.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size())
-														.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
-														.set(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
-														.set(AnalyticTriggerStateBean::next_check, next_check)
-														;
-											trigger_crud.updateObjectById(t._id(), trigger_update);
-										});
-									}
-									else { // Treat these as if they never triggered at all:
-										mutable_external_triggers_dormant.addAll(mutable_external_triggers_active);
-									}
-								}
-								
-								// 1.2) should we activate a job from an active bucket based on internal dependencies
-
-								// Already done the trigger processing here, just need to clear up
-
-								// the jobs:
-								
-								final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
-										new BucketActionMessage.BucketActionAnalyticJobMessage(bucket_to_check, mutable_newly_active_jobs, JobMessageType.starting);
-								
-								BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
-										ManagementDbActorContext.get().getBucketActionSupervisor(), 
-										ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
-								//(don't wait for a reply or anything)
-								
-								// the triggers:
-								
-								mutable_internal_triggers_active.stream().parallel().forEach(t -> {
-									final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
-											CrudUtils.update(AnalyticTriggerStateBean.class)
-												.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size())
-												.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
-												.set(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
-												.set(AnalyticTriggerStateBean::next_check, next_check)
-												;
-									trigger_crud.updateObjectById(t._id(), trigger_update);
-								});
-								
-								// 2) Update all the unused triggers 
-								
-								if (!mutable_external_triggers_dormant.isEmpty() || !mutable_internal_triggers_dormant.isEmpty()) {
-									Stream.concat(
-											mutable_external_triggers_dormant.stream(),
-											mutable_internal_triggers_dormant.stream()
-									)
-									.parallel().forEach(t -> {
-										final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
-												CrudUtils.update(AnalyticTriggerStateBean.class)
-													.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size())
-													.set(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
-													.set(AnalyticTriggerStateBean::next_check, next_check)
-													;
-										trigger_crud.updateObjectById(t._id(), trigger_update);
-									});
-								}
+								triggerChecks_processResults(bucket_to_check,
+										mutable_active_jobs, 
+										mutable_external_triggers_active, mutable_internal_triggers_active,
+										mutable_external_triggers_dormant, mutable_external_triggers_dormant,
+										mutable_newly_active_jobs
+										);
 							});
 							
 						});
@@ -489,7 +354,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected void onAnalyticTrigger_checkTrigger(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final AnalyticTriggerStateBean trigger, 
 			final List<AnalyticTriggerStateBean> mutable_trigger_list_active, final List<AnalyticTriggerStateBean> mutable_trigger_list_dormant)
 	{
-		final boolean is_already_triggered = AnalyticTriggerUtils.checkTriggerLimits(trigger); 
+		final boolean is_already_triggered = AnalyticTriggerBeanUtils.checkTriggerLimits(trigger); 
 			
 		if (!is_already_triggered) {
 			final AnalyticStateChecker checker = _actor_context.getAnalyticTriggerFactory().getChecker(trigger.trigger_type());
@@ -528,8 +393,6 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		
-		///TODO (ALEPH-12): add queries to optimization list
-		
 		Patterns.match(message).andAct()
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.starting == msg.type(),
@@ -543,53 +406,234 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 																			.flatMap(s -> s.stream().findFirst());
 								
-								final AnalyticTriggerStateBean new_entry =
-										BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
-											.with(AnalyticTriggerStateBean::_id,
-													AnalyticTriggerStateBean.buildId(msg.bucket().full_name(), job.name(), locked_to_host, Optional.empty())
-											)
-											.with(AnalyticTriggerStateBean::is_bucket_active, true)
-											.with(AnalyticTriggerStateBean::is_job_active, true)
-											.with(AnalyticTriggerStateBean::bucket_id, msg.bucket()._id())
-											.with(AnalyticTriggerStateBean::bucket_name, msg.bucket().full_name())
-											.with(AnalyticTriggerStateBean::job_name, job.name())
-											.with(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-											.with(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
-											.with(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().plusSeconds(ACTIVE_CHECK_FREQ_SECS)))
-											.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
-										.done().get();
-								
-								trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
+								AnalyticTriggerCrudUtils.createActiveJobRecord(trigger_crud, msg.bucket(), job, locked_to_host);								
 							});
+							
+							//TODO: do i also want to update the is_job_active fields everywhere else?
 						})
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.stopping == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
+							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
+									.flatMap(s -> s.stream().findFirst());
+							
 							// 2) A previous request for the status of a job has come back telling me it has stopped
 							
 							// 2.1) Check whether the completion of that job is a trigger anywhere
 							
-							//TODO (ALEPH-12) - this seems like a good case for a call to some util							
-							// (but basically just to an update on the right set of triggers)
+							Optionals.ofNullable(msg.jobs()).stream().forEach(job -> {
 							
-							// 2.2) Remove the active entry for that job
+								AnalyticTriggerCrudUtils.updateTriggerInputsWhenJobOrBucketCompletes(
+										trigger_crud, msg.bucket(), Optional.of(job), locked_to_host);								
+							});
+														
+							// 2.2) Check whether the completion of that job completes a bucket's analytic thread:
 							
-							trigger_crud.deleteObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)
-																.when(AnalyticTriggerStateBean::bucket_name, msg.bucket().full_name())
-																.withAny(AnalyticTriggerStateBean::job_name, msg.jobs().stream().map(j -> j.name()).collect(Collectors.toList()))
-																.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-																);
+							//TODO (hmm it's a bit more complicated than this, no? because we might be about to start another inactive jbo..)
+							// should probably wait until the next standard check?
 							
-							// 2.3) Update any pending entries for this job
+							final boolean bucket_still_active = 
+									AnalyticTriggerCrudUtils.isAnalyticBucketOrJobActive(trigger_crud, msg.bucket().full_name(), Optional.empty(), locked_to_host).join();
+
+							if (!bucket_still_active) {
+								// Send a message to the technology
 							
-							//TODO (ALEPH-12) - just call that other function
+								final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
+										new BucketActionMessage.BucketActionAnalyticJobMessage(
+												BeanTemplateUtils.clone(msg.bucket())
+													.with(DataBucketBean::harvest_technology_name_or_id, null)
+												.done(),
+												null, JobMessageType.stopping);
+								
+								BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
+										ManagementDbActorContext.get().getBucketActionSupervisor(), 
+										ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
+								//(don't wait for a reply or anything)								
+								
+								// Also update triggers that might depend on this bucket:
+								
+								AnalyticTriggerCrudUtils.updateTriggerInputsWhenJobOrBucketCompletes(
+										trigger_crud, msg.bucket(), Optional.empty(), locked_to_host);								
+							}
 							
-							// 2.4) Does this mean the entire bucket is complete?
+							// 2.3) Remove the active entry for that job
 							
-							//TODO (ALEPH-12) - just look to see if the bucket has any empty entries		
+							AnalyticTriggerCrudUtils.deleteActiveJobEntries(trigger_crud, msg.bucket(), msg.jobs(), locked_to_host);
+							
+							// 2.4) Update any pending entries for this job
+							
+							Optionals.ofNullable(msg.jobs()).stream().forEach(job -> {
+								
+								AnalyticTriggerCrudUtils.updateCompletedJob(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host);							
+							});							
 						})
 			.otherwise(__ -> {}); //(ignore)
 		;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	
+	// HANDLING THE OUTCOME OF TRIGGER CHECKS 
+	
+	/** Top level control function for acting on the trigger processing
+	 * @param bucket_to_check
+	 * @param mutable_active_jobs
+	 * @param mutable_external_triggers_active
+	 * @param mutable_internal_triggers_active
+	 * @param mutable_external_triggers_dormant
+	 * @param mutable_internal_triggers_dormant
+	 * @param mutable_newly_active_jobs
+	 */
+	public void triggerChecks_processResults(
+			final DataBucketBean bucket_to_check,
+			final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs,
+			final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_active,
+			final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_active,
+			final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_dormant,
+			final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_dormant,
+			final LinkedList<AnalyticThreadJobBean> mutable_newly_active_jobs
+			)
+	{
+		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
+				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+		
+		// 0) Nice and quick, just update all the active beans
+		// (there are no decisions to make because we receive the replies asynchronously via bucket action analytic event messages)
+		
+		triggerChecks_processResults_currentlyActiveJobs(trigger_crud, bucket_to_check, mutable_active_jobs);
+		
+		final Date next_check = AnalyticTriggerBeanUtils.getNextCheckTime(Date.from(Instant.now()), bucket_to_check);
+		
+		// 1) OK (in theory only one of these 2 things should occur)
+		
+		// 1.1) should we activate a bucket based on external dependencies
+		
+		triggerChecks_processResults_currentlyInactiveBuckets(trigger_crud, bucket_to_check, next_check, mutable_external_triggers_active, mutable_external_triggers_dormant);
+		
+		
+		// 1.2) should we activate a job from an active bucket based on internal dependencies
+
+		triggerChecks_processResults_currentlyInactiveJobs(trigger_crud, bucket_to_check, next_check, mutable_internal_triggers_active, mutable_internal_triggers_dormant, mutable_newly_active_jobs);
+		
+		// 2) Update all the unused triggers 
+		
+		if (!mutable_external_triggers_dormant.isEmpty() || !mutable_internal_triggers_dormant.isEmpty()) {			
+			
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, 
+					Stream.concat(
+							mutable_external_triggers_dormant.stream(),
+							mutable_internal_triggers_dormant.stream()
+					),
+					next_check, Optional.empty());				
+		}				
+	}
+	
+	/** Specifically handles currently active jobs - here we have requested status information via asynchronous messaging
+	 *  so we can't actually do anything other than update the usual status fields
+	 * @param trigger_crud
+	 * @param bucket_to_check
+	 * @param mutable_active_jobs
+	 */
+	public void triggerChecks_processResults_currentlyActiveJobs(
+			final ICrudService<AnalyticTriggerStateBean> trigger_crud,
+			final DataBucketBean bucket_to_check,
+			final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs)
+	{
+		if (!mutable_active_jobs.isEmpty()) {
+			
+			AnalyticTriggerCrudUtils.updateActiveJobTriggerStatus(trigger_crud, bucket_to_check);
+		}			
+	}
+	
+	/** Specifically handles inactive buckets - decide whether to activate the bucket or not
+	 * @param trigger_crud
+	 * @param bucket_to_check
+	 * @param mutable_active_jobs
+	 */
+	public void triggerChecks_processResults_currentlyInactiveBuckets(
+			final ICrudService<AnalyticTriggerStateBean> trigger_crud,
+			final DataBucketBean bucket_to_check,
+			final Date next_check,
+			final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_active,
+			final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_dormant)
+	{
+		if (!mutable_external_triggers_active.isEmpty()) {
+			
+			final Optional<AnalyticThreadComplexTriggerBean> trigger_checker = 
+					AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(bucket_to_check);
+												
+			final boolean external_bucket_activate =
+					trigger_checker.map(checker -> {
+						final Set<Tuple2<String, String>> resources_dataservices = 
+								mutable_external_triggers_active.stream()
+								.map(t -> Tuples._2T(t.input_resource_combined(), t.input_data_service()))
+								.collect(Collectors.toSet())
+								;
+								
+						return AnalyticTriggerBeanUtils.checkTrigger(checker,resources_dataservices);
+					})
+					.orElse(false);
+			
+			if (external_bucket_activate) {
+				// 2 things to do
+				
+				// 1) Send a notification to the technologies
+			
+				final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
+						new BucketActionMessage.BucketActionAnalyticJobMessage(bucket_to_check, null, JobMessageType.starting);
+				
+				BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
+						ManagementDbActorContext.get().getBucketActionSupervisor(), 
+						ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
+				//(don't wait for a reply or anything)
+				
+				// 2) Update all the jobs
+				
+				AnalyticTriggerCrudUtils.updateTriggersWithBucketActivation(trigger_crud, bucket_to_check);
+				
+				// 3) Also update the states:
+				
+				AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_external_triggers_active.stream(), next_check, Optional.of(true));				
+			}
+			else { // Treat these as if they never triggered at all:
+				mutable_external_triggers_dormant.addAll(mutable_external_triggers_active);
+			}
+		}
+	}
+
+	/** Specifically handles inactive jobs inside active bucketes - decide whether to activate the job or not
+	 * @param trigger_crud
+	 * @param bucket_to_check
+	 * @param next_check
+	 * @param mutable_internal_triggers_active
+	 * @param mutable_internal_triggers_dormant
+	 * @param mutable_newly_active_jobs
+	 */
+	public void triggerChecks_processResults_currentlyInactiveJobs(
+			final ICrudService<AnalyticTriggerStateBean> trigger_crud,
+			final DataBucketBean bucket_to_check,
+			final Date next_check,
+			final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_active,
+			final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_dormant,
+			final LinkedList<AnalyticThreadJobBean> mutable_newly_active_jobs)
+	{
+		// Already done the trigger processing here, just act on the results
+
+		// the jobs:
+		
+		if (!mutable_newly_active_jobs.isEmpty()) {
+			final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket_to_check, mutable_newly_active_jobs, JobMessageType.starting);
+			
+			BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
+					ManagementDbActorContext.get().getBucketActionSupervisor(), 
+					ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
+			
+			//(don't wait for a reply or anything)
+		}		
+		// the triggers:
+		
+		AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_internal_triggers_active.stream(), next_check, Optional.of(true));				
 	}
 }
