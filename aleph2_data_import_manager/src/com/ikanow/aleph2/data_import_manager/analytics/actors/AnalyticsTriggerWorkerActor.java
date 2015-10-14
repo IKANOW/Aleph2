@@ -159,7 +159,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers);
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers).join();
 		}
 		finally { // ie always run this:
 			// Unset the mutexes
@@ -176,7 +176,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		
-		AnalyticTriggerCrudUtils.deleteTriggers(trigger_crud, message.bucket());
+		AnalyticTriggerCrudUtils.deleteTriggers(trigger_crud, message.bucket()).join();
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////
@@ -287,7 +287,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				// Unset the mutexes
 				if (path_names.isSet()) AnalyticTriggerCoreUtils.deregisterOwnershipOfTriggers(path_names.get(), _distributed_services.getCuratorFramework());
 			}			
-		});
+		})
+		.join();
 		
 		// (don't wait for replies, these will come in asynchronously)
 	}
@@ -386,21 +387,22 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		Patterns.match(message).andAct()
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.starting == msg.type(),
-						msg -> {
-							// 1) 1+ jobs have been confirmed started by the technology:
+						msg -> { // (note don't need to worry about locking here)
+							
+							// 1) 1+ jobs have been confirmed/manually started by the technology:
 							// (or just the bucket if msg.jobs()==null)
 							
+							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
+									.flatMap(s -> s.stream().findFirst());
+
 							Optionals.ofNullable(msg.jobs()).stream().forEach(job -> { // (note don't need to worry about locking here)
 							
 								// 1.1) Create an active entry for that job
 								
-								final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
-																			.flatMap(s -> s.stream().findFirst());
-								
-								AnalyticTriggerCrudUtils.createActiveJobRecord(trigger_crud, msg.bucket(), job, locked_to_host);
+								AnalyticTriggerCrudUtils.createActiveJobRecord(trigger_crud, msg.bucket(), job, locked_to_host).join();
 							});
 							
-							AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(trigger_crud, msg.bucket(), Optional.ofNullable(msg.jobs()));
+							AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(trigger_crud, msg.bucket(), Optional.ofNullable(msg.jobs()), locked_to_host).join();
 							
 						})
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
@@ -417,7 +419,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							Optionals.ofNullable(msg.jobs()).stream().forEach(job -> {
 							
 								AnalyticTriggerCrudUtils.updateTriggerInputsWhenJobOrBucketCompletes(
-										trigger_crud, msg.bucket(), Optional.of(job), locked_to_host);								
+										trigger_crud, msg.bucket(), Optional.of(job), locked_to_host).join();								
 							});
 														
 							// [REMOVED - 2.2) Check whether the completion of that job completes a bucket's entire analytic thread:]
@@ -427,13 +429,13 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 
 							// 2.3) Remove the active entry for that job
 							
-							AnalyticTriggerCrudUtils.deleteActiveJobEntries(trigger_crud, msg.bucket(), msg.jobs(), locked_to_host);
+							AnalyticTriggerCrudUtils.deleteActiveJobEntries(trigger_crud, msg.bucket(), msg.jobs(), locked_to_host).join();
 							
 							// 2.4) Update any pending entries for this job
 							
 							Optionals.ofNullable(msg.jobs()).stream().forEach(job -> {
 								
-								AnalyticTriggerCrudUtils.updateCompletedJob(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host);							
+								AnalyticTriggerCrudUtils.updateCompletedJob(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host).join();							
 							});							
 						})
 			.otherwise(__ -> {}); //(ignore)
@@ -496,7 +498,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							mutable_external_triggers_dormant.stream(),
 							mutable_internal_triggers_dormant.stream()
 					),
-					next_check, Optional.empty());				
+					next_check, Optional.empty()).join();				
 		}				
 	}
 	
@@ -513,7 +515,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	{
 		if (!mutable_active_jobs.isEmpty()) {
 			
-			AnalyticTriggerCrudUtils.updateActiveJobTriggerStatus(trigger_crud, bucket_to_check);
+			AnalyticTriggerCrudUtils.updateActiveJobTriggerStatus(trigger_crud, bucket_to_check).join();
 		}			
 	}
 	
@@ -553,13 +555,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				// Also update triggers that might depend on this bucket:
 				
 				AnalyticTriggerCrudUtils.updateTriggerInputsWhenJobOrBucketCompletes(
-						trigger_crud, bucket_to_check, Optional.empty(), locked_to_host);								
+						trigger_crud, bucket_to_check, Optional.empty(), locked_to_host).join();								
 			}
-			
-			
-			
-			//TODO (ALEPH-12): hmm what about if it takes >5s for the activation to occur .. the _next_ trigger will keep going
-			// one option would be to update some field that triggering is pending
 		}
 	}
 	
@@ -611,7 +608,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				
 				// 3) Also update the states:
 				
-				AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_external_triggers_active.stream(), next_check, Optional.of(true));				
+				AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_external_triggers_active.stream(), next_check, Optional.of(true)).join();				
 			}
 			else { // Treat these as if they never triggered at all:
 				mutable_external_triggers_dormant.addAll(mutable_external_triggers_active);
@@ -647,11 +644,16 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
 			
 			//(don't wait for a reply or anything)
+
+			// But do immediately set up the jobs as active - if the tech fails, then we'll find out when we poll them later
 			
-			//(don't update the actual job statuses until we get confirmation from the tech via onAnalyticBucketEvent)
+			mutable_newly_active_jobs.stream().parallel().forEach(job ->
+				AnalyticTriggerCrudUtils.createActiveJobRecord(trigger_crud, bucket_to_check, job, locked_to_host).join());
+			
 		}		
 		// the triggers:
+		// (note that all internal active triggers that remain at this point are "legit" (unlike external where you can have partial triggering)
 		
-		AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_internal_triggers_active.stream(), next_check, Optional.of(true));				
+		AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_internal_triggers_active.stream(), next_check, Optional.of(true)).join();				
 	}
 }

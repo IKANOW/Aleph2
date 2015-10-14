@@ -41,6 +41,19 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 
 //TODO (ALEPH-12) - add these to the optimized list in singleton
 
+//TODO (ALEPH-12): what happens if an updated bucket has no jobs left? need to make sure the existing jobs get erased?!
+// ... can i do a big delete on all the buckets' jobs? 
+// Ahhhhhhhhhhh complication ... i receive these messages grouped not by bucket(:locked_host) _but_ by bucket(:locked_host)[implicitly:analytic_tech]
+// so i'm going to need to update these groupings....
+// ugh it gets worse ... i don't even know when i've received them all, so if i have a bucket with a job served via analytic tech X
+// and then the bucket gets updated so X doesn't appear any more, then i never see the update message (YIKES which also won't update DIM)
+// OK solution: use diff bean to see that analytic thread has changed, write logic to send an empty list of jobs, make sure DIM treats that as
+// "remove everything"
+// SO IN SUMMARY
+// 1) add code to CMDB to check create "empty" buckets
+// 2) ensure that DIM stops empty buckets (and sends messages to the analytic engine)
+// 3) ensure that we handle empty jobs (ie they get to this point)
+
 /** A set of utilities for retrieving and updating the trigger state
  * @author Alex
  */
@@ -58,7 +71,7 @@ public class AnalyticTriggerCrudUtils {
 	 * @param job
 	 * @param locked_to_host
 	 */
-	public static void createActiveJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final AnalyticThreadJobBean job, final Optional<String> locked_to_host) {
+	public static CompletableFuture<?> createActiveJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final AnalyticThreadJobBean job, final Optional<String> locked_to_host) {
 		final AnalyticTriggerStateBean new_entry =
 				BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 					.with(AnalyticTriggerStateBean::_id,
@@ -75,39 +88,26 @@ public class AnalyticTriggerCrudUtils {
 					.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 				.done().get();
 		
-		trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
+		return trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
 		
 		// Also: update the is_job_active for all other triggers
 	}
-	
-	//TODO (ALEPH-12): what happens if an updated bucket has no jobs left? need to make sure the existing jobs get erased?!
-	// ... can i do a big delete on all the buckets' jobs? 
-	// Ahhhhhhhhhhh complication ... i receive these messages grouped not by bucket(:locked_host) _but_ by bucket(:locked_host)[implicitly:analytic_tech]
-	// so i'm going to need to update these groupings....
-	// ugh it gets worse ... i don't even know when i've received them all, so if i have a bucket with a job served via analytic tech X
-	// and then the bucket gets updated so X doesn't appear any more, then i never see the update message (YIKES which also won't update DIM)
-	// OK solution: use diff bean to see that analytic thread has changed, write logic to send an empty list of jobs, make sure DIM treats that as
-	// "remove everything"
-	// SO IN SUMMARY
-	// 1) add code to CMDB to check create "empty" buckets
-	// 2) ensure that DIM stops empty buckets (and sends messages to the analytic engine)
-	// 3) ensure that we handle empty jobs (ie they get to this point)
 	
 	/** Stores/updates the set of triggers derived from the bucket (replacing any previous ones ... with the exception that if the job to be replaced
 	 *  is active then the new set are stored as active  
 	 * @param trigger_crud
 	 * @param triggers
 	 */
-	public static void storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
+	public static CompletableFuture<?> storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
 		
 		final Date now = Date.from(Instant.now());
 		
-		triggers.values().stream()
+		final Stream<CompletableFuture<?>> ret = triggers.values().stream()
 			.flatMap(l -> l.stream())
 			.collect(Collectors.groupingBy(v -> Tuples._3T(v.bucket_name(), v.job_name(), v.locked_to_host())))
 			.entrySet()
 			.stream()
-			.forEach(kv -> {
+			.flatMap(kv -> {
 				final String bucket_name = kv.getKey()._1();
 				final String job_name = kv.getKey()._2();
 				final Optional<String> locked_to_host = Optional.ofNullable(kv.getKey()._3());
@@ -116,7 +116,7 @@ public class AnalyticTriggerCrudUtils {
 				final boolean is_active = isAnalyticBucketOrJobActive(trigger_crud, bucket_name, Optional.of(job_name), locked_to_host).join();
 				
 				// Step 2: write out the transformed job, with instructions to check in <5s and last_checked == now
-				trigger_crud.storeObjects(
+				final CompletableFuture<?> f1 = trigger_crud.storeObjects(
 						kv.getValue().stream()
 							.map(trigger ->
 								BeanTemplateUtils.clone(trigger)
@@ -138,9 +138,15 @@ public class AnalyticTriggerCrudUtils {
 						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 						.get();
 									
-				trigger_crud.deleteObjectsBySpec(query);
+				final CompletableFuture<?> f2 = trigger_crud.deleteObjectsBySpec(query);
+				
+				return Stream.of(f1, f2);
 			});
-			;
+			;		
+			
+		final CompletableFuture<?> combined[] = ret.toArray(size -> new CompletableFuture[size]);
+		
+		return CompletableFuture.allOf(combined);			
 	}
 	
 	///////////////////////////////////////////////////////////////////////
@@ -223,7 +229,7 @@ public class AnalyticTriggerCrudUtils {
 	 * @param job_name
 	 * @param locked_to_host
 	 */
-	public static void updateCompletedJob(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host) {
+	public static CompletableFuture<?> updateCompletedJob(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host) {
 		
 		final QueryComponent<AnalyticTriggerStateBean> is_pending_count_query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -235,7 +241,7 @@ public class AnalyticTriggerCrudUtils {
 				.limit(1)
 				;
 		
-		trigger_crud.countObjectsBySpec(is_pending_count_query).thenAccept(count -> {
+		return trigger_crud.countObjectsBySpec(is_pending_count_query).thenAccept(count -> {
 			if (count > 0) {
 				final QueryComponent<AnalyticTriggerStateBean> is_not_pending_delete_query = 
 						Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -264,8 +270,7 @@ public class AnalyticTriggerCrudUtils {
 					return trigger_crud.updateObjectsBySpec(is_pending_update_query, Optional.of(false), update);
 				});
 			}
-		})
-		.join(); //(because the inter process mutex forces synchronous operations)
+		});
 		
 	}
 	
@@ -276,13 +281,13 @@ public class AnalyticTriggerCrudUtils {
 	 * @param next_check
 	 * @param change_activation - if present then the activation status of this also changes
 	 */
-	public static void updateTriggerStatuses(final ICrudService<AnalyticTriggerStateBean> trigger_crud,
+	public static CompletableFuture<?> updateTriggerStatuses(final ICrudService<AnalyticTriggerStateBean> trigger_crud,
 			final Stream<AnalyticTriggerStateBean> trigger_stream,
 			final Date next_check,
 			final Optional<Boolean> change_activation			
 			)
 	{
-		trigger_stream.parallel().forEach(t -> {
+		final Stream<CompletableFuture<?>> ret = trigger_stream.parallel().map(t -> {
 			final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
 					Optional.of(CrudUtils.update(AnalyticTriggerStateBean.class)
 						.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size())
@@ -292,24 +297,29 @@ public class AnalyticTriggerCrudUtils {
 						if (change) {
 							// (note: don't set the status to active until we get back a message from the technology)
 							return q.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
+									.set(AnalyticTriggerStateBean::is_job_active, true) // (this hasn't been confirmed by the tech yet but if it fails we'll find out in 10s time when we poll it)
 									;							
 						}
 						else {
-							return q.set(AnalyticTriggerStateBean::is_job_active, false) //(do de-activate though, we don't care about the tech's opinion on that!)
+							return q.set(AnalyticTriggerStateBean::is_job_active, false) 
 									;							
 						}
 					}).orElse(q))
 					.get()
 				;
-			trigger_crud.updateObjectById(t._id(), trigger_update);
+			return trigger_crud.updateObjectById(t._id(), trigger_update);
 		});		
+		
+		final CompletableFuture<?> combined[] = ret.toArray(size -> new CompletableFuture[size]);
+		return CompletableFuture.allOf(combined);
+
 	}	
 	
 	/** When a bucket.job completes, this may trigger inputs that depend on that bucket/job 
 	 * @param trigger_crud
 	 * @param bucket
 	 */
-	public static void updateTriggerInputsWhenJobOrBucketCompletes(
+	public static CompletableFuture<?> updateTriggerInputsWhenJobOrBucketCompletes(
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket,
 			final Optional<AnalyticThreadJobBean> job,
 			final Optional<String> locked_to_host
@@ -332,17 +342,20 @@ public class AnalyticTriggerCrudUtils {
 					.increment(AnalyticTriggerStateBean::curr_resource_size, 1L)
 				;
 		
-		trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
+		return trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
 	}
 	
 	/** Updates relevant triggers to indicate that their bucket is now active
 	 * @param trigger_crud
 	 * @param bucket
 	 */
-	public static void updateTriggersWithBucketOrJobActivation(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final Optional<List<AnalyticThreadJobBean>> jobs) {
+	public static CompletableFuture<?> updateTriggersWithBucketOrJobActivation(final ICrudService<AnalyticTriggerStateBean> trigger_crud, 
+			final DataBucketBean bucket, final Optional<List<AnalyticThreadJobBean>> jobs, final Optional<String> locked_to_host)
+	{
 		final QueryComponent<AnalyticTriggerStateBean> update_query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()))
+						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 						.map(q -> jobs.map(js -> q.when(AnalyticTriggerStateBean::job_name, js.stream().map(j -> j.name()).collect(Collectors.toList()))).orElse(q))
 						.get()
 						;
@@ -354,13 +367,13 @@ public class AnalyticTriggerCrudUtils {
 						.get()
 						;
 		
-		trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);
+		return trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);
 	}
 	
 	/** Updates active job records' next check times
 	 * @param trigger_crud
 	 */
-	public static void updateActiveJobTriggerStatus(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+	public static CompletableFuture<?> updateActiveJobTriggerStatus(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
 		final QueryComponent<AnalyticTriggerStateBean> update_query = 
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
@@ -375,7 +388,7 @@ public class AnalyticTriggerCrudUtils {
 						.set(AnalyticTriggerStateBean::next_check, Date.from(now.plusSeconds(AnalyticTriggerCrudUtils.ACTIVE_CHECK_FREQ_SECS)))
 						;												
 		
-		trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);		
+		return trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);		
 	}
 	
 	///////////////////////////////////////////////////////////////////////
@@ -387,8 +400,8 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 * @param bucket
 	 */
-	public static void deleteTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
-		trigger_crud.deleteObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class).when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()));
+	public static CompletableFuture<?> deleteTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+		return trigger_crud.deleteObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class).when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()));
 	}
 
 	/** Removes any special "active job records" associated with a set of jobs that are now known to have completed
@@ -397,7 +410,7 @@ public class AnalyticTriggerCrudUtils {
 	 * @param jobs
 	 * @param locked_to_host
 	 */
-	public static void deleteActiveJobEntries(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, List<AnalyticThreadJobBean> jobs, final Optional<String> locked_to_host)
+	public static CompletableFuture<?> deleteActiveJobEntries(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, List<AnalyticThreadJobBean> jobs, final Optional<String> locked_to_host)
 	{
 		final QueryComponent<AnalyticTriggerStateBean> delete_query =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -407,6 +420,6 @@ public class AnalyticTriggerCrudUtils {
 						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 						.get();
 			
-			trigger_crud.deleteObjectsBySpec(delete_query);
+		return trigger_crud.deleteObjectsBySpec(delete_query);
 	}	
 }
