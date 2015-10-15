@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.ikanow.aleph2.data_model.utils.TestCrudUtils
--------------------------------------------------------------------------------
-Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.249 sec
