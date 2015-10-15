@@ -952,7 +952,12 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 																
 									//(ignore the reply apart from logging - failures will be identified by triggers)
 									top_level_result.thenAccept(reply -> {
-										if (!reply.success()) _logger.info(ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
+										if (!reply.success()) {
+											_logger.warn(ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
+										}
+										else {
+											_logger.info(ErrorUtils.get("Started analytic thread {0}", bucket.full_name()));											
+										}
 									}); 
 									
 									// Send a status message (Which will be ignored)
@@ -972,7 +977,16 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 												.collect(Collectors.toList());
 									
 									//(ignore the reply apart from logging - failures will be identified by triggers)
-									//TODO (ALEPH-12): logging
+									job_results.forEach(job_res -> {
+										job_res._2().thenAccept(res -> {
+											if (!res.success()) {
+												_logger.warn(ErrorUtils.get("Error starting analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()));
+											}
+											else {
+												_logger.info(ErrorUtils.get("Started analytic job {0}:{1}", bucket.full_name(), job_res._1().name()));											
+											}											
+										});
+									});
 									
 									// Send a status message (Which will be ignored)
 									
@@ -981,20 +995,64 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
 								msg -> (JobMessageType.stopping == msg.type()) && (null == msg.jobs()), 
 								msg -> {
-									//TODO 
-									return null;
+									// Received a stop notification for the bucket
+
+									final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onThreadComplete(msg.bucket(), jobs, context);
+																
+									//(ignore the reply apart from logging - failures will be identified by triggers)
+									top_level_result.thenAccept(reply -> {
+										if (!reply.success()) {
+											_logger.warn(ErrorUtils.get("Error stopping analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
+										}
+										else {
+											_logger.info(ErrorUtils.get("Stopping analytic thread {0}", bucket.full_name()));											
+										}
+									}); 
+									
+									// Send a status message (Which will be ignored)
+									
+									return CompletableFuture.completedFuture(new BucketActionReplyMessage.BucketActionNullReplyMessage());
 								})
 						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
 								msg -> (JobMessageType.stopping == msg.type()) && (null != msg.jobs()), 
 								msg -> {
-									//TODO 
-									return null;
+									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
+											jobs.stream()
+												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
+														tech_module.suspendAnalyticJob(msg.bucket(), jobs, job, context)))
+												.collect(Collectors.toList());
+								
+									//(ignore the reply apart from logging - failures will be identified by triggers)
+									job_results.forEach(job_res -> {
+										job_res._2().thenAccept(res -> {
+											if (!res.success()) {
+												_logger.warn(ErrorUtils.get("Error stopping analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()));
+											}
+											else {
+												_logger.info(ErrorUtils.get("Stopping analytic job {0}:{1}", bucket.full_name(), job_res._1().name()));											
+											}											
+										});
+									});
+									
+									// Send a status message (Which will be ignored)
+									
+									return CompletableFuture.completedFuture(new BucketActionReplyMessage.BucketActionNullReplyMessage());
 								})
 						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
 								msg -> (JobMessageType.deleting == msg.type()), 
 								msg -> {
-									//TODO 
-									return null;
+									// This is different because it happens as part of a user action related to buckets, whereas stopping occurs based on trigger related actions
+									
+									final CompletableFuture<BasicMessageBean> top_level_result = CompletableFuture.completedFuture(
+											ErrorUtils.buildSuccessMessage(DataBucketAnalyticsChangeActor.class.getSimpleName(), "BucketActionAnalyticJobMessage:deleting", ""));
+									
+									final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
+												.map(job -> tech_module.suspendAnalyticJob(bucket, jobs, job, context))
+												.collect(Collectors.toList());
+									
+									// Hence do return a legit reply message here
+									
+									return combineResults(top_level_result, job_results, source);
 								})
 						.otherwise(msg -> { // return "command not recognized" error
 							return CompletableFuture.completedFuture(
