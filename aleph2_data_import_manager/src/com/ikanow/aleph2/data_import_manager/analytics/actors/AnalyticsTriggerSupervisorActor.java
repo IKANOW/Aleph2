@@ -15,7 +15,6 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
-import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -25,11 +24,10 @@ import org.apache.logging.log4j.Logger;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
+import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerCrudUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
-import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
@@ -93,17 +91,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 			_analytics_trigger_state.set(_core_management_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class));
 	
 			// ensure analytic queue is optimized:
-	
-			final MethodNamingHelper<AnalyticTriggerStateBean> state_clazz = BeanTemplateUtils.from(AnalyticTriggerStateBean.class);
-			
-			//TODO (ALEPH-12): lots of other optimizations required here:
-			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(state_clazz.field(AnalyticTriggerStateBean::next_check)));
-			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(state_clazz.field(AnalyticTriggerStateBean::last_checked)));
-			_analytics_trigger_state.get().optimizeQuery(Arrays.asList(
-					state_clazz.field(AnalyticTriggerStateBean::bucket_name),
-					state_clazz.field(AnalyticTriggerStateBean::job_name),
-					state_clazz.field(AnalyticTriggerStateBean::locked_to_host)
-				));
+			AnalyticTriggerCrudUtils.optimizeQueries(_analytics_trigger_state.get());
 			
 			_logger.info("Initialized AnalyticsTriggerSupervisorActor");
 		}

@@ -34,12 +34,11 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTrigger
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
-
-//TODO (ALEPH-12) - add these to the optimized list in singleton
 
 /** A set of utilities for retrieving and updating the trigger state
  * @author Alex
@@ -146,6 +145,9 @@ public class AnalyticTriggerCrudUtils {
 		
 		final Date now = Date.from(Instant.now());
 		
+		// These queries want the following optimizations:
+		// (next_check)
+		
 		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.rangeBelow(AnalyticTriggerStateBean::next_check, now, true)
@@ -182,6 +184,10 @@ public class AnalyticTriggerCrudUtils {
 	 * @return
 	 */
 	public static CompletableFuture<Boolean> isAnalyticBucketOrJobActive(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final Optional<String> job_name, final Optional<String> locked_to_host) {
+		
+		// These queries want the following optimizations:
+		// (bucket_name, job_name, trigger_type, is_job_active)
+		
 		final QueryComponent<AnalyticTriggerStateBean> query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
@@ -210,6 +216,9 @@ public class AnalyticTriggerCrudUtils {
 	 * @param locked_to_host
 	 */
 	public static CompletableFuture<?> updateCompletedJob(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host) {
+		
+		// These queries want the following optimizations:
+		// (bucket_name, job_name, is_pending)
 		
 		final QueryComponent<AnalyticTriggerStateBean> is_pending_count_query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -267,6 +276,9 @@ public class AnalyticTriggerCrudUtils {
 			final Optional<Boolean> change_activation			
 			)
 	{
+		// These queries want the following optimizations:
+		// (_id)
+		
 		final Stream<CompletableFuture<?>> ret = trigger_stream.parallel().map(t -> {
 			final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
 					Optional.of(CrudUtils.update(AnalyticTriggerStateBean.class)
@@ -305,14 +317,17 @@ public class AnalyticTriggerCrudUtils {
 			final Optional<String> locked_to_host
 			)
 	{
+		// These queries want the following optimizations:
+		// (input_resource_combined, input_data_service)
+		
 		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("")) 
+					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
 					.when(AnalyticTriggerStateBean::is_bucket_active, false)
 					.when(AnalyticTriggerStateBean::is_job_active, false)
 					.when(AnalyticTriggerStateBean::is_pending, false)
-					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
-					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("") 
-					))
+					)
 					.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 					.get();
 				;
@@ -332,11 +347,14 @@ public class AnalyticTriggerCrudUtils {
 	public static CompletableFuture<?> updateTriggersWithBucketOrJobActivation(final ICrudService<AnalyticTriggerStateBean> trigger_crud, 
 			final DataBucketBean bucket, final Optional<List<AnalyticThreadJobBean>> jobs, final Optional<String> locked_to_host)
 	{
+		// These queries want the following optimizations:
+		// (bucket_name, job_name)
+				
 		final QueryComponent<AnalyticTriggerStateBean> update_query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()))
+						.map(q -> jobs.map(js -> q.withAny(AnalyticTriggerStateBean::job_name, js.stream().map(j -> j.name()).collect(Collectors.toList()))).orElse(q))
 						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
-						.map(q -> jobs.map(js -> q.when(AnalyticTriggerStateBean::job_name, js.stream().map(j -> j.name()).collect(Collectors.toList()))).orElse(q))
 						.get()
 						;
 		
@@ -354,10 +372,13 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 */
 	public static CompletableFuture<?> updateActiveJobTriggerStatus(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+		// These queries want the following optimizations:
+		// (bucket_name, trigger_type)
+		
 		final QueryComponent<AnalyticTriggerStateBean> update_query = 
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
-						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 						;
 				
 		final Instant now = Instant.now();
@@ -381,6 +402,9 @@ public class AnalyticTriggerCrudUtils {
 	 * @param bucket
 	 */
 	public static CompletableFuture<?> deleteTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+		// These queries want the following optimizations:
+		// (bucket_name)
+		
 		return trigger_crud.deleteObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class).when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()));
 	}
 
@@ -392,6 +416,9 @@ public class AnalyticTriggerCrudUtils {
 	 */
 	public static CompletableFuture<?> deleteActiveJobEntries(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, List<AnalyticThreadJobBean> jobs, final Optional<String> locked_to_host)
 	{
+		// These queries want the following optimizations:
+		// (bucket_name, job_name, trigger_type)
+		
 		final QueryComponent<AnalyticTriggerStateBean> delete_query =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
@@ -412,6 +439,9 @@ public class AnalyticTriggerCrudUtils {
 	 * @return
 	 */
 	public static CompletableFuture<?> deleteOldTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host, final Date now) {
+		// These queries want the following optimizations:
+		// (bucket_name, job_name, is_job_active, last_checked)
+		
 		final QueryComponent<AnalyticTriggerStateBean> query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
@@ -426,4 +456,64 @@ public class AnalyticTriggerCrudUtils {
 		return f2;
 	}
 	
+	///////////////////////////////////////////////////////////////////////
+	
+	// OPTIMIZATION UTILTIES
+	
+	/** Optimize queries
+	 * @param trigger_crud
+	 */
+	public static void optimizeQueries(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {
+		final MethodNamingHelper<AnalyticTriggerStateBean> state_clazz = BeanTemplateUtils.from(AnalyticTriggerStateBean.class);
+		
+		//1) getTriggersToCheck: (next_check)
+		//2) isAnalyticBucketOrJobActive: (bucket_name, job_name, trigger_type, is_job_active)
+		//3) updateCompletedJob: (bucket_name, job_name, is_pending)
+		//4) updateTriggerStatuses: (_id) [none]
+		//5) updateTriggerInputsWhenJobOrBucketCompletes:  (input_resource_combined, input_data_service)
+		//6) updateTriggersWithBucketOrJobActivation: (bucket_name, job_name) [ie subset of 2]
+		//7) updateActiveJobTriggerStatus: (bucket_name, trigger_type)
+		//8) deleteTriggers: (bucket_name) [ie subset of 2]
+		//9) deleteActiveJobEntries: (bucket_name, job_name, trigger_type) [ie subset of 2]
+		//10) deleteOldTriggers: (bucket_name, job_name, is_job_active, last_checked)			
+		
+		//1)
+		trigger_crud.optimizeQuery(Arrays.asList(state_clazz.field(AnalyticTriggerStateBean::next_check)));
+		//2)
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::bucket_name),
+				state_clazz.field(AnalyticTriggerStateBean::job_name),
+				state_clazz.field(AnalyticTriggerStateBean::trigger_type),
+				state_clazz.field(AnalyticTriggerStateBean::is_job_active)
+			));
+		//3)
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::bucket_name),
+				state_clazz.field(AnalyticTriggerStateBean::job_name),
+				state_clazz.field(AnalyticTriggerStateBean::is_pending)
+			));
+		//4) (none)
+		//5)
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::input_resource_combined),
+				state_clazz.field(AnalyticTriggerStateBean::input_data_service)
+			));
+		//6) (none)
+		//7)
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::bucket_name),
+				state_clazz.field(AnalyticTriggerStateBean::trigger_type)
+			));
+		//8) (none)
+		//9) (none)
+		//10) 
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::bucket_name),
+				state_clazz.field(AnalyticTriggerStateBean::job_name),
+				state_clazz.field(AnalyticTriggerStateBean::is_job_active),
+				state_clazz.field(AnalyticTriggerStateBean::last_checked)
+			));
+		
+		
+	}		
 }
