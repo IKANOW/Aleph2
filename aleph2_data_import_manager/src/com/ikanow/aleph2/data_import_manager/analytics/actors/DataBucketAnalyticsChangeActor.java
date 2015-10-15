@@ -68,8 +68,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -114,6 +116,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
 
 
 
@@ -195,6 +198,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActi
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 
+import fj.Unit;
 import fj.data.Either;
 import fj.data.Validation;
 
@@ -1242,9 +1246,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 												final Tuple2<ActorRef, ActorSelection> me_sibling)
 	{
 		if (null == me_sibling) return; // (just keeps bw compatibility with the various test cases we currently have - won't get encountered in practice)
-		
-		CompletableFuture.allOf(job_results.stream().map(j_f -> j_f._2()).toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {
-			
+
+		final Runnable actualProcessing = () -> {
+			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
 			final Map<Optional<JobMessageType>, List<Tuple2<AnalyticThreadJobBean, T>>> completed_jobs = 
 					job_results.stream()
 						.filter(j_f -> _batch_types.contains(j_f._1().analytic_type())) // (never allow streaming types to go to the triggers)
@@ -1263,8 +1267,31 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 												kv.getKey().get());
 								me_sibling._2().tell(fwd_msg, me_sibling._1());
 							}				
-						});			
-		});
-
+						});						
+		};
+		
+		// Perform the processing even if 1+ if the jobs fails - that job will just be flat wrapped out
+		CompletableFuture.allOf(job_results.stream().map(j_f -> j_f._2()).toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {			
+			actualProcessing.run();
+		})
+		.exceptionally(__ -> {			
+			actualProcessing.run();
+			return null;
+		})
+		;
 	}	
+
+	/** Inefficient but safe utility for sending update events to the trigger sibling
+	 * @param job_results
+	 * @param bucket
+	 * @param grouping_lambda - returns the job type based on the job and return value
+	 * @param me_sibling
+	 */
+	protected static <T> void sendOnTriggerEventMessages_phase2(final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<T>>> job_results,
+			final DataBucketBean bucket,
+			final Function<Tuple2<AnalyticThreadJobBean, T>, Optional<JobMessageType>> grouping_lambda,
+			final Tuple2<ActorRef, ActorSelection> me_sibling)
+	{
+		
+	}
 }

@@ -125,7 +125,7 @@ public class AnalyticTriggerCrudUtils {
 			
 		final CompletableFuture<?> combined[] = ret.toArray(size -> new CompletableFuture[size]);
 		
-		return CompletableFuture.allOf(combined);			
+		return CompletableFuture.allOf(combined).exceptionally(__ -> null);			
 	}
 	
 	///////////////////////////////////////////////////////////////////////
@@ -303,7 +303,7 @@ public class AnalyticTriggerCrudUtils {
 		});		
 		
 		final CompletableFuture<?> combined[] = ret.toArray(size -> new CompletableFuture[size]);
-		return CompletableFuture.allOf(combined);
+		return CompletableFuture.allOf(combined).exceptionally(__ -> null);
 
 	}	
 	
