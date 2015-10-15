@@ -62,8 +62,16 @@ import java.util.stream.StreamSupport;
 
 
 
+
+
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
+
+
 
 
 
@@ -100,6 +108,7 @@ import scala.Tuple2;
 import scala.runtime.BoxedUnit;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
 
@@ -133,11 +142,17 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
+
+
+import com.codepoetics.protonpack.StreamUtils;
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticsErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.utils.ActorNameUtils;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
@@ -172,6 +187,7 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 
@@ -202,6 +218,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	protected final Optional<IAnalyticsTechnologyService> _batch_analytics_tech;
 	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
 	protected final SetOnce<AnalyticsContext> _batch_analytics_context = new SetOnce<>();
+	protected final ActorSelection _trigger_sibling; 
 	
 	// Streaming enrichment handling:
 	public static final Optional<String> STREAMING_ENRICHMENT_DEFAULT = Optional.of("StreamingEnrichmentService");
@@ -221,6 +238,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		
 		_stream_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, STREAMING_ENRICHMENT_DEFAULT);
 		_batch_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, BATCH_ENRICHMENT_DEFAULT);
+		
+		// My local analytics trigger engine:
+		_trigger_sibling = _actor_system.actorSelection(_context.getInformationService().getHostname() + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX);
 	}
 	
 	///////////////////////////////////////////
@@ -294,6 +314,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    			
 		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
+		    			final ActorRef closing_self = this.self();		    			
+		    			
 		    			final BucketActionMessage final_msg = 
 		    					Patterns.match(m).<BucketActionMessage>andReturn()
 		    					
@@ -307,6 +329,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    									
 		    						// Standard case
 		    						.otherwise(__ -> m);
+		    			
+		    			//(before we actually handle the message, we're going to send it to my trigger sibling (fire and forget))
+		    			_trigger_sibling.tell(final_msg, closing_self);
 		    			
 		    			handleActionRequest(final_msg);
 		    		})
@@ -358,23 +383,26 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				// One final system classpath/streaming enrichment fix:
 				final DataBucketBean final_bucket = finalBucketConversion(technology_name_or_id, message.bucket(), err_or_map);
 				
-				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, 
+				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, Tuples._2T(closing_self, _trigger_sibling), 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
 																			err_or_tech_module);
 				
 				return handleTechnologyErrors(final_bucket, message, hostname, err_or_tech_module, ret);
 				
 			})
-			.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
-				// Some information logging:
-				Patterns.match(reply).andAct()
-					.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-							message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
-					.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-							msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
-					.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+			.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
 				
-				closing_sender.tell(reply,  closing_self);		    						
+				if (!(reply instanceof BucketActionReplyMessage.BucketActionNullReplyMessage)) {
+					// Some information logging:
+					Patterns.match(reply).andAct()
+						.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+								message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
+						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+								msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
+						.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+					
+					closing_sender.tell(reply,  closing_self);
+				}
 			})
 			.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 				// Some information logging:
@@ -393,7 +421,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////
 
-	// STREAMING ENRICHMENT SPECIAL CASE
+	// ENRICHMENT SPECIAL CASE
 	
 	/** Determines whether this bucket should be handled as 
 	 * @param bucket - the bucket
@@ -420,8 +448,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	 * @param message
 	 * @return
 	 */
-	protected BucketActionMessage convertEmptyAnalyticsMessageToStop(final BucketActionMessage.UpdateBucketActionMessage message) {		
-		return new BucketActionMessage.UpdateBucketActionMessage(message.old_bucket(), false, message.old_bucket(), message.handling_clients());		
+	protected BucketActionMessage convertEmptyAnalyticsMessageToStop(final BucketActionMessage.UpdateBucketActionMessage message) {
+		return new BucketActionMessage.BucketActionAnalyticJobMessage(message.old_bucket(), 
+				Optionals.of(() -> message.old_bucket().analytic_thread().jobs()).orElse(Collections.emptyList()), 
+				JobMessageType.deleting);
 	}
 	
 	/** Converts a bucket with only streaming enrichment settings into one that has an analytic thread dervied
@@ -779,6 +809,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final BucketActionMessage m,			
 			final String source,
 			final AnalyticsContext context,
+			final Tuple2<ActorRef, ActorSelection> me_sibling,
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)
 			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module // "pipeline element"
 			)
@@ -876,6 +907,95 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							
 							return combineResults(top_level_result, Collections.emptyList(), source);
 						})
+						// Finally, a bunch of analytic messages
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.check_completion == msg.type()), 
+								msg -> {
+									// Check whether these jobs are complete, send message back to sibling asynchronously
+
+									//(note: don't use perJobSetup for these explicity analytic event messages)
+									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<Boolean>>> job_results = 
+											jobs.stream()
+												.map(job -> Tuples._2T(job, (CompletableFuture<Boolean>)
+														tech_module.checkAnalyticJobProgress(msg.bucket(), msg.jobs(), job, context)))
+												.collect(Collectors.toList());
+									
+									// Send a result message if any jobs are complete (wait for all of them, for simplicity):
+									
+									CompletableFuture.allOf(job_results.stream().toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {
+										
+										final List<AnalyticThreadJobBean> completed_jobs = 
+												job_results.stream()
+													.flatMap(Lambdas.flatWrap_i(j_f -> Tuples._2T(j_f._1(), j_f._2().get())))
+													.filter(j_f -> j_f._2())
+													.map(j_f -> j_f._1())
+													.collect(Collectors.toList())
+													;
+										if (!completed_jobs.isEmpty()) {
+											final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = 
+													new BucketActionMessage.BucketActionAnalyticJobMessage(msg.bucket(), completed_jobs, JobMessageType.stopping);
+											me_sibling._2().tell(msg, me_sibling._1());
+										}
+									});
+									
+									// Send a status message (Which will be ignored)
+									
+									return CompletableFuture.completedFuture(new BucketActionReplyMessage.BucketActionNullReplyMessage());
+								})
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.starting == msg.type()) && (null == msg.jobs()), 
+								msg -> {
+									// Received a start notification for the bucket
+
+									//TODO (ALEPH-12): get the matching triggers into the message
+									final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onThreadExecute(msg.bucket(), jobs, Collections.emptyList(), context);
+																
+									//(ignore the reply apart from logging - failures will be identified by triggers)
+									top_level_result.thenAccept(reply -> {
+										if (!reply.success()) _logger.info(ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
+									}); 
+									
+									// Send a status message (Which will be ignored)
+									
+									return CompletableFuture.completedFuture(new BucketActionReplyMessage.BucketActionNullReplyMessage());
+								})
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.starting == msg.type()) && (null != msg.jobs()), 
+								msg -> {
+									// Received a start notification for 1+ of the jobs
+									
+									//(note: don't use perJobSetup for these explicity analytic event messages)
+									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
+											jobs.stream()
+												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
+														tech_module.startAnalyticJob(msg.bucket(), jobs, job, context)))
+												.collect(Collectors.toList());
+									
+									//(ignore the reply apart from logging - failures will be identified by triggers)
+									//TODO (ALEPH-12): logging
+									
+									// Send a status message (Which will be ignored)
+									
+									return CompletableFuture.completedFuture(new BucketActionReplyMessage.BucketActionNullReplyMessage());
+								})
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.stopping == msg.type()) && (null == msg.jobs()), 
+								msg -> {
+									//TODO 
+									return null;
+								})
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.stopping == msg.type()) && (null != msg.jobs()), 
+								msg -> {
+									//TODO 
+									return null;
+								})
+						.when(BucketActionMessage.BucketActionAnalyticJobMessage.class,
+								msg -> (JobMessageType.deleting == msg.type()), 
+								msg -> {
+									//TODO 
+									return null;
+								})
 						.otherwise(msg -> { // return "command not recognized" error
 							return CompletableFuture.completedFuture(
 									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,

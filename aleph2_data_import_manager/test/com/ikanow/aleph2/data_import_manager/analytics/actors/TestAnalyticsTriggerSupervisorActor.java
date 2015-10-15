@@ -47,7 +47,6 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper;
-import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
@@ -126,7 +125,7 @@ public class TestAnalyticsTriggerSupervisorActor {
 
 		// wake up the supervisor
 		
-		_test_actor = _cds.createSingletonActor(ActorUtils.ANALYTICS_TRIGGER_SINGLETON_ACTOR,
+		_test_actor = _cds.createSingletonActor("ANALYTICS_TRIGGER_SINGLETON_ACTOR",
 					ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build(), 
 					Props.create(AnalyticsTriggerSupervisorActor.class));
 				

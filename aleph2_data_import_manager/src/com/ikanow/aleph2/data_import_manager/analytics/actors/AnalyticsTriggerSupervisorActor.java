@@ -125,6 +125,8 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
+			//TODO (ALEPH-12): at some point add a slower-time "resync" in case lost messages result in a gradual loss of state consistency 
+			
 			// Send a message to a worker:
 			_analytics_trigger_bus.publish(new AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
 		}

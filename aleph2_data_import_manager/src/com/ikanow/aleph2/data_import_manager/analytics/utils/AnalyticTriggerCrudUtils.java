@@ -41,19 +41,6 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 
 //TODO (ALEPH-12) - add these to the optimized list in singleton
 
-//TODO (ALEPH-12): what happens if an updated bucket has no jobs left? need to make sure the existing jobs get erased?!
-// ... can i do a big delete on all the buckets' jobs? 
-// Ahhhhhhhhhhh complication ... i receive these messages grouped not by bucket(:locked_host) _but_ by bucket(:locked_host)[implicitly:analytic_tech]
-// so i'm going to need to update these groupings....
-// ugh it gets worse ... i don't even know when i've received them all, so if i have a bucket with a job served via analytic tech X
-// and then the bucket gets updated so X doesn't appear any more, then i never see the update message (YIKES which also won't update DIM)
-// OK solution: use diff bean to see that analytic thread has changed, write logic to send an empty list of jobs, make sure DIM treats that as
-// "remove everything"
-// SO IN SUMMARY
-// 1) add code to CMDB to check create "empty" buckets
-// 2) ensure that DIM stops empty buckets (and sends messages to the analytic engine)
-// 3) ensure that we handle empty jobs (ie they get to this point)
-
 /** A set of utilities for retrieving and updating the trigger state
  * @author Alex
  */
@@ -129,16 +116,9 @@ public class AnalyticTriggerCrudUtils {
 						, 
 						true);
 				
-				// Step 3: then remove any existing entries with lesser last_checked
-				final QueryComponent<AnalyticTriggerStateBean> query = 
-						Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
-									.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
-									.whenNot(AnalyticTriggerStateBean::is_job_active, true)
-									.rangeBelow(AnalyticTriggerStateBean::last_checked, now, true))
-						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
-						.get();
-									
-				final CompletableFuture<?> f2 = trigger_crud.deleteObjectsBySpec(query);
+				// Step 3: then remove any existing entries with lesser last_checked (for that job)
+				
+				final CompletableFuture<?> f2 = deleteOldTriggers(trigger_crud, bucket_name, job_name, locked_to_host, now);
 				
 				return Stream.of(f1, f2);
 			});
@@ -422,4 +402,28 @@ public class AnalyticTriggerCrudUtils {
 			
 		return trigger_crud.deleteObjectsBySpec(delete_query);
 	}	
+
+	/** Deletes old triggers (either that have been removed from the bucket, or that have been replaced by new ones)
+	 * @param trigger_crud
+	 * @param bucket_name
+	 * @param job_name
+	 * @param locked_to_host
+	 * @param now
+	 * @return
+	 */
+	public static CompletableFuture<?> deleteOldTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host, final Date now) {
+		final QueryComponent<AnalyticTriggerStateBean> query = 
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
+							.when(AnalyticTriggerStateBean::job_name, job_name)
+							.whenNot(AnalyticTriggerStateBean::is_job_active, true)
+							.rangeBelow(AnalyticTriggerStateBean::last_checked, now, true))
+				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+				.get();
+							
+		final CompletableFuture<?> f2 = trigger_crud.deleteObjectsBySpec(query);
+		
+		return f2;
+	}
+	
 }

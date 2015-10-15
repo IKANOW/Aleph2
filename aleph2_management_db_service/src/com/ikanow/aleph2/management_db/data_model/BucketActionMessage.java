@@ -191,7 +191,7 @@ public class BucketActionMessage implements Serializable {
 		private static final long serialVersionUID = -8638417014896946076L;
 
 		protected BucketActionAnalyticJobMessage() { super(null, null); }
-		public enum JobMessageType { starting, stopping, check_completion };
+		public enum JobMessageType { starting, stopping, deleting, check_completion };
 		
 		public BucketActionAnalyticJobMessage(final DataBucketBean bucket, final List<AnalyticThreadJobBean> jobs, final JobMessageType type) {
 			super(bucket);

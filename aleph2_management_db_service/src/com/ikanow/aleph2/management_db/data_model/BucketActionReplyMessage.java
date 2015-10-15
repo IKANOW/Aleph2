@@ -129,4 +129,12 @@ public class BucketActionReplyMessage implements Serializable {
 		private String source;
 		private BasicMessageBean reply;
 	}
+	
+	/** A reply that is ignored by everyone and should not be sent on when encountered
+	 * @author Alex
+	 */
+	public static class BucketActionNullReplyMessage extends BucketActionReplyMessage implements Serializable {
+		private static final long serialVersionUID = 5399489379330665287L;
+		public BucketActionNullReplyMessage() {}
+	}
 }

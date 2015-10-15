@@ -817,7 +817,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), 
 					"test1", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.fail(error));
 	
@@ -835,7 +835,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, offer,
 					"test2", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null,
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 			
@@ -850,7 +850,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, delete,
 					"test3", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -872,7 +872,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, create,
 					"test4", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -894,7 +894,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test4b = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, create,
 					"test4b", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -910,7 +910,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, update,
 					"test5", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -943,7 +943,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					disabled_bucket, update,
 					"test5a", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -966,7 +966,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, update,
 					"test5b", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -988,7 +988,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket_batch, update,
 					"test5c", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1010,7 +1010,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket_batch, update,
 					"test5d", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1045,7 +1045,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, update,
 					"test5e.1", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1074,7 +1074,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, update,
 					"test5e.2", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1107,7 +1107,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, update,
 					"test5e.3", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1134,7 +1134,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, purge_msg,
 					"test7", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1152,7 +1152,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, test,
 					"test8", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 									
@@ -1186,7 +1186,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					disabled_bucket, test,
 					"test8b", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 									
@@ -1205,7 +1205,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, poll,
 					"test9", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1226,7 +1226,7 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, bad_msg,
 					"testX", 
-					_actor_context.getNewAnalyticsContext(), 
+					_actor_context.getNewAnalyticsContext(), null, 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 									

@@ -32,11 +32,9 @@ public class ActorUtils {
 	
 	public final static String BUCKET_ACTION_SUPERVISOR = "bucket_actions_supervisor";
 	public final static String BUCKET_ACTION_HANDLER = "bucket_actions_handler";
-	public final static String ANALYTICS_TRIGGER_SINGLETON_ACTOR = "analytics_trigger_singleton";
 	public final static String BUCKET_TEST_CYCLE_SINGLETON_ACTOR = "test_cycle_singleton";
 	public final static String BUCKET_DELETION_SINGLETON_ACTOR = "deletion_singleton";
 	public final static String BUCKET_DELETION_WORKER_ACTOR = "deletion_worker";
 	public final static String BUCKET_POLL_FREQUENCY_SINGLETON_ACTOR = "poll_freq_singleton";
-	public final static String ANALYTICS_TRIGGER_WORKER_ACTOR = "analytics_trigger_worker";	
 	public final static String SECURITY_CACHE_INVALIDATION_SINGLETON_ACTOR = "security_cache_invalidation_singleton";
 }

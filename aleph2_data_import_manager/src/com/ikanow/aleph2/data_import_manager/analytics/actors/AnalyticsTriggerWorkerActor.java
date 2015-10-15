@@ -452,6 +452,22 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								AnalyticTriggerCrudUtils.updateCompletedJob(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host).join();							
 							});							
 						})
+			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
+					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.deleting == msg.type(),
+						msg -> { // (note don't need to worry about locking here)
+							
+							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
+									.flatMap(s -> s.stream().findFirst());							
+							
+							// This is a special message indicating that the bucket has been updated and some jobs have been removed
+							// so just remove those jobs from the trigger database
+							
+							Optionals.ofNullable(msg.jobs()).stream()
+								.forEach(job -> {
+									AnalyticTriggerCrudUtils.deleteOldTriggers(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host, Date.from(Instant.now()));
+								});
+							
+						})						
 			.otherwise(__ -> {
 				_logger.info(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
 			}); //(ignore)
