@@ -40,9 +40,18 @@ public class CoreSecurityModule extends ShiroModule {
         	bindRealms();
         	bind(CacheManager.class).to(EhCacheManager.class).asEagerSingleton();
         	expose(CacheManager.class);
+        	bindMisc();
     }
 
-    @Provides
+    /** 
+     * Place holder to overwrite. 
+     */
+    protected void bindMisc() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Provides
     Ini loadShiroIni() {
         return Ini.fromResourcePath("classpath:shiro.ini");
     }
