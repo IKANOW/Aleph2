@@ -294,12 +294,20 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    			
 		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
-		    			final BucketActionMessage final_msg = Lambdas.get(() -> {
-		    				if (isEnrichmentRequest(m)) {
-		    					return convertEnrichmentToAnalytics(m);
-		    				}
-		    				else return m;
-		    			});
+		    			final BucketActionMessage final_msg = 
+		    					Patterns.match(m).<BucketActionMessage>andReturn()
+		    					
+		    						// Enrichment message, convert to analytics message
+		    						.when(__ -> isEnrichmentRequest(m), __ -> convertEnrichmentToAnalytics(m))
+		    						
+		    						// Update message telling me this analytic tech has been removed, so send stop messages to all jobs
+		    						.when(BucketActionMessage.UpdateBucketActionMessage.class, 
+		    								__ -> Optionals.of(() -> m.bucket().analytic_thread().jobs()).map(j -> j.isEmpty()).orElse(false),
+		    									msg -> convertEmptyAnalyticsMessageToStop(msg))
+		    									
+		    						// Standard case
+		    						.otherwise(__ -> m);
+		    			
 		    			handleActionRequest(final_msg);
 		    		})
 	    		.build();
@@ -408,6 +416,14 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					.done();
 	}
 
+	/** Convert an update message where the new bucket has no jobs to a stop message for the previous version of the bucket
+	 * @param message
+	 * @return
+	 */
+	protected BucketActionMessage convertEmptyAnalyticsMessageToStop(final BucketActionMessage.UpdateBucketActionMessage message) {		
+		return new BucketActionMessage.UpdateBucketActionMessage(message.old_bucket(), false, message.old_bucket(), message.handling_clients());		
+	}
+	
 	/** Converts a bucket with only streaming enrichment settings into one that has an analytic thread dervied
 	 * @param bucket
 	 * @return

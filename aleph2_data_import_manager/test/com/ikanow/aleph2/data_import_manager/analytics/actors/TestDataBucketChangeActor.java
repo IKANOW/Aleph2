@@ -341,6 +341,58 @@ public class TestDataBucketChangeActor {
 		}		
 	}	
 
+	//TODO (ALEPH-12): finish this
+	@org.junit.Ignore
+	@Test
+	public void test_send_dummyUpdateMessage() throws InterruptedException, ExecutionException {
+		
+		// Create a bucket
+		
+		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
+				"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
+		
+		final AnalyticThreadJobBean job = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+											.done().get();
+		
+		final AnalyticThreadBean thread1 = BeanTemplateUtils.build(AnalyticThreadBean.class)
+												.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+											.done().get();
+		
+		final AnalyticThreadBean thread2 = BeanTemplateUtils.build(AnalyticThreadBean.class)
+												.with(AnalyticThreadBean::jobs, Arrays.asList())
+											.done().get();
+		
+		final DataBucketBean old_bucket = // (don't convert to actor, this is going via the message bus, ie "raw") 				
+						BeanTemplateUtils.clone(createBucket("test_actor"))
+								.with(DataBucketBean::analytic_thread, thread1)
+						.done()
+						;
+		
+		final DataBucketBean new_bucket = BeanTemplateUtils.clone(old_bucket)
+												.with(DataBucketBean::analytic_thread, thread2)
+											.done()
+											;
+		
+		// Create an actor:
+		
+		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
+		_db_actor_context.getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
+
+		// create the inbox:
+		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		
+		
+		// 1) A message that will be converted
+		{
+			final BucketActionMessage.UpdateBucketActionMessage update =
+					new BucketActionMessage.UpdateBucketActionMessage(new_bucket, true, old_bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
+			
+			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, update, 5000L), _db_actor_context.getActorSystem().dispatcher());
+			@SuppressWarnings("unused")
+			final BucketActionReplyMessage msg4 = reply4.get();
+			
+		}
+	}	
+
 	@Test
 	public void test_getAnalyticsTechnology_specialCases() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
 		// Just check the streaming enrichment error and success cases
