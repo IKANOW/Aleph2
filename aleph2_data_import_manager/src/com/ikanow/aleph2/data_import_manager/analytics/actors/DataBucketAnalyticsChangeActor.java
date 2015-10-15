@@ -1243,10 +1243,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	{
 		if (null == me_sibling) return; // (just keeps bw compatibility with the various test cases we currently have - won't get encountered in practice)
 		
-		CompletableFuture.allOf(job_results.stream().toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {
+		CompletableFuture.allOf(job_results.stream().map(j_f -> j_f._2()).toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {
 			
 			final Map<Optional<JobMessageType>, List<Tuple2<AnalyticThreadJobBean, T>>> completed_jobs = 
 					job_results.stream()
+						.filter(j_f -> _batch_types.contains(j_f._1().analytic_type())) // (never allow streaming types to go to the triggers)
 						.flatMap(Lambdas.flatWrap_i(j_f -> Tuples._2T(j_f._1(), j_f._2().get())))
 						.collect(Collectors.
 									groupingBy((Tuple2<AnalyticThreadJobBean, T> j_f) -> grouping_lambda.apply(j_f)))
