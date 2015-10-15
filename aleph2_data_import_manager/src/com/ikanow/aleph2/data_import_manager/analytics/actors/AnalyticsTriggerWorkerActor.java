@@ -117,7 +117,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 * @param message
 	 */
 	protected void onBucketChanged(final BucketActionMessage message) {
-		_logger.info(ErrorUtils.get("Received analytic trigger request for bucket {0}", message.bucket().full_name()));
+		_logger.info(ErrorUtils.get("Received bucket action relay for bucket {0}: {1}", message.bucket().full_name()), message.getClass().getName());
 		
 		// Create the state objects
 
@@ -153,6 +153,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							Tuples._2T(max_time_to_decollide, on_collision));
 			
 			path_names.trySet(triggers.keySet());
+			
+			_logger.info(ErrorUtils.get("Generated {0} triggers for bucket {1} ({2} jobs)", 
+					triggers_in.values().size(),
+					message.bucket().full_name()), Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0));			
 			
 			// Output them
 			
@@ -348,20 +352,22 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final boolean is_already_triggered = AnalyticTriggerBeanUtils.checkTriggerLimits(trigger); 
 			
 		if (!is_already_triggered) {
-			final AnalyticStateChecker checker = _actor_context.getAnalyticTriggerFactory().getChecker(trigger.trigger_type());
+			final AnalyticStateChecker checker = 
+					_actor_context.getAnalyticTriggerFactory()
+						.getChecker(trigger.trigger_type(), Optional.ofNullable(trigger.input_data_service()));
 			
 			final Tuple2<Boolean, Long> check_result = checker.check(bucket, job, trigger).join(); // (can't use the async nature because of the InterProcessMutex)
 			
 			if (check_result._1()) {
 				mutable_trigger_list_active.add(
 						BeanTemplateUtils.clone(trigger)
-							.with(AnalyticTriggerStateBean::last_resource_size, check_result._2())
+							.with(AnalyticTriggerStateBean::curr_resource_size, check_result._2())
 						.done());
 			}
 			else {
 				mutable_trigger_list_dormant.add(
 						BeanTemplateUtils.clone(trigger)
-							.with(AnalyticTriggerStateBean::last_resource_size, check_result._2())
+							.with(AnalyticTriggerStateBean::curr_resource_size, check_result._2())
 						.done());				
 			}			
 		}
@@ -388,6 +394,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.starting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
+
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));
+							
 							
 							// 1) 1+ jobs have been confirmed/manually started by the technology:
 							// (or just the bucket if msg.jobs()==null)
@@ -408,6 +418,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.stopping == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
+							
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));
+							
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());
@@ -438,7 +452,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								AnalyticTriggerCrudUtils.updateCompletedJob(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host).join();							
 							});							
 						})
-			.otherwise(__ -> {}); //(ignore)
+			.otherwise(__ -> {
+				_logger.info(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
+			}); //(ignore)
 		;
 	}
 
@@ -514,6 +530,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs)
 	{
 		if (!mutable_active_jobs.isEmpty()) {
+			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),
+					mutable_active_jobs.stream().map(t -> t.input_resource_combined()).collect(Collectors.joining(";"))
+					));			
 			
 			AnalyticTriggerCrudUtils.updateActiveJobTriggerStatus(trigger_crud, bucket_to_check).join();
 		}			
@@ -542,6 +561,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					AnalyticTriggerCrudUtils.isAnalyticBucketOrJobActive(trigger_crud, bucket_to_check.full_name(), Optional.empty(), locked_to_host).join();
 
 			if (!bucket_still_active) {
+				_logger.info(ErrorUtils.get("Bucket {0}: changed to inactive", bucket_to_check.full_name()));			
+				
 				// Send a message to the technology
 			
 				final BucketActionMessage new_message = 
@@ -585,11 +606,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								.collect(Collectors.toSet())
 								;
 								
-						return AnalyticTriggerBeanUtils.checkTrigger(checker,resources_dataservices);
+						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker,resources_dataservices);
+						
+						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
+								bucket_to_check.full_name()),
+								resources_dataservices.toString()
+								);							
+						
+						return b;
 					})
 					.orElse(false);
 			
-			if (external_bucket_activate) {
+			if (external_bucket_activate) {				
 				// 2 things to do
 				
 				// 1) Send a notification to the technologies
@@ -645,6 +673,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			
 			//(don't wait for a reply or anything)
 
+			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),
+					mutable_newly_active_jobs.stream().map(j -> j.name()).collect(Collectors.joining(";"))
+					));						
+			
 			// But do immediately set up the jobs as active - if the tech fails, then we'll find out when we poll them later
 			
 			mutable_newly_active_jobs.stream().parallel().forEach(job ->
