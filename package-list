@@ -1,0 +1,11 @@
+com.ikanow.aleph2.data_model.interfaces.data_access
+com.ikanow.aleph2.data_model.interfaces.data_analytics
+com.ikanow.aleph2.data_model.interfaces.data_import
+com.ikanow.aleph2.data_model.interfaces.data_services
+com.ikanow.aleph2.data_model.interfaces.shared_services
+com.ikanow.aleph2.data_model.module
+com.ikanow.aleph2.data_model.objects.data_analytics
+com.ikanow.aleph2.data_model.objects.data_import
+com.ikanow.aleph2.data_model.objects.data_layers
+com.ikanow.aleph2.data_model.objects.shared
+com.ikanow.aleph2.data_model.utils

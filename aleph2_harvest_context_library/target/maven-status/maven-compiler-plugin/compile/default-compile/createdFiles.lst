@@ -1,0 +1,5 @@
+com\ikanow\aleph2\data_import\services\HarvestContext$State.class
+com\ikanow\aleph2\data_import\utils\LiveInjector.class
+com\ikanow\aleph2\data_import\services\HarvestContext$MutableState.class
+com\ikanow\aleph2\data_import\services\HarvestContext.class
+com\ikanow\aleph2\data_import\utils\ErrorUtils.class

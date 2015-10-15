@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.ikanow.aleph2.data_model.interfaces.shared_services.TestIServiceContext
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.959 sec
