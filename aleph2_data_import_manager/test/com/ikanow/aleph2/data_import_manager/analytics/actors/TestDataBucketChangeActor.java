@@ -341,17 +341,15 @@ public class TestDataBucketChangeActor {
 		}		
 	}	
 
-	//TODO (ALEPH-12): finish this
-	@org.junit.Ignore
 	@Test
 	public void test_send_dummyUpdateMessage() throws InterruptedException, ExecutionException {
 		
 		// Create a bucket
 		
-		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-				"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
-		
 		final AnalyticThreadJobBean job = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+												.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "StreamingEnrichmentService")
+												.with(AnalyticThreadJobBean::name, "test")
+												.with(AnalyticThreadJobBean::config, new LinkedHashMap<String, Object>())
 											.done().get();
 		
 		final AnalyticThreadBean thread1 = BeanTemplateUtils.build(AnalyticThreadBean.class)
@@ -378,18 +376,18 @@ public class TestDataBucketChangeActor {
 		final ActorRef handler = _db_actor_context.getActorSystem().actorOf(Props.create(DataBucketAnalyticsChangeActor.class), "test_host");
 		_db_actor_context.getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_EVENT_BUS);
 
-		// create the inbox:
-		final Inbox inbox = Inbox.create(_actor_context.getActorSystem());		
-		
 		// 1) A message that will be converted
 		{
 			final BucketActionMessage.UpdateBucketActionMessage update =
 					new BucketActionMessage.UpdateBucketActionMessage(new_bucket, true, old_bucket, new HashSet<String>(Arrays.asList(_actor_context.getInformationService().getHostname())));
 			
 			final CompletableFuture<BucketActionReplyMessage> reply4 = AkkaFutureUtils.efficientWrap(Patterns.ask(handler, update, 5000L), _db_actor_context.getActorSystem().dispatcher());
-			@SuppressWarnings("unused")
 			final BucketActionReplyMessage msg4 = reply4.get();
 			
+			assertTrue("Job should be the right type: " + msg4.getClass(), msg4 instanceof BucketActionReplyMessage.BucketActionCollectedRepliesMessage);
+			assertTrue("Job should reply once", ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)msg4).replies().size()==1);
+			assertTrue("Job should work", ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)msg4).replies().get(0).success());
+			assertEquals("Job should be a stop", "stopJob", ((BucketActionReplyMessage.BucketActionCollectedRepliesMessage)msg4).replies().get(0).command());
 		}
 	}	
 
