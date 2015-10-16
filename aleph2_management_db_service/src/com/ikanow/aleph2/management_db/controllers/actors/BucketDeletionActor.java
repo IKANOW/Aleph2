@@ -208,7 +208,7 @@ public class BucketDeletionActor extends UntypedActor {
 	}
 	
 	/** Deletes the data in all data services
-	 *  TODO: assume default ones for now 
+	 *  TODO (ALEPH-26): assume default ones for now 
 	 * @param bucket - the bucket to cleanse
 	 */
 	public static CompletableFuture<Collection<BasicMessageBean>> deleteAllDataStoresForBucket(final DataBucketBean bucket, final IServiceContext service_context, boolean delete_bucket) {
@@ -231,8 +231,6 @@ public class BucketDeletionActor extends UntypedActor {
 					.ifPresent(storage -> {
 						vals.add(storage.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
 					});			
-				
-				vals.add(service_context.getStorageService().getDataService().get().handleBucketDeletionRequest(bucket, Optional.empty(), false));
 			}		
 			
 			return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))
