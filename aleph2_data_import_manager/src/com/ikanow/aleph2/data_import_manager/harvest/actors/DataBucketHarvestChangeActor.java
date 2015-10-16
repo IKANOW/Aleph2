@@ -154,7 +154,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    						// Some information logging:
 	    						Patterns.match(reply).andAct()
 	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage, 
-	    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={1}, success={2} error=", 
+	    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
 	    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
 	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
 	    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
