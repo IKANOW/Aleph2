@@ -994,6 +994,10 @@ public class TestDataBucketChangeActor {
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
+
+			/**/
+			System.out.println("????????? " + test_reply.replies().stream().map(tr -> tr.message() + ":" + tr.command()).collect(Collectors.joining(";")));
+			
 			assertEquals("test5c", test_reply.source());
 			assertEquals(3, test_reply.replies().size());
 			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();

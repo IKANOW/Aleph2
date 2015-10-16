@@ -140,11 +140,6 @@ public class TestAnalyticsTriggerSupervisorActor {
 		
 		for (int ii = 0; (ii < 20) && (_num_received.get() <= 2); ++ii) Thread.sleep(500L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
-		
-		// Check the DB was optimized:
-		//TODO (ALEPH-12): fix this for final list...
-//		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("is_active")));
-//		assertTrue(_under_mgmt_db.getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class).deregisterOptimizedQuery(Arrays.asList("next_check")));
 	}	
 	
 	@After

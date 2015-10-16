@@ -65,12 +65,12 @@ public class AnalyticTriggerBeanUtils {
 		
 		final Optional<List<AnalyticThreadComplexTriggerBean>> bucket_dependencies = Lambdas.get(() -> {
 			
-			if (trigger_info.map(info -> Optional.ofNullable(info.enabled()).orElse(true)).orElse(true)) {
+			if (!trigger_info.map(info -> Optional.ofNullable(info.enabled()).orElse(true)).orElse(true)) {
 				// Case 1: no trigger specified
 				return Optional.<List<AnalyticThreadComplexTriggerBean>>empty();
 			}
 			//(note beyond here trigger_info must be populated)
-			else if (trigger_info.map(info -> Optional.ofNullable(info.auto_calculate()).orElse(null != info.trigger())).orElse(false)) {
+			else if (trigger_info.map(info -> Optional.ofNullable(info.auto_calculate()).orElse(null == info.trigger())).orElse(false)) {
 				// (auto_calculate defaults to true if no trigger is specified, false otherwise)
 				return Optional.of(getFullyAutomaticTriggerList(bucket));
 			}
@@ -87,7 +87,7 @@ public class AnalyticTriggerBeanUtils {
 		final Stream<AnalyticTriggerStateBean> external_state_beans =
 				bucket_dependencies.map(List::stream).orElseGet(Stream::empty)
 					.map(trigger -> {
-						final String[] resource_subchannel = trigger.resource_name_or_id().split(":");						
+						final String[] resource_subchannel = Optional.ofNullable(trigger.resource_name_or_id()).orElse("").split(":");						
 						
 						return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 									//(add the transient params later)
@@ -184,7 +184,7 @@ public class AnalyticTriggerBeanUtils {
 		
 		return Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 			.stream()
-			.flatMap(job -> job.inputs().stream())
+			.flatMap(job -> Optionals.ofNullable(job.inputs()).stream())
 			.filter(input -> Optional.ofNullable(input.enabled()).orElse(true))
 			.map(input -> convertExternalInputToComplexTrigger(input))
 			.filter(opt_input -> opt_input.isPresent())
@@ -225,7 +225,7 @@ public class AnalyticTriggerBeanUtils {
 	 */
 	public static Stream<AnalyticThreadComplexTriggerBean> getSemiAutomaticTriggerStream(final AnalyticThreadComplexTriggerBean trigger) {		
 		// Basically we're just flattening the list here:		
-		if (Optional.ofNullable(trigger.enabled()).orElse(true)) {
+		if (!Optional.ofNullable(trigger.enabled()).orElse(true)) {
 			return Stream.empty();
 		}
 		else if (null == trigger.op()) { // end leaf node

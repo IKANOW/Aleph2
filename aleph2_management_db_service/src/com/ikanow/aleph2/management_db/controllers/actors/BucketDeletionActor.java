@@ -208,31 +208,40 @@ public class BucketDeletionActor extends UntypedActor {
 	}
 	
 	/** Deletes the data in all data services
-	 *  TODO: assume default ones for now 
+	 *  TODO (ALEPH-26): assume default ones for now 
 	 * @param bucket - the bucket to cleanse
 	 */
 	public static CompletableFuture<Collection<BasicMessageBean>> deleteAllDataStoresForBucket(final DataBucketBean bucket, final IServiceContext service_context, boolean delete_bucket) {
 		
 		// Currently the only supported data service is the search index
+		try {
+			final Optional<ISearchIndexService> search_index = service_context.getSearchIndexService();
 		
-		final Optional<ISearchIndexService> search_index = service_context.getSearchIndexService();
-	
-		final LinkedList<CompletableFuture<BasicMessageBean>> vals = new LinkedList<>();
-		
-		search_index
-			.flatMap(ISearchIndexService::getDataService)
-			.ifPresent(index -> {
-				vals.add(index.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
-			});
-		
-		if (!delete_bucket) { // (Else will be deleted in the main actor fn)
-			vals.add(service_context.getStorageService().getDataService().get().handleBucketDeletionRequest(bucket, Optional.empty(), false));
-		}		
-		
-		return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))
-				.thenApply(__ -> {
-					return vals.stream().map(x -> x.join()).collect(Collectors.toList());
+			final LinkedList<CompletableFuture<BasicMessageBean>> vals = new LinkedList<>();
+			
+			search_index
+				.flatMap(ISearchIndexService::getDataService)
+				.ifPresent(index -> {
+					vals.add(index.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
 				});
+			
+			if (!delete_bucket) { // (Else will be deleted in the main actor fn)
+				
+				service_context.getStorageService().getDataService()
+					.ifPresent(storage -> {
+						vals.add(storage.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
+					});			
+			}		
+			
+			return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))
+					.thenApply(__ -> {
+						return vals.stream().map(x -> x.join()).collect(Collectors.toList());
+					});
+		}
+		catch (Throwable t) {
+			return CompletableFuture.completedFuture(Arrays.asList(
+					ErrorUtils.buildErrorMessage(BucketDeletionActor.class.getSimpleName(), "deleteAllDataStoresForBucket", ErrorUtils.getLongForm("{0}", t))));
+		}
 	}
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#postStop()
