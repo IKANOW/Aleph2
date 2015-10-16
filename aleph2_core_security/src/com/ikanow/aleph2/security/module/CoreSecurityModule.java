@@ -33,17 +33,29 @@ import com.ikanow.aleph2.security.service.CoreRealm;
  * @author Joern
  */
 public class CoreSecurityModule extends ShiroModule {
+	static{
+		// prevent ehcache from making calls
+		System.setProperty("net.sf.ehcache.skipUpdateCheck","true");
+	}
     protected void configureShiro() {
 			bindCredentialsMatcher();
 			bindAuthProviders();
     		bindRoleProviders();
         	bindRealms();
-        	bind(CacheManager.class).to(EhCacheManager.class).asEagerSingleton();
-        	expose(CacheManager.class);
+        	bindCacheManager();
         	bindMisc();
     }
 
-    /** 
+    protected void bindCacheManager() {
+    	bind(CacheManager.class).toInstance(new EhCacheManager(){
+    	    public String getCacheManagerConfigFile() {
+    	        return "classpath:ehcache.xml";
+    	    }
+    	});		
+    	expose(CacheManager.class);
+	}
+
+	/** 
      * Place holder to overwrite. 
      */
     protected void bindMisc() {
@@ -51,11 +63,11 @@ public class CoreSecurityModule extends ShiroModule {
 		
 	}
 
-	@Provides
+/*	@Provides
     Ini loadShiroIni() {
         return Ini.fromResourcePath("classpath:shiro.ini");
     }
-    
+  */  
     protected void bindRealms(){
         	bindRealm().to(CoreRealm.class).asEagerSingleton();         
      }
