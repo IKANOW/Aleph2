@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
+import java.util.Optional;
 
 import scala.Tuple2;
 
@@ -30,6 +31,11 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public interface IStorageService extends IUnderlyingService, IDataServiceProvider {
 
+	/** Can be used with getUnderlyingPlatformDriver(FileContext, LOCAL_FS) to return a local FS (that knows about the remote one
+	 *  ie can be safely used to pass data around) 
+	 */
+	public static final Optional<String> LOCAL_FS = Optional.of("local");
+	
 	/** The system is only interested in files under this sub-directory of each bucket path
 	 */
 	public static final String BUCKET_SUFFIX = "/managed_bucket/";

@@ -19,7 +19,6 @@ import java.io.FileNotFoundException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -47,7 +46,7 @@ public class JarCacheUtils {
 	{		
 		try {
 			final FileContext dfs = fs.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-			final FileContext lfs = FileContext.getLocalFSFileContext(new Configuration());
+			final FileContext lfs = fs.getUnderlyingPlatformDriver(FileContext.class, IStorageService.LOCAL_FS).get();
 			
 			final Path cached_jar_file = lfs.makeQualified(new Path(local_cached_jar_dir + "/" + buildCachedJarName(library_bean))); 
 			final Path original_jar_file = dfs.makeQualified(new Path(library_bean.path_name()));

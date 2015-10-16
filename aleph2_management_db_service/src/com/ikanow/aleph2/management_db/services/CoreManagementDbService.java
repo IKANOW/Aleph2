@@ -402,7 +402,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 							_logger.debug("Got hostnames successfully, added test to test queue and delete queue");
 							return ErrorUtils.buildSuccessMessage("CoreManagementDbService", "testBucket", "Created test on hosts {0}, added test to test queue and delete queue\nmessages = {1}", hostnames.stream().collect(Collectors.joining(";")), reply_str);
 						} else {
-							final String err = ErrorUtils.get("Error, hostnames was empty, possibly did not finish setting job up (storm can take a long time to receive jar)\nmessages = {0}", reply_str);
+							final String err = ErrorUtils.get("Error, hostnames was empty, (if no messages below possibly did not finish setting job up before timeout; otherwise likely an error)\nmessages = {0}", reply_str);
 							_logger.error(err);
 							return ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", err);
 						}					
