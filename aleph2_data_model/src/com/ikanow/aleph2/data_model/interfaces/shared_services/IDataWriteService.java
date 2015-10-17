@@ -103,6 +103,11 @@ public interface IDataWriteService<O> {
 		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent)
 		 */
 		void storeObject(final O new_object);
+		
+		/** Flushes any pending output (eg before a process exits)
+		 * @return an undefined future that completes when all data is flushes to its destination 
+		 */
+		CompletableFuture<?> flushOutput();
 	}
 	
 	//////////////////////////////////////////////////////
