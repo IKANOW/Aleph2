@@ -60,12 +60,18 @@ public interface IHarvestContext extends IUnderlyingService {
 	 */
 	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final Either<JsonNode, Map<String, Object>> object);
 	
-	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
+	/** (HarvestModule only) For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 */
 	void emitObject(final Optional<DataBucketBean> bucket, final Either<JsonNode, Map<String, Object>> object);
 
+	/** (HarvestModule only) Flushes any pending batch output, eg before a process exits
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @return a undefined future that completes when the batch output completes
+	 */
+	CompletableFuture<?> flushBatchOutput(final Optional<DataBucketBean> bucket); 
+	
 	//////////////////////////////////////////////////////
 	
 	// BOTH HARVEST TECHNOLOGY AND HARVEST MODULE - DATA INPUT/OUPUT

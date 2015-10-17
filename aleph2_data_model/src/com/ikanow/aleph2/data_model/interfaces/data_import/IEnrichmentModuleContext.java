@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_import;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import scala.Tuple2;
@@ -133,7 +134,12 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 */
 	void storeErroredObject(final long id, final JsonNode original_json);
 	
-	
+	/** Flushes any pending batch output, eg before a process exits
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @return a undefined future that completes when the batch output completes
+	 */
+	CompletableFuture<?> flushBatchOutput(final Optional<DataBucketBean> bucket); 
+		
 	////////////////////////////////////////////
 	
 	// Common - Management

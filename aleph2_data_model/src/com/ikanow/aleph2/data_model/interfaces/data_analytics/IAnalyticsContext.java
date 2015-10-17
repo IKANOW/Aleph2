@@ -64,13 +64,20 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations);
 	
-	/** For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
+	/** (Analytic Module only) For output modules for the particular technology to output objects reasonably efficient, if an output service is not available
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job for which data is being output
 	 * @param object the object to emit represented by either Jackson JsonNode or a generic map-of-objects
 	 * @param annotation - the generic annotation parameters can either be copied directly into the object, or appended via this bean (merging if the object also has annotatiosn)
 	 */
 	void emitObject(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations);
+	
+	/**(Analytic Module only) Flushes any pending batch output, eg before a process exits
+	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
+	 * @param job the job for which data is being output
+	 * @return a undefined future that completes when the batch output completes
+	 */
+	CompletableFuture<?> flushBatchOutput(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job); 
 	
 	//////////////////////////////////////////////////////
 	

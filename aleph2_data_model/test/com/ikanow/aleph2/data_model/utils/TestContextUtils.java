@@ -258,6 +258,12 @@ public class TestContextUtils {
 		public Map<String, SharedLibraryBean> getLibraryConfigs() {
 			return null;
 		}
+
+		@Override
+		public CompletableFuture<?> flushBatchOutput(
+				Optional<DataBucketBean> bucket) {
+			return null;
+		}
 	}
 	public static class MockAnalyticsContext implements IAnalyticsContext {
 		
@@ -425,6 +431,12 @@ public class TestContextUtils {
 		public Map<String, SharedLibraryBean> getLibraryConfigs() {
 			return null;
 		}
+
+		@Override
+		public CompletableFuture<?> flushBatchOutput(
+				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+			return null;
+		}
 	}
 	
 	public static class MockEnrichmentContext implements IEnrichmentModuleContext {
@@ -549,6 +561,12 @@ public class TestContextUtils {
 
 		@Override
 		public Optional<SharedLibraryBean> getModuleConfig() {
+			return null;
+		}
+
+		@Override
+		public CompletableFuture<?> flushBatchOutput(
+				Optional<DataBucketBean> bucket) {
 			return null;
 		}
 		

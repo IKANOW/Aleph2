@@ -818,4 +818,10 @@ public class HarvestContext implements IHarvestContext {
 			_crud_storage_service.get().storeObject(obj_json);
 		}
 	}
+
+	@Override
+	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
+		// TODO (ALEPH-12): implement
+		return null;
+	}
 }

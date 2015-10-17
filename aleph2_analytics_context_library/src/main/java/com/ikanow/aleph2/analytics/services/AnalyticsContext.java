@@ -1165,5 +1165,15 @@ public class AnalyticsContext implements IAnalyticsContext {
 			;
 		return need_ping_pong_buffer;
 	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#flushBatchOutput(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean)
+	 */
+	@Override
+	public CompletableFuture<?> flushBatchOutput(
+			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+		// TODO (ALEPH-12) Auto-generated method stub
+		return null;
+	}
 	
 }
