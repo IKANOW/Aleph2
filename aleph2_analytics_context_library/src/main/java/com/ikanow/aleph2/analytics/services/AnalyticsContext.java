@@ -824,10 +824,15 @@ public class AnalyticsContext implements IAnalyticsContext {
 			})
 			.orElse(Collections.emptySet());
 			
+			//TODO (ALEPH-12): 1) don't understand why i have this _and_ getUnderlying artefacts ... and the 2 are slightly different
+			// 2) really for search index service (document service etc in the future), should be able to figure it out based on the data 
+			// schema and job.input (can delegate that job to the analytic services)
+			
 			// Mandatory services
 			final Set<String> mandatory_service_class_files =
 						Arrays.asList(
 								_distributed_services.getUnderlyingArtefacts(),
+								_service_context.getSearchIndexService().map(s -> s.getUnderlyingArtefacts()).orElse(Collections.emptyList()),
 								_service_context.getStorageService().getUnderlyingArtefacts(),
 								_service_context.getSecurityService().getUnderlyingArtefacts(),
 								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
