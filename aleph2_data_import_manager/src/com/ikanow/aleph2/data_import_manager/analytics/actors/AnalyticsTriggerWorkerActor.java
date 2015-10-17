@@ -464,7 +464,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							
 							Optionals.ofNullable(msg.jobs()).stream()
 								.forEach(job -> {
-									AnalyticTriggerCrudUtils.deleteOldTriggers(trigger_crud, msg.bucket().full_name(), job.name(), locked_to_host, Date.from(Instant.now()));
+									AnalyticTriggerCrudUtils.deleteOldTriggers(trigger_crud, msg.bucket().full_name(), Optional.ofNullable(job.name()), locked_to_host, Date.from(Instant.now()));
 								});
 							
 						})						

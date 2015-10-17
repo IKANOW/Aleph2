@@ -99,7 +99,7 @@ public class AnalyticTriggerCrudUtils {
 				final Optional<String> locked_to_host = Optional.ofNullable(kv.getKey()._3());
 				
 				// Step 1: is the bucket/job active?
-				final boolean is_active = isAnalyticBucketOrJobActive(trigger_crud, bucket_name, Optional.of(job_name), locked_to_host).join();
+				final boolean is_active = isAnalyticBucketOrJobActive(trigger_crud, bucket_name, Optional.ofNullable(job_name), locked_to_host).join();
 				
 				// Step 2: write out the transformed job, with instructions to check in <5s and last_checked == now
 				final CompletableFuture<?> f1 = trigger_crud.storeObjects(
@@ -117,7 +117,7 @@ public class AnalyticTriggerCrudUtils {
 				
 				// Step 3: then remove any existing entries with lesser last_checked (for that job)
 				
-				final CompletableFuture<?> f2 = deleteOldTriggers(trigger_crud, bucket_name, job_name, locked_to_host, now);
+				final CompletableFuture<?> f2 = deleteOldTriggers(trigger_crud, bucket_name, Optional.ofNullable(job_name), locked_to_host, now);
 				
 				return Stream.of(f1, f2);
 			});
@@ -191,7 +191,6 @@ public class AnalyticTriggerCrudUtils {
 		final QueryComponent<AnalyticTriggerStateBean> query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
-							.when(AnalyticTriggerStateBean::job_name, job_name)
 							.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 							.when(AnalyticTriggerStateBean::is_job_active, true)) 				
 				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
@@ -438,16 +437,16 @@ public class AnalyticTriggerCrudUtils {
 	 * @param now
 	 * @return
 	 */
-	public static CompletableFuture<?> deleteOldTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final String job_name, Optional<String> locked_to_host, final Date now) {
+	public static CompletableFuture<?> deleteOldTriggers(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final Optional<String> job_name, Optional<String> locked_to_host, final Date now) {
 		// These queries want the following optimizations:
 		// (bucket_name, job_name, is_job_active, last_checked)
 		
 		final QueryComponent<AnalyticTriggerStateBean> query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
-							.when(AnalyticTriggerStateBean::job_name, job_name)
 							.whenNot(AnalyticTriggerStateBean::is_job_active, true)
 							.rangeBelow(AnalyticTriggerStateBean::last_checked, now, true))
+				.map(q -> job_name.map(j -> q.when(AnalyticTriggerStateBean::job_name, j)).orElse(q))
 				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 				.get();
 							
