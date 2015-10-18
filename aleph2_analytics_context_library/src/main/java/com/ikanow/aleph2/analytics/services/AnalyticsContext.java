@@ -89,6 +89,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValueFactory;
 
+import fj.Unit;
 import fj.data.Either;
 
 /** The implementation of the analytics context interface
@@ -1172,8 +1173,16 @@ public class AnalyticsContext implements IAnalyticsContext {
 	@Override
 	public CompletableFuture<?> flushBatchOutput(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
-		// TODO (ALEPH-12) Auto-generated method stub
-		return null;
+		
+		final CompletableFuture<?> cf1 = 
+				_batch_index_service.map(s -> s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		
+		final CompletableFuture<?> cf2 = 
+				_batch_storage_service.map(s -> s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		
+		return CompletableFuture.allOf(cf1, cf2);
 	}
 	
 }

@@ -86,6 +86,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValueFactory;
 
+import fj.Unit;
 import fj.data.Either;
 
 //TODO: ALEPH-12 wire up module config via signature
@@ -819,9 +820,20 @@ public class HarvestContext implements IHarvestContext {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#flushBatchOutput(java.util.Optional)
+	 */
 	@Override
 	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
-		// TODO (ALEPH-12): implement
-		return null;
+		
+		final CompletableFuture<?> cf1 = 
+				_batch_index_service.map(s -> s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		
+		final CompletableFuture<?> cf2 = 
+				_batch_storage_service.map(s -> s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		
+		return CompletableFuture.allOf(cf1, cf2);
 	}
 }
