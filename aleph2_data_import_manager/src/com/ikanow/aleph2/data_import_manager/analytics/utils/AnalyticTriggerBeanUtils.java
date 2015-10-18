@@ -122,6 +122,7 @@ public class AnalyticTriggerBeanUtils {
 											.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 											.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
 											.with(AnalyticTriggerStateBean::job_name, job.name())
+											.with(AnalyticTriggerStateBean::input_resource_name_or_id, dep)
 											.with(AnalyticTriggerStateBean::is_bucket_active, false)
 											.with(AnalyticTriggerStateBean::is_job_active, false)
 											.with(AnalyticTriggerStateBean::is_bucket_suspended, is_suspended)
@@ -223,7 +224,7 @@ public class AnalyticTriggerBeanUtils {
 	/** Builds a set of trigger means from the recursive manually specified list
 	 * @return
 	 */
-	public static Stream<AnalyticThreadComplexTriggerBean> getSemiAutomaticTriggerStream(final AnalyticThreadComplexTriggerBean trigger) {		
+	public static Stream<AnalyticThreadComplexTriggerBean> getSemiAutomaticTriggerStream(final AnalyticThreadComplexTriggerBean trigger) {				
 		// Basically we're just flattening the list here:		
 		if (!Optional.ofNullable(trigger.enabled()).orElse(true)) {
 			return Stream.empty();

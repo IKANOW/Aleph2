@@ -58,11 +58,8 @@ public class AnalyticTriggerCrudUtils {
 	 * @param locked_to_host
 	 */
 	public static CompletableFuture<?> createActiveJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final AnalyticThreadJobBean job, final Optional<String> locked_to_host) {
-		final AnalyticTriggerStateBean new_entry =
+		final AnalyticTriggerStateBean new_entry_pre =
 				BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
-					.with(AnalyticTriggerStateBean::_id,
-							AnalyticTriggerStateBean.buildId(bucket.full_name(), job.name(), locked_to_host, Optional.empty())
-					)
 					.with(AnalyticTriggerStateBean::is_bucket_active, true)
 					.with(AnalyticTriggerStateBean::is_job_active, true)
 					.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
@@ -73,6 +70,10 @@ public class AnalyticTriggerCrudUtils {
 					.with(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().plusSeconds(ACTIVE_CHECK_FREQ_SECS)))
 					.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 				.done().get();
+		
+		final AnalyticTriggerStateBean new_entry = BeanTemplateUtils.clone(new_entry_pre)
+													.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(new_entry_pre, false))
+													.done();
 		
 		return trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
 		
@@ -106,6 +107,7 @@ public class AnalyticTriggerCrudUtils {
 						kv.getValue().stream()
 							.map(trigger ->
 								BeanTemplateUtils.clone(trigger)
+									.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, !is_active))
 									.with(AnalyticTriggerStateBean::is_pending, !is_active)
 									.with(AnalyticTriggerStateBean::last_checked, now)
 									.with(AnalyticTriggerStateBean::next_check, now)

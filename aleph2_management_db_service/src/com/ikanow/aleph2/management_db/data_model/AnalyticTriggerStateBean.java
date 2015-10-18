@@ -17,9 +17,10 @@ package com.ikanow.aleph2.management_db.data_model;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 
 /** Contains the state necessary to determine when analytic buckets and jobs should trigger
  * @author Alex
@@ -79,15 +80,26 @@ public class AnalyticTriggerStateBean implements Serializable {
 		this.resource_limit = resource_limit;
 		this.locked_to_host = locked_to_host;
 		
-		this._id = buildId(bucket_name, job_name, Optional.ofNullable(locked_to_host), Optional.ofNullable(is_pending));
+		this._id = buildId(this, this.is_pending());
 	}
 
 	/** Builds this id
 	 * @param bean
 	 * @return
 	 */
-	public static String buildId(final String bucket_name, final String job_name, final Optional<String> locked_to_host, final Optional<Boolean> is_pending) {
-		return bucket_name + ":" + job_name + ":" + locked_to_host.orElse("") + ":" + is_pending.orElse(false);
+	public static String buildId(final AnalyticTriggerStateBean bean, final boolean is_pending) {
+		return UuidUtils.get().getContentBasedUuid(
+				BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
+					.with(AnalyticTriggerStateBean::bucket_name, bean.bucket_name())
+					.with(AnalyticTriggerStateBean::job_name, bean.job_name())
+					.with(AnalyticTriggerStateBean::input_data_service, bean.input_data_service())
+					.with(AnalyticTriggerStateBean::trigger_type, bean.trigger_type())
+					.with(AnalyticTriggerStateBean::input_resource_name_or_id, bean.input_resource_name_or_id())
+					.with(AnalyticTriggerStateBean::input_resource_combined, bean.input_resource_combined())
+					.with(AnalyticTriggerStateBean::locked_to_host, bean.locked_to_host())
+					.with(AnalyticTriggerStateBean::is_pending, is_pending)
+				.done().get()
+				);
 	}
 	
 	/** The bucket _id in the database
