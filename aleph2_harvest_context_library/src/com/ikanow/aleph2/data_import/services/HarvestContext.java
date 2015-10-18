@@ -826,13 +826,15 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
 		
-		final CompletableFuture<?> cf1 = 
-				_batch_index_service.map(s -> s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		@SuppressWarnings("unchecked")
+		final CompletableFuture<Object> cf1 = 
+				_batch_index_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
 		
-		final CompletableFuture<?> cf2 = 
-				_batch_storage_service.map(s -> s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
+		@SuppressWarnings("unchecked")
+		final CompletableFuture<Object> cf2 = 
+				_batch_storage_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
+				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
 		
 		return CompletableFuture.allOf(cf1, cf2);
 	}
