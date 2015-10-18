@@ -96,19 +96,20 @@ public class AnalyticTriggerCrudUtils {
 			.stream()
 			.flatMap(kv -> {
 				final String bucket_name = kv.getKey()._1();
-				final String job_name = kv.getKey()._2();
+				final Optional<String> job_name = Optional.ofNullable(kv.getKey()._2());
 				final Optional<String> locked_to_host = Optional.ofNullable(kv.getKey()._3());
 				
 				// Step 1: is the bucket/job active?
-				final boolean is_active = isAnalyticBucketOrJobActive(trigger_crud, bucket_name, Optional.ofNullable(job_name), locked_to_host).join();
+				final boolean is_active = job_name.map(j -> isAnalyticBucketOrJobActive(trigger_crud, bucket_name, job_name, locked_to_host).join())
+											.orElse(false); // (don't care if the bucket is active, only the designated job)
 				
 				// Step 2: write out the transformed job, with instructions to check in <5s and last_checked == now
 				final CompletableFuture<?> f1 = trigger_crud.storeObjects(
 						kv.getValue().stream()
 							.map(trigger ->
 								BeanTemplateUtils.clone(trigger)
-									.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, !is_active))
-									.with(AnalyticTriggerStateBean::is_pending, !is_active)
+									.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, is_active))
+									.with(AnalyticTriggerStateBean::is_pending, is_active)
 									.with(AnalyticTriggerStateBean::last_checked, now)
 									.with(AnalyticTriggerStateBean::next_check, now)
 								.done()
@@ -119,7 +120,7 @@ public class AnalyticTriggerCrudUtils {
 				
 				// Step 3: then remove any existing entries with lesser last_checked (for that job)
 				
-				final CompletableFuture<?> f2 = deleteOldTriggers(trigger_crud, bucket_name, Optional.ofNullable(job_name), locked_to_host, now);
+				final CompletableFuture<?> f2 = deleteOldTriggers(trigger_crud, bucket_name, job_name, locked_to_host, now);
 				
 				return Stream.of(f1, f2);
 			});
@@ -221,45 +222,35 @@ public class AnalyticTriggerCrudUtils {
 		// These queries want the following optimizations:
 		// (bucket_name, job_name, is_pending)
 		
-		final QueryComponent<AnalyticTriggerStateBean> is_pending_count_query = 
+		final QueryComponent<AnalyticTriggerStateBean> is_pending_query = 
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
 							.when(AnalyticTriggerStateBean::job_name, job_name)
 							.when(AnalyticTriggerStateBean::is_pending, true))							
 				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 				.get()
-				.limit(1)
 				;
 		
-		return trigger_crud.countObjectsBySpec(is_pending_count_query).thenAccept(count -> {
-			if (count > 0) {
-				final QueryComponent<AnalyticTriggerStateBean> is_not_pending_delete_query = 
-						Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
-									.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
-									.when(AnalyticTriggerStateBean::job_name, job_name)
-									.when(AnalyticTriggerStateBean::is_pending, true))							
-						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
-						.get()
+		return trigger_crud.getObjectsBySpec(is_pending_query).thenCompose(cursor -> {
+			final Stream<CompletableFuture<?>> cfs = 
+					StreamSupport.stream(cursor.spliterator(), true)
+						.map(trigger -> {
+							return trigger_crud.storeObject( // overwrite the old object with the new one (except with pending set)
+									BeanTemplateUtils.clone(trigger)
+										.with(AnalyticTriggerStateBean::is_pending, false)
+										.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, false))
+										.done()
+										,
+										true
+									)
+									// then delete the "pending" new object
+									.thenCompose(__ -> trigger_crud.deleteObjectById(trigger._id()))
+									.exceptionally(__ -> trigger_crud.deleteObjectById(trigger._id()).join())
+									;
+						})
 						;
-				
-				trigger_crud.deleteObjectsBySpec(is_not_pending_delete_query).thenCompose(__ -> {
-					
-					final QueryComponent<AnalyticTriggerStateBean> is_pending_update_query = 
-							Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
-										.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
-										.when(AnalyticTriggerStateBean::job_name, job_name)
-										.when(AnalyticTriggerStateBean::is_pending, true))							
-							.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
-							.get()
-							;
-					
-					final UpdateComponent<AnalyticTriggerStateBean> update =
-							CrudUtils.update(AnalyticTriggerStateBean.class)
-								.set(AnalyticTriggerStateBean::is_pending, false);
-					
-					return trigger_crud.updateObjectsBySpec(is_pending_update_query, Optional.of(false), update);
-				});
-			}
+			
+			return CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new));
 		});
 		
 	}

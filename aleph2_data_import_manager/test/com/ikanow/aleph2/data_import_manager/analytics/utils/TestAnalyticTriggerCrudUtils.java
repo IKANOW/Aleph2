@@ -30,7 +30,6 @@ import org.junit.Test;
 
 import scala.Tuple2;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -50,8 +49,6 @@ import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFact
 
 //TODO (ALEPH-12): now copy internal job deps into resource_name_or_id, so need to sort that out
 
-//TODO (ALEPH-12): looks like i'm not taking is_pending into account in the UUID
-
 public class TestAnalyticTriggerCrudUtils {
 
 	ICrudService<AnalyticTriggerStateBean> _test_crud;
@@ -63,8 +60,6 @@ public class TestAnalyticTriggerCrudUtils {
 		_test_crud = factory.getMongoDbCrudService(AnalyticTriggerStateBean.class, String.class, factory.getMongoDbCollection("test.trigger_crud"), Optional.empty(), Optional.empty(), Optional.empty());
 		_test_crud.deleteDatastore().get();
 	}	
-	
-	//TODO (ALEPH-12) testing
 	
 	@Test
 	public void test_storeOrUpdateTriggerStage() throws InterruptedException {
@@ -145,8 +140,7 @@ public class TestAnalyticTriggerCrudUtils {
 	
 	//////////////////////////////////////////////////////////////////
 	
-	//TODO (ALEPH-12): this doesn't currently work
-	//@Test
+	@Test
 	public void test_activateUpdateAndSuspend() throws InterruptedException
 	{
 		assertEquals(0, _test_crud.countObjects().join().intValue());
@@ -179,17 +173,23 @@ public class TestAnalyticTriggerCrudUtils {
 			
 		}
 		
+		// Handly debug:
+//		{
+//			List<JsonNode> ll = Optionals.streamOf(_test_crud.getRawService().getObjectsBySpec(CrudUtils.allOf())
+//				.join().iterator(), true)
+//				.collect(Collectors.toList())
+//				;
+//			System.out.println("Resources = \n" + 
+//					ll.stream().map(t -> t.toString()).collect(Collectors.joining("\n")));
+//		}		
+		
 		// Sleep to change times
 		Thread.sleep(100L);
 		
 		//(activate)
-		_test_crud.updateObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class), 
-				Optional.empty(), 
-				CrudUtils.update(AnalyticTriggerStateBean.class)
-					.set(AnalyticTriggerStateBean::is_bucket_active, true)
-					.set(AnalyticTriggerStateBean::is_job_active, true)
-				).join()
-				;
+		bucket.analytic_thread().jobs().forEach(job -> {
+			AnalyticTriggerCrudUtils.createActiveJobRecord(_test_crud, bucket, job, Optional.of("test_host"));
+		});
 		
 		// 4) Activate then save suspended - check suspended goes to pending 		
 		{
@@ -202,10 +202,12 @@ public class TestAnalyticTriggerCrudUtils {
 			= test_list.stream().collect(
 					Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 			
+			//TODO: de-active somewhere?
+			
 			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
 			
-			assertEquals(18L, _test_crud.countObjects().join().intValue());			
-			assertEquals(9L, _test_crud.countObjectsBySpec(
+			assertEquals(11L, _test_crud.countObjects().join().intValue()); // ie 4 job dependencies, the 3 external triggers get overwritten			
+			assertEquals(7L, _test_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
 					).join().intValue());			
@@ -216,30 +218,28 @@ public class TestAnalyticTriggerCrudUtils {
 		
 		// 5) De-activate and check reverts to pending
 		{
+			AnalyticTriggerCrudUtils.deleteActiveJobEntries(_test_crud, bucket, bucket.analytic_thread().jobs(), Optional.of("test_host")).join();
+			
 			bucket.analytic_thread().jobs().stream().forEach(job -> {
+				//System.out.println("BEFORE: " + job.name() + ": " + _test_crud.countObjects().join().intValue());
 				
-				/**/
-				System.out.println("BEFORE: " + job.name() + ": " + _test_crud.countObjects().join().intValue());
-				AnalyticTriggerCrudUtils.updateCompletedJob(_test_crud, bucket.full_name(), job.name(), Optional.empty()).join();							
-				/**/
-				System.out.println(" AFTER: " + job.name() + ": " + _test_crud.countObjects().join().intValue());
+				AnalyticTriggerCrudUtils.updateCompletedJob(_test_crud, bucket.full_name(), job.name(), Optional.of("test_host")).join();
+				
+				//System.out.println(" AFTER: " + job.name() + ": " + _test_crud.countObjects().join().intValue());
 			});										
 			
-/**/			
-			List<JsonNode> ll = Optionals.streamOf(_test_crud.getRawService().getObjectsBySpec(CrudUtils.allOf())
-				.join().iterator(), true)
-				.collect(Collectors.toList())
-				;
-			System.out.println("Resources = \n" + 
-					ll.stream().map(t -> t.toString()).collect(Collectors.joining("\n")));
+			assertEquals(7L, _test_crud.countObjects().join().intValue());			
 			
-			assertEquals(9L, _test_crud.countObjects().join().intValue());			
+			assertEquals(7L, _test_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::is_pending, false)
+					).join().intValue());			
 			
 		}
 	}
 	
-	//TODO (ALEPH-12): not building _ids....
-	
+	//TODO (ALEPH-12): test 2 different locked_to_host, check they don't interfere...
+
 	//////////////////////////////////////////////////////////////////
 	
 	//TODO (ALEPH-12): delete bucket, check clears the DB
