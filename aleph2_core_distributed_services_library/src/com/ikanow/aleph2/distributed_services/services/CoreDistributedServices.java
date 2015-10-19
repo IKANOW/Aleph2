@@ -375,6 +375,9 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 */
 	@Override
 	public Optional<ActorRef> createSingletonActor(final String actor_name, final Set<String> for_roles, final Props actor_config) {
+		if (for_roles.isEmpty()) {
+			logger.warn(ErrorUtils.get("Called createSingletonActor for {0} with no roles so never start", actor_name));
+		}
 		return for_roles.contains(_config_bean.application_name())
 				?
 				Optional.of(getAkkaSystem().actorOf(ClusterSingletonManager.props(actor_config, new SingletonEndMessage(), 

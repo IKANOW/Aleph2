@@ -24,6 +24,6 @@ public class ActorNameUtils {
 	
 	public static final String HARVEST_BUCKET_CHANGE_SUFFIX = ".harvest.actors.DataBucketHarvestChangeActor";
 	public static final String ANALYTICS_BUCKET_CHANGE_SUFFIX = ".analytics.actors.DataBucketAnalyticsChangeActor";
-	public static final String ANALYTICS_TRIGGER_SUPERVISOR_SUFFIX = ".analytics.actors.AnalyticsTriggerWorkerActor";
-	public static final String ANALYTICS_TRIGGER_WORKER_SUFFIX = ".analytics.actors.AnalyticsTriggerSupervisorActor";	
+	public static final String ANALYTICS_TRIGGER_WORKER_SUFFIX = ".analytics.actors.AnalyticsTriggerWorkerActor";
+	public static final String ANALYTICS_TRIGGER_SUPERVISOR_SUFFIX = ".analytics.actors.AnalyticsTriggerSupervisorActor";	
 }

@@ -15,6 +15,8 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.util.Optional;
+
 
 /** An object container that you can only set once
  *  For cases when you want to make something final but for whatever reason it can't get set
@@ -43,6 +45,13 @@ public class SetOnce<T> {
 	public boolean set(T t) {
 		if (null == _t) _t = t;
 		return (_t == t); // (ptr ==)
+	}
+	
+	/** Returns an optional containing the value if set
+	 * @return an optional containing the value if set
+	 */
+	public Optional<T> optional() {
+		return Optional.ofNullable(_t);
 	}
 	
 	/** Returns the value, throws an unchecked exception if not set

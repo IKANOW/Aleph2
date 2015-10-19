@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_import_manager.modules;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -145,10 +144,15 @@ public class DataImportManagerModule {
 	
 			// Create trigger supervisor and worker
 			
-			@SuppressWarnings("unused")
 			final Optional<ActorRef> trigger_supervisor = _core_distributed_services.createSingletonActor(
-					hostname + ActorNameUtils.ANALYTICS_TRIGGER_SUPERVISOR_SUFFIX, Collections.emptySet(), 
+					hostname + ActorNameUtils.ANALYTICS_TRIGGER_SUPERVISOR_SUFFIX, 
+						ImmutableSet.<String>builder().add(DistributedServicesPropertyBean.ApplicationNames.DataImportManager.toString()).build()
+						, 
 					Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerSupervisorActor.class));
+			
+			if (!trigger_supervisor.isPresent()) {
+				_logger.error("Analytic trigger supervisor didn't start, unknown reason (wrong CDS application_name?)");
+			}
 			
 			final ActorRef trigger_worker = _local_actor_context.getActorSystem().actorOf(
 					Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
@@ -173,7 +177,7 @@ public class DataImportManagerModule {
 				}
 			}
 			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
-				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=stream_enrichment");
+				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=analytics");
 				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + hostname);
 			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=analytics");

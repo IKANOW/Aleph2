@@ -92,8 +92,11 @@ public class TestAnalyticTriggerCrudUtils {
 			assertEquals(7L, _test_crud.countObjects().join().intValue());
 		}		
 		
+		//DEBUG
+		//this.printTriggerDatabase();
+		
 		// Sleep to change times
-		Thread.sleep(100L);
+		Thread.sleep(100L); 
 		
 		// 2) Modify and update
 		{
@@ -123,6 +126,9 @@ public class TestAnalyticTriggerCrudUtils {
 		
 			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
 		
+			//DEBUG
+			//this.printTriggerDatabase();
+			
 			assertEquals(7L, _test_crud.countObjects().join().intValue());
 		
 			assertEquals(4L, Optionals.streamOf(
@@ -173,15 +179,8 @@ public class TestAnalyticTriggerCrudUtils {
 			
 		}
 		
-		// Handly debug:
-//		{
-//			List<JsonNode> ll = Optionals.streamOf(_test_crud.getRawService().getObjectsBySpec(CrudUtils.allOf())
-//				.join().iterator(), true)
-//				.collect(Collectors.toList())
-//				;
-//			System.out.println("Resources = \n" + 
-//					ll.stream().map(t -> t.toString()).collect(Collectors.joining("\n")));
-//		}		
+		//DEBUG
+		//printTriggerDatabase();
 		
 		// Sleep to change times
 		Thread.sleep(100L);
@@ -202,11 +201,17 @@ public class TestAnalyticTriggerCrudUtils {
 			= test_list.stream().collect(
 					Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 			
-			//TODO: de-active somewhere?
+			//DEBUG
+			//printTriggerDatabase();
+			
+			assertEquals(12L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs, 4 job dependencies, 3 external triggers 			
 			
 			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+
+			//DEBUG
+			//printTriggerDatabase();
 			
-			assertEquals(11L, _test_crud.countObjects().join().intValue()); // ie 4 job dependencies, the 3 external triggers get overwritten			
+			assertEquals(16L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs, 4 job dependencies x2 (pending/non-pending), the 3 external triggers get overwritten			
 			assertEquals(7L, _test_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
@@ -233,8 +238,7 @@ public class TestAnalyticTriggerCrudUtils {
 			assertEquals(7L, _test_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_pending, false)
-					).join().intValue());			
-			
+					).join().intValue());									
 		}
 	}
 	
@@ -245,6 +249,16 @@ public class TestAnalyticTriggerCrudUtils {
 	//TODO (ALEPH-12): delete bucket, check clears the DB
 
 	//////////////////////////////////////////////////////////////////
+	
+	public void printTriggerDatabase()
+	{
+		List<com.fasterxml.jackson.databind.JsonNode> ll = Optionals.streamOf(_test_crud.getRawService().getObjectsBySpec(CrudUtils.allOf())
+				.join().iterator(), true)
+				.collect(Collectors.toList())
+				;
+			System.out.println("DB_Resources = \n" + 
+					ll.stream().map(t -> t.toString()).collect(Collectors.joining("\n")));		
+	}
 	
 	/** Generates 4 job->job dependency
 	 * @param bucket_path
@@ -279,6 +293,12 @@ public class TestAnalyticTriggerCrudUtils {
 					.with(AnalyticThreadJobBean::name, "job2")
 					.with(AnalyticThreadJobBean::dependencies, Arrays.asList("job1a", "job1b"))
 				.done().get();
+		
+		//Will be ignored as has no deps:
+		final AnalyticThreadJobBean job3 = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+					.with(AnalyticThreadJobBean::name, "job3")
+				.done().get();
 
 		final AnalyticThreadTriggerBean trigger_info =
 			BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
@@ -288,7 +308,7 @@ public class TestAnalyticTriggerCrudUtils {
 		
 		final AnalyticThreadBean thread = 
 				BeanTemplateUtils.build(AnalyticThreadBean.class)
-					.with(AnalyticThreadBean::jobs, Arrays.asList(job0, job1a, job1b, job2))
+					.with(AnalyticThreadBean::jobs, Arrays.asList(job0, job1a, job1b, job2, job3))
 					.with(AnalyticThreadBean::trigger_config, trigger_info)
 				.done().get();
 		

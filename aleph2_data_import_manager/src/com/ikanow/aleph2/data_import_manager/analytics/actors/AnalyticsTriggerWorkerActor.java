@@ -412,7 +412,12 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								AnalyticTriggerCrudUtils.createActiveJobRecord(trigger_crud, msg.bucket(), job, locked_to_host).join();
 							});
 							
-							AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(trigger_crud, msg.bucket(), Optional.ofNullable(msg.jobs()), locked_to_host).join();
+							// Always (re-) active the bucket when I get a jobs message
+							// (safe but inefficient way of handling multiple triggers)
+							AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(trigger_crud, msg.bucket(), Optional.empty(), locked_to_host).join();
+							Optional.ofNullable(msg.jobs()).ifPresent(jobs -> 
+								AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(trigger_crud, msg.bucket(), Optional.of(jobs), locked_to_host).join()
+							);
 							
 						})
 			.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
@@ -462,11 +467,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							// This is a special message indicating that the bucket has been updated and some jobs have been removed
 							// so just remove those jobs from the trigger database
 							
-							Optionals.ofNullable(msg.jobs()).stream()
-								.forEach(job -> {
-									AnalyticTriggerCrudUtils.deleteOldTriggers(trigger_crud, msg.bucket().full_name(), Optional.ofNullable(job.name()), locked_to_host, Date.from(Instant.now()));
-								});
-							
+							AnalyticTriggerCrudUtils.deleteOldTriggers(trigger_crud, msg.bucket().full_name(), 
+									Optional.ofNullable(Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.toList())), 
+									locked_to_host, Date.from(Instant.now()));
 						})						
 			.otherwise(__ -> {
 				_logger.info(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
