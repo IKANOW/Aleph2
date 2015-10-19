@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1167,6 +1168,35 @@ public class AnalyticsContext implements IAnalyticsContext {
 		return need_ping_pong_buffer;
 	}
 
+	/** For ping/pong output will switch the ping/pong buffers over
+	 *  CALLED FROM DIM ONLY - NOT FOR USER CONSUMPTION
+	 *  CALLED FROM TECHNOLOGY _NOT_ MODULE
+	 * @param bucket
+	 */
+	public void completeJobOutput(final DataBucketBean bucket) {
+		Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
+			.stream()
+			.filter(j -> needPingPongBuffer(j))
+			.findFirst()
+			.ifPresent(__ -> { // need the ping pong buffer, so switch them
+				
+				final Consumer<IGenericDataService> switchPrimary = s -> {
+					getSecondaryBuffer(bucket, true, s)
+					.ifPresent(curr_secondary -> {
+						s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
+								IGenericDataService.SECONDARY_PING.equals(curr_secondary)
+									? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
+									: Optional.of(IGenericDataService.SECONDARY_PING)
+								); 
+					});
+				}
+				;					
+				
+				_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+				_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+			});
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#flushBatchOutput(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean)
 	 */

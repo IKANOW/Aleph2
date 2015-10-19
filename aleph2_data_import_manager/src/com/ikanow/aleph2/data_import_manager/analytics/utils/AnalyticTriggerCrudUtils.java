@@ -312,7 +312,7 @@ public class AnalyticTriggerCrudUtils {
 		// These queries want the following optimizations:
 		// (input_resource_combined, input_data_service)
 		
-		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query =
+		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_1 =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("")) 
 					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
@@ -323,6 +323,23 @@ public class AnalyticTriggerCrudUtils {
 					.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 					.get();
 				;
+				
+		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query =
+				job.map(j -> {
+					final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_2 =
+							Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+								.when(AnalyticTriggerStateBean::input_resource_name_or_id, j.name()) 
+								.withNotPresent(AnalyticTriggerStateBean::input_data_service)
+								.when(AnalyticTriggerStateBean::is_bucket_active, false)
+								.when(AnalyticTriggerStateBean::is_job_active, false)
+								.when(AnalyticTriggerStateBean::is_pending, false)
+								)
+								.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+								.get();
+					return (QueryComponent<AnalyticTriggerStateBean>)CrudUtils.anyOf(update_trigger_query_1, update_trigger_query_2);
+				})
+				.orElse(update_trigger_query_1);
+				
 				
 		final UpdateComponent<AnalyticTriggerStateBean> update =
 				CrudUtils.update(AnalyticTriggerStateBean.class)

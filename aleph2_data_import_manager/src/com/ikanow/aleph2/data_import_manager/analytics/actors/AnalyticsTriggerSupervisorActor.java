@@ -68,7 +68,15 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		_analytics_trigger_bus = _actor_context.getAnalyticsTriggerBus();
 		
 		_context = _actor_context.getServiceContext();
-		_core_management_db = Lambdas.get(() -> { try { return _context.getCoreManagementDbService(); } catch (Exception e) { return null; } });
+		_core_management_db = Lambdas.get(() -> { 
+			try { 
+				return _context.getCoreManagementDbService(); 
+			} 
+			catch (Throwable e) { 
+				_logger.warn(ErrorUtils.getLongForm("Failed to load core management db service: {0}", e));
+				return null; 
+			} 
+		});
 
 		if (null != _core_management_db) {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);

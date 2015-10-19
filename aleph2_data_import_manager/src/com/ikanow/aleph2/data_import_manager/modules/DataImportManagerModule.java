@@ -155,7 +155,7 @@ public class DataImportManagerModule {
 					hostname + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX
 					);
 
-			_logger.info(ErrorUtils.get("Attaching analytics AnalyticsTriggerWorkerActor {0} to bus {1}", analytics_handler, ActorUtils.ANALYTICS_TRIGGER_BUS));
+			_logger.info(ErrorUtils.get("Attaching analytics AnalyticsTriggerWorkerActor {0} to bus {1}", trigger_worker, ActorUtils.ANALYTICS_TRIGGER_BUS));
 
 			_db_actor_context.getAnalyticsTriggerBus().subscribe(trigger_worker, ActorUtils.ANALYTICS_TRIGGER_BUS);
 			

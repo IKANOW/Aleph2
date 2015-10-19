@@ -403,6 +403,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				if (!(reply instanceof BucketActionReplyMessage.BucketActionNullReplyMessage)) {
 					// Some information logging:
 					Patterns.match(reply).andAct()
+						.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg ->
+								_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
+										message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
+								))
 						.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
 								message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
 						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
@@ -1019,6 +1023,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 								msg -> {
 									// Received a stop notification for the bucket
 
+									// Complete the job output
+									context.completeJobOutput(msg.bucket());
+									
 									final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onThreadComplete(msg.bucket(), jobs, context);
 																
 									//(ignore the reply apart from logging - failures will be identified by triggers)
@@ -1260,7 +1267,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			completed_jobs.entrySet().stream()
 						.filter(kv -> kv.getKey().isPresent())
 						.forEach(kv -> {
-							if (!kv.getValue().isEmpty()) {
+							if (!kv.getValue().isEmpty()) {								
+								_logger.info(ErrorUtils.get("Forwarding bucket information to {0}: bucket {1} event {2}",
+										me_sibling._2(), bucket.full_name(), kv.getKey().get()
+										));
+								
 								final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = 
 										new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
 												kv.getValue().stream().map(j_f -> j_f._1()).collect(Collectors.toList()), 
