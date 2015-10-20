@@ -1045,13 +1045,14 @@ public class TestAnalyticsContext {
 	@Test
 	public void test_objectEmitting_pingPong() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 		//(will start by writing into pong)
-		Tuple2<DataBucketBean, IGenericDataService> saved = test_objectEmitting(false, true); //(ping)
+		Tuple2<DataBucketBean, AnalyticsContext> saved = test_objectEmitting(false, true); //(ping)
 		test_objectEmitting(false, false); //(ping)
-		saved._2().switchCrudServiceToPrimaryBuffer(saved._1(), Optional.of(IGenericDataService.SECONDARY_PONG), Optional.empty());
-		test_objectEmitting(false, false); //(pong)
+		saved._2().completeJobOutput(saved._1());
+		Tuple2<DataBucketBean, AnalyticsContext> saved2 = test_objectEmitting(false, false); //(pong)
+		saved2._2().completeJobOutput(saved2._1());
 	}
 	
-	public Tuple2<DataBucketBean, IGenericDataService> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
+	public Tuple2<DataBucketBean, AnalyticsContext> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 		_logger.info("run test_objectEmitting: " + preserve_out);
 
 		//TODO (ALEPH-12): also check file output 		
@@ -1157,6 +1158,8 @@ public class TestAnalyticsContext {
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
 				
+		test_context.flushBatchOutput(Optional.of(test_bucket), analytic_job1);
+		
 		for (int i = 0; i < 60; ++i) {
 			Thread.sleep(1000L);
 			if (crud_check_index.countObjects().get().intValue() >= 2) {
@@ -1176,7 +1179,8 @@ public class TestAnalyticsContext {
 		List<String> kafka = Optionals.streamOf(test_context._distributed_services.consumeAs(topic, Optional.empty()), false).collect(Collectors.toList());
 		assertEquals(first_time ? 1 : 3, kafka.size()); //(second time through the topic exists so all 3 emits work)
 
-		return Tuples._2T(test_bucket, check_index.getDataService().get());
+		//return Tuples._2T(test_bucket, check_index.getDataService().get());
+		return Tuples._2T(test_bucket, test_context);
 	}
 
 	@Test

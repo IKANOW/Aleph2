@@ -969,7 +969,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									sendOnTriggerEventMessages(job_results, msg.bucket(), t2 -> {
 										if (t2._2()) {
-											_logger.info(ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
+											_logger.info(ErrorUtils.get("Completed: bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
 										}
 										return t2._2() ? Optional.of(JobMessageType.stopping) : Optional.empty();
 									}, me_sibling);									

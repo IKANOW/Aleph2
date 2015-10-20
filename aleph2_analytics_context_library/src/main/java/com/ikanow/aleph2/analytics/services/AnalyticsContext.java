@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,6 +56,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -1205,14 +1207,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
 		
 		@SuppressWarnings("unchecked")
-		final CompletableFuture<Object> cf1 = 
-				_batch_index_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
+		Function<Optional<IBatchSubservice<JsonNode>>, CompletableFuture<Object>> flusher = opt -> {
+			return opt.map(s -> (CompletableFuture<Object>)s.flushOutput())
+						.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));			
+		};
 		
-		@SuppressWarnings("unchecked")
-		final CompletableFuture<Object> cf2 = 
-				_batch_storage_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
+		final CompletableFuture<Object> cf1 = flusher.apply(_batch_index_service);
+		final CompletableFuture<Object> cf2 = flusher.apply(_batch_storage_service);
 		
 		return CompletableFuture.allOf(cf1, cf2);
 	}

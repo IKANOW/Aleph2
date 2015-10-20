@@ -938,8 +938,7 @@ public class TestDataBucketChangeActor {
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());			
 			
-			Thread.sleep(100L); // give the sibling messages a chance to be delivered			
-			
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered						
 			assertEquals(0, TestActor_Counter.job_counter.get()); // streaming => no sibling messages
 		}		
 		// Test 5a: update - but with no enabled jobs
@@ -1025,6 +1024,7 @@ public class TestDataBucketChangeActor {
 			
 			Thread.sleep(100L); // give the sibling messages a chance to be delivered
 			
+			Thread.sleep(100L);
 			assertEquals(2, TestActor_Counter.job_counter.get());
 			assertEquals(1, TestActor_Counter.msg_counter.get());
 			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.starting));
@@ -1323,6 +1323,7 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
+			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(2, TestActor_Counter.job_counter.get());
 			assertEquals(1, TestActor_Counter.msg_counter.get());
@@ -1347,6 +1348,7 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
+			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(0, TestActor_Counter.job_counter.get());
 			assertEquals(0, TestActor_Counter.msg_counter.get());
@@ -1371,6 +1373,7 @@ public class TestDataBucketChangeActor {
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			//(these come from sibling so not replying there with anything)
+			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(0, TestActor_Counter.job_counter.get());
 			assertEquals(0, TestActor_Counter.msg_counter.get());
@@ -1394,6 +1397,7 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
+			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(0, TestActor_Counter.job_counter.get());
 			assertEquals(0, TestActor_Counter.msg_counter.get());
@@ -1417,6 +1421,7 @@ public class TestDataBucketChangeActor {
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
+			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(0, TestActor_Counter.job_counter.get());
 			assertEquals(0, TestActor_Counter.msg_counter.get());
@@ -1877,7 +1882,8 @@ public class TestDataBucketChangeActor {
 		public static AtomicInteger job_counter = new AtomicInteger(0);
 		public static ConcurrentHashMap<JobMessageType, Integer> message_types = new ConcurrentHashMap<>();
 		
-		public static void reset() {
+		public static synchronized void reset() {
+			_logger.info("Reset counter");
 			msg_counter.set(0);
 			job_counter.set(0);
 			message_types.clear();
@@ -1891,18 +1897,20 @@ public class TestDataBucketChangeActor {
 		public void onReceive(Object arg0) throws Exception {
 			_logger.info("Count from: " + uuid + ": " + arg0.getClass().getSimpleName());
 						
-			if (arg0 instanceof AnalyticTriggerMessage) {
-				final AnalyticTriggerMessage msg = (AnalyticTriggerMessage) arg0;
-
-				if (msg.bucket_action_message() instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
-					final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = (BucketActionMessage.BucketActionAnalyticJobMessage) msg.bucket_action_message();
-				
-					msg_counter.incrementAndGet();
-					job_counter.addAndGet(Optional.ofNullable(fwd_msg.jobs()).map(l -> l.size()).orElse(0));
-					message_types.merge(fwd_msg.type(), 1, (x, y) -> x + y);
+			synchronized (TestActor_Counter.class) {
+				if (arg0 instanceof AnalyticTriggerMessage) {
+					final AnalyticTriggerMessage msg = (AnalyticTriggerMessage) arg0;
+	
+					if (msg.bucket_action_message() instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+						final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = (BucketActionMessage.BucketActionAnalyticJobMessage) msg.bucket_action_message();
+					
+						msg_counter.incrementAndGet();
+						job_counter.addAndGet(Optional.ofNullable(fwd_msg.jobs()).map(l -> l.size()).orElse(0));
+						message_types.merge(fwd_msg.type(), 1, (x, y) -> x + y);
+					}
+					else _logger.warn("Received invalid trigger message: " + msg.bucket_action_message());
+	
 				}
-				else _logger.warn("Received invalid trigger message: " + msg.bucket_action_message());
-
 			}
 		}		
 	}
