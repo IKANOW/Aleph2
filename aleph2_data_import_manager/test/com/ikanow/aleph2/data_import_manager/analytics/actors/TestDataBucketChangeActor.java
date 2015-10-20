@@ -1265,6 +1265,69 @@ public class TestDataBucketChangeActor {
 		
 	}	
 	
+	//TODO (ALEPH-12): finish these tests
+	@SuppressWarnings("unused")
+	@Test
+	public void test_talkToAnalytics_analyticsMessages() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
+		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
+		final DataBucketBean bucket_batch = createBatchBucket("test_tech_id_analytics");
+		
+		// Get the analytics tech module standalone ("in app" way is covered above)
+		
+		final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
+						Collections.emptyList(), "test1", "test");						
+		
+		if (ret_val.isFail()) {
+			fail("getAnalyticsTechnology call failed: " + ret_val.fail().message());
+		}
+		assertTrue("harvest tech created: ", ret_val.success() != null);
+		
+		final IAnalyticsTechnologyModule analytics_tech = ret_val.success();
+		
+		final ActorRef test_counter = _db_actor_context.getDistributedServices().getAkkaSystem().actorOf(Props.create(TestActor_Counter.class, "test_counter_2"), "test_counter_2");
+		
+		final ActorSelection test_counter_selection = _actor_context.getActorSystem().actorSelection("/user/test_counter_2");
+		
+		// Automated trigger
+		final DataBucketBean trigger_batch_bucket = BeanTemplateUtils.clone(bucket_batch)
+														.with(DataBucketBean::analytic_thread, 
+																BeanTemplateUtils.clone(bucket_batch.analytic_thread())
+																	.with(AnalyticThreadBean::trigger_config, 
+																			BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+																			.done().get()
+																			)
+																.done()
+																)
+														.done();
+		
+		// 1) Check completion
+		{
+			TestActor_Counter.reset();
+			
+			final BucketActionMessage.BucketActionAnalyticJobMessage check_complete = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(
+							trigger_batch_bucket, 
+							Arrays.asList(trigger_batch_bucket.analytic_thread().jobs().stream().findFirst().get()), 
+							JobMessageType.check_completion);
+					
+					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, check_complete,
+					"test1", 
+					_actor_context.getNewAnalyticsContext(), null, 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
+			//TODO: check sends messages on the other bus
+		}
+		
+	}	
+	
 	@Test
 	public void test_setPerJobContextParams() {
 		

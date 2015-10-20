@@ -302,6 +302,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 */
 	protected void onAnalyticTrigger_checkActiveJob(final DataBucketBean bucket, final AnalyticThreadJobBean job, final AnalyticTriggerStateBean trigger) {
 		
+		//TODO (ALEPH-12): might need to reduce the chattiness of this (can I check once every 5 minutes or something? use a google cache)
+		_logger.info(ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name()), 
+				Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse(""));
+		
 		final BucketActionMessage new_message = 
 				AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket, Arrays.asList(job), JobMessageType.check_completion, Optional.ofNullable(trigger.locked_to_host()));		
 		
@@ -397,10 +401,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						msg -> { // (note don't need to worry about locking here)
 
 							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.bucket().full_name(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
 									msg.type()
-									);							
+									));							
 							
 							// 1) 1+ jobs have been confirmed/manually started by the technology:
 							// (or just the bucket if msg.jobs()==null)
@@ -428,10 +432,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						msg -> { // (note don't need to worry about locking here)
 							
 							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.bucket().full_name(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
 									msg.type()
-									);
+									));
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());
@@ -467,10 +471,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						msg -> { // (note don't need to worry about locking here)
 							
 							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.bucket().full_name(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
 									msg.type()
-									);
+									));
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());							
@@ -483,7 +487,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									locked_to_host, Date.from(Instant.now()));
 						})						
 			.otherwise(__ -> {
-				_logger.warn(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
+				_logger.warn(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket().full_name(), message.getClass().getSimpleName()));				
 			}); //(ignore)
 		;
 	}
@@ -560,10 +564,6 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs)
 	{
 		if (!mutable_active_jobs.isEmpty()) {
-			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),
-					mutable_active_jobs.stream().map(t -> t.input_resource_combined()).collect(Collectors.joining(";"))
-					));			
-			
 			AnalyticTriggerCrudUtils.updateActiveJobTriggerStatus(trigger_crud, bucket_to_check).join();
 		}			
 	}

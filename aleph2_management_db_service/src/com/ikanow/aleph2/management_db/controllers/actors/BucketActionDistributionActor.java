@@ -200,7 +200,14 @@ public class BucketActionDistributionActor extends AbstractActor {
 	
 				// 3) Transition state
 				
-				context().become(_stateAwaitingReplies);
+				if (message instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+					//These message types are fire+forget
+					_state.data_import_manager_set.clear();
+					sendReplyAndClose();
+				}
+				else {
+					context().become(_stateAwaitingReplies);
+				}
 			}
 			//(else we're going to insta terminate anyway)
 		}

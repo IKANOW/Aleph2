@@ -913,9 +913,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
 														j_r -> {
 															if (Optional.ofNullable(j_r._1().enabled()).orElse(true)) {
+																_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success=", bucket.full_name(), j_r._1().name(), j_r._2().success()));																
 																return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();
 															}
 															else {
+																_logger.info(ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), j_r._1().name()));																
 																return Optional.of(JobMessageType.stopping);
 															}
 														},
@@ -938,7 +940,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							
 							// Only send on trigger events for messages that started
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
-														j_r -> j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(), 
+														j_r -> {
+															_logger.info(ErrorUtils.get("Starting test bucket:job {0}:{1} success=", bucket.full_name(), j_r._1().name(), j_r._2().success()));
+															return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(); 
+														},
 														me_sibling);									
 							
 							
@@ -962,7 +967,12 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 														tech_module.checkAnalyticJobProgress(msg.bucket(), msg.jobs(), job, context)))
 												.collect(Collectors.toList());
 									
-									sendOnTriggerEventMessages(job_results, msg.bucket(), __ -> Optional.of(JobMessageType.stopping), me_sibling);									
+									sendOnTriggerEventMessages(job_results, msg.bucket(), t2 -> {
+										if (t2._2()) {
+											_logger.info(ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
+										}
+										return t2._2() ? Optional.of(JobMessageType.stopping) : Optional.empty();
+									}, me_sibling);									
 									
 									// Send a status message (Which will be ignored)
 									
