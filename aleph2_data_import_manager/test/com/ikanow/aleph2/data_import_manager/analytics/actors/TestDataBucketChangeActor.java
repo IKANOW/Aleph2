@@ -1022,21 +1022,21 @@ public class TestDataBucketChangeActor {
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());
 			
-			Thread.sleep(100L); // give the sibling messages a chance to be delivered
-			
-			Thread.sleep(100L);
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered			
 			assertEquals(2, TestActor_Counter.job_counter.get());
 			assertEquals(1, TestActor_Counter.msg_counter.get());
 			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.starting));
 		}
 		// Test 5d: suspend batch (all jobs will be suspended)
 		{
+			TestActor_Counter.reset();
+			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, false, bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket_batch, update,
 					"test5d", 
-					_actor_context.getNewAnalyticsContext(), null, 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -1050,6 +1050,11 @@ public class TestDataBucketChangeActor {
 			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
 			assertEquals("called suspendAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());
+			
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered			
+			assertEquals(3, TestActor_Counter.job_counter.get());
+			assertEquals(1, TestActor_Counter.msg_counter.get());
+			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.stopping));			
 		}
 		// Test 5e: update bucket with triggers (should see no jobs)
 		// Test 5e.1: 
