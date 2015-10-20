@@ -221,7 +221,11 @@ public class BucketActionChooseActor extends AbstractActor {
 						this.self(), new BucketActionTimeoutMessage(_state.current_timeout_id), 
 						_system_context.getActorSystem().dispatcher(), null);
 			
-			this.context().become(_stateAwaitingReply);
+			if (_state.original_message.get() instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+				//These message types are fire+forget
+				sendReplyAndClose(Collections.emptyList());
+			}
+			else this.context().become(_stateAwaitingReply);
 		}
 		else { // Must have timed out getting any replies, just terminate
 			this.abortAndRetry(false);
@@ -272,13 +276,7 @@ public class BucketActionChooseActor extends AbstractActor {
 							this.self(), new BucketActionTimeoutMessage(_state.current_timeout_id), 
 							_system_context.getActorSystem().dispatcher(), null);
 				
-				if (message instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
-					//These message types are fire+forget
-					sendReplyAndClose(Collections.emptyList());
-				}
-				else {					
-					this.context().become(_stateGettingCandidates);
-				}
+				this.context().become(_stateGettingCandidates);
 			}
 			//(else we're going to insta terminate anyway)			
 		}
