@@ -248,7 +248,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		_batch_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, BATCH_ENRICHMENT_DEFAULT);
 		
 		// My local analytics trigger engine:
-		_trigger_sibling = _actor_system.actorSelection(_context.getInformationService().getHostname() + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX);
+		_trigger_sibling = _actor_system.actorSelection("/user/" + _context.getInformationService().getHostname() + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX);
 	}
 	
 	///////////////////////////////////////////
@@ -912,7 +912,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							// Send all stop messages, and start messages for jobs that succeeeded
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
 														j_r -> {
-															if (j_r._1().enabled()) {
+															if (Optional.ofNullable(j_r._1().enabled()).orElse(true)) {
 																return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();
 															}
 															else {
@@ -1254,39 +1254,15 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	{
 		if (null == me_sibling) return; // (just keeps bw compatibility with the various test cases we currently have - won't get encountered in practice)
 
-		final Runnable actualProcessing = () -> {
-			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
-			final Map<Optional<JobMessageType>, List<Tuple2<AnalyticThreadJobBean, T>>> completed_jobs = 
-					job_results.stream()
-						.filter(j_f -> _batch_types.contains(j_f._1().analytic_type())) // (never allow streaming types to go to the triggers)
-						.flatMap(Lambdas.flatWrap_i(j_f -> Tuples._2T(j_f._1(), j_f._2().get())))
-						.collect(Collectors.
-									groupingBy((Tuple2<AnalyticThreadJobBean, T> j_f) -> grouping_lambda.apply(j_f)))
-						;
-			
-			completed_jobs.entrySet().stream()
-						.filter(kv -> kv.getKey().isPresent())
-						.forEach(kv -> {
-							if (!kv.getValue().isEmpty()) {								
-								_logger.info(ErrorUtils.get("Forwarding bucket information to {0}: bucket {1} event {2}",
-										me_sibling._2(), bucket.full_name(), kv.getKey().get()
-										));
-								
-								final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = 
-										new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
-												kv.getValue().stream().map(j_f -> j_f._1()).collect(Collectors.toList()), 
-												kv.getKey().get());
-								me_sibling._2().tell(fwd_msg, me_sibling._1());
-							}				
-						});						
-		};
-		
 		// Perform the processing even if 1+ if the jobs fails - that job will just be flat wrapped out
 		CompletableFuture.allOf(job_results.stream().map(j_f -> j_f._2()).toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {			
-			actualProcessing.run();
+			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
 		})
 		.exceptionally(__ -> {			
-			actualProcessing.run();
+			/**/
+			__.printStackTrace();
+			
+			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
 			return null;
 		})
 		;
@@ -1303,6 +1279,28 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final Function<Tuple2<AnalyticThreadJobBean, T>, Optional<JobMessageType>> grouping_lambda,
 			final Tuple2<ActorRef, ActorSelection> me_sibling)
 	{
+		final Map<Optional<JobMessageType>, List<Tuple2<AnalyticThreadJobBean, T>>> completed_jobs = 
+				job_results.stream()
+					.filter(j_f -> _batch_types.contains(j_f._1().analytic_type())) // (never allow streaming types to go to the triggers)
+					.flatMap(Lambdas.flatWrap_i(j_f -> Tuples._2T(j_f._1(), j_f._2().get())))
+					.collect(Collectors.
+								groupingBy((Tuple2<AnalyticThreadJobBean, T> j_f) -> grouping_lambda.apply(j_f)))
+					;
 		
+		completed_jobs.entrySet().stream()
+					.filter(kv -> kv.getKey().isPresent())
+					.forEach(kv -> {
+						if (!kv.getValue().isEmpty()) {								
+							_logger.info(ErrorUtils.get("Forwarding bucket information to {0}: bucket {1} event {2}",
+									me_sibling._2(), bucket.full_name(), kv.getKey().get()
+									));
+							
+							final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = 
+									new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+											kv.getValue().stream().map(j_f -> j_f._1()).collect(Collectors.toList()), 
+											kv.getKey().get());
+							me_sibling._2().tell(fwd_msg, me_sibling._1());
+						}				
+					});								
 	}
 }

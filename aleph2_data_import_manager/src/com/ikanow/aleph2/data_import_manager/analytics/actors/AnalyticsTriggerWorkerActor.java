@@ -461,6 +461,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.deleting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));							
+							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());							
 							
@@ -472,7 +475,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									locked_to_host, Date.from(Instant.now()));
 						})						
 			.otherwise(__ -> {
-				_logger.info(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
+				_logger.warn(ErrorUtils.get("Bucket {0}: received unknown message: {1}", message.bucket(), message.getClass().getSimpleName()));				
 			}); //(ignore)
 		;
 	}

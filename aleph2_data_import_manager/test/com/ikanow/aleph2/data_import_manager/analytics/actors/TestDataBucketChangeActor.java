@@ -32,9 +32,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileContext;
@@ -44,12 +46,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import akka.util.Timeout;
 
 import scala.Tuple2;
 import scala.concurrent.duration.Duration;
+import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
 import akka.actor.Inbox;
 import akka.actor.Props;
+import akka.actor.UntypedActor;
 import akka.pattern.Patterns;
 
 import com.google.common.base.Charsets;
@@ -87,6 +93,7 @@ import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.PurgeBucketActionMessage;
@@ -810,6 +817,16 @@ public class TestDataBucketChangeActor {
 		
 		final IAnalyticsTechnologyModule analytics_tech = ret_val.success();
 		
+		final ActorRef test_counter = _db_actor_context.getDistributedServices().getAkkaSystem().actorOf(Props.create(TestActor_Counter.class, "test_counter"), "test_counter");
+		
+		/**/
+		System.out.println("**************** " + test_counter.path());
+		
+		final ActorSelection test_counter_selection = _actor_context.getActorSystem().actorSelection("/user/test_counter");
+		
+		/**/
+		System.out.println("**************** " + test_counter_selection.resolveOne(Timeout.durationToTimeout(FiniteDuration.fromNanos(1000000000L))).value());
+		
 		// Test 1: pass along errors:
 		{
 			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
@@ -905,12 +922,15 @@ public class TestDataBucketChangeActor {
 		}		
 		// Test 5: update
 		{
+			TestActor_Counter.reset();			
+			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, update,
 					"test5", 
-					_actor_context.getNewAnalyticsContext(), null, 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+						//(send sibling to check does nothing with sibling if not batch)
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
@@ -923,7 +943,11 @@ public class TestDataBucketChangeActor {
 			assertEquals(true, test_reply1.success());
 			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
-			assertEquals(true, test_reply2.success());
+			assertEquals(true, test_reply2.success());			
+			
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered			
+			
+			assertEquals(0, TestActor_Counter.job_counter.get()); // streaming => no sibling messages
 		}		
 		// Test 5a: update - but with no enabled jobs
 		{
@@ -983,21 +1007,20 @@ public class TestDataBucketChangeActor {
 		}		
 		// Test 5c: update batch (only dependency-less jobs will be run)
 		{
+			TestActor_Counter.reset();			
+			
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, true, bucket_batch, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket_batch, update,
 					"test5c", 
-					_actor_context.getNewAnalyticsContext(), null, 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
 
-			/**/
-			System.out.println("????????? " + test_reply.replies().stream().map(tr -> tr.message() + ":" + tr.command()).collect(Collectors.joining(";")));
-			
 			assertEquals("test5c", test_reply.source());
 			assertEquals(3, test_reply.replies().size());
 			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
@@ -1006,6 +1029,11 @@ public class TestDataBucketChangeActor {
 			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
 			assertEquals("called resumeAnalyticJob", test_reply2.message());
 			assertEquals(true, test_reply2.success());
+			
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered
+			
+			assertEquals(1, TestActor_Counter.job_counter.get());
+			assertEquals(2, TestActor_Counter.msg_counter.get());						
 		}
 		// Test 5d: suspend batch (all jobs will be suspended)
 		{
@@ -1682,4 +1710,41 @@ public class TestDataBucketChangeActor {
 		
 		return Arrays.asList(lib_element, lib_element2, lib_element3, lib_element4);
 	}
+
+	////////////////////////////////////////////////////////////////////////////////////
+	
+	// ACTOR UTILS
+	
+	public static class TestActor_Counter extends UntypedActor {
+		
+		public static AtomicInteger msg_counter = new AtomicInteger(0);
+		public static AtomicInteger job_counter = new AtomicInteger(0);
+		public static ConcurrentHashMap<JobMessageType, Integer> message_types = new ConcurrentHashMap<>();
+		
+		public static void reset() {
+			msg_counter.set(0);
+			job_counter.set(0);
+			message_types.clear();
+		}
+		
+		public TestActor_Counter(String uuid) {
+			this.uuid = uuid;
+		}
+		private final String uuid;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Count from: " + uuid + ": " + arg0.getClass().getSimpleName());
+						
+			if (arg0 instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+				final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = (BucketActionMessage.BucketActionAnalyticJobMessage) arg0;
+			
+				msg_counter.incrementAndGet();
+				job_counter.addAndGet(Optional.ofNullable(fwd_msg.jobs()).map(l -> l.size()).orElse(0));
+				message_types.merge(fwd_msg.type(), 1, (x, y) -> x + y);
+			}			
+		}		
+	}
+
+	
+
 }
