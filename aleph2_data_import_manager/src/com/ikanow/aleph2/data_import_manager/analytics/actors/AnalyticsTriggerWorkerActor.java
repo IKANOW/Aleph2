@@ -80,6 +80,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 	}
 	
+	//TODO (ALEPH-12): in at least one place it's enriching itself with the bucket from the DB which then doesn't work on test buckets...
+	
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
 	 */

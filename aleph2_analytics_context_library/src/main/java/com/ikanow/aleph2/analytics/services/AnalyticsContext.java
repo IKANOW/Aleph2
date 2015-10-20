@@ -1208,7 +1208,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		@SuppressWarnings("unchecked")
 		Function<Optional<IBatchSubservice<JsonNode>>, CompletableFuture<Object>> flusher = opt -> {
-			return opt.map(s -> (CompletableFuture<Object>)s.flushOutput())
+			return Optional.ofNullable(opt).flatMap(__->__).map(s -> (CompletableFuture<Object>)s.flushOutput())
 						.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));			
 		};
 		
