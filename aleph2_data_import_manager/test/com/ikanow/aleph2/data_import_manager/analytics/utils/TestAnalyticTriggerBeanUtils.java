@@ -18,4 +18,18 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 public class TestAnalyticTriggerBeanUtils {
 
 	//TODO (ALEPH-12) testing
+	
+	
+//    "analytic_thread": {"jobs": [{
+//        "analytic_technology_name_or_id": "BatchEnrichmentService",
+//        "analytic_type": "batch",
+//        "enabled": true,
+//        "inputs": [{
+//            "data_service": "storage_service",
+//            "resource_name_or_id": "/bucket/test/flume_test"
+//        }],
+//        "name": "read_from_flume_test",
+//        "output": {"is_transient": false}
+//    }]},
+	
 }
