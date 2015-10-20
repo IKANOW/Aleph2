@@ -63,7 +63,6 @@ public class AnalyticTriggerCrudUtils {
 	public static CompletableFuture<?> createActiveJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final AnalyticThreadJobBean job, final Optional<String> locked_to_host) {
 		final AnalyticTriggerStateBean new_entry_pre =
 				BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
-					.with(AnalyticTriggerStateBean::is_bucket_active, true)
 					.with(AnalyticTriggerStateBean::is_job_active, true)
 					.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 					.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
@@ -78,7 +77,7 @@ public class AnalyticTriggerCrudUtils {
 													.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(new_entry_pre, false))
 													.done();
 		
-		final CompletableFuture<?> f1 = trigger_crud.storeObject(new_entry, true); //(fire and forget - don't use a list because storeObjects with replace can be problematic for some DBs)
+		final CompletableFuture<?> f1 = trigger_crud.storeObject(new_entry, true); //(fire and forget)
 		
 		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -97,9 +96,23 @@ public class AnalyticTriggerCrudUtils {
 		
 		final CompletableFuture<?> f2 = trigger_crud.updateObjectsBySpec(active_job_query, Optional.empty(), active_job_update);
 		
+		// Finally also create a bucket active notification record:
+		
+		final AnalyticTriggerStateBean new_bucket_entry_pre = 
+				BeanTemplateUtils.clone(new_entry_pre)
+					.with(AnalyticTriggerStateBean::job_name, null)
+					.with(AnalyticTriggerStateBean::is_job_active, null)
+					.done();
+
+		final AnalyticTriggerStateBean new_bucket_entry = BeanTemplateUtils.clone(new_bucket_entry_pre)
+				.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(new_bucket_entry_pre, false))
+				.done();
+
+		final CompletableFuture<?> f3 = trigger_crud.storeObject(new_bucket_entry, true); //(fire and forget)		
+		
 		//(note any notification of active jobs also updates the bucket active status, so don't need to worry about that here)
 		
-		return CompletableFuture.allOf(f1, f2);
+		return CompletableFuture.allOf(f1, f2, f3);
 	}
 	
 	/** Stores/updates the set of triggers derived from the bucket (replacing any previous ones ... with the exception that if the job to be replaced
@@ -184,7 +197,6 @@ public class AnalyticTriggerCrudUtils {
 		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.rangeBelow(AnalyticTriggerStateBean::next_check, now, true)
-					.when(AnalyticTriggerStateBean::is_job_active, true)
 					.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none); 
 			//(ie only returns special "is job active" records, not the input triggers - these are the records we use to check completion)
 		
@@ -225,7 +237,7 @@ public class AnalyticTriggerCrudUtils {
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
 							.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-							.when(AnalyticTriggerStateBean::is_job_active, true)) 				
+							.when(AnalyticTriggerStateBean::is_job_active, true)) //(ie won't match on the active bucket record because of this term)	
 				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 				.map(q -> job_name.map(j -> q.when(AnalyticTriggerStateBean::job_name, j)).orElse(q))
 				.get()
@@ -500,6 +512,22 @@ public class AnalyticTriggerCrudUtils {
 		final CompletableFuture<?> f2 = trigger_crud.deleteObjectsBySpec(query);
 		
 		return f2;
+	}
+	
+	/** Deletes the active bucket record
+	 * @param trigger_crud
+	 * @param bucket_name
+	 * @param locked_to_host
+	 * @return
+	 */
+	public static CompletableFuture<?> deleteActiveBucketRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, Optional<String> locked_to_host) {
+		return trigger_crud.deleteObjectsBySpec(
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none))
+						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+						.get()
+				);
 	}
 	
 	///////////////////////////////////////////////////////////////////////

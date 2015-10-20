@@ -206,7 +206,7 @@ public class TestAnalyticTriggerCrudUtils {
 			//DEBUG
 			//printTriggerDatabase();
 			
-			assertEquals(12L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs, 4 job dependencies, 3 external triggers 			
+			assertEquals(13L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs + 1 active bucket, 4 job dependencies, 3 external triggers 			
 			
 			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
 
@@ -369,10 +369,10 @@ public class TestAnalyticTriggerCrudUtils {
 			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res2 = 
 					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
 	
-			assertEquals("Got the one active record", 1, res2.keySet().size());			
+			assertEquals("Got the one active bucket", 1, res2.keySet().size());			
 			
 			final List<AnalyticTriggerStateBean> triggers = res2.values().stream().findFirst().get();
-			assertEquals("One trigger for the one active bucket", 1, triggers.size());
+			assertEquals("One trigger for the one active job + 1 for the bucket", 2, triggers.size());
 
 		}		
 	}

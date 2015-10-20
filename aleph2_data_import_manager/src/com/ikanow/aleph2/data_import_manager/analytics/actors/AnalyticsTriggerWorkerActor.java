@@ -222,6 +222,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				
 				triggers.entrySet().stream().parallel()
 					.forEach(kv -> {
+						//(discard bucket active records)
 						kv.getValue().stream().findFirst().ifPresent(trigger -> {
 
 							final Optional<DataBucketBean> bucket_to_check_reply = 
@@ -248,7 +249,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 											// 1) This is an active job, want to know if the job is complete
 											
 											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
-													Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
+													(null == trigger_in.job_name())
+													? Optional.empty()
+													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
 											
 											analytic_job_opt.ifPresent(analytic_job -> onAnalyticTrigger_checkActiveJob(bucket_to_check, analytic_job, trigger_in));
 											
@@ -303,8 +306,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected void onAnalyticTrigger_checkActiveJob(final DataBucketBean bucket, final AnalyticThreadJobBean job, final AnalyticTriggerStateBean trigger) {
 		
 		//TODO (ALEPH-12): might need to reduce the chattiness of this (can I check once every 5 minutes or something? use a google cache)
-		_logger.info(ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name()), 
-				Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse(""));
+		_logger.info(ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name(), 
+				Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse("")));
 		
 		final BucketActionMessage new_message = 
 				AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket, Arrays.asList(job), JobMessageType.check_completion, Optional.ofNullable(trigger.locked_to_host()));		
@@ -602,6 +605,10 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						ManagementDbActorContext.get().getBucketActionSupervisor(), 
 						ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
 				//(don't wait for a reply or anything)								
+				
+				// Delete the bucket record
+				
+				AnalyticTriggerCrudUtils.deleteActiveBucketRecord(trigger_crud, bucket_to_check.full_name(), locked_to_host).join();
 				
 				// Also update triggers that might depend on this bucket:
 				
