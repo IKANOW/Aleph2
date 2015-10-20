@@ -185,7 +185,6 @@ public class AnalyticTriggerCrudUtils {
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.rangeBelow(AnalyticTriggerStateBean::next_check, now, true)
 					.when(AnalyticTriggerStateBean::is_job_active, true)
-					.when(AnalyticTriggerStateBean::is_pending, false)
 					.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none); 
 			//(ie only returns special "is job active" records, not the input triggers - these are the records we use to check completion)
 		
@@ -304,14 +303,18 @@ public class AnalyticTriggerCrudUtils {
 		
 		final Stream<CompletableFuture<?>> ret = trigger_stream.parallel().map(t -> {
 			final UpdateComponent<AnalyticTriggerStateBean> trigger_update =
-					Optional.of(CrudUtils.update(AnalyticTriggerStateBean.class)
-						.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size())
+					Optional.of(CrudUtils.update(AnalyticTriggerStateBean.class)						
 						.set(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
 						.set(AnalyticTriggerStateBean::next_check, next_check))
+					.map(q -> Optional.ofNullable(t.curr_resource_size())
+								.map(size -> q.set(AnalyticTriggerStateBean::curr_resource_size, t.curr_resource_size()))
+								.orElse(q))
 					.map(q -> change_activation.map(change -> {
 						if (change) {
 							// (note: don't set the status to active until we get back a message from the technology)
-							return q.set(AnalyticTriggerStateBean::last_resource_size, t.curr_resource_size())
+							return Optional.ofNullable(t.curr_resource_size())
+											.map(size -> q.set(AnalyticTriggerStateBean::last_resource_size, size))
+											.orElse(q)
 									.set(AnalyticTriggerStateBean::is_job_active, true) // (this hasn't been confirmed by the tech yet but if it fails we'll find out in 10s time when we poll it)
 									;							
 						}
@@ -322,7 +325,9 @@ public class AnalyticTriggerCrudUtils {
 					}).orElse(q))
 					.get()
 				;
-			return trigger_crud.updateObjectById(t._id(), trigger_update);
+				final CompletableFuture<Boolean> cf_b = trigger_crud.updateObjectById(t._id(), trigger_update);
+				
+				return cf_b;
 		});		
 		
 		final CompletableFuture<?> combined[] = ret.toArray(size -> new CompletableFuture[size]);

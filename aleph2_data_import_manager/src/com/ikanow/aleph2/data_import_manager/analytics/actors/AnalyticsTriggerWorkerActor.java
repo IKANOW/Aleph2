@@ -156,7 +156,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			
 			_logger.info(ErrorUtils.get("Generated {0} triggers for bucket {1} ({2} jobs)", 
 					triggers_in.values().size(),
-					message.bucket().full_name()), Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0));			
+					message.bucket().full_name(), 
+					Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0)));			
 			
 			// Output them
 			
@@ -395,9 +396,11 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.starting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));
-							
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+									msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.type()
+									);							
 							
 							// 1) 1+ jobs have been confirmed/manually started by the technology:
 							// (or just the bucket if msg.jobs()==null)
@@ -424,9 +427,11 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.stopping == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));
-							
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+									msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.type()
+									);
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());
@@ -461,8 +466,11 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.deleting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", msg.bucket(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))));							
+							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+									msg.bucket(), 
+									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";"))),
+									msg.type()
+									);
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());							

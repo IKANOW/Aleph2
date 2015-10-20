@@ -17,7 +17,9 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import static org.junit.Assert.*;
 
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,7 +78,7 @@ public class TestAnalyticTriggerCrudUtils {
 			System.out.println("Resources = \n" + 
 					test_list.stream().map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
 			
-			assertEquals(8L, test_list.size()); //(8 noy 7 cos haven't dedup'd yet)
+			assertEquals(8L, test_list.size()); //(8 not 7 cos haven't dedup'd yet)
 	
 			// 4 internal dependencies
 			assertEquals(4L, test_list.stream().filter(t -> null != t.job_name()).count());
@@ -244,6 +246,137 @@ public class TestAnalyticTriggerCrudUtils {
 	
 	//TODO (ALEPH-12): test 2 different locked_to_host, check they don't interfere...
 
+	@Test
+	public void test_getTriggersToCheck() throws InterruptedException {
+		assertEquals(0, _test_crud.countObjects().join().intValue());
+		
+		final DataBucketBean bucket = buildBucket("/test/check/triggers", true);
+		
+		// Just set the test up:
+		{
+			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(bucket, false, Optional.empty());
+			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
+			
+			assertEquals(8L, test_list.size());//(8 not 7 because we only dedup at the DB)
+	
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> grouped_triggers
+				= test_list.stream().collect(
+					Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
+		
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+		
+			assertEquals(7L, _test_crud.countObjects().join().intValue());
+		}		
+		
+		// Check the triggers:
+		{
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			assertEquals("Just one bucket", 1, res.keySet().size());
+			
+			final List<AnalyticTriggerStateBean> triggers = res.values().stream().findFirst().get();
+			assertEquals("One trigger for each resource", 3, triggers.size());
+			
+			assertTrue("External triggers", triggers.stream().allMatch(trigger -> null != trigger.input_resource_combined()));
+			
+			// Save the triggers
+			
+			//DEBUG
+			//this.printTriggerDatabase();
+			
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, triggers.stream(), 
+					Date.from(Instant.now().plusSeconds(2)), Optional.empty()
+					).join();
+
+			//DEBUG
+			//this.printTriggerDatabase();
+			
+		}
+		
+		// Try again
+		{
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			assertEquals("None this time", 0, res.keySet().size());
+		}		
+		
+		// Activate the internal jobs and the external triggers, and set the times back
+		// (this time will get the job deps but not the triggers)
+		
+		{
+			_test_crud.updateObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class), 
+					Optional.empty(), 
+						CrudUtils.update(AnalyticTriggerStateBean.class)
+									.set(AnalyticTriggerStateBean::is_job_active, true)
+									.set(AnalyticTriggerStateBean::is_bucket_active, true)
+									.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2)))
+					).join();
+			
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			final List<AnalyticTriggerStateBean> triggers = res.values().stream().findFirst().get();
+			assertEquals("One trigger for each job dep", 4, triggers.size());
+			
+			assertFalse("Internal triggers", triggers.stream().allMatch(trigger -> null != trigger.input_resource_combined()));
+			
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, triggers.stream(), 
+					Date.from(Instant.now().plusSeconds(2)), Optional.empty()
+					).join();			
+		}
+		
+		// Try again
+		{
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			assertEquals("None this time", 0, res.keySet().size());			
+		}		
+		
+		// Activate the jobs "properly"
+		
+		{
+			AnalyticTriggerCrudUtils.createActiveJobRecord(
+					_test_crud, 
+					bucket, 
+					bucket.analytic_thread().jobs().stream().findFirst().get(), 
+					Optional.empty()
+					).join();
+			
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			assertEquals("None this time", 0, res.keySet().size());			
+			
+			//DEBUG
+			//this.printTriggerDatabase();
+			
+			// Reduce the date and try again:
+			_test_crud.updateObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+							.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+							, 
+					Optional.empty(), 
+						CrudUtils.update(AnalyticTriggerStateBean.class)
+									.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2)))
+					).join();
+			
+			//DEBUG
+			//this.printTriggerDatabase();
+			
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res2 = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
+	
+			assertEquals("Got the one active record", 1, res2.keySet().size());			
+			
+			final List<AnalyticTriggerStateBean> triggers = res2.values().stream().findFirst().get();
+			assertEquals("One trigger for the one active bucket", 1, triggers.size());
+
+		}		
+	}
+	
 	//////////////////////////////////////////////////////////////////
 	
 	//TODO (ALEPH-12): delete bucket, check clears the DB
