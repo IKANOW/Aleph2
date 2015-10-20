@@ -190,6 +190,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -339,8 +340,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    						.otherwise(__ -> m);
 		    			
 		    			//(before we actually handle the message, we're going to send it to my trigger sibling (fire and forget))
-		    			_trigger_sibling.tell(final_msg, closing_self);
-		    			
+		    			if (!BucketActionOfferMessage.class.isAssignableFrom(m.getClass())) { //(don't bother for offer message obv)
+		    				_trigger_sibling.tell(final_msg, closing_self);
+		    			}		    			
 		    			handleActionRequest(final_msg);
 		    		})
 	    		.build();
@@ -828,8 +830,6 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
 		
-		//TODO (ALEPH-12): this doens't handle batch triggers correctly yet (eg "thread starting" messages)
-		
 		final BiFunction<Stream<AnalyticThreadJobBean>, Tuple2<Boolean, Boolean>, Stream<AnalyticThreadJobBean>> perJobSetup = 
 				(job_stream, existingbucket_bucketactive) -> {
 					return job_stream
@@ -1259,9 +1259,6 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
 		})
 		.exceptionally(__ -> {			
-			/**/
-			__.printStackTrace();
-			
 			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
 			return null;
 		})
@@ -1299,7 +1296,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
 											kv.getValue().stream().map(j_f -> j_f._1()).collect(Collectors.toList()), 
 											kv.getKey().get());
-							me_sibling._2().tell(fwd_msg, me_sibling._1());
+							me_sibling._2().tell(new AnalyticTriggerMessage(fwd_msg), me_sibling._1());
 						}				
 					});								
 	}

@@ -117,7 +117,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 * @param message
 	 */
 	protected void onBucketChanged(final BucketActionMessage message) {
-		_logger.info(ErrorUtils.get("Received bucket action relay for bucket {0}: {1}", message.bucket().full_name()), message.getClass().getName());
+		_logger.info(ErrorUtils.get("Received bucket action relay for bucket {0}: {1}", message.bucket().full_name(), message.getClass().getName()));
 		
 		// Create the state objects
 
@@ -154,7 +154,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			
 			path_names.trySet(triggers.keySet());
 			
-			_logger.info(ErrorUtils.get("Generated {0} triggers for bucket {1} ({2} jobs)", 
+			_logger.info(ErrorUtils.get("Generated {0} triggers for bucket {1} ({2} job(s))", 
 					triggers_in.values().size(),
 					message.bucket().full_name(), 
 					Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0)));			

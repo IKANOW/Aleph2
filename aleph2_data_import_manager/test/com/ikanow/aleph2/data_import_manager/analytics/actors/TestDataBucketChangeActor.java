@@ -46,11 +46,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
-import akka.util.Timeout;
 
 import scala.Tuple2;
 import scala.concurrent.duration.Duration;
-import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.Inbox;
@@ -92,6 +90,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
+import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
@@ -819,13 +818,7 @@ public class TestDataBucketChangeActor {
 		
 		final ActorRef test_counter = _db_actor_context.getDistributedServices().getAkkaSystem().actorOf(Props.create(TestActor_Counter.class, "test_counter"), "test_counter");
 		
-		/**/
-		System.out.println("**************** " + test_counter.path());
-		
 		final ActorSelection test_counter_selection = _actor_context.getActorSystem().actorSelection("/user/test_counter");
-		
-		/**/
-		System.out.println("**************** " + test_counter_selection.resolveOne(Timeout.durationToTimeout(FiniteDuration.fromNanos(1000000000L))).value());
 		
 		// Test 1: pass along errors:
 		{
@@ -1736,13 +1729,19 @@ public class TestDataBucketChangeActor {
 		public void onReceive(Object arg0) throws Exception {
 			_logger.info("Count from: " + uuid + ": " + arg0.getClass().getSimpleName());
 						
-			if (arg0 instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
-				final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = (BucketActionMessage.BucketActionAnalyticJobMessage) arg0;
-			
-				msg_counter.incrementAndGet();
-				job_counter.addAndGet(Optional.ofNullable(fwd_msg.jobs()).map(l -> l.size()).orElse(0));
-				message_types.merge(fwd_msg.type(), 1, (x, y) -> x + y);
-			}			
+			if (arg0 instanceof AnalyticTriggerMessage) {
+				final AnalyticTriggerMessage msg = (AnalyticTriggerMessage) arg0;
+
+				if (msg.bucket_action_message() instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+					final BucketActionMessage.BucketActionAnalyticJobMessage fwd_msg = (BucketActionMessage.BucketActionAnalyticJobMessage) msg.bucket_action_message();
+				
+					msg_counter.incrementAndGet();
+					job_counter.addAndGet(Optional.ofNullable(fwd_msg.jobs()).map(l -> l.size()).orElse(0));
+					message_types.merge(fwd_msg.type(), 1, (x, y) -> x + y);
+				}
+				else _logger.warn("Received invalid trigger message: " + msg.bucket_action_message());
+
+			}
 		}		
 	}
 
