@@ -1239,6 +1239,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.count();
 	}
 	
+	public static final FsPermission DEFAULT_DIR_PERMS = FsPermission.valueOf("drwxrwxrwx");	
+	
 	/** Create the different default files needed by the bucket in the distributed file system
 	 * @param bucket
 	 * @param storage_service
@@ -1272,7 +1274,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				)
 				.stream()
 				.map(s -> new Path(bucket_root + IStorageService.BUCKET_SUFFIX + s))
-				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, FsPermission.getDefault(), true)));
+				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, DEFAULT_DIR_PERMS, true)));
 	}
 	
 	private static final Pattern VALID_ANALYTIC_JOB_NAME = Pattern.compile("[a-zA-Z0-9_]+");

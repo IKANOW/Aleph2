@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 /** 
@@ -69,12 +70,14 @@ public class DirUtils {
 		return p;
 	}
 
+	public static final FsPermission DEFAULT_DIR_PERMS = FsPermission.valueOf("drwxrwxrwx");		 
+	 
 	public static void createDirectory(FileContext fileContext,String pathString) {
 		if(fileContext!=null && pathString !=null){
 			try {
 				Path dir = new Path(pathString);
 				if(!fileContext.util().exists(dir)){
-					fileContext.mkdir(dir, FileContext.DIR_DEFAULT_PERM, true);
+					fileContext.mkdir(dir, DEFAULT_DIR_PERMS, true);
 				}
 			} catch (Exception e) {
 				logger.error("createFolderStructure Caught Exception", e);

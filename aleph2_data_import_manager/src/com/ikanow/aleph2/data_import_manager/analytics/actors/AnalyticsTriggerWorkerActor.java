@@ -306,6 +306,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected void onAnalyticTrigger_checkActiveJob(final DataBucketBean bucket, final AnalyticThreadJobBean job, final AnalyticTriggerStateBean trigger) {
 		
 		//TODO (ALEPH-12): might need to reduce the chattiness of this (can I check once every 5 minutes or something? use a google cache)
+		// (but also then need to reduce the chattiness of logging for the choose and distribution actor, else there's no point...)
 		_logger.info(ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name(), 
 				Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse("")));
 		

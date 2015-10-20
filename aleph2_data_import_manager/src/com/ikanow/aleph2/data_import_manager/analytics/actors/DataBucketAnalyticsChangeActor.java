@@ -962,7 +962,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 
 									//(note: don't use perJobSetup for these explicity analytic event messages)
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<Boolean>>> job_results = 
-											jobs.stream()
+											Optionals.ofNullable(msg.jobs()).stream()
 												.map(job -> Tuples._2T(job, (CompletableFuture<Boolean>)
 														tech_module.checkAnalyticJobProgress(msg.bucket(), msg.jobs(), job, context)))
 												.collect(Collectors.toList());
@@ -1007,7 +1007,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									//(note: don't use perJobSetup for these explicity analytic event messages)
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
-											jobs.stream()
+											msg.jobs().stream()
 												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
 														tech_module.startAnalyticJob(msg.bucket(), jobs, job, context)))
 												.collect(Collectors.toList());
@@ -1056,7 +1056,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 								msg -> (JobMessageType.stopping == msg.type()) && (null != msg.jobs()), 
 								msg -> {
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
-											jobs.stream()
+											msg.jobs().stream()
 												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
 														tech_module.suspendAnalyticJob(msg.bucket(), jobs, job, context)))
 												.collect(Collectors.toList());
@@ -1085,7 +1085,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									final CompletableFuture<BasicMessageBean> top_level_result = CompletableFuture.completedFuture(
 											ErrorUtils.buildSuccessMessage(DataBucketAnalyticsChangeActor.class.getSimpleName(), "BucketActionAnalyticJobMessage:deleting", ""));
 									
-									final List<CompletableFuture<BasicMessageBean>> job_results = jobs.stream()
+									final List<CompletableFuture<BasicMessageBean>> job_results = 
+											Optionals.ofNullable(msg.jobs()).stream()
 												.map(job -> tech_module.suspendAnalyticJob(bucket, jobs, job, context))
 												.collect(Collectors.toList());
 									

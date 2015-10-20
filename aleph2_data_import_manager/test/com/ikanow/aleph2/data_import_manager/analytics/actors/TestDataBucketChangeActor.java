@@ -1265,11 +1265,9 @@ public class TestDataBucketChangeActor {
 		
 	}	
 	
-	//TODO (ALEPH-12): finish these tests
-	@SuppressWarnings("unused")
 	@Test
 	public void test_talkToAnalytics_analyticsMessages() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
+		//final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
 		final DataBucketBean bucket_batch = createBatchBucket("test_tech_id_analytics");
 		
 		// Get the analytics tech module standalone ("in app" way is covered above)
@@ -1310,7 +1308,10 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionAnalyticJobMessage check_complete = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(
 							trigger_batch_bucket, 
-							Arrays.asList(trigger_batch_bucket.analytic_thread().jobs().stream().findFirst().get()), 
+							Arrays.asList(
+									trigger_batch_bucket.analytic_thread().jobs().stream().findFirst().get(),
+									trigger_batch_bucket.analytic_thread().jobs().stream().skip(1).findFirst().get()
+									), 
 							JobMessageType.check_completion);
 					
 					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
@@ -1318,12 +1319,107 @@ public class TestDataBucketChangeActor {
 			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					trigger_batch_bucket, check_complete,
 					"test1", 
-					_actor_context.getNewAnalyticsContext(), null, 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
-			//TODO: check sends messages on the other bus
+			assertEquals(2, TestActor_Counter.job_counter.get());
+			assertEquals(1, TestActor_Counter.msg_counter.get());
+			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.stopping));
+		}
+		// 2) Start notification that bucket has triggered
+		{
+			TestActor_Counter.reset();
+			
+			final BucketActionMessage.BucketActionAnalyticJobMessage bucket_starting = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(
+							trigger_batch_bucket, 
+							null, 
+							JobMessageType.starting);
+					
+					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, bucket_starting,
+					"test2", 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
+			assertEquals(0, TestActor_Counter.job_counter.get());
+			assertEquals(0, TestActor_Counter.msg_counter.get());
+		}
+		// 3) Instruction to start some jobs for an active bucket
+		{
+			TestActor_Counter.reset();
+			
+			final BucketActionMessage.BucketActionAnalyticJobMessage job_starting = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(
+							trigger_batch_bucket, 
+							Arrays.asList(trigger_batch_bucket.analytic_thread().jobs().stream().findFirst().get()), 
+							JobMessageType.starting);
+					
+					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, job_starting,
+					"test3", 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			//(these come from sibling so not replying there with anything)
+			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
+			assertEquals(0, TestActor_Counter.job_counter.get());
+			assertEquals(0, TestActor_Counter.msg_counter.get());
+		}
+		// 4) notification that bucket has stopped
+		{
+			TestActor_Counter.reset();
+			
+			final BucketActionMessage.BucketActionAnalyticJobMessage bucket_stopping = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(
+							trigger_batch_bucket, 
+							null, 
+							JobMessageType.stopping);
+					
+					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, bucket_stopping,
+					"test4", 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
+			assertEquals(0, TestActor_Counter.job_counter.get());
+			assertEquals(0, TestActor_Counter.msg_counter.get());
+		}
+		// 5) instruction to stop a job
+		{
+			TestActor_Counter.reset();
+			
+			final BucketActionMessage.BucketActionAnalyticJobMessage jobs_stopping = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(
+							trigger_batch_bucket, 
+							trigger_batch_bucket.analytic_thread().jobs().stream().collect(Collectors.toList()), 
+							JobMessageType.stopping);
+					
+					//.UpdateBucketActionMessage(trigger_batch_bucket, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					trigger_batch_bucket, jobs_stopping,
+					"test5", 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
+			assertEquals(0, TestActor_Counter.job_counter.get());
+			assertEquals(0, TestActor_Counter.msg_counter.get());
 		}
 		
 	}	
@@ -1671,18 +1767,21 @@ public class TestDataBucketChangeActor {
 												Arrays.asList(
 														BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, analytic_tech_id + "_1")
+															.with(AnalyticThreadJobBean::name, analytic_tech_id + "_1")
 															.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch)
 															.with(AnalyticThreadJobBean::dependencies, null) // (null - counts as none)
 														.done().get()
 														,
 														BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, analytic_tech_id + "_2")
+															.with(AnalyticThreadJobBean::name, analytic_tech_id + "_2")
 															.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch)
 															.with(AnalyticThreadJobBean::dependencies, Arrays.asList("test")) //dependency ... will be ignored)
 														.done().get()
 														,
 														BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, analytic_tech_id + "_3")
+															.with(AnalyticThreadJobBean::name, analytic_tech_id + "_3")
 															.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch)
 															.with(AnalyticThreadJobBean::dependencies, Arrays.asList()) // (empty - counts as none)
 														.done().get()
