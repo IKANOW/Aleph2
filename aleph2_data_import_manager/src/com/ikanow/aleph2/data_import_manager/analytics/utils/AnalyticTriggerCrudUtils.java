@@ -19,11 +19,10 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -122,34 +121,41 @@ public class AnalyticTriggerCrudUtils {
 	 */
 	public static CompletableFuture<?> storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
 		
-		//TODO: there's a complication, we might overwrite the bucket active status
-		
 		final Date now = Date.from(Instant.now());		
-		final Set<Tuple2<String, Optional<String>>> mutable_bucket_names = new HashSet<>();
+		final Map<Tuple2<String, Optional<String>>, Boolean> mutable_bucket_names = new HashMap<>();
 		
-		final List<CompletableFuture<?>> ret = triggers.values().stream()
-			.flatMap(l -> l.stream())
+		final Stream<CompletableFuture<?>> ret = triggers.entrySet().stream()
+			.flatMap(kv -> {
+				final Tuple2<String, Optional<String>> bucket_name = Tuples._2T(kv.getKey()._1(), Optional.ofNullable(kv.getKey()._2()));
+				mutable_bucket_names.put(bucket_name,
+						isAnalyticBucketActive(trigger_crud, bucket_name._1(), bucket_name._2()).join()
+						);
+				
+				return kv.getValue().stream();
+			})
 			.collect(Collectors.groupingBy(v -> Tuples._3T(v.bucket_name(), v.job_name(), v.locked_to_host())))
 			.entrySet()
-			.stream()
+			.stream().parallel() // (note no mutable state written to from here)
 			.flatMap(kv -> {
 				final String bucket_name = kv.getKey()._1();
 				final Optional<String> job_name = Optional.ofNullable(kv.getKey()._2());
 				final Optional<String> locked_to_host = Optional.ofNullable(kv.getKey()._3());
-				
-				mutable_bucket_names.add(Tuples._2T(bucket_name, locked_to_host));
-				
+								
 				// Step 1: is the bucket/job active?
-				final boolean is_active = job_name.map(j -> isAnalyticBucketOrJobActive(trigger_crud, bucket_name, job_name, locked_to_host).join())
+				final boolean is_job_active = job_name.map(j -> areAnalyticJobsActive(trigger_crud, bucket_name, job_name, locked_to_host).join())
 											.orElse(false); // (don't care if the bucket is active, only the designated job)
+
+				// Step 1.5: is the bucket active?
+				final boolean is_bucket_active = mutable_bucket_names.getOrDefault(Tuples._2T(bucket_name, locked_to_host), false);	//(must exist by construction?)	
 				
 				// Step 2: write out the transformed job, with instructions to check in <5s and last_checked == now
 				final CompletableFuture<?> f1 = trigger_crud.storeObjects(
 						kv.getValue().stream()
 							.map(trigger ->
 								BeanTemplateUtils.clone(trigger)
-									.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, is_active))
-									.with(AnalyticTriggerStateBean::is_pending, is_active)
+									.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(trigger, is_job_active))
+									.with(AnalyticTriggerStateBean::is_bucket_active, is_bucket_active)
+									.with(AnalyticTriggerStateBean::is_pending, is_job_active)
 									.with(AnalyticTriggerStateBean::last_checked, now)
 									.with(AnalyticTriggerStateBean::next_check, now)
 								.done()
@@ -160,18 +166,17 @@ public class AnalyticTriggerCrudUtils {
 				
 				return Stream.of(f1);
 			})
-			.collect(Collectors.toList()) //(so that the streamg gets evaluated and fills in mutable_bucket_names)
 			;		
 		
 		// Step 3: then remove any existing entries with lesser last_checked (for all external depdendencies and non-active jobs)
 		// (note that external depdendencies are typically updated hence won't be affected by this)
 			
 		final Stream<CompletableFuture<?>> f2 =
-				mutable_bucket_names.stream().map(bucket_name -> {
+				mutable_bucket_names.keySet().stream().map(bucket_name -> {
 					return deleteOldTriggers(trigger_crud, bucket_name._1(), Optional.empty(), bucket_name._2(), now);
 				});
 			
-		final CompletableFuture<?> combined[] = Stream.concat(ret.stream(), f2).toArray(size -> new CompletableFuture[size]);
+		final CompletableFuture<?> combined[] = Stream.concat(ret, f2).toArray(size -> new CompletableFuture[size]);
 		
 		return CompletableFuture.allOf(combined).exceptionally(__ -> null);			
 	}
@@ -225,12 +230,12 @@ public class AnalyticTriggerCrudUtils {
 								groupingBy(trigger -> Tuples._2T(trigger.bucket_name(), trigger.locked_to_host()))));		
 	}
 	
-	/** Checks the DB to see whether a bucket job is currently active
+	/** Checks the DB to see whether a bucket job (or any if job is empty) is currently active
 	 * @param analytic_bucket
 	 * @param job
 	 * @return
 	 */
-	public static CompletableFuture<Boolean> isAnalyticBucketOrJobActive(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final Optional<String> job_name, final Optional<String> locked_to_host) {
+	public static CompletableFuture<Boolean> areAnalyticJobsActive(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final Optional<String> job_name, final Optional<String> locked_to_host) {
 		
 		// These queries want the following optimizations:
 		// (bucket_name, job_name, trigger_type, is_job_active)
@@ -242,6 +247,30 @@ public class AnalyticTriggerCrudUtils {
 							.when(AnalyticTriggerStateBean::is_job_active, true)) //(ie won't match on the active bucket record because of this term)	
 				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 				.map(q -> job_name.map(j -> q.when(AnalyticTriggerStateBean::job_name, j)).orElse(q))
+				.get()
+				.limit(1)
+				;
+					
+		return trigger_crud.countObjectsBySpec(query).thenApply(c -> c.intValue() > 0);
+	}
+	
+	/** Checks the DB to see whether a bucket is currently active
+	 * @param analytic_bucket
+	 * @param job
+	 * @return
+	 */
+	public static CompletableFuture<Boolean> isAnalyticBucketActive(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, final Optional<String> locked_to_host) {
+		
+		// These queries want the following optimizations:
+		// (bucket_name, job_name, trigger_type, is_bucket_active)
+		
+		final QueryComponent<AnalyticTriggerStateBean> query = 
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
+							.withNotPresent(AnalyticTriggerStateBean::job_name) // (ie will only match on the bucket active record)
+							.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+							.when(AnalyticTriggerStateBean::is_bucket_active, true)) 	
+				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 				.get()
 				.limit(1)
 				;
@@ -493,7 +522,23 @@ public class AnalyticTriggerCrudUtils {
 						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 						.get();
 			
-		return trigger_crud.deleteObjectsBySpec(delete_query);
+		final CompletableFuture<?> cf1 = trigger_crud.deleteObjectsBySpec(delete_query);
+		
+		// Also remove the is_job_active from eg external triggers
+		
+		final CompletableFuture<?> cf2 = trigger_crud.updateObjectsBySpec(
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.withAny(AnalyticTriggerStateBean::job_name, jobs.stream().map(j -> j.name()).collect(Collectors.toList()))
+						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name()))
+							.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+							.get()
+						,
+						Optional.of(false)
+						,
+						CrudUtils.update(AnalyticTriggerStateBean.class)
+							.set(AnalyticTriggerStateBean::is_job_active, false));
+				
+		return CompletableFuture.allOf(cf1, cf2);		
 	}	
 
 	/** Deletes old triggers (either that have been removed from the bucket, or that have been replaced by new ones)
@@ -531,13 +576,28 @@ public class AnalyticTriggerCrudUtils {
 	 * @return
 	 */
 	public static CompletableFuture<?> deleteActiveBucketRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final String bucket_name, Optional<String> locked_to_host) {
-		return trigger_crud.deleteObjectsBySpec(
+		final CompletableFuture<?> cf1 = trigger_crud.deleteObjectsBySpec(
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
 						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none))
 						.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 						.get()
 				);
+		
+		// Also remove the is_bucket_active from eg external triggers
+		
+		final CompletableFuture<?> cf2 = trigger_crud.updateObjectsBySpec(
+				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::bucket_name, bucket_name))
+							.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+							.get()
+						,
+						Optional.of(false)
+						,
+						CrudUtils.update(AnalyticTriggerStateBean.class)
+							.set(AnalyticTriggerStateBean::is_bucket_active, false));
+				
+		return CompletableFuture.allOf(cf1, cf2);
 	}
 	
 	///////////////////////////////////////////////////////////////////////

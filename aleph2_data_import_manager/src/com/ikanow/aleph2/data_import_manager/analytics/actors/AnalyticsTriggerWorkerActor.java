@@ -594,7 +594,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			// If so:
 			
 			final boolean bucket_still_active = 
-					AnalyticTriggerCrudUtils.isAnalyticBucketOrJobActive(trigger_crud, bucket_to_check.full_name(), Optional.empty(), locked_to_host).join();
+					AnalyticTriggerCrudUtils.areAnalyticJobsActive(trigger_crud, bucket_to_check.full_name(), Optional.empty(), locked_to_host).join();
 
 			if (!bucket_still_active) {
 				_logger.info(ErrorUtils.get("Bucket {0}: changed to inactive", bucket_to_check.full_name()));			
