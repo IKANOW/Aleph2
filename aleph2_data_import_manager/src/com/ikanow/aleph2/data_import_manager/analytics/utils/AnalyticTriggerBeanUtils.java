@@ -123,6 +123,7 @@ public class AnalyticTriggerBeanUtils {
 											.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
 											.with(AnalyticTriggerStateBean::job_name, job.name())
 											.with(AnalyticTriggerStateBean::input_resource_name_or_id, dep)
+											.with(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name()+":"+dep)
 											.with(AnalyticTriggerStateBean::is_bucket_active, false)
 											.with(AnalyticTriggerStateBean::is_job_active, false)
 											.with(AnalyticTriggerStateBean::is_bucket_suspended, is_suspended)
