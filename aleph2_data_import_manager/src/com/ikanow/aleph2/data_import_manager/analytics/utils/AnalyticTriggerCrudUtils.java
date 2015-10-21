@@ -365,6 +365,7 @@ public class AnalyticTriggerCrudUtils {
 					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("")) 
 					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
 					.when(AnalyticTriggerStateBean::is_bucket_active, false)
+					.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
 					.when(AnalyticTriggerStateBean::is_job_active, false)
 					.when(AnalyticTriggerStateBean::is_pending, false)
 					)

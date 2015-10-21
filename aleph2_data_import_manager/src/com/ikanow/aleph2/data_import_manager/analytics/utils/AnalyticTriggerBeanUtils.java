@@ -300,7 +300,7 @@ public class AnalyticTriggerBeanUtils {
 				&&
 			(null != trigger.last_resource_size()))
 		{
-			return (trigger.last_resource_size() - trigger.curr_resource_size())
+			return (trigger.curr_resource_size() - trigger.last_resource_size())
 					> Optional.ofNullable(trigger.resource_limit()).orElse(0L);
 		}
 		else return false;																
