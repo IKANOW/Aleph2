@@ -797,6 +797,61 @@ public class TestDataBucketChangeActor {
 	}
 
 	@Test
+	public void test_talkToAnalytics_realCases() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, IOException {
+		
+		// Some test cases from real life that failed for some reason
+
+		// 1) This _should_ just be a dup to test_talkToAnalytics case 5c but was failing in real life
+		{
+			final Validation<BasicMessageBean, IAnalyticsTechnologyModule> ret_val = 
+					ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+							"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+							Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
+							Collections.emptyList(), "test1", "test");						
+			
+			if (ret_val.isFail()) {
+				fail("getAnalyticsTechnology call failed: " + ret_val.fail().message());
+			}
+			assertTrue("harvest tech created: ", ret_val.success() != null);
+			
+			final IAnalyticsTechnologyModule analytics_tech = ret_val.success();			
+			
+			final ActorRef test_counter = _db_actor_context.getDistributedServices().getAkkaSystem().actorOf(Props.create(TestActor_Counter.class, "test_counter_real1"), "test_counter_real1");			
+			final ActorSelection test_counter_selection = _actor_context.getActorSystem().actorSelection("/user/test_counter_real1");
+			
+			final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_1.json"), Charsets.UTF_8);
+			final DataBucketBean bucket_batch = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+			TestActor_Counter.reset();			
+			
+			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket_batch, true, bucket_batch, Collections.emptySet());
+			
+			final CompletableFuture<BucketActionReplyMessage> test = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					bucket_batch, update,
+					"test1", 
+					_actor_context.getNewAnalyticsContext(), Tuples._2T(test_counter, test_counter_selection), 
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+						
+			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test.get().getClass());
+			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test.get();
+
+			assertEquals("test1", test_reply.source());
+			assertEquals(2, test_reply.replies().size());
+			final BasicMessageBean test_reply1 = test_reply.replies().stream().skip(0).findFirst().get();
+			assertEquals("called onUpdatedThread: true", test_reply1.message());
+			assertEquals(true, test_reply1.success());
+			final BasicMessageBean test_reply2 = test_reply.replies().stream().skip(1).findFirst().get();
+			assertEquals("called resumeAnalyticJob", test_reply2.message());
+			assertEquals(true, test_reply2.success());
+			
+			Thread.sleep(100L); // give the sibling messages a chance to be delivered			
+			assertEquals(1, TestActor_Counter.job_counter.get());
+			assertEquals(1, TestActor_Counter.msg_counter.get());
+			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.starting));
+		}
+	}	
+	
+	@Test
 	public void test_talkToAnalytics() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
 		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
 		final DataBucketBean bucket_batch = createBatchBucket("test_tech_id_analytics");

@@ -596,6 +596,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	private static boolean isBatchEnrichmentType(final DataBucketBean bucket) {
 		return _batch_types.contains(Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none));
 	}
+	/** Quick utility to determine if a bucket job has a batch type
+	 * @param bucket
+	 * @return
+	 */
+	private static boolean isBatchEnrichmentType(final AnalyticThreadJobBean job) {
+		return _batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none));
+	}	
 	
 	/** Quick utility to determine if a bucket has a batch or streaming type
 	 * @param bucket
@@ -783,7 +790,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 															final AnalyticThreadJobBean job,
 															final Tuple2<Boolean, Boolean> existingbucket_bucketactive)
 	{
-		if (!isBatchEnrichmentType(bucket)) {
+		if (!isBatchEnrichmentType(job)) {
 			return false; //(nice easy bypass)
 		}
 		// if present then trigger isn't manual unless disabled
@@ -792,9 +799,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 											.orElse(false)
 											; 
 		
-		final boolean job_has_dependency = 
-					(_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-						&& !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty());
+		final boolean job_has_dependency = !Optional.ofNullable(job.dependencies()).orElse(Collections.emptyList()).isEmpty();
+			//(we've already checked the job is batch)
 		
 		final boolean existing_bucket = existingbucket_bucketactive._1();
 		final boolean bucket_active = existingbucket_bucketactive._2();
@@ -903,10 +909,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
 							final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
 									perJobSetup.apply(jobs.stream(), Tuples._2T(true, msg.is_enabled()))
-										.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)((msg.is_enabled() && Optional.ofNullable(job.enabled()).orElse(true))
-											? tech_module.resumeAnalyticJob(bucket, jobs, job, context)
-											: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
-											)))
+										.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
+												((msg.is_enabled() && Optional.ofNullable(job.enabled()).orElse(true))
+													? tech_module.resumeAnalyticJob(bucket, jobs, job, context)
+													: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
+													)))
 										.collect(Collectors.toList());
 
 							// Send all stop messages, and start messages for jobs that succeeeded
