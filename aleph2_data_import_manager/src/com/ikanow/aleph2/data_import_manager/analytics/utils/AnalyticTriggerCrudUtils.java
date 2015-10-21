@@ -122,6 +122,8 @@ public class AnalyticTriggerCrudUtils {
 	 */
 	public static CompletableFuture<?> storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
 		
+		//TODO: there's a complication, we might overwrite the bucket active status
+		
 		final Date now = Date.from(Instant.now());		
 		final Set<Tuple2<String, Optional<String>>> mutable_bucket_names = new HashSet<>();
 		
@@ -359,27 +361,32 @@ public class AnalyticTriggerCrudUtils {
 	{
 		// These queries want the following optimizations:
 		// (input_resource_combined, input_data_service)
+		// (input_resource_name_or_id)
 		
+		
+		// 1) external inputs, ie from other buckets
+		// since these are external inputs, only care if the bucket is _not_ active
 		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_1 =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("")) 
 					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
 					.when(AnalyticTriggerStateBean::is_bucket_active, false)
 					.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
-					.when(AnalyticTriggerStateBean::is_job_active, false)
 					.when(AnalyticTriggerStateBean::is_pending, false)
 					)
 					.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 					.get();
 				;
 				
+		// 2) internal inputs, ie within this bucket
+		// since these are internal ... here only care if the bucket is _active_ (and if it's not already running)
 		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query =
 				job.map(j -> {
 					final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_2 =
 							Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 								.when(AnalyticTriggerStateBean::input_resource_name_or_id, j.name()) 
 								.withNotPresent(AnalyticTriggerStateBean::input_data_service)
-								.when(AnalyticTriggerStateBean::is_bucket_active, false)
+								.when(AnalyticTriggerStateBean::is_bucket_active, true)
 								.when(AnalyticTriggerStateBean::is_job_active, false)
 								.when(AnalyticTriggerStateBean::is_pending, false)
 								)
@@ -393,6 +400,7 @@ public class AnalyticTriggerCrudUtils {
 		final UpdateComponent<AnalyticTriggerStateBean> update =
 				CrudUtils.update(AnalyticTriggerStateBean.class)
 					.increment(AnalyticTriggerStateBean::curr_resource_size, 1L)
+					.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(1L))) // (Ensure it gets checked immediately)
 				;
 		
 		return trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
@@ -546,7 +554,7 @@ public class AnalyticTriggerCrudUtils {
 		//2) isAnalyticBucketOrJobActive: (bucket_name, job_name, trigger_type, is_job_active)
 		//3) updateCompletedJob: (bucket_name, job_name, is_pending)
 		//4) updateTriggerStatuses: (_id) [none]
-		//5) updateTriggerInputsWhenJobOrBucketCompletes:  (input_resource_combined, input_data_service)
+		//5) updateTriggerInputsWhenJobOrBucketCompletes:  (input_resource_combined, input_data_service), (input_resource_name_or_id)
 		//6) updateTriggersWithBucketOrJobActivation: (bucket_name, job_name) [ie subset of 2]
 		//7) updateActiveJobTriggerStatus: (bucket_name, trigger_type)
 		//8) deleteTriggers: (bucket_name) [ie subset of 2]
@@ -569,10 +577,14 @@ public class AnalyticTriggerCrudUtils {
 				state_clazz.field(AnalyticTriggerStateBean::is_pending)
 			));
 		//4) (none)
-		//5)
+		//5a)
 		trigger_crud.optimizeQuery(Arrays.asList(
 				state_clazz.field(AnalyticTriggerStateBean::input_resource_combined),
 				state_clazz.field(AnalyticTriggerStateBean::input_data_service)
+			));
+		//5b)
+		trigger_crud.optimizeQuery(Arrays.asList(
+				state_clazz.field(AnalyticTriggerStateBean::input_resource_name_or_id)
 			));
 		//6) (none)
 		//7)

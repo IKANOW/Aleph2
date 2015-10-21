@@ -325,6 +325,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    			
 		    			final ActorRef closing_self = this.self();		    			
 		    			
+		    			// We're not going to reply this to my sibling if it's from me
+		    			final boolean is_analytic_message_from_sibling =
+		    					BucketActionMessage.BucketActionAnalyticJobMessage.class.isAssignableFrom(m.getClass());
+		    			
 		    			final BucketActionMessage final_msg = 
 		    					Patterns.match(m).<BucketActionMessage>andReturn()
 		    					
@@ -340,7 +344,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    						.otherwise(__ -> m);
 		    			
 		    			//(before we actually handle the message, we're going to send it to my trigger sibling (fire and forget))
-		    			if (!BucketActionOfferMessage.class.isAssignableFrom(m.getClass())) { //(don't bother for offer message obv)
+		    			if ((!BucketActionOfferMessage.class.isAssignableFrom(m.getClass())) //(don't bother for offer message obv)
+		    					&&
+		    				!is_analytic_message_from_sibling) // (as above)
+		    			{ 
 		    				_trigger_sibling.tell(final_msg, closing_self);
 		    			}		    			
 		    			handleActionRequest(final_msg);

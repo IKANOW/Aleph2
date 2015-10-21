@@ -469,7 +469,7 @@ public class TestAnalyticTriggerCrudUtils {
 	 * @param trigger
 	 * @return
 	 */
-	public DataBucketBean buildBucket(final String bucket_path, boolean trigger) {
+	public static DataBucketBean buildBucket(final String bucket_path, boolean trigger) {
 		
 		final AnalyticThreadJobBean job0 = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
@@ -529,7 +529,7 @@ public class TestAnalyticTriggerCrudUtils {
 	/** Generates 3 triggers (add a 4th)
 	 * @return
 	 */
-	AnalyticThreadComplexTriggerBean buildTrigger() {
+	public static AnalyticThreadComplexTriggerBean buildTrigger() {
 		
 		final AnalyticThreadComplexTriggerBean complex_trigger =
 				BeanTemplateUtils.build(AnalyticThreadComplexTriggerBean.class)

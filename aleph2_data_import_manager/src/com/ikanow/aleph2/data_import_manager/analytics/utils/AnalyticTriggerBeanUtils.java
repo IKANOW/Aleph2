@@ -123,7 +123,7 @@ public class AnalyticTriggerBeanUtils {
 											.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
 											.with(AnalyticTriggerStateBean::job_name, job.name())
 											.with(AnalyticTriggerStateBean::input_resource_name_or_id, dep)
-											.with(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name()+":"+dep)
+											//(no combined since it's internal)
 											.with(AnalyticTriggerStateBean::is_bucket_active, false)
 											.with(AnalyticTriggerStateBean::is_job_active, false)
 											.with(AnalyticTriggerStateBean::is_bucket_suspended, is_suspended)
@@ -145,39 +145,6 @@ public class AnalyticTriggerBeanUtils {
 	///////////////////////////////////////////////////////////////////////////
 	
 	// UTILS FOR DECIDING WHETHER TO TRIGGER 
-	
-	/** Converts an analytic input to an optional trigger bean
-	 * @param input
-	 * @return
-	 */
-	protected static Optional<AnalyticThreadComplexTriggerBean> convertInternalInputToComplexTrigger(final DataBucketBean bucket, final AnalyticThreadJobInputBean input) {
-		
-		final String resource_name_or_id = Optional.ofNullable(input.resource_name_or_id()).orElse("");
-		if (resource_name_or_id.startsWith("/") && !bucket.full_name().equals(resource_name_or_id.split(":")[0])) {
-			return Optional.empty();
-		}
-		else {
-			final String full_resource_name =
-					Optional.of(resource_name_or_id)
-							.filter(rid -> rid.startsWith("/"))
-							.map(rid -> rid.startsWith(":") ? rid.substring(1) : rid)
-							.map(rid -> bucket.full_name() + ":" + rid)
-							.orElse(resource_name_or_id)
-							;
-			
-			return Optional.of(
-					BeanTemplateUtils.build(AnalyticThreadComplexTriggerBean.class)
-						.with(AnalyticThreadComplexTriggerBean::type, TriggerType.bucket)
-						.with(AnalyticThreadComplexTriggerBean::resource_name_or_id, full_resource_name)
-						.with(AnalyticThreadComplexTriggerBean::data_service, 
-								Optional.ofNullable(input.data_service())
-										.filter(ds -> !"streaming".equals(input.data_service()))
-										.orElse(null)
-								)
-					.done().get()
-					);			
-		}
-	}
 	
 	/** Builds a set of trigger beans from the inputs
 	 * @return
