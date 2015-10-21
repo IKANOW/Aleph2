@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 /** 
  * Utility class working on FileContext.
  * @author jfreydank
@@ -77,7 +78,8 @@ public class DirUtils {
 			try {
 				Path dir = new Path(pathString);
 				if(!fileContext.util().exists(dir)){
-					fileContext.mkdir(dir, DEFAULT_DIR_PERMS, true);
+					fileContext.mkdir(dir, DEFAULT_DIR_PERMS, true); //(note perm is & with umask)
+					fileContext.setPermission(dir, DEFAULT_DIR_PERMS);
 				}
 			} catch (Exception e) {
 				logger.error("createFolderStructure Caught Exception", e);

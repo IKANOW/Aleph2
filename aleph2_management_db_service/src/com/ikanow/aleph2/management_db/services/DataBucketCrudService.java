@@ -1266,6 +1266,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				"import",
 				"import/temp",
 				"import/temp/upload",
+				"import/transient",
 				"import/stored",
 				"import/stored/raw",
 				"import/stored/json",
@@ -1274,7 +1275,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				)
 				.stream()
 				.map(s -> new Path(bucket_root + IStorageService.BUCKET_SUFFIX + s))
-				.forEach(Lambdas.wrap_consumer_u(p -> dfs.mkdir(p, DEFAULT_DIR_PERMS, true)));
+				.forEach(Lambdas.wrap_consumer_u(p -> {
+					dfs.mkdir(p, DEFAULT_DIR_PERMS, true); //(note perm is & with umask)
+					dfs.setPermission(p, DEFAULT_DIR_PERMS);
+				}));
 	}
 	
 	private static final Pattern VALID_ANALYTIC_JOB_NAME = Pattern.compile("[a-zA-Z0-9_]+");
