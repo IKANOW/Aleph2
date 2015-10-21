@@ -79,7 +79,7 @@ public class DirUtils {
 				Path dir = new Path(pathString);
 				if(!fileContext.util().exists(dir)){
 					fileContext.mkdir(dir, DEFAULT_DIR_PERMS, true); //(note perm is & with umask)
-					fileContext.setPermission(dir, DEFAULT_DIR_PERMS);
+					try { fileContext.setPermission(dir, DEFAULT_DIR_PERMS); } catch (Exception e) {} // (not supported in all FS)
 				}
 			} catch (Exception e) {
 				logger.error("createFolderStructure Caught Exception", e);

@@ -1277,7 +1277,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				.map(s -> new Path(bucket_root + IStorageService.BUCKET_SUFFIX + s))
 				.forEach(Lambdas.wrap_consumer_u(p -> {
 					dfs.mkdir(p, DEFAULT_DIR_PERMS, true); //(note perm is & with umask)
-					dfs.setPermission(p, DEFAULT_DIR_PERMS);
+					try { dfs.setPermission(p, DEFAULT_DIR_PERMS); } catch (Exception e) {} // (not supported in all FS)
 				}));
 	}
 	
