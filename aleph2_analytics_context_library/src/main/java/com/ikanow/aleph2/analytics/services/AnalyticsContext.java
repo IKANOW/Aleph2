@@ -278,18 +278,32 @@ public class AnalyticsContext implements IAnalyticsContext {
 	protected void setupOutputs(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
 		final boolean need_ping_pong_buffer = needPingPongBuffer(job);
 
-		_batch_index_service = 
-				(_crud_index_service = _index_service.getDataService()
-											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-													getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
-				)
-				.flatMap(IDataWriteService::getBatchWriteSubservice)
+		final boolean output_is_transient = Optionals.of(() -> job.output().is_transient()).orElse(false);
+		
+		if (output_is_transient) { // no index output if batch disabled
+			_batch_index_service = Optional.empty();
+			_crud_index_service = Optional.empty();
+		}
+		else { // normal case
+			_batch_index_service = 
+					(_crud_index_service = _index_service.getDataService()
+												.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
+														getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
+					)
+					.flatMap(IDataWriteService::getBatchWriteSubservice)
+					;
+		}
+				
+		// Transient output always results in file output regardless of schema
+		final String storage_output_type = output_is_transient
+				? IStorageService.StorageStage.transient_output.toString() + ":" + job.name()
+				: IStorageService.StorageStage.processed.toString()
 				;
-
+		
 		_batch_storage_service = 
 				(_crud_storage_service = _storage_service.getDataService()
 											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
-															Optional.of(IStorageService.StorageStage.processed.toString()), 
+															Optional.of(storage_output_type), 
 																getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
 				)
 				.flatMap(IDataWriteService::getBatchWriteSubservice)
