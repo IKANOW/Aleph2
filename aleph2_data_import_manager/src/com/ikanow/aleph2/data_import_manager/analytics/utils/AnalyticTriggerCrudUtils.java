@@ -503,6 +503,7 @@ public class AnalyticTriggerCrudUtils {
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
 							.whenNot(AnalyticTriggerStateBean::is_job_active, true)
+							.whenNot(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 							.rangeBelow(AnalyticTriggerStateBean::last_checked, now, true)
 							)
 				.map(q -> job_names.map(j -> q.withAny(AnalyticTriggerStateBean::job_name, j)).orElse(q))

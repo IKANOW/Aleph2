@@ -64,7 +64,7 @@ public class TestAnalyticTriggerCrudUtils {
 	}	
 	
 	@Test
-	public void test_storeOrUpdateTriggerStage() throws InterruptedException {
+	public void test_storeOrUpdateTriggerStage_updateActivation() throws InterruptedException {
 		assertEquals(0, _test_crud.countObjects().join().intValue());
 		
 		final DataBucketBean bucket = buildBucket("/test/store/trigger", true);
@@ -101,23 +101,23 @@ public class TestAnalyticTriggerCrudUtils {
 		Thread.sleep(100L); 
 		
 		// 2) Modify and update
-		{
-			final DataBucketBean mod_bucket = 
-					BeanTemplateUtils.clone(bucket)
-						.with(DataBucketBean::analytic_thread, 
-								BeanTemplateUtils.clone(bucket.analytic_thread())
-									.with(AnalyticThreadBean::jobs,
-											bucket.analytic_thread().jobs().stream()
-												.map(j -> 
-													BeanTemplateUtils.clone(j)
-														.with(AnalyticThreadJobBean::name, "test_" + j.name())
-													.done()
-												)
-												.collect(Collectors.toList())
+		final DataBucketBean mod_bucket = 
+				BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.clone(bucket.analytic_thread())
+								.with(AnalyticThreadBean::jobs,
+										bucket.analytic_thread().jobs().stream()
+											.map(j -> 
+												BeanTemplateUtils.clone(j)
+													.with(AnalyticThreadJobBean::name, "test_" + j.name())
+												.done()
 											)
-								.done()
-								)
-					.done();
+											.collect(Collectors.toList())
+										)
+							.done()
+							)
+				.done();
+		{
 			
 			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(mod_bucket, false, Optional.empty());
 			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
@@ -141,22 +141,76 @@ public class TestAnalyticTriggerCrudUtils {
 					.filter(t -> t.job_name().startsWith("test_")).count());
 		}
 		
-		//TODO (ALEPH-12): more validation
-		
-		//TODO (ALEPH-12): more cases
+		// 3) Since we're here might as well try activating...
+		{
+			final Stream<AnalyticTriggerStateBean> test_stream = Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false);
+					
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, test_stream, new Date(), Optional.of(true)).join();
+			
+			assertEquals(7L, _test_crud.countObjects().join().intValue());
+			assertEquals(7L, Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false)
+					.filter(t -> t.is_job_active())
+					.filter(t -> 100 != Optional.ofNullable(t.last_resource_size()).orElse(-1L))
+					.count());
+		}		
+		// 4) ... and then de-activating...
+		{
+			final Stream<AnalyticTriggerStateBean> test_stream = Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false);
+			
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, test_stream, new Date(), Optional.of(false)).join();
+			
+			assertEquals(7L, _test_crud.countObjects().join().intValue());
+			assertEquals(7L, Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false)
+					.filter(t -> !t.is_job_active())
+					.filter(t -> 100 != Optional.ofNullable(t.last_resource_size()).orElse(-1L))
+					.count());
+		}		
+		// 5) ... finally re-activate 
+		{
+			final Stream<AnalyticTriggerStateBean> test_stream = Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false)
+					.map(t -> BeanTemplateUtils.clone(t)
+							.with(AnalyticTriggerStateBean::curr_resource_size, 100L).done())
+					;
+			
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, test_stream, new Date(), Optional.of(true)).join();
+			
+			assertEquals(7L, _test_crud.countObjects().join().intValue());
+			assertEquals(7L, Optionals.streamOf(
+					_test_crud.getObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class)).join().iterator()
+					,
+					false)
+					.filter(t -> t.is_job_active())
+					.filter(t -> 100 == t.last_resource_size())
+					.count());
+			
+		}
 	}
 	
 	//////////////////////////////////////////////////////////////////
-	
+
 	@Test
-	public void test_activateUpdateAndSuspend() throws InterruptedException
+	public void test_activateUpdateTimesAndSuspend() throws InterruptedException
 	{
 		assertEquals(0, _test_crud.countObjects().join().intValue());
 		
-		final DataBucketBean bucket = buildBucket("/test/active/trigger", true);
+		final DataBucketBean bucket = buildBucket("/test/active/trigger", true);		
 		
-		
-		// 3) Store as above
+		// 1) Store as above
 		{
 			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(bucket, false, Optional.of("test_host"));
 			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
@@ -192,7 +246,7 @@ public class TestAnalyticTriggerCrudUtils {
 			AnalyticTriggerCrudUtils.createActiveJobRecord(_test_crud, bucket, job, Optional.of("test_host"));
 		});
 		
-		// 4) Activate then save suspended - check suspended goes to pending 		
+		// 2) Activate then save suspended - check suspended goes to pending 		
 		{
 			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(bucket, true, Optional.of("test_host"));
 			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
@@ -213,7 +267,7 @@ public class TestAnalyticTriggerCrudUtils {
 			//DEBUG
 			//printTriggerDatabase();
 			
-			assertEquals(16L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs, 4 job dependencies x2 (pending/non-pending), the 3 external triggers get overwritten			
+			assertEquals(17L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs, + 1 active bucket, 4 job dependencies x2 (pending/non-pending), the 3 external triggers get overwritten			
 			assertEquals(7L, _test_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
@@ -223,7 +277,7 @@ public class TestAnalyticTriggerCrudUtils {
 		// Sleep to change times
 		Thread.sleep(100L);
 		
-		// 5) De-activate and check reverts to pending
+		// 3) De-activate and check reverts to pending
 		{
 			AnalyticTriggerCrudUtils.deleteActiveJobEntries(_test_crud, bucket, bucket.analytic_thread().jobs(), Optional.of("test_host")).join();
 			
@@ -234,18 +288,28 @@ public class TestAnalyticTriggerCrudUtils {
 				
 				//System.out.println(" AFTER: " + job.name() + ": " + _test_crud.countObjects().join().intValue());
 			});										
-			
-			assertEquals(7L, _test_crud.countObjects().join().intValue());			
-			
+
+			assertEquals(8L, _test_crud.countObjects().join().intValue());			
+
 			assertEquals(7L, _test_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_pending, false)
-					).join().intValue());									
+					).join().intValue());												
+			
+			AnalyticTriggerCrudUtils.deleteActiveBucketRecord(_test_crud, bucket.full_name(), Optional.of("test_host")).join();
+			
+			assertEquals(7L, _test_crud.countObjects().join().intValue());						
 		}
 	}
 	
 	//TODO (ALEPH-12): test 2 different locked_to_host, check they don't interfere...
 
+	//TODO: test list
+	// (simple)
+	// - updateActiveJobTriggerStatus ... Updates active job records' next check times
+	// (more complex)
+	// - updateTriggerInputsWhenJobOrBucketCompletes
+	
 	@Test
 	public void test_getTriggersToCheck() throws InterruptedException {
 		assertEquals(0, _test_crud.countObjects().join().intValue());
@@ -290,8 +354,7 @@ public class TestAnalyticTriggerCrudUtils {
 					).join();
 
 			//DEBUG
-			//this.printTriggerDatabase();
-			
+			//this.printTriggerDatabase();			
 		}
 		
 		// Try again
@@ -306,11 +369,19 @@ public class TestAnalyticTriggerCrudUtils {
 		// (this time will get the job deps but not the triggers)
 		
 		{
+			// activates external with bucket_active
+			AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(
+					_test_crud, bucket, Optional.empty(), Optional.empty()).join();
+					
+			// activate internal with bucket and job active
+			AnalyticTriggerCrudUtils.updateTriggersWithBucketOrJobActivation(
+					_test_crud, bucket, Optional.of(bucket.analytic_thread().jobs()), Optional.empty())
+					.join();
+
+			//(just update the next trigger time)
 			_test_crud.updateObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class), 
 					Optional.empty(), 
 						CrudUtils.update(AnalyticTriggerStateBean.class)
-									.set(AnalyticTriggerStateBean::is_job_active, true)
-									.set(AnalyticTriggerStateBean::is_bucket_active, true)
 									.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2)))
 					).join();
 			
