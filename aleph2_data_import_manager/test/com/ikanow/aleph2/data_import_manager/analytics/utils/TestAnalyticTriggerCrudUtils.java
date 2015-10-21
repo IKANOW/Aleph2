@@ -82,8 +82,8 @@ public class TestAnalyticTriggerCrudUtils {
 	
 			// 4 internal dependencies
 			assertEquals(4L, test_list.stream().filter(t -> null != t.job_name()).count());
-			// 5 external dependencies
-			assertEquals(4L, test_list.stream().filter(t -> null != t.input_resource_combined()).count());
+			// 4 external dependencies
+			assertEquals(4L, test_list.stream().filter(t -> null == t.job_name()).count());
 			
 			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> grouped_triggers
 				= test_list.stream().collect(
@@ -223,7 +223,7 @@ public class TestAnalyticTriggerCrudUtils {
 			// 4 internal dependencies
 			assertEquals(4L, test_list.stream().filter(t -> null != t.job_name()).count());
 			// 5 external dependencies
-			assertEquals(4L, test_list.stream().filter(t -> null != t.input_resource_combined()).count());
+			assertEquals(4L, test_list.stream().filter(t -> null == t.job_name()).count());
 			
 			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> grouped_triggers
 				= test_list.stream().collect(
@@ -391,7 +391,7 @@ public class TestAnalyticTriggerCrudUtils {
 			final List<AnalyticTriggerStateBean> triggers = res.values().stream().findFirst().get();
 			assertEquals("One trigger for each job dep", 4, triggers.size());
 			
-			assertFalse("Internal triggers", triggers.stream().allMatch(trigger -> null != trigger.input_resource_combined()));
+			assertFalse("Should be external triggers", triggers.stream().allMatch(trigger -> null == trigger.job_name()));
 			
 			AnalyticTriggerCrudUtils.updateTriggerStatuses(_test_crud, triggers.stream(), 
 					Date.from(Instant.now().plusSeconds(2)), Optional.empty()
