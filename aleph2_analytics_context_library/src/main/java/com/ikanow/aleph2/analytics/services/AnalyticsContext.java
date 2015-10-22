@@ -1211,13 +1211,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		// This is a more complex case .. for now we'll just delete the data on the _first_ job with no dependencies we encounter
 			
-		state_bucket.analytic_thread().jobs().stream()
+		Optionals.of(() -> state_bucket.analytic_thread().jobs()).orElse(Collections.emptyList()).stream()
 			.filter(j -> Optionals.ofNullable(j.dependencies()).isEmpty()) // can't have any dependencies
 			.filter(j -> Optional.ofNullable(j.enabled()).orElse(true)) // enabled
 			.findFirst()
 			.ifPresent(first_job -> {
 				final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.empty());
-				_logger.info(ErrorUtils.get("Central per bucket setup for {0} (used job {1)): need to do anything = {2}", state_bucket.full_name(), first_job.name(), need_ping_pong_buffer));
+				_logger.info(ErrorUtils.get("Central per bucket setup for {0} (used job {1})): need to do anything = {2}", state_bucket.full_name(), first_job.name(), need_ping_pong_buffer));
 				
 				// (only do anything if the bucket globally has a ping/pong buffer)
 				if (need_ping_pong_buffer) {
