@@ -891,6 +891,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 																tech_module.stopAnalyticJob(bucket, jobs, job, context)))
 														.collect(Collectors.toList());
 							
+							//(no need to call the context.completeJobOutput since we're deleting the bucket)
 							sendOnTriggerEventMessages(job_results, msg.bucket(), __ -> Optional.of(JobMessageType.stopping), me_sibling);									
 							
 							return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
@@ -932,6 +933,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 															}
 															else { // either stopping all, or have disabled certain jobs
 																_logger.info(ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), j_r._1().name()));																
+																if (msg.is_enabled()) { //(else stopping the entire bucket)
+																	context.completeJobOutput(msg.bucket(), j_r._1());																	
+																}
 																return Optional.of(JobMessageType.stopping);
 															}
 														},
@@ -985,6 +989,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 										if (t2._2()) {
 											_logger.info(ErrorUtils.get("Completed: bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
 										}
+										context.completeJobOutput(msg.bucket(), t2._1());
 										return t2._2() ? Optional.of(JobMessageType.stopping) : Optional.empty();
 									}, me_sibling);									
 									
@@ -1048,7 +1053,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									// Received a stop notification for the bucket
 
 									// Complete the job output
-									context.completeJobOutput(msg.bucket());
+									context.completeBucketOutput(msg.bucket());
 									
 									final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onThreadComplete(msg.bucket(), jobs, context);
 																

@@ -1047,9 +1047,9 @@ public class TestAnalyticsContext {
 		//(will start by writing into pong)
 		Tuple2<DataBucketBean, AnalyticsContext> saved = test_objectEmitting(false, true); //(ping)
 		test_objectEmitting(false, false); //(ping)
-		saved._2().completeJobOutput(saved._1());
+		saved._2().completeBucketOutput(saved._1());
 		Tuple2<DataBucketBean, AnalyticsContext> saved2 = test_objectEmitting(false, false); //(pong)
-		saved2._2().completeJobOutput(saved2._1());
+		saved2._2().completeBucketOutput(saved2._1());
 	}
 	
 	public Tuple2<DataBucketBean, AnalyticsContext> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {

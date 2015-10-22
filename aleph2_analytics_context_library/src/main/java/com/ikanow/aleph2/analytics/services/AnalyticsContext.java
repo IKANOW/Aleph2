@@ -1189,28 +1189,45 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 *  CALLED FROM TECHNOLOGY _NOT_ MODULE
 	 * @param bucket
 	 */
-	public void completeJobOutput(final DataBucketBean bucket) {
+	public void completeBucketOutput(final DataBucketBean bucket) {
 		Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 			.stream()
+			.filter(j -> !Optionals.of(() -> j.output().is_transient()).orElse(false)) //(these are handled separately)
 			.filter(j -> needPingPongBuffer(j))
 			.findFirst()
-			.ifPresent(__ -> { // need the ping pong buffer, so switch them
-				
-				final Consumer<IGenericDataService> switchPrimary = s -> {
-					getSecondaryBuffer(bucket, true, s)
-					.ifPresent(curr_secondary -> {
-						s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
-								IGenericDataService.SECONDARY_PING.equals(curr_secondary)
-									? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
-									: Optional.of(IGenericDataService.SECONDARY_PING)
-								); 
-					});
-				}
-				;					
-				
-				_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
-				_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+			.ifPresent(j -> { // need the ping pong buffer, so switch them				
+				switchJobOutputBuffer(bucket, j);				
 			});
+	}
+	
+	/** For transient jobs completes output
+	 * @param bucket
+	 */
+	public void completeJobOutput(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
+			switchJobOutputBuffer(bucket, job);
+		}
+		//(else nothing to do)
+	}
+	
+	/** Internal utility for completing job output
+	 * @param bucket
+	 * @param job
+	 */
+	private void switchJobOutputBuffer(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		final Consumer<IGenericDataService> switchPrimary = s -> {
+			getSecondaryBuffer(bucket, true, s)
+			.ifPresent(curr_secondary -> {
+				s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
+						IGenericDataService.SECONDARY_PING.equals(curr_secondary)
+							? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
+							: Optional.of(IGenericDataService.SECONDARY_PING)
+						); 
+			});
+		}
+		;							
+		_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+		_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));		
 	}
 	
 	/* (non-Javadoc)
