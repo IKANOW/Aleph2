@@ -22,6 +22,7 @@ import java.util.Optional;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+import kafka.utils.ZkUtils;
 
 import org.I0Itec.zkclient.ZkClient;
 import org.junit.Before;
@@ -104,7 +105,7 @@ public class TestKafkaUtils {
 		final String topic = "test_create";
 		final ZkClient zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
-		Thread.sleep(5000);
+//		Thread.sleep(5000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 	}
 	
@@ -118,16 +119,15 @@ public class TestKafkaUtils {
 		final String topic = "test_produce_consume";
 		final ZkClient zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
-		Thread.sleep(5000);
+//		Thread.sleep(5000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 5;
 		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
-		
-		Thread.sleep(5000);
+			producer.send(new KeyedMessage<String, String>(topic, "test"));				
+		Thread.sleep(5000); //sleep to wait for records getting moved
 		
 		//see if we can read that items
 		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
@@ -153,21 +153,20 @@ public class TestKafkaUtils {
 	@Ignore
 	@Test
 	public void testDeleteTopic() throws InterruptedException {
-		final String topic = "test_delete_topic11";
+		final String topic = "test_delete_topic";
 		final ZkClient zk_client = KafkaUtils.getNewZkClient();
 				
 		//Create a topic to delete later
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);
 		
-		Thread.sleep(5000);
+//		Thread.sleep(5000);
 		
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 3;
 		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
-		
-		Thread.sleep(5000);
+			producer.send(new KeyedMessage<String, String>(topic, "test"));				
+		Thread.sleep(5000); //sleep to wait for records getting moved
 		
 		//delete the topic
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
@@ -211,5 +210,83 @@ public class TestKafkaUtils {
 			assertFalse(does_topic_exist.booleanValue());
 		}
 		assertFalse(KafkaUtils.my_topics.containsKey(topic));
+	}
+	
+	/**
+	 * Tests creating a named consumer, then closing it and cleaning it up.
+	 * 1. Create topic
+	 * 2. Create consumer
+	 * 3. Produce some data
+	 * 4. Consume said data with previous consumer
+	 * 5. Close consumer, assert it doesnt exist
+	 * 6. Open consumer with same name
+	 * 7. Produce some data
+	 * 8. Consume said data
+	 * 9. Close consumer
+	 * @throws InterruptedException 
+	 */
+	@Test
+	public void testConsumerCleanup() throws InterruptedException {
+		final String topic = "test_consumer_cleanup";
+		final String group_id = "test_consumer";
+		final ZkClient zk_client = KafkaUtils.getNewZkClient();
+		
+		System.out.println("CREATING TOPIC");
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
+		//Thread.sleep(5000);
+		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
+		
+		System.out.println("CREATING CONSUMER");
+		//create a named consumer before we start producing
+		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, Optional.of(group_id));
+		@SuppressWarnings("resource")
+		WrappedConsumerIterator wrapped_consumer = new WrappedConsumerIterator(consumer, topic);
+		
+		System.out.println("PRODUCE SOME DATA");
+		//write something into the topic
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5;
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new KeyedMessage<String, String>(topic, "test_pt1"));				
+		Thread.sleep(15000); //sleep to wait for records getting moved
+		
+		System.out.println("CONSUMING DATA");
+		//see if we can read that items
+		long count = 0;
+		while ( wrapped_consumer.hasNext() ) {
+			wrapped_consumer.next();
+			count++;
+		}
+		assertEquals(count, num_messages_to_produce);
+		
+		System.out.println("DELETING CONSUMER");
+		//assert consumer exists
+		assertTrue(ZkUtils.pathExists(zk_client, ZkUtils.ConsumersPath() + "/" + group_id));
+		//close consumer
+		wrapped_consumer.close();
+		//assert consumer no longer exists
+		//NOTE: current consumer does not delete this entry out, you have to manually handle it
+		//we could delete it via ZKUtils.deletePathRecursively but waiting until 0.8.2 to see how that handles
+		//assertFalse(ZkUtils.pathExists(zk_client, ZkUtils.ConsumersPath() + "/" + group_id));
+		
+		System.out.println("CREATING CONSUMER AGAIN, REUSING NAME");
+		consumer = KafkaUtils.getKafkaConsumer(topic, Optional.of(group_id));
+		wrapped_consumer = new WrappedConsumerIterator(consumer, topic);	
+		
+		System.out.println("PRODUCE SOME DATA");
+		//assert we can reuse the same consumer
+		//write something into the topic, again
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new KeyedMessage<String, String>(topic, "test_pt2"));				
+		Thread.sleep(5000); //sleep to wait for records getting moved
+		
+		System.out.println("CONSUME DATA");
+		//see if we can read that items			
+		count = 0;
+		while ( wrapped_consumer.hasNext() ) {
+			wrapped_consumer.next();
+			count++;
+		}
+		assertEquals(count, num_messages_to_produce);
 	}
 }

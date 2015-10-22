@@ -15,6 +15,7 @@
 ******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,9 @@ public class KafkaUtils {
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
 	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
-	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();	
+	protected static int producer_pool_index = -1;
+	protected static List<Producer<String,String>> producer_pool = null;
 	//TODO (ALEPH-12): make my_topics a cached map also
 	
 	/** Creates a new ZK client from the properties
@@ -81,16 +84,23 @@ public class KafkaUtils {
 	 * 
 	 * @return
 	 */
-	public synchronized static Producer<String, String> getKafkaProducer() {		
-		if ( producer == null ) {
+	public synchronized static Producer<String, String> getKafkaProducer() {	
+		final int num_producers = 25; //TODO make this configurable, probably per topic rather than globally?
+		if ( producer_pool == null ) {
+			producer_pool = new ArrayList<Producer<String,String>>(num_producers);
 			ProducerConfig config = new ProducerConfig(kafka_properties);
-			producer = new Producer<String, String>(config);
+			for ( int i = 0; i < num_producers; i++ ) {
+				producer_pool.add(new Producer<String, String>(config));
+			}
 		}
-        return producer;
+		producer_pool_index = (producer_pool_index+1)%num_producers;
+        return producer_pool.get(producer_pool_index);
 	}
 	
 	/**
 	 * Creates a consumer for a single topic with the currently configured Kafka instance.
+	 * WARNING: When a consumer is created, it starts its reading at now, so if you
+	 * previously produced on a topic, this consumer won't be able to see it.
 	 * 
 	 * This consumer should be closed once you are done reading.
 	 * 
@@ -107,6 +117,7 @@ public class KafkaUtils {
 						final Properties np = new Properties();
 						kafka_properties.forEach((key, val) -> np.put(key, val));
 						np.put("group.id", name);
+						//np.put("auto.offset.reset", "largest");
 						return np;
 					})
 				.orElse(kafka_properties)
@@ -170,9 +181,7 @@ public class KafkaUtils {
 	public static void setProperties(Config parseMap) {
 		kafka_properties = new Properties();
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-				.put("group.id", "aleph2_unknown")
-				.put("serializer.class", "kafka.serializer.StringEncoder")
-				.put("request.required.acks", "1")
+				.put("group.id", "aleph2_unknown")				
 				.put("consumer.timeout.ms", "3000")
 		        .put("auto.commit.interval.ms", "1000")
 		        // Not sure which of these 2 sets is correct, so will list them both!
@@ -185,6 +194,13 @@ public class KafkaUtils {
 				.put("zk.sessiontimeout.ms", "6000")
 				.put("zk.synctime.ms", "2000")
 				.put("delete.topic.enable", "true")
+				
+				//producer specific config		
+				.put("serializer.class", "kafka.serializer.StringEncoder")
+				.put("request.required.acks", "1")
+				.put("producer.type", "async")
+				.put("compression.codec", "2")
+				.put("batch.num.messages", "800")
 				.build();	
 		
 		final Config fullConfig = parseMap.withFallback(ConfigFactory.parseMap(config_map_kafka));
