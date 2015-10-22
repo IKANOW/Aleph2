@@ -790,8 +790,8 @@ public class TestAnalyticsContext {
 					"/this_bucket", "test_name1", "/this_bucket", "test_transient_internal_not_transient"), 
 					e.getMessage());
 		}
-		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/current/test_transient_external_present"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/current/test_transient_external_present/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
 		try {
 			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4b);
 			fail("Should have thrown exception");
@@ -801,8 +801,8 @@ public class TestAnalyticsContext {
 					"/this_bucket", "test_name1", "/other_bucket", "test_transient_external_not_batch"), 
 					e.getMessage());
 		}
-		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5a));
-		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5b));
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5a));
+		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input5b));
 	}
 	
 	@Test
