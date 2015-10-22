@@ -743,10 +743,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 											ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH,
 													my_bucket.full_name(), job.name(), bucket_subchannel[0], bucket_subchannel[1])));
 					
-								return Arrays.asList(_storage_service.getBucketRootPath() + bucket_subchannel[0] + IStorageService.TRANSIENT_DATA_SUFFIX + bucket_subchannel[1]);
+								return Arrays.asList(_storage_service.getBucketRootPath() + bucket_subchannel[0] + IStorageService.TRANSIENT_DATA_SUFFIX + bucket_subchannel[1] + "/**/*");
 							}
 							else { // This is my input directory
-								return Arrays.asList(_storage_service.getBucketRootPath() + my_bucket.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX);
+								return Arrays.asList(_storage_service.getBucketRootPath() + my_bucket.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX + "*");
 							}
 						});
 					}
