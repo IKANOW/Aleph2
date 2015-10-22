@@ -1188,6 +1188,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 		final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.of(job));
 			// _either_ the entire bucket needs ping/pong, or it's a transient job that needs it
 		
+		_logger.info(ErrorUtils.get("Central per bucket setup for {0}: need to do anything = {1}", state_bucket.full_name(), need_ping_pong_buffer));
+		
 		if (need_ping_pong_buffer) {
 			setupOutputs(state_bucket, job);
 			
@@ -1206,20 +1208,22 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @param state_bucket
 	 */
 	public void centralPerBucketOutputSetup(final DataBucketBean state_bucket) {
-		final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.empty());
 		
 		// This is a more complex case .. for now we'll just delete the data on the _first_ job with no dependencies we encounter
-		if (need_ping_pong_buffer) {
-			// (only do anything if the bucket globally has a ping/pong buffer)
 			
-			state_bucket.analytic_thread().jobs().stream()
-				.filter(j -> Optionals.ofNullable(j.dependencies()).isEmpty()) // can't have any dependencies
-				.filter(j -> Optional.ofNullable(j.enabled()).orElse(true)) // enabled
-				.findFirst()
-				.ifPresent(__ -> {
+		state_bucket.analytic_thread().jobs().stream()
+			.filter(j -> Optionals.ofNullable(j.dependencies()).isEmpty()) // can't have any dependencies
+			.filter(j -> Optional.ofNullable(j.enabled()).orElse(true)) // enabled
+			.findFirst()
+			.ifPresent(first_job -> {
+				final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.empty());
+				_logger.info(ErrorUtils.get("Central per bucket setup for {0} (used job {1)): need to do anything = {2}", state_bucket.full_name(), first_job.name(), need_ping_pong_buffer));
+				
+				// (only do anything if the bucket globally has a ping/pong buffer)
+				if (need_ping_pong_buffer) {
 					this.getBucketGlobalOutputs(state_bucket).map(s -> s.deleteDatastore().join());
-				});
-		}		
+				}
+			});
 	}	
 	
 	////////////////////////////////////////////////////
@@ -1278,6 +1282,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	}
 	
 	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
+	 *  NOTE: CAN HAVE SIDE EFFECTS IF UNINITIALIZED
 	 * @param bucket
 	 * @param job - if present _and_ points to transient output, then returns the buffers for that transient output, else for the entire bucket
 	 * @param need_ping_pong_buffer - based on the job.output
@@ -1303,6 +1308,11 @@ public class AnalyticsContext implements IAnalyticsContext {
 								else return Optional.of(IGenericDataService.SECONDARY_PONG);
 							}
 							else { // 2) all other cases: this is the ES case, where we just use an alias to switch ..
+								// So here there are side effects
+								_logger.info(ErrorUtils.get("Unexpected no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4})",
+										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer
+										));
+								
 								// ... but we don't currently have a primary so need to build that
 								if (0 == ping_pong_count) { // first time through, create the buffers:
 									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PONG));
