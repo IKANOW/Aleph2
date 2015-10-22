@@ -1194,8 +1194,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 			.stream()
 			.filter(j -> !Optionals.of(() -> j.output().is_transient()).orElse(false)) //(these are handled separately)
 			.filter(j -> needPingPongBuffer(j))
-			.findFirst()
-			.ifPresent(j -> { // need the ping pong buffer, so switch them				
+			.findFirst() // (currently all jobs have to point to the same output)
+			.ifPresent(j -> { // need the ping pong buffer, so switch them	
+				_logger.info(ErrorUtils.get("Completing non-transient output of bucket {0}", bucket.full_name()));
 				switchJobOutputBuffer(bucket, j);				
 			});
 	}
@@ -1205,6 +1206,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	public void completeJobOutput(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
 		if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
+			_logger.info(ErrorUtils.get("Completing transient output of bucket:job {0}:{1}", bucket.full_name(), job.name()));
 			switchJobOutputBuffer(bucket, job);
 		}
 		//(else nothing to do)
@@ -1236,6 +1238,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 	@Override
 	public CompletableFuture<?> flushBatchOutput(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		
+		_logger.info(ErrorUtils.get("Flushing output for bucket:job {0}:{1}", my_bucket.full_name(), job.name()));
 		
 		@SuppressWarnings("unchecked")
 		Function<Optional<IBatchSubservice<JsonNode>>, CompletableFuture<Object>> flusher = opt -> {
