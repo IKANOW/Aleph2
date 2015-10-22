@@ -59,27 +59,33 @@ public interface IDataServiceProvider {
 		<O> Optional<ICrudService<O>> getReadableCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets, final Optional<String> options);
 		
 		/** Returns the list of secondary buffers used with this bucket (so that they can be deleted)
+		 *  By default does list the secdonary for transient analytic jobs, only that of the final output buffer (other jobs are locked together)  
 		 * @param bucket
+		 * @param intermediate_step - if specified then returns the secondary buffers of the specified analytic job (normally one with transient output), otherwise for the bucket (other jobs are locked). Does nothing if the service does not support intermediate jobs. 
 		 * @return
 		 */
-		Set<String> getSecondaryBuffers(final DataBucketBean bucket);
+		Set<String> getSecondaryBuffers(final DataBucketBean bucket, Optional<String> intermediate_step);
 		
 		/** Provides the primary name if it can be deduced, else Optional.empty (ie if symlinks aren't supported ... in this case you can infer what the primary buffer is
 		 *  based on the fact it will be missing from the secondary buffer)
+		 *  By default does list the primary for transient analytic jobs, only that of the final output buffer (other jobs are locked together)  
 		 * @param bucket
+		 * @param intermediate_step - if specified then returns the primary buffer of the specified analytic job (normally one with transient output), otherwise for the bucket (other jobs are locked). Does nothing if the service does not support intermediate jobs. 
 		 * @return
 		 */
-		Optional<String> getPrimaryBufferName(final DataBucketBean bucket);
+		Optional<String> getPrimaryBufferName(final DataBucketBean bucket, Optional<String> intermediate_step);
 		
 		/** For "ping pong" buffers (or when atomically modifying the contents of any bucket), switches the "active" read buffer to the designated secondary buffer
 		 *  The current primary bucket is returned to its previous name if possible, else uses the designated string, else deletes it 
+		 *  By default does not switch transient buffers for transient analytic jobs, only the final output buffer		 *  
 		 * @param bucket - the bucket to switch
 		 * @param secondary_buffer - the name of the buffer (if not present then moves back to the default secondary)
 		 * @param new_name_for_ex_primary - if empty then uses a technology specific term (can be referenced subsequently by using Optional.empty() in secondary_buffer) 
 		 *        if "" then deletes the old index (this can be unsafe if a long running MR job is still running on the older collection), else renames to this
+		 * @param intermediate_step - if specified then switches the primary buffer of the specified analytic job (normally one with transient output), otherwise for the bucket (other jobs are locked). Returns an error if the service does not support intermediate jobs. 
 		 * @return a future containing the success/failure of the operation and associated status
 		 */
-		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary);
+		CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(final DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary, Optional<String> intermediate_step);
 				
 		/** Indicates that this service should examine the data in this bucket and delete any old data
 		 * @param bucket - the bucket to be checked

@@ -48,12 +48,8 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	 */
 	public static final String TEMP_DATA_SUFFIX = "/managed_bucket/import/temp/";
 	
-	/** This is for transient data, eg for intermediate analytic steps (the name follows this suffix)
-	 */
-	public static final String TRANSIENT_DATA_SUFFIX = "/managed_bucket/import/transient/current/";
-	
-	/** This is for transient data, eg for intermediate analytic steps
-	 *  (where secondary buffers are stored)
+	/** This is for transient data, eg for intermediate analytic steps - data is stored in TRANSIENT_DATA_SUFFIX_SECONDARY + <job_name>/<secondary_buffer-or-"current/">
+	 *  (where secondary buffers are stored, has no primary string constant because of the job name infix)
 	 */
 	public static final String TRANSIENT_DATA_SUFFIX_SECONDARY = "/managed_bucket/import/transient/";
 	

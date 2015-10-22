@@ -119,7 +119,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
-		final SetOnce<String> signature_override = new SetOnce<>();		
+		final SetOnce<String> signature_override = new SetOnce<>();
 	};	
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -223,94 +223,6 @@ public class AnalyticsContext implements IAnalyticsContext {
 		static_instances.put(_mutable_state.signature_override.get(), this);
 	}
 
-	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
-	 * @param bucket
-	 * @param need_ping_pong_buffer - based on the job.output
-	 * @param data_service
-	 * @return
-	 */
-	protected static Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
-	{
-		if (need_ping_pong_buffer) {
-			final Optional<String> write_buffer = 
-					data_service.getPrimaryBufferName(bucket).map(Optional::of)
-						.orElseGet(() -> { // Two cases:
-							
-							final Set<String> secondaries = data_service.getSecondaryBuffers(bucket);
-							final int ping_pong_count = (secondaries.contains(IGenericDataService.SECONDARY_PING) ? 1 : 0)
-													+ (secondaries.contains(IGenericDataService.SECONDARY_PONG) ? 1 : 0);
-							
-							if (1 == ping_pong_count) { // 1) one of ping/pong exists but not the other ... this is the file case where we can't tell what the primary actually is
-								if (secondaries.contains(IGenericDataService.SECONDARY_PONG)) { //(eg pong is secondary so ping must be primary)
-									return Optional.of(IGenericDataService.SECONDARY_PING);
-								}
-								else return Optional.of(IGenericDataService.SECONDARY_PONG);
-							}
-							else { // 2) all other cases: this is the ES case where we haven't built
-								if (0 == ping_pong_count) { // first time through, create the buffers:
-									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PONG));
-									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PING));
-								}								
-								final Optional<String> curr_primary = Optional.of(IGenericDataService.SECONDARY_PING);
-								final CompletableFuture<BasicMessageBean> future_res = data_service.switchCrudServiceToPrimaryBuffer(bucket, curr_primary, Optional.empty());							
-								future_res.thenAccept(res -> {
-									if (!res.success()) {
-										_logger.error("Error switching between ping/pong buffers: " + res.message());
-									}
-								});
-								return curr_primary;
-							}
-						})
-						.map(curr_pri -> { // then just pick the buffer that isn't the primary
-							if (IGenericDataService.SECONDARY_PING.equals(curr_pri)) {
-								return IGenericDataService.SECONDARY_PONG;
-							}
-							else return IGenericDataService.SECONDARY_PING;							
-						});			
-			
-			return write_buffer;			
-		}
-		else return Optional.empty();						
-	};
-	
-	/** Setup the outputs for the given bucket
-	 */
-	protected void setupOutputs(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
-		final boolean need_ping_pong_buffer = needPingPongBuffer(job);
-
-		final boolean output_is_transient = Optionals.of(() -> job.output().is_transient()).orElse(false);
-		
-		if (output_is_transient) { // no index output if batch disabled
-			_batch_index_service = Optional.empty();
-			_crud_index_service = Optional.empty();
-		}
-		else { // normal case
-			_batch_index_service = 
-					(_crud_index_service = _index_service.getDataService()
-												.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-														getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
-					)
-					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					;
-		}
-				
-		// Transient output always results in file output regardless of schema
-		final String storage_output_type = output_is_transient
-				? IStorageService.StorageStage.transient_output.toString() + ":" + job.name()
-				: IStorageService.StorageStage.processed.toString()
-				;
-		
-		_batch_storage_service = 
-				(_crud_storage_service = _storage_service.getDataService()
-											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
-															Optional.of(storage_output_type), 
-																getSecondaryBuffer(bucket, need_ping_pong_buffer, s)))
-				)
-				.flatMap(IDataWriteService::getBatchWriteSubservice)
-				;
-		
-	}
-	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#initializeNewContext(java.lang.String)
 	 */
@@ -492,21 +404,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_mutable_state.signature_override.set(ret1);
 			final String ret = this.getClass().getName() + ":" + ret1;
 
-			// Finally this is a good central place to sort out deleting ping pong buffers
+			// Finally this is a good central (central per-job, NOT per-bucket or per-bucket-and-tech (*)) place to sort out deleting ping pong buffers
+			// (*) though there's some logic that attempts to simulate running once-per-bucket-and-tech
+			// which should work for the moment - though will disable that functionality still because it _doesn't_ work for tidying up at the end
 			getJob().ifPresent(job -> {
-				final boolean need_ping_pong_buffer = needPingPongBuffer(job);
-	
-				if (need_ping_pong_buffer) {
-					setupOutputs(_mutable_state.bucket.get(), job);
-	
-					// Clean the data out from the buffers we're about to write into
-					_crud_index_service.ifPresent(outputter -> {
-						outputter.deleteDatastore().join();
-					});
-					_crud_storage_service.ifPresent(outputter -> {
-						outputter.deleteDatastore().join();
-					});
-				}
+				
+				centralPerJobOutputSetup(my_bucket, job);
+				centralPerBucketOutputSetup(my_bucket);				
 			});		
 			return ret;
 		}
@@ -743,7 +647,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 											ErrorUtils.get(ErrorUtils.INPUT_PATH_NOT_A_TRANSIENT_BATCH,
 													my_bucket.full_name(), job.name(), bucket_subchannel[0], bucket_subchannel[1])));
 					
-								return Arrays.asList(_storage_service.getBucketRootPath() + bucket_subchannel[0] + IStorageService.TRANSIENT_DATA_SUFFIX + bucket_subchannel[1] + "/**/*");
+								return Arrays.asList(_storage_service.getBucketRootPath() + bucket_subchannel[0] + IStorageService.TRANSIENT_DATA_SUFFIX_SECONDARY 
+														+ bucket_subchannel[1] + IStorageService.PRIMARY_BUFFER_SUFFIX + "**/*");
 							}
 							else { // This is my input directory
 								return Arrays.asList(_storage_service.getBucketRootPath() + my_bucket.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX + "*");
@@ -1171,66 +1076,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 		//(else nothing to do)
 	}
 
-	/** Util to check if we're using a ping pong buffer to change over data "atomically"
-	 * @param job
-	 * @return
-	 */
-	protected static boolean needPingPongBuffer(final AnalyticThreadJobBean job) {
-		final boolean need_ping_pong_buffer = 
-				!Optionals.of(() -> job.output().preserve_existing_data()).orElse(false)
-				&&
-				_batch_types.contains(Optional.ofNullable(job.analytic_type()).orElse(MasterEnrichmentType.none))
-			;
-		return need_ping_pong_buffer;
-	}
-
-	/** For ping/pong output will switch the ping/pong buffers over
-	 *  CALLED FROM DIM ONLY - NOT FOR USER CONSUMPTION
-	 *  CALLED FROM TECHNOLOGY _NOT_ MODULE
-	 * @param bucket
-	 */
-	public void completeBucketOutput(final DataBucketBean bucket) {
-		Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
-			.stream()
-			.filter(j -> !Optionals.of(() -> j.output().is_transient()).orElse(false)) //(these are handled separately)
-			.filter(j -> needPingPongBuffer(j))
-			.findFirst() // (currently all jobs have to point to the same output)
-			.ifPresent(j -> { // need the ping pong buffer, so switch them	
-				_logger.info(ErrorUtils.get("Completing non-transient output of bucket {0}", bucket.full_name()));
-				switchJobOutputBuffer(bucket, j);				
-			});
-	}
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	/** For transient jobs completes output
-	 * @param bucket
-	 */
-	public void completeJobOutput(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
-		if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
-			_logger.info(ErrorUtils.get("Completing transient output of bucket:job {0}:{1}", bucket.full_name(), job.name()));
-			switchJobOutputBuffer(bucket, job);
-		}
-		//(else nothing to do)
-	}
+	// LOTS AND LOTS OF LOGIC TO MANAGE THE OUTPUTS
 	
-	/** Internal utility for completing job output
-	 * @param bucket
-	 * @param job
-	 */
-	private void switchJobOutputBuffer(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
-		final Consumer<IGenericDataService> switchPrimary = s -> {
-			getSecondaryBuffer(bucket, true, s)
-			.ifPresent(curr_secondary -> {
-				s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
-						IGenericDataService.SECONDARY_PING.equals(curr_secondary)
-							? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
-							: Optional.of(IGenericDataService.SECONDARY_PING)
-						); 
-			});
-		}
-		;							
-		_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
-		_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));		
-	}
+	////////////////////////////////////////////////////
+	
+	// PUBLIC INTERFACE
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#flushBatchOutput(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean)
@@ -1238,6 +1090,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 	@Override
 	public CompletableFuture<?> flushBatchOutput(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+		
+		// (this can safely be run for multiple jobs since it only applies to the outputter we're using in this process anyway, plus multiple
+		// flushes don't have any functional side effects)
+		
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		
 		_logger.info(ErrorUtils.get("Flushing output for bucket:job {0}:{1}", my_bucket.full_name(), job.name()));
@@ -1254,4 +1110,245 @@ public class AnalyticsContext implements IAnalyticsContext {
 		return CompletableFuture.allOf(cf1, cf2);
 	}
 	
+	/** For ping/pong output will switch the ping/pong buffers over
+	 *  CALLED FROM DIM ONLY - NOT FOR USER CONSUMPTION
+	 *  CALLED FROM TECHNOLOGY _NOT_ MODULE
+	 * @param bucket
+	 */
+	public void completeBucketOutput(final DataBucketBean bucket) {
+		Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
+			.stream()
+			.filter(j -> !Optionals.of(() -> j.output().is_transient()).orElse(false)) //(these are handled separately)
+			.filter(j -> needPingPongBuffer(bucket, Optional.of(j)))
+			.findFirst() // (currently all jobs have to point to the same output)
+			.ifPresent(j -> { // need the ping pong buffer, so switch them	
+				_logger.info(ErrorUtils.get("Completing non-transient output of bucket {0} (using job {1})", bucket.full_name(), j.name()));
+				switchJobOutputBuffer(bucket, j);				
+			});
+	}
+	
+	/** For transient jobs completes output
+	 * @param bucket
+	 */
+	public void completeJobOutput(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
+			_logger.info(ErrorUtils.get("Completing transient output of bucket:job {0}:{1}", bucket.full_name(), job.name()));
+			switchJobOutputBuffer(bucket, job);
+		}
+		//(else nothing to do)
+	}
+	
+	////////////////////////////////////////////////////
+	
+	// INTERNAL UTILS - LOW-ISH LEVEL
+	
+	/** Setup the outputs for the given bucket
+	 */
+	protected void setupOutputs(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		final boolean need_ping_pong_buffer = needPingPongBuffer(bucket, Optional.of(job));
+
+		final boolean output_is_transient = Optionals.of(() -> job.output().is_transient()).orElse(false);
+		
+		if (output_is_transient) { // no index output if batch disabled
+			_batch_index_service = Optional.empty();
+			_crud_index_service = Optional.empty();
+		}
+		else { // normal case
+			_batch_index_service = 
+					(_crud_index_service = _index_service.getDataService()
+												.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
+														getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
+					)
+					.flatMap(IDataWriteService::getBatchWriteSubservice)
+					;
+		}
+				
+		// Transient output always results in file output regardless of schema
+		final String storage_output_type = output_is_transient
+				? IStorageService.StorageStage.transient_output.toString() + ":" + job.name()
+				: IStorageService.StorageStage.processed.toString()
+				;
+		
+		_batch_storage_service = 
+				(_crud_storage_service = _storage_service.getDataService()
+											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
+															Optional.of(storage_output_type), 
+																getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
+				)
+				.flatMap(IDataWriteService::getBatchWriteSubservice)
+				;
+		
+	}
+	
+	/** Handles ping/pong buffer set up for transient jobs' outputs, called once per job on startup
+	 * @param state_bucket
+	 * @param job
+	 */
+	public void centralPerJobOutputSetup(final DataBucketBean state_bucket, final AnalyticThreadJobBean job) {
+		final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.of(job));
+			// _either_ the entire bucket needs ping/pong, or it's a transient job that needs it
+		
+		if (need_ping_pong_buffer) {
+			setupOutputs(state_bucket, job);
+			
+			// If it's transient then delete the transient buffer
+			// (for non transient jobs - ie that share the bucket's output, then we do it centrally below)
+			if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
+				_crud_storage_service.ifPresent(outputter -> {
+					outputter.deleteDatastore().join();
+				});				
+			}
+		};		
+	}
+	
+	/** Handles ping/pong buffer set up for the entire bucket's output, called once per job on startup (but should only do something
+	 *  for the first job to run)
+	 * @param state_bucket
+	 */
+	public void centralPerBucketOutputSetup(final DataBucketBean state_bucket) {
+		final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.empty());
+		
+		// This is a more complex case .. for now we'll just delete the data on the _first_ job with no dependencies we encounter
+		if (need_ping_pong_buffer) {
+			// (only do anything if the bucket globally has a ping/pong buffer)
+			
+			state_bucket.analytic_thread().jobs().stream()
+				.filter(j -> Optionals.ofNullable(j.dependencies()).isEmpty()) // can't have any dependencies
+				.filter(j -> Optional.ofNullable(j.enabled()).orElse(true)) // enabled
+				.findFirst()
+				.ifPresent(__ -> {
+					this.getBucketGlobalOutputs(state_bucket).map(s -> s.deleteDatastore().join());
+				});
+		}		
+	}	
+	
+	////////////////////////////////////////////////////
+	
+	// INTERNAL UTILS - LOW LEVEL
+	
+	/** Util to check if we're using a ping pong buffer to change over data "atomically"
+	 *  Either for a transient job or the entire bucket
+	 *  Note that for the global outputs, there can be only setting so we read from the bucket
+	 * @param job - if this is not present or isn't a transient job then this is global
+	 * @return
+	 */
+	protected static boolean needPingPongBuffer(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job) {
+		final boolean need_ping_pong_buffer = 
+			job.filter(j -> Optionals.of(() -> j.output().is_transient()).orElse(false)) // only transients
+				.map(j -> 
+					!Optionals.of(() -> j.output().preserve_existing_data()).orElse(false)
+					&&
+					_batch_types.contains(Optional.ofNullable(j.analytic_type()).orElse(MasterEnrichmentType.none))
+				)
+				.orElseGet(() -> { // This is the bucket case  ... if there are any batch jobs that don't preserve existing data
+					return Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList()).stream()
+						.filter(j -> !Optionals.of(() -> j.output().is_transient()).orElse(false)) // not transient
+						.filter(j -> Optional.ofNullable(j.enabled()).orElse(true)) // enabled
+						.filter(j -> _batch_types.contains(Optional.ofNullable(j.analytic_type()).orElse(MasterEnrichmentType.none))) // batch
+						.filter(j -> !Optionals.of(() -> j.output().preserve_existing_data()).orElse(false)) // not preserving data
+						.findFirst().isPresent();
+				});
+
+		return need_ping_pong_buffer;
+	}
+
+	/** Internal utility for completing job output
+	 *  NOTE IF THE JOB IS NOT TRANSIENT THEN IT SWITCHES THE ENTIRE BUFFER ACROSS
+	 *  (WHICH WON'T WORK IF THERE ARE >1 JOBS)
+	 * @param bucket
+	 * @param job
+	 */
+	private void switchJobOutputBuffer(final DataBucketBean bucket, final AnalyticThreadJobBean job) {
+		final Optional<String> job_name = Optional.of(job).filter(j -> Optionals.of(() -> j.output().is_transient()).orElse(false)).map(j -> j.name());
+		final Consumer<IGenericDataService> switchPrimary = s -> {
+			getSecondaryBuffer(bucket, Optional.of(job), true, s)
+			.ifPresent(curr_secondary -> {
+				s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
+						IGenericDataService.SECONDARY_PING.equals(curr_secondary)
+							? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
+							: Optional.of(IGenericDataService.SECONDARY_PING)
+						,
+						job_name
+						); 
+			});
+		}
+		;							
+		_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+		_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));		
+	}
+	
+	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
+	 * @param bucket
+	 * @param job - if present _and_ points to transient output, then returns the buffers for that transient output, else for the entire bucket
+	 * @param need_ping_pong_buffer - based on the job.output
+	 * @param data_service
+	 * @return
+	 */
+	protected static Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
+	{
+		if (need_ping_pong_buffer) {
+			final Optional<String> job_name = job.filter(j -> Optionals.of(() -> j.output().is_transient()).orElse(false)).map(j -> j.name());
+			final Optional<String> write_buffer = 
+					data_service.getPrimaryBufferName(bucket, job_name).map(Optional::of)
+						.orElseGet(() -> { // Two cases:
+							
+							final Set<String> secondaries = data_service.getSecondaryBuffers(bucket, job_name);
+							final int ping_pong_count = (secondaries.contains(IGenericDataService.SECONDARY_PING) ? 1 : 0)
+													+ (secondaries.contains(IGenericDataService.SECONDARY_PONG) ? 1 : 0);
+							
+							if (1 == ping_pong_count) { // 1) one of ping/pong exists but not the other ... this is the file case where we can't tell what the primary actually is
+								if (secondaries.contains(IGenericDataService.SECONDARY_PONG)) { //(eg pong is secondary so ping must be primary)
+									return Optional.of(IGenericDataService.SECONDARY_PING);
+								}
+								else return Optional.of(IGenericDataService.SECONDARY_PONG);
+							}
+							else { // 2) all other cases: this is the ES case, where we just use an alias to switch ..
+								// ... but we don't currently have a primary so need to build that
+								if (0 == ping_pong_count) { // first time through, create the buffers:
+									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PONG));
+									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PING));
+								}								
+								final Optional<String> curr_primary = Optional.of(IGenericDataService.SECONDARY_PING);
+								final CompletableFuture<BasicMessageBean> future_res = data_service.switchCrudServiceToPrimaryBuffer(bucket, curr_primary, Optional.empty(), job_name);							
+								future_res.thenAccept(res -> {
+									if (!res.success()) {
+										_logger.error("Error switching between ping/pong buffers: " + res.message());
+									}
+								});
+								return curr_primary;
+							}
+						})
+						.map(curr_pri -> { // then just pick the buffer that isn't the primary
+							if (IGenericDataService.SECONDARY_PING.equals(curr_pri)) {
+								return IGenericDataService.SECONDARY_PONG;
+							}
+							else return IGenericDataService.SECONDARY_PING;							
+						});			
+			
+			return write_buffer;			
+		}
+		else return Optional.empty();						
+	};
+	
+	/** Returns a stream of outputters that always apply to the global bucket
+	 * @param bucket
+	 * @return
+	 */
+	protected Stream<IDataWriteService<JsonNode>> getBucketGlobalOutputs(final DataBucketBean bucket) {
+		final boolean need_ping_pong_buffer = needPingPongBuffer(bucket, Optional.empty());
+		
+		return Stream.of(
+				_index_service.getDataService()
+					.<IDataWriteService<JsonNode>>flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
+							getSecondaryBuffer(bucket, Optional.empty(), need_ping_pong_buffer, s)))
+				,
+				_storage_service.getDataService()
+					.<IDataWriteService<JsonNode>>flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
+								Optional.of(IStorageService.StorageStage.processed.toString()), 
+									getSecondaryBuffer(bucket, Optional.empty(), need_ping_pong_buffer, s)))				
+				)
+				.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
+				;
+				
+	}	
 }

@@ -110,13 +110,13 @@ public class TestDataAgeOutSupervisor {
 
 			@Override
 			public Set<String> getSecondaryBuffers(
-					DataBucketBean bucket) {
+					DataBucketBean bucket, Optional<String> intermediate_step) {
 				return null;
 			}
 
 			@Override
 			public CompletableFuture<BasicMessageBean> switchCrudServiceToPrimaryBuffer(
-					DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary) {
+					DataBucketBean bucket, Optional<String> secondary_buffer, final Optional<String> new_name_for_ex_primary, Optional<String> intermediate_step) {
 				return null;
 			}
 
@@ -160,7 +160,7 @@ public class TestDataAgeOutSupervisor {
 			}
 
 			@Override
-			public Optional<String> getPrimaryBufferName(DataBucketBean bucket) {
+			public Optional<String> getPrimaryBufferName(DataBucketBean bucket, Optional<String> intermediate_step) {
 				return null;
 			}
 			

@@ -474,12 +474,20 @@ public class TestAnalyticTriggerCrudUtils {
 		final AnalyticThreadJobBean job0 = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 					.with(AnalyticThreadJobBean::name, "job0")
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList(
+							//(empty input list)
+							))
 				.done().get();
 		
 		//#INT1: job1a -> job0
 		final AnalyticThreadJobBean job1a = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 					.with(AnalyticThreadJobBean::name, "job1a")
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList( // (multiple inputs)
+							BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+							//TODO
+							.done().get()
+							))
 					.with(AnalyticThreadJobBean::dependencies, Arrays.asList("job0"))
 				.done().get();
 		
@@ -487,6 +495,7 @@ public class TestAnalyticTriggerCrudUtils {
 		final AnalyticThreadJobBean job1b = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 					.with(AnalyticThreadJobBean::name, "job1b")
+					//(no input)
 					.with(AnalyticThreadJobBean::dependencies, Arrays.asList("job0"))
 				.done().get();
 		
@@ -502,6 +511,9 @@ public class TestAnalyticTriggerCrudUtils {
 		final AnalyticThreadJobBean job3 = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 					.with(AnalyticThreadJobBean::name, "job3")
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList( // (single input)
+							
+							))
 				.done().get();
 
 		final AnalyticThreadTriggerBean trigger_info =

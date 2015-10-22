@@ -349,7 +349,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public Boolean preserve_existing_data() { return preserve_existing_data; }
 		
-		/** Whether the output data is written to a transient file store (default) or whether it's used as the output for this bucket (or a sub-bucket) 
+		/** Whether the output data is written to a transient file store or whether (by default) it's used as the output for this bucket (or a sub-bucket) 
 		 * @return - whether the output data is transient or persisted in a bucket
 		 */
 		public Boolean is_transient() { return is_transient; }

@@ -791,7 +791,7 @@ public class TestAnalyticsContext {
 					e.getMessage());
 		}
 		assertEquals(Arrays.asList("/app/aleph2//data//this_bucket/managed_bucket/import/ready/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input3));
-		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/current/test_transient_external_present/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
+		assertEquals(Arrays.asList("/app/aleph2//data//other_bucket/managed_bucket/import/transient/test_transient_external_present/current/**/*"), test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4a));
 		try {
 			test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input4b);
 			fail("Should have thrown exception");
@@ -1118,9 +1118,9 @@ public class TestAnalyticsContext {
 
 		if (!preserve_out) {
 			Thread.sleep(1000L);
-			assertTrue(check_index.getDataService().get().getPrimaryBufferName(test_bucket).isPresent()); // (one of pong or ping)
+			assertTrue(check_index.getDataService().get().getPrimaryBufferName(test_bucket, Optional.empty()).isPresent()); // (one of pong or ping)
 		}
-		Optional<String> write_buffer = check_index.getDataService().get().getPrimaryBufferName(test_bucket)
+		Optional<String> write_buffer = check_index.getDataService().get().getPrimaryBufferName(test_bucket, Optional.empty())
 				.map(name -> name.equals(IGenericDataService.SECONDARY_PING) ? IGenericDataService.SECONDARY_PONG: IGenericDataService.SECONDARY_PING);
 		
 		System.out.println("GET WRITE BUFFER NAME = " + write_buffer);		
