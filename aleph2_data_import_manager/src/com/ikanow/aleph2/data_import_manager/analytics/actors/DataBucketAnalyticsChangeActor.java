@@ -1014,6 +1014,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									//(note: don't use perJobSetup for these explicity analytic event messages)
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<Boolean>>> job_results = 
 											Optionals.ofNullable(msg.jobs()).stream()
+												.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
 												.map(job -> Tuples._2T(job, (CompletableFuture<Boolean>)
 														tech_module.checkAnalyticJobProgress(msg.bucket(), msg.jobs(), job, context)))
 												.collect(Collectors.toList());
@@ -1079,6 +1080,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									//(note: don't use perJobSetup for these explicity analytic event messages)
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
 											msg.jobs().stream()
+												.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
 												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
 														tech_module.startAnalyticJob(msg.bucket(), jobs, job, context)))
 												.collect(Collectors.toList());
@@ -1128,6 +1130,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 								msg -> {
 									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
 											msg.jobs().stream()
+												.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
 												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
 														tech_module.suspendAnalyticJob(msg.bucket(), jobs, job, context)))
 												.collect(Collectors.toList());
