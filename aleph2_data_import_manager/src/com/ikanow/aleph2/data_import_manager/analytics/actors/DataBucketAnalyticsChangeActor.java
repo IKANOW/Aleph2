@@ -897,7 +897,22 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
 						})
 						.when(BucketActionMessage.NewBucketActionMessage.class, msg -> {
-							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onNewThread(bucket, jobs, context, !msg.is_suspended());									
+							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onNewThread(bucket, jobs, context, !msg.is_suspended());
+							
+							final boolean starting_thread = 
+									msg.is_suspended()
+										? false
+										: perJobSetup.apply(jobs.stream(), Tuples._2T(false, true))
+												.anyMatch(job -> _batch_types.contains(job.analytic_type()))
+										;
+							
+							if (starting_thread) {
+								BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
+								_logger.info("Executing thread for bucket {0}, success={1} (error={2})",
+										bucket.full_name(), thread_start_result.success(),
+										thread_start_result.success() ? "none" : thread_start_result.message());
+							}
+							
 							final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
 									msg.is_suspended()
 									? Collections.emptyList()
@@ -915,6 +930,23 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						})
 						.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> {
 							final CompletableFuture<BasicMessageBean> top_level_result = tech_module.onUpdatedThread(msg.old_bucket(), bucket, jobs, msg.is_enabled(), Optional.empty(), context);
+							
+							final boolean starting_thread = 
+									!msg.is_enabled()
+										? false
+										: perJobSetup.apply(jobs.stream(), Tuples._2T(true, true))
+												.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
+												.anyMatch(job -> _batch_types.contains(job.analytic_type()))
+										;
+							
+							if (starting_thread) {
+								BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
+								_logger.info("Executing thread for bucket {0}, success={1} (error={2})",
+										bucket.full_name(), thread_start_result.success(),
+										thread_start_result.success() ? "none" : thread_start_result.message());
+							}
+							//(don't need the analog for stopping because the trigger will give me the notification once all jobs are completed)
+							
 							final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
 									perJobSetup.apply(jobs.stream(), Tuples._2T(true, msg.is_enabled()))
 										.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
@@ -923,7 +955,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 													: tech_module.suspendAnalyticJob(bucket, jobs, job, context)
 													)))
 										.collect(Collectors.toList());
-
+							
 							// Send all stop messages, and start messages for jobs that succeeeded
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
 														j_r -> {
@@ -988,8 +1020,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									sendOnTriggerEventMessages(job_results, msg.bucket(), t2 -> {
 										if (t2._2()) {
 											_logger.info(ErrorUtils.get("Completed: bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
+											context.completeJobOutput(msg.bucket(), t2._1());
 										}
-										context.completeJobOutput(msg.bucket(), t2._1());
 										return t2._2() ? Optional.of(JobMessageType.stopping) : Optional.empty();
 									}, me_sibling);									
 									

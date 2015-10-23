@@ -1315,6 +1315,13 @@ public class AnalyticsContext implements IAnalyticsContext {
 										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer
 										));
 								
+								/**/
+								//TODO (ALEPH-12): debugging
+								System.out.println("?? " + ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4}) + ... secondaries={5}",
+										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer,
+										secondaries.stream().collect(Collectors.joining(";"))
+										));
+								
 								// ... but we don't currently have a primary so need to build that
 								if (0 == ping_pong_count) { // first time through, create the buffers:
 									data_service.getWritableDataService(JsonNode.class, bucket, Optional.empty(), Optional.of(IGenericDataService.SECONDARY_PONG));
