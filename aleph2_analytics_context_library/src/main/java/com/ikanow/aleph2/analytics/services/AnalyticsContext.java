@@ -1291,7 +1291,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @param data_service
 	 * @return
 	 */
-	protected static Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
+	protected Optional<String> getSecondaryBuffer(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final boolean need_ping_pong_buffer, final IGenericDataService data_service)
 	{
 		if (need_ping_pong_buffer) {
 			final Optional<String> job_name = job.filter(j -> Optionals.of(() -> j.output().is_transient()).orElse(false)).map(j -> j.name());
@@ -1311,16 +1311,17 @@ public class AnalyticsContext implements IAnalyticsContext {
 							}
 							else { // 2) all other cases: this is the ES case, where we just use an alias to switch ..
 								// So here there are side effects
-								_logger.info(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4})",
-										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer
-										));
-								
-								/**/
-								//TODO (ALEPH-12): debugging
-								System.out.println("?? " + ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4}) + ... secondaries={5}",
-										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer,
-										secondaries.stream().collect(Collectors.joining(";"))
-										));
+								if (_state_name == State.IN_MODULE) { // this should not happen
+									_logger.error(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4}, secondaries={5})",
+											bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer,
+											secondaries.stream().collect(Collectors.joining(";"))
+											));									
+								}
+								else {
+									_logger.info(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4})",
+											bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer
+											));
+								}
 								
 								// ... but we don't currently have a primary so need to build that
 								if (0 == ping_pong_count) { // first time through, create the buffers:

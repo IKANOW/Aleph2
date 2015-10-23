@@ -23,8 +23,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedActor;
 
 import com.google.inject.Inject;
@@ -55,6 +59,8 @@ public class TestAnalyticsTriggerWorkerActor {
 	protected ManagementDbActorContext _actor_context = null;
 	
 	protected static AtomicLong _num_received = new AtomicLong();
+	
+	protected ActorRef _trigger_worker = null;
 	
 	// This one always accepts, but then refuses when it comes down to it...
 	public static class TestActor extends UntypedActor {
@@ -98,6 +104,25 @@ public class TestAnalyticsTriggerWorkerActor {
 		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
+		
+		_trigger_worker = _actor_context.getActorSystem().actorOf(
+				Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
+				"test_woker"
+				//hostname + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX
+				);
+
+	}
+	
+	@After
+	public void tidyUpActor() {
+		if (null != _trigger_worker) {
+			_trigger_worker.tell(akka.actor.PoisonPill.getInstance(), _trigger_worker);
+		}
+	}
+	
+	@Test
+	public void test_updateBucket() {
+		//TODO (ALEPH-12)
 	}
 	
 	
