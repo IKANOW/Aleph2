@@ -1188,7 +1188,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 		final boolean need_ping_pong_buffer = needPingPongBuffer(state_bucket, Optional.of(job));
 			// _either_ the entire bucket needs ping/pong, or it's a transient job that needs it
 		
-		_logger.info(ErrorUtils.get("Central per bucket setup for {0}: need to do anything = {1}", state_bucket.full_name(), need_ping_pong_buffer));
+		_logger.info(ErrorUtils.get("Central per bucket:job setup for {0}:{1} need to do anything = {2}", state_bucket.full_name(), job.name(), need_ping_pong_buffer));
 		
 		if (need_ping_pong_buffer) {
 			setupOutputs(state_bucket, job);
@@ -1277,7 +1277,9 @@ public class AnalyticsContext implements IAnalyticsContext {
 			});
 		}
 		;							
-		_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+		if (!job_name.isPresent()) { // else we're transient so there's no index service
+			_index_service.getDataService().ifPresent(s -> switchPrimary.accept(s));
+		}
 		_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));		
 	}
 	
@@ -1309,7 +1311,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 							}
 							else { // 2) all other cases: this is the ES case, where we just use an alias to switch ..
 								// So here there are side effects
-								_logger.info(ErrorUtils.get("Unexpected no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4})",
+								_logger.info(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4})",
 										bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer
 										));
 								
