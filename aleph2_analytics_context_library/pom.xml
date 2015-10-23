@@ -132,35 +132,47 @@
 		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
 	</dependency>
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_management_db_service</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>${aleph2.scope}</scope>
-  	</dependency>
+	<!-- Other external dependencies here -->
 	<dependency>
 		<groupId>commons-io</groupId>
 		<artifactId>commons-io</artifactId>
 		<version>2.4</version>
 	</dependency>
-	<!-- Other external dependencies here -->
-   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_storage_service_hdfs</artifactId>
-  		<version>${aleph2.version}</version>
-	    <scope>test</scope>
-  	</dependency>  	
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
-  		<version>${aleph2.version}</version>
-	    <scope>test</scope>
-  	</dependency>
-   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>test</scope>
-  	</dependency>  	
   </dependencies>
+	<!-- Test dependencies -->
+  <profiles>
+	<profile>
+	    <id>test_dependencies</id>
+		<properties>
+			<property>skipTests</property>
+			<value>!true</value>
+		</properties>
+		<dependencies>
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_management_db_service</artifactId>
+		  		<version>${aleph2.version}</version>
+				<scope>test</scope>
+		  	</dependency>
+			<dependency>
+				<groupId>com.ikanow.aleph2</groupId>
+				<artifactId>aleph2_storage_service_hdfs</artifactId>
+				<version>${aleph2.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.ikanow.aleph2</groupId>
+				<artifactId>aleph2_management_db_service_mongodb</artifactId>
+				<version>${aleph2.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.ikanow.aleph2</groupId>
+				<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
+				<version>${aleph2.version}</version>
+				<scope>test</scope>
+			</dependency>  	
+		</dependencies>
+	</profile>	
+  </profiles>	
 </project>
