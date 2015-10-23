@@ -6,6 +6,8 @@
   <properties>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
 	<aleph2.scope>compile</aleph2.scope>
+	<!-- Overridden in test_depdendencies profile that is activated if skip tests is true -->
+	<maven.test.skip>true</maven.test.skip>
   </properties>
   <build>
     <plugins>
@@ -143,9 +145,14 @@
   <profiles>
 	<profile>
 	    <id>test_dependencies</id>
+		<activation>
+			<property>
+				<name>skipTests</name>
+				<value>!true</value>
+			</property>
+		</activation>
 		<properties>
-			<property>skipTests</property>
-			<value>!true</value>
+			<maven.test.skip>false</maven.test.skip>
 		</properties>
 		<dependencies>
 		  	<dependency>
