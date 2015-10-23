@@ -32,6 +32,7 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
@@ -1016,6 +1017,25 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 												.map(job -> Tuples._2T(job, (CompletableFuture<Boolean>)
 														tech_module.checkAnalyticJobProgress(msg.bucket(), msg.jobs(), job, context)))
 												.collect(Collectors.toList());
+									
+									// In addition (for now) just log the management results
+									job_results.stream().forEach(jr -> {
+											if (jr._2() instanceof ManagementFuture) {
+												ManagementFuture<Boolean> jr2 = (ManagementFuture<Boolean>)jr._2();
+												jr2.thenAccept(result -> {
+													if (result) {
+														jr2.getManagementResults().thenAccept(mgmt_results -> {
+															List<String> errs = mgmt_results.stream().filter(res -> !res.success()).map(res -> res.message()).collect(Collectors.toList());
+															if (!errs.isEmpty()) 
+																_logger.info(ErrorUtils.get("Completed bucket:job {0}:{1} had errors: {2}",
+																	bucket.full_name(), jr._1().name(), errs.stream().collect(Collectors.joining(";"))
+																	));
+														});
+													}
+												});
+											}
+											//(it will always be)
+									});
 									
 									sendOnTriggerEventMessages(job_results, msg.bucket(), t2 -> {
 										if (t2._2()) {
