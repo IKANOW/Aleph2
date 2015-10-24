@@ -242,9 +242,12 @@ public class TestAnalyticTriggerCrudUtils {
 		Thread.sleep(100L);
 		
 		//(activate)
-		bucket.analytic_thread().jobs().forEach(job -> {
-			AnalyticTriggerCrudUtils.createActiveJobRecord(_test_crud, bucket, job, Optional.of("test_host"));
-		});
+		bucket.analytic_thread().jobs()
+								.stream()
+								.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
+								.forEach(job -> {
+									AnalyticTriggerCrudUtils.createActiveJobRecord(_test_crud, bucket, job, Optional.of("test_host"));
+								});
 		
 		// 2) Activate then save suspended - check suspended goes to pending 		
 		{
@@ -516,6 +519,17 @@ public class TestAnalyticTriggerCrudUtils {
 							))
 				.done().get();
 
+		//Will be ignored as is not enabled:
+		final AnalyticThreadJobBean job4 = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+					.with(AnalyticThreadJobBean::name, "job4")
+					.with(AnalyticThreadJobBean::enabled, false)
+					.with(AnalyticThreadJobBean::dependencies, Arrays.asList("job0"))
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList( // (single input)
+							
+							))
+				.done().get();
+
 		final AnalyticThreadTriggerBean trigger_info =
 			BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
 				.with(AnalyticThreadTriggerBean::auto_calculate, trigger ? null : true)
@@ -524,7 +538,7 @@ public class TestAnalyticTriggerCrudUtils {
 		
 		final AnalyticThreadBean thread = 
 				BeanTemplateUtils.build(AnalyticThreadBean.class)
-					.with(AnalyticThreadBean::jobs, Arrays.asList(job0, job1a, job1b, job2, job3))
+					.with(AnalyticThreadBean::jobs, Arrays.asList(job0, job1a, job1b, job2, job3, job4))
 					.with(AnalyticThreadBean::trigger_config, trigger_info)
 				.done().get();
 		

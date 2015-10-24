@@ -115,6 +115,7 @@ public class AnalyticTriggerBeanUtils {
 
 		final Stream<AnalyticTriggerStateBean> internal_state_beans =
 				Optionals.of(() -> bucket.analytic_thread().jobs()).map(List::stream).orElseGet(Stream::empty)
+					.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
 					.map(job -> {
 						return Optionals.ofNullable(job.dependencies()).stream()
 								.<AnalyticTriggerStateBean>map(dep -> {
@@ -153,6 +154,7 @@ public class AnalyticTriggerBeanUtils {
 		
 		return Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
 			.stream()
+			.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
 			.flatMap(job -> Optionals.ofNullable(job.inputs()).stream())
 			.filter(input -> Optional.ofNullable(input.enabled()).orElse(true))
 			.map(input -> convertExternalInputToComplexTrigger(input))
