@@ -60,6 +60,7 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import akka.actor.UntypedActor;
@@ -227,12 +228,27 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						//(discard bucket active records)
 						kv.getValue().stream().findFirst().ifPresent(trigger -> {
 
-							final Optional<DataBucketBean> bucket_to_check_reply = 
+							final Optional<DataBucketBean> bucket_to_check_reply =
+									BucketUtils.isTestBucket(
+											BeanTemplateUtils.build(DataBucketBean.class)
+												.with(DataBucketBean::full_name, trigger.bucket_name())
+											.done().get())
+									?
+									// Test bucket - get from test
+									_service_context.getCoreManagementDbService().readOnlyVersion().getBucketTestQueue(BucketTimeoutMessage.class)
+										.getObjectById(trigger.bucket_name()) //(test bucket use transformed full name as _id)
+										.<Optional<DataBucketBean>>thenApply(bucket_msg -> bucket_msg.map(msg -> msg.bucket()))
+										.join()
+									:
+									// Normal bucket get from bucket store
 									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id(),
 											Arrays.asList(BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::harvest_technology_name_or_id)),
 											false
 											)
-											.join(); // (annoyingly can't chain CFs because need to block this thread until i'm ready to release the 
+											.join() 
+									;
+									// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
+										
 							//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
 								
 							final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs = new LinkedList<>();
