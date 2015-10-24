@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ import scala.Tuple2;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
@@ -57,7 +59,7 @@ public class AnalyticTriggerCoreUtils {
 	{		
 		return all_triggers.entrySet()
 			.stream() //(can't be parallel - has to happen in the same thread)
-			.map(kv -> Tuples._2T(kv, ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + kv.getKey()))
+			.map(kv -> Tuples._2T(kv, ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + BucketUtils.getUniqueSignature(kv.getKey()._1(), Optional.ofNullable(kv.getKey()._2()))))
 			.flatMap(Lambdas.flatWrap_i(kv_path -> 
 						Tuples._2T(kv_path._1(), _mutex_cache.get(kv_path._2(), () -> { return new InterProcessMutex(curator, kv_path._2()); }))))
 			.flatMap(Lambdas.flatWrap_i(kv_mutex -> {
@@ -79,7 +81,7 @@ public class AnalyticTriggerCoreUtils {
 	 */
 	public static void deregisterOwnershipOfTriggers(final Collection<Tuple2<String, String>> path_names, CuratorFramework curator) {
 		path_names.stream() //(can't be parallel - has to happen in the same thread)
-			.map(path -> ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + path)
+			.map(path -> ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + BucketUtils.getUniqueSignature(path._1(), Optional.ofNullable(path._2())))
 			.map(path -> Tuples._2T(path, _mutex_cache.getIfPresent(path)))
 			.filter(path_mutex -> null != path_mutex._2())
 			.forEach(Lambdas.wrap_consumer_i(path_mutex -> path_mutex._2().release()));

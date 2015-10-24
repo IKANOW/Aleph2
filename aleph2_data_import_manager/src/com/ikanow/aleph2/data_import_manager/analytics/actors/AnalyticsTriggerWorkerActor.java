@@ -71,13 +71,13 @@ import akka.actor.UntypedActor;
 public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected static final Logger _logger = LogManager.getLogger();	
 
-	final DataImportActorContext _actor_context;
+	final DataImportActorContext _local_actor_context;
 	final IServiceContext _service_context;
 	final ICoreDistributedServices _distributed_services;
 	
 	public AnalyticsTriggerWorkerActor() {
-		_actor_context = DataImportActorContext.get();
-		_service_context = _actor_context.getServiceContext();
+		_local_actor_context = DataImportActorContext.get();
+		_service_context = _local_actor_context.getServiceContext();
 		_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 	}
 	
@@ -88,28 +88,33 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 */
 	@Override
 	public void onReceive(Object message) throws Exception {		
-		Patterns.match(message).andAct()
-			// Bucket deletion
-			.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> onBucketDelete(msg))
-			
-			// Test complete
-			.when(BucketActionMessage.UpdateBucketActionMessage.class,
-					msg -> !msg.is_enabled() && BucketUtils.isTestBucket(msg.bucket()),
-						msg -> onBucketDelete(msg))
-						
-			// Other bucket update
-			.when(BucketActionMessage.class, msg -> onBucketChanged(msg))
-			
-			// Regular trigger message
-			.when(AnalyticTriggerMessage.class, 
-					msg -> null != msg.trigger_action_message(), 
-						msg -> onAnalyticTrigger(msg.trigger_action_message()))
-						
-			// Trigger event from elsewhere in the system
-			.when(AnalyticTriggerMessage.class, 
-					msg -> null != msg.bucket_action_message(), 
-						msg -> onAnalyticBucketEvent(msg.bucket_action_message()))
-			;		
+		try {
+			Patterns.match(message).andAct()
+				// Bucket deletion
+				.when(BucketActionMessage.DeleteBucketActionMessage.class, msg -> onBucketDelete(msg))
+				
+				// Test complete
+				.when(BucketActionMessage.UpdateBucketActionMessage.class,
+						msg -> !msg.is_enabled() && BucketUtils.isTestBucket(msg.bucket()),
+							msg -> onBucketDelete(msg))
+							
+				// Other bucket update
+				.when(BucketActionMessage.class, msg -> onBucketChanged(msg))
+				
+				// Regular trigger message
+				.when(AnalyticTriggerMessage.class, 
+						msg -> null != msg.trigger_action_message(), 
+							msg -> onAnalyticTrigger(msg.trigger_action_message()))
+							
+				// Trigger event from elsewhere in the system
+				.when(AnalyticTriggerMessage.class, 
+						msg -> null != msg.bucket_action_message(), 
+							msg -> onAnalyticBucketEvent(msg.bucket_action_message()))
+				;
+		}
+		catch (Throwable t) {
+			_logger.error(ErrorUtils.getLongForm("Error receiving message type = {1} error = {0}", t, message.getClass().getSimpleName()));
+		}
 	}	
 	
 	///////////////////////////////////////////////////////////////////////////////
@@ -125,7 +130,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		// Create the state objects
 
 		final boolean is_suspended = Patterns.match(message).<Boolean>andReturn()
-				.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> !msg.is_enabled(), __ -> true)
+				.when(BucketActionMessage.NewBucketActionMessage.class, msg -> !msg.is_suspended())
+				.when(BucketActionMessage.UpdateBucketActionMessage.class, msg -> !msg.is_enabled())
 				.otherwise(__ -> false);
 		
 		final Stream<AnalyticTriggerStateBean> state_beans = 
@@ -133,7 +139,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					is_suspended,
 					Optional.ofNullable(message.bucket().multi_node_enabled())
 										.filter(enabled -> enabled)
-										.map(__ -> _actor_context.getInformationService().getHostname()));
+										.map(__ -> _local_actor_context.getInformationService().getHostname()));
 
 		// Handle bucket collisions
 		final Consumer<String> on_collision = path -> {			
@@ -152,22 +158,23 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			// Grab the mutex
 			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers = 
 					AnalyticTriggerCoreUtils.registerOwnershipOfTriggers(triggers_in, 
-							_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
+							_local_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
 							Tuples._2T(max_time_to_decollide, on_collision));
 			
 			path_names.trySet(triggers.keySet());
 			
-			_logger.info(ErrorUtils.get("Generated {0} triggers for bucket {1} ({2} job(s))", 
-					triggers_in.values().size(),
+			_logger.info(ErrorUtils.get("Generated {0} trigger(s) ({1} group(s)) for bucket {2} ({3} job(s))", 
+					triggers_in.values().stream().flatMap(l->l.stream()).count(),
+					triggers_in.size(),
 					message.bucket().full_name(), 
 					Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0)));			
-			
+
 			// Output them
 			
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers).join();			
 		}
 		finally { // ie always run this:
 			// Unset the mutexes
@@ -216,7 +223,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				// Grab the mutex
 				final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers = 
 						AnalyticTriggerCoreUtils.registerOwnershipOfTriggers(triggers_to_check, 
-								_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
+								_local_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
 								Tuples._2T(max_time_to_decollide, on_collision));
 				
 				path_names.trySet(triggers.keySet());
@@ -380,7 +387,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			
 		if (!is_already_triggered) {
 			final AnalyticStateChecker checker = 
-					_actor_context.getAnalyticTriggerFactory()
+					_local_actor_context.getAnalyticTriggerFactory()
 						.getChecker(trigger.trigger_type(), Optional.ofNullable(trigger.input_data_service()));
 			
 			final Tuple2<Boolean, Long> check_result = checker.check(bucket, job, trigger).join(); // (can't use the async nature because of the InterProcessMutex)

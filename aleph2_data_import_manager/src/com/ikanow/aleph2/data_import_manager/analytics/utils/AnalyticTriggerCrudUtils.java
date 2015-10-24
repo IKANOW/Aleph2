@@ -130,12 +130,12 @@ public class AnalyticTriggerCrudUtils {
 				mutable_bucket_names.put(bucket_name,
 						isAnalyticBucketActive(trigger_crud, bucket_name._1(), bucket_name._2()).join()
 						);
-				
 				return kv.getValue().stream();
 			})
 			.collect(Collectors.groupingBy(v -> Tuples._3T(v.bucket_name(), v.job_name(), v.locked_to_host())))
 			.entrySet()
-			.stream().parallel() // (note no mutable state written to from here)
+			.stream()
+			.parallel() // (note no mutable state written to from here)
 			.flatMap(kv -> {
 				final String bucket_name = kv.getKey()._1();
 				final Optional<String> job_name = Optional.ofNullable(kv.getKey()._2());

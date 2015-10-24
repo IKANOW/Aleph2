@@ -71,7 +71,6 @@ public class TestAnalyticTriggerCrudUtils {
 
 		// Save a bucket
 		{		
-			//TODO: add tests in TestBeanUtils for other cases?
 			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(bucket, false, Optional.empty());
 			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
 			
@@ -488,8 +487,14 @@ public class TestAnalyticTriggerCrudUtils {
 					.with(AnalyticThreadJobBean::name, "job1a")
 					.with(AnalyticThreadJobBean::inputs, Arrays.asList( // (multiple inputs)
 							BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
-							//TODO
+								.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test_job1a_input_1")
+								.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "storage_service")
 							.done().get()
+							,
+							BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+							.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test_job1a_input:temp")
+							.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "batch")
+						.done().get()
 							))
 					.with(AnalyticThreadJobBean::dependencies, Arrays.asList("job0"))
 				.done().get();
@@ -515,7 +520,10 @@ public class TestAnalyticTriggerCrudUtils {
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 					.with(AnalyticThreadJobBean::name, "job3")
 					.with(AnalyticThreadJobBean::inputs, Arrays.asList( // (single input)
-							
+							BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+								.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/test_job3_input_1")
+								.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service")
+							.done().get()							
 							))
 				.done().get();
 

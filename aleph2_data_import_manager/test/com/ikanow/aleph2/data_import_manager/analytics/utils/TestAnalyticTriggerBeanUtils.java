@@ -15,6 +15,8 @@
 ******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
+import static org.junit.Assert.*;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,6 +40,10 @@ public class TestAnalyticTriggerBeanUtils {
 		
 		System.out.println("Resources = \n" + 
 				test_list.stream().map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+		
+		assertEquals(7, test_list.size()); // (3 inputs + 4 job deps:)
+		assertEquals(3, test_list.stream().filter(trigger -> null == trigger.job_name()).count());
+		assertEquals(4, test_list.stream().filter(trigger -> null != trigger.job_name()).count());
 		
 	}
 	
