@@ -110,9 +110,17 @@ public class AnalyticStateTriggerCheckFactory {
 								+ IStorageService.TO_IMPORT_DATA_SUFFIX
 								;
 					
+					/**/
+					//TODO (ALEPH-12): not firing diagnostics
+					_logger.warn("Looking in path: " + path_name);
+					
 					final Path path = new Path(path_name);
 					
 					if (_file_context.util().exists(path)) {
+						/**/
+						//TODO (ALEPH-12): not firing diagnostics
+						_logger.warn("Path exists! " + path);						
+						
 						FileStatus[] status = _file_context.util().listStatus(path);				
 						
 						if (status.length > 0) {
@@ -130,6 +138,10 @@ public class AnalyticStateTriggerCheckFactory {
 			}
 			catch (Exception e) {
 				if (_logger.isDebugEnabled()) _logger.debug(ErrorUtils.getLongForm("{0}", e)); 
+				
+				/**/
+				//TODO (ALEPH-12): not firing diagnostics
+				_logger.warn(ErrorUtils.getLongForm("{0}", e));
 				
 				return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 			}
