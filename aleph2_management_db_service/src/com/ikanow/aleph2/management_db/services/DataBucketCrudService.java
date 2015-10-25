@@ -1379,6 +1379,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						if (null != job.output().sub_bucket_path()) {
 							errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_OUTPUT_TRANSIENT_ILLEGAL_FIELD, bean.full_name(), job_identifier, "sub_bucket_path")); 
 						}
+						// TODO (ALEPH-12): Don't currently support "is_transient" with "preserve_data"
+						if (Optional.ofNullable(job.output().preserve_existing_data()).orElse(false)) {
+							errs.add(ErrorUtils.get("Due to temporary bug, don't currently support is_transient:true and preserve_existing_data:false - please contact the developers"));
+						}
 					}
 				}				
 			});
