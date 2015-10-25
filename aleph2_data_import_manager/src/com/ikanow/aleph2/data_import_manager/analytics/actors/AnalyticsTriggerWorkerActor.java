@@ -217,8 +217,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		triggers_in.thenAccept(triggers_to_check -> {
 		
 			//DEBUG
-			//System.out.println("??? " + triggers_to_check.values().stream().flatMap(s->s.stream())
-			//		.map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+//			System.out.println("??? " + triggers_to_check.values().stream().flatMap(s->s.stream())
+//					.map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
 			
 			final Consumer<String> on_collision = path -> {			
 				_logger.warn("Failed to grab trigger on {0}", path);
@@ -297,8 +297,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 										})
 										.when(__ -> !trigger_in.is_bucket_active() && (null == trigger_in.job_name()), __ -> {
 											
-											// 2) Inactive bucket, check external dependency
-											
+											// 2) Inactive bucket, check external dependency											
 											onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
 										})
 										.when(__ -> trigger_in.is_bucket_active() && (null != trigger_in.job_name()), __ -> {
@@ -391,7 +390,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						.getChecker(trigger.trigger_type(), Optional.ofNullable(trigger.input_data_service()));
 			
 			final Tuple2<Boolean, Long> check_result = checker.check(bucket, job, trigger).join(); // (can't use the async nature because of the InterProcessMutex)
-			
+		
 			if (check_result._1()) {
 				mutable_trigger_list_active.add(
 						BeanTemplateUtils.clone(trigger)

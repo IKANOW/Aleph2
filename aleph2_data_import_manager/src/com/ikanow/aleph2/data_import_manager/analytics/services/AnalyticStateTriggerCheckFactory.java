@@ -94,6 +94,10 @@ public class AnalyticStateTriggerCheckFactory {
 				AnalyticTriggerStateBean trigger)
 		{
 			try {
+				if (null == _file_context) {
+					_file_context = _service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+				}
+				
 				// Count the files
 				
 				//TODO (ALEPH-12): need to check if this is permitted by security
@@ -125,6 +129,8 @@ public class AnalyticStateTriggerCheckFactory {
 				return CompletableFuture.completedFuture(Tuples._2T(files > 0, files));
 			}
 			catch (Exception e) {
+				if (_logger.isDebugEnabled()) _logger.debug(ErrorUtils.getLongForm("{0}", e)); 
+				
 				return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 			}
 		}		

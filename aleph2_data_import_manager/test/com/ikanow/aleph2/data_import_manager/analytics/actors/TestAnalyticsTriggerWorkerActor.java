@@ -16,7 +16,9 @@
 package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Date;
@@ -24,6 +26,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -38,6 +41,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.TestAnalyticTriggerCrudUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -236,24 +240,26 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 		// Tests a manual bucket that has inter-job dependencies		
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/simple_job_deps_bucket.json"), Charsets.UTF_8);		
-		final DataBucketBean job_dep_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		final DataBucketBean bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
 		// (have to save the bucket to make trigger checks work correctly)
-		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(job_dep_bucket, true).join();
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(bucket, true).join();
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		trigger_crud.deleteDatastore().join();
 		
+		_num_received.set(0L);
+		
 		// 1) Send a message to the worker to fill in that bucket
 		{
 			final BucketActionMessage.NewBucketActionMessage msg = 
-					new BucketActionMessage.NewBucketActionMessage(job_dep_bucket, false);
+					new BucketActionMessage.NewBucketActionMessage(bucket, false);
 			
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(1000L);
+			waitForData(trigger_crud, 3, true);
 			
 			// Check the DB
 		
@@ -276,7 +282,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 3, true);
+			Thread.sleep(1000L);
 			
 			// Check the DB
 		
@@ -291,8 +297,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		// 3a) Let the worker now that job1 has started (which should also launch the bucket)
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
-					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
-							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
 							JobMessageType.starting);
 
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
@@ -327,8 +333,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		// 3b) Send a job completion message
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
-					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
-							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
 							JobMessageType.stopping);
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
@@ -390,8 +396,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		// 5) Send a job completion message
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
-					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
-							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("next_phase")).collect(Collectors.toList()),
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("next_phase")).collect(Collectors.toList()),
 							JobMessageType.stopping);
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
@@ -452,8 +458,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		// 7) Stop the final job
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
-					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
-							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("final_phase")).collect(Collectors.toList()),
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("final_phase")).collect(Collectors.toList()),
 							JobMessageType.stopping);
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
@@ -500,12 +506,160 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		}		
 	}
 	
-	//TODO (ALEPH-12): more tests
+	@Test
+	public void test_enrichment_analyticForm() throws IOException, InterruptedException {
+		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
+		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		
+		test_enrichment_common(enrichment_bucket);
+	}
+	
+	@Test
+	public void test_enrichment_enrichmentForm() {
+		//TODO (ALEPH-12) - create a batch enrichment version of the bucket
+	}
+	
+	public void test_enrichment_common(final DataBucketBean bucket) throws IOException, InterruptedException {
+
+		//setup
+		// (have to save the bucket to make trigger checks work correctly)
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(bucket, true).join();
+		
+		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
+				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+		trigger_crud.deleteDatastore().join();
+		
+		_num_received.set(0L);
+		
+		// 0) create input directory
+				
+		final String root_dir = _service_context.getStorageService().getBucketRootPath();
+		final String suffix = IStorageService.TO_IMPORT_DATA_SUFFIX;
+		createDirectory(root_dir, bucket.full_name(), suffix, 0, true);
+		
+		// 1) Send a message to the worker to fill in that bucket
+		{
+			final BucketActionMessage.NewBucketActionMessage msg = 
+					new BucketActionMessage.NewBucketActionMessage(bucket, false);
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish	
+			waitForData(trigger_crud, 1, true);
+			
+			// Check the DB
+		
+			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());
+		}
+		
+		// 2) Perform a trigger check, make sure that nothing has activated
+		{
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			Thread.sleep(1000L);
+			
+			// Check the DB
+		
+			// (ie no active records)
+			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());			
+		}		
+		
+		// 3a) Add files to input directory, checks triggers (external triggers are slower so shouldn't trigger anything)
+		{
+			createDirectory(root_dir, bucket.full_name(), suffix, 1, false);
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			Thread.sleep(1000L);
+			
+			// Check the DB
+		
+			// (ie no active records)
+			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());						
+		}
+		// 3b) reset triggers try again
+		{
+			resetTriggerCheckTimes(trigger_crud); // (since the external triggers
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			Thread.sleep(1000L);
+			
+			// Check the DB
+		
+			// external trigger + bucket active record + job active record
+			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - should get a job start notification
+			
+			assertEquals(1, _num_received.get());						
+		}
+		
+		// 4) Check doesn't trigger when active, even with directories
+		
+		// 5) De-active
+		
+		// 6) Check triggers again
+		
+		//TODO (ALEPH-12)		
+	}
+	
+	//TODO (ALEPH-12): more tests (bucket completion + file trigger)
 	
 	/////////////////////////////////////////////////////
 	
 	// UTILITIES
 
+	protected void createDirectory(final String root_dir, final String bucket_path, final String suffix, int files_to_create, boolean clear_dir) throws IOException {
+		
+		final String dir = root_dir + File.separator + bucket_path + File.separator + suffix;
+		final File dir_file = new File(dir);
+		
+		if (clear_dir) {
+			try {
+				FileUtils.deleteDirectory(dir_file);
+			}
+			catch (Exception e) {} // prob just doesn't exist
+		}
+		
+		try {
+			FileUtils.forceMkdir(dir_file);
+		}
+		catch (Exception e) { // prob just already exists
+			
+		}
+		assertTrue("Directory should exist: " + dir_file, dir_file.exists());
+		
+		for (int ii = 0; ii < files_to_create; ++ii) {
+			final String file = dir + UuidUtils.get().getRandomUuid() + ".json";
+			final File file_file = new File(file);
+			FileUtils.touch(file_file);
+			assertTrue("Newly created file should exist", file_file.exists());
+			//System.out.println("Created file in " + dir + ": " + file + " .. " + file_file.lastModified());			
+		}
+	}
+	
 	protected void waitForData(final ICrudService<AnalyticTriggerStateBean> trigger_crud, long exit_value, boolean ascending) {
 		int ii = 0;
 		long curr_val = -1;
