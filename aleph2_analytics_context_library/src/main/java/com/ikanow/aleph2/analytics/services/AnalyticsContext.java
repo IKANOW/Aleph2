@@ -1221,7 +1221,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				
 				// (only do anything if the bucket globally has a ping/pong buffer)
 				if (need_ping_pong_buffer) {
-					this.getBucketGlobalOutputs(state_bucket).map(s -> s.deleteDatastore().join());
+					this.getBucketGlobalOutputs(state_bucket).forEach(s -> s.deleteDatastore().join()); 
 				}
 			});
 	}	
