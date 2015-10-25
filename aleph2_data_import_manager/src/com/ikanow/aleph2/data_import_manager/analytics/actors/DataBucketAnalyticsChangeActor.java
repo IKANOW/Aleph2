@@ -347,6 +347,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		    			//(before we actually handle the message, we're going to send it to my trigger sibling (fire and forget))
 		    			if ((!BucketActionOfferMessage.class.isAssignableFrom(m.getClass())) //(don't bother for offer message obv)
 		    					&&
+		    				(!BucketActionMessage.PollFreqBucketActionMessage.class.isAssignableFrom(m.getClass())) //(don't bother for poll message - user actions only)
+		    					&&
 		    				!is_analytic_message_from_sibling) // (as above)
 		    			{ 
 		    				_trigger_sibling.tell(final_msg, closing_self);

@@ -48,8 +48,6 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
  */
 public class AnalyticTriggerCrudUtils {
 
-	public final static long ACTIVE_CHECK_FREQ_SECS = 10L;
-	
 	///////////////////////////////////////////////////////////////////////
 	
 	// CREATE UTILTIES
@@ -69,7 +67,7 @@ public class AnalyticTriggerCrudUtils {
 					.with(AnalyticTriggerStateBean::job_name, job.name())
 					.with(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 					.with(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
-					.with(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().plusSeconds(ACTIVE_CHECK_FREQ_SECS)))
+					.with(AnalyticTriggerStateBean::next_check, Date.from(Instant.now())) // (currently check active buckets every 10s)
 					.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 				.done().get();
 		
@@ -202,11 +200,11 @@ public class AnalyticTriggerCrudUtils {
 		// These queries want the following optimizations:
 		// (next_check)
 		
-		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
+		final QueryComponent<AnalyticTriggerStateBean> active_bucket_job_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.rangeBelow(AnalyticTriggerStateBean::next_check, now, true)
 					.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none); 
-			//(ie only returns special "is job active" records, not the input triggers - these are the records we use to check completion)
+			//(ie only returns special "is job active" and "is bucket active" records, not the input triggers - these are the records we use to check completion)
 		
 		final QueryComponent<AnalyticTriggerStateBean> external_query =
 				CrudUtils.allOf(AnalyticTriggerStateBean.class)
@@ -223,7 +221,7 @@ public class AnalyticTriggerCrudUtils {
 					.when(AnalyticTriggerStateBean::is_pending, false)
 					.withPresent(AnalyticTriggerStateBean::job_name);
 						
-		final QueryComponent<AnalyticTriggerStateBean> query = CrudUtils.anyOf(Arrays.asList(active_job_query, external_query, internal_query));
+		final QueryComponent<AnalyticTriggerStateBean> query = CrudUtils.anyOf(Arrays.asList(active_bucket_job_query, external_query, internal_query));
 		
 		return trigger_crud.getObjectsBySpec(query).thenApply(cursor -> 
 				StreamSupport.stream(cursor.spliterator(), false)
@@ -488,9 +486,10 @@ public class AnalyticTriggerCrudUtils {
 	}
 	
 	/** Updates active job records' next check times
+	 *  CURRENTLY - JUST SETS TO "NOW" AGAIN, IE ACTIVE JOB STATUSES GET CHECKED EVERY TRIGGER (LIKE ACTIVE JOB DEPENDENCIES)
 	 * @param trigger_crud
 	 */
-	public static CompletableFuture<?> updateActiveJobTriggerStatus(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket) {
+	public static CompletableFuture<?> updateActiveJobTriggerStatus(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final Date next_check) {
 		// These queries want the following optimizations:
 		// (bucket_name, trigger_type)
 		
@@ -505,7 +504,7 @@ public class AnalyticTriggerCrudUtils {
 		final UpdateComponent<AnalyticTriggerStateBean> update = 
 				CrudUtils.update(AnalyticTriggerStateBean.class)
 						.set(AnalyticTriggerStateBean::last_checked, Date.from(now))
-						.set(AnalyticTriggerStateBean::next_check, Date.from(now.plusSeconds(AnalyticTriggerCrudUtils.ACTIVE_CHECK_FREQ_SECS)))
+						.set(AnalyticTriggerStateBean::next_check, next_check)
 						;												
 		
 		return trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);		

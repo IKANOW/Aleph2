@@ -488,10 +488,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(trigger_crud, 3, false);
-
+			
 			// Check the DB
 		
-			// (bucket active still present, now "next_phase" has started)
+			// (all active records removed)
 			assertEquals(3L, trigger_crud.countObjects().join().intValue());
 			
 			// Check the message bus - should have received a stop message for the bucket
@@ -507,12 +507,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	// UTILITIES
 
 	protected void waitForData(final ICrudService<AnalyticTriggerStateBean> trigger_crud, long exit_value, boolean ascending) {
-		for (int ii = 0; ii < 10; ++ii) {
+		int ii = 0;
+		long curr_val = -1;
+		for (; ii < 10; ++ii) {
 			try { Thread.sleep(500L); } catch (Exception e) {}
-			final long curr_val = trigger_crud.countObjects().join();
+			curr_val = trigger_crud.countObjects().join();
 			if (ascending && (curr_val >= exit_value)) break;
-			else if (curr_val <= exit_value) break;
+			else if (!ascending && (curr_val <= exit_value)) break;
 		}
+		System.out.println("(Waited " + ii/2 + " (secs) for count=" + curr_val + ")");
 	}
 	
 	/** Utility to make trigger checks pending

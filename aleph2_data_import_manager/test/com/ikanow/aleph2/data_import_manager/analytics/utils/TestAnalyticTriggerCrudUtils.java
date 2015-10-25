@@ -418,24 +418,6 @@ public class TestAnalyticTriggerCrudUtils {
 					Optional.empty()
 					).join();
 			
-			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> res = 
-					AnalyticTriggerCrudUtils.getTriggersToCheck(_test_crud).join();
-	
-			assertEquals("None this time", 0, res.keySet().size());			
-			
-			//DEBUG
-			//this.printTriggerDatabase();
-			
-			// Reduce the date and try again:
-			_test_crud.updateObjectsBySpec(
-					CrudUtils.allOf(AnalyticTriggerStateBean.class)
-							.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-							, 
-					Optional.empty(), 
-						CrudUtils.update(AnalyticTriggerStateBean.class)
-									.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2)))
-					).join();
-			
 			//DEBUG
 			//this.printTriggerDatabase();
 			
