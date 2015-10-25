@@ -20,12 +20,10 @@ import java.util.Collection;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.config.ConfigurationException;
-import org.apache.shiro.config.Ini;
 import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
 
-import com.google.inject.Provides;
 import com.google.inject.binder.AnnotatedBindingBuilder;
 import com.ikanow.aleph2.security.service.CoreRealm;
 

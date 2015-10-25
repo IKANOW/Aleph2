@@ -250,6 +250,7 @@ public class SecurityServiceTest {
 	@Test
 	@Ignore
 	public void testJvmSecurity(){
+		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
 		securityService.enableJvmSecurityManager(true);
 		File f =  new File("/tmp/data/misc");

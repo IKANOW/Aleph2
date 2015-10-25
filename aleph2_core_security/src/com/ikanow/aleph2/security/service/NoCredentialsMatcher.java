@@ -24,7 +24,7 @@ import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.authc.credential.SimpleCredentialsMatcher;
 
 public class NoCredentialsMatcher extends SimpleCredentialsMatcher {
-	private static final Logger logger = LogManager.getLogger(NoCredentialsMatcher.class);
+	protected static final Logger logger = LogManager.getLogger(NoCredentialsMatcher.class);
 
 	
     /**
