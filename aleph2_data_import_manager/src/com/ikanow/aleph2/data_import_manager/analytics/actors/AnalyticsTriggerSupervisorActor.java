@@ -80,7 +80,7 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 
 		if (null != _core_management_db) {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
-			final FiniteDuration poll_frequency = Duration.create(5, TimeUnit.SECONDS);
+			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
 			_ticker.set(this.context().system().scheduler()
 						.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
 			
