@@ -117,7 +117,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		final DataBucketBean manual_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", true);
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
-				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);		
+		trigger_crud.deleteDatastore().join();
 						
 		// 1) Send a message to the worker to fill in that bucket
 		{
@@ -126,8 +127,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			_trigger_worker.tell(msg, _trigger_worker);
 			
-			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			// Give it a couple of secs to finish
+			waitForData(trigger_crud, 7, true);
 			
 			// Check the DB
 		
@@ -147,7 +148,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 7, true);
 			
 			// Check the DB
 		
@@ -167,7 +168,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 0, false);
 			
 			// Check the DB
 		
@@ -190,7 +191,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
-						
+		trigger_crud.deleteDatastore().join();
+
 		// 1) Send a message to the worker to fill in that bucket
 		{
 			final BucketActionMessage.TestBucketActionMessage msg = 
@@ -199,7 +201,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 7, true);
 			
 			// Check the DB
 		
@@ -219,7 +221,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 0, false);
 			
 			// Check the DB
 		
@@ -241,6 +243,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+		trigger_crud.deleteDatastore().join();
 		
 		// 1) Send a message to the worker to fill in that bucket
 		{
@@ -250,7 +253,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			Thread.sleep(1000L);
 			
 			// Check the DB
 		
@@ -273,7 +276,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 3, true);
 			
 			// Check the DB
 		
@@ -297,7 +300,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 5, true);
 			
 			// Check the DB
 		
@@ -333,7 +336,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 4, false);
 			
 			// Check the DB
 			
@@ -360,7 +363,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 5, true);
 
 			// Check the DB
 		
@@ -396,7 +399,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 4, false);
 			
 			// Check the DB
 			
@@ -422,7 +425,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 5, true);
 
 			// Check the DB
 		
@@ -458,7 +461,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 4, false);
 			
 			// Check the DB
 			
@@ -484,7 +487,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(500L);
+			waitForData(trigger_crud, 3, false);
 
 			// Check the DB
 		
@@ -502,6 +505,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	/////////////////////////////////////////////////////
 	
 	// UTILITIES
+
+	protected void waitForData(final ICrudService<AnalyticTriggerStateBean> trigger_crud, long exit_value, boolean ascending) {
+		for (int ii = 0; ii < 10; ++ii) {
+			try { Thread.sleep(500L); } catch (Exception e) {}
+			final long curr_val = trigger_crud.countObjects().join();
+			if (ascending && (curr_val >= exit_value)) break;
+			else if (curr_val <= exit_value) break;
+		}
+	}
 	
 	/** Utility to make trigger checks pending
 	 */

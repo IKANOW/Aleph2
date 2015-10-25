@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,8 +28,11 @@ import org.junit.Test;
 
 import scala.Tuple2;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -49,6 +53,23 @@ public class TestAnalyticTriggerBeanUtils {
 		assertEquals(7, test_list.size()); // (3 inputs + 4 job deps:)
 		assertEquals(3, test_list.stream().filter(trigger -> null == trigger.job_name()).count());
 		assertEquals(4, test_list.stream().filter(trigger -> null != trigger.job_name()).count());
+	}
+	
+	@Test
+	public void test_enrichmentBucket() throws IOException {
+		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
+		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		
+		final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(enrichment_bucket, false, Optional.empty());
+		final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
+		
+		System.out.println("Resources = \n" + 
+				test_list.stream().map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+		
+		assertEquals(1, test_list.size());
+		AnalyticTriggerStateBean trigger = test_list.get(0);
+		assertEquals(enrichment_bucket.full_name(), trigger.input_resource_name_or_id());
+		assertEquals(TriggerType.file, trigger.trigger_type());
 	}
 	
 	@Test

@@ -157,7 +157,7 @@ public class AnalyticTriggerBeanUtils {
 			.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
 			.flatMap(job -> Optionals.ofNullable(job.inputs()).stream())
 			.filter(input -> Optional.ofNullable(input.enabled()).orElse(true))
-			.map(input -> convertExternalInputToComplexTrigger(input))
+			.map(input -> convertExternalInputToComplexTrigger(bucket, input))
 			.filter(opt_input -> opt_input.isPresent())
 			.map(opt_input -> opt_input.get())
 			.collect(Collectors.toList())
@@ -169,11 +169,21 @@ public class AnalyticTriggerBeanUtils {
 	 * @param input
 	 * @return
 	 */
-	public static Optional<AnalyticThreadComplexTriggerBean> convertExternalInputToComplexTrigger(final AnalyticThreadJobInputBean input) {
+	public static Optional<AnalyticThreadComplexTriggerBean> convertExternalInputToComplexTrigger(final DataBucketBean bucket, final AnalyticThreadJobInputBean input) {
 		
 		// Only care about external sources:		
 		final String resource_name_or_id = Optional.ofNullable(input.resource_name_or_id()).orElse("");
-		if (!resource_name_or_id.startsWith("/")) { // (ie it's an internal job)
+		final Optional<String> maybe_ds = Optional.ofNullable(input.data_service());
+		if (resource_name_or_id.isEmpty() && maybe_ds.orElse("").equals("batch")) { //special case: my own input
+			return Optional.of(
+					BeanTemplateUtils.build(AnalyticThreadComplexTriggerBean.class)
+						.with(AnalyticThreadComplexTriggerBean::type, TriggerType.file)
+						.with(AnalyticThreadComplexTriggerBean::resource_name_or_id, bucket.full_name())
+						.with(AnalyticThreadComplexTriggerBean::data_service, maybe_ds.get()) 
+					.done().get()
+					);			
+		}
+		else if (!resource_name_or_id.startsWith("/")) { // (ie it's an internal job)
 			return Optional.empty();
 		}
 		else {
@@ -182,8 +192,7 @@ public class AnalyticTriggerBeanUtils {
 						.with(AnalyticThreadComplexTriggerBean::type, TriggerType.bucket)
 						.with(AnalyticThreadComplexTriggerBean::resource_name_or_id, resource_name_or_id)
 						.with(AnalyticThreadComplexTriggerBean::data_service, 
-								Optional.ofNullable(input.data_service())
-										.filter(ds -> !"streaming".equals(input.data_service()))
+								maybe_ds.filter(ds -> !"streaming".equals(input.data_service()))
 										.orElse(null)
 								)
 					.done().get()

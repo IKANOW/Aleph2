@@ -1,0 +1,57 @@
+{
+                "aliases": [],
+                "analytic_thread": {
+                    "jobs": [
+                        {
+                            "analytic_technology_name_or_id": "BatchEnrichmentService",
+                            "analytic_type": "batch",
+                            "enabled": true,
+                            "inputs": [
+                                {
+                                    "data_service": "batch",
+                                    "resource_name_or_id": ""
+                                }
+                            ],
+                            "name": "read_from_self_test",
+                            "output": {
+                                "is_transient": false,
+                                "preserve_existing_data": true
+                            }
+                        }
+                    ],
+                    "trigger_config": {
+                        "auto_calculate": true
+                    }
+                },
+                "data_schema": {
+                    "columnar_schema": {
+                        "field_include_pattern_list": [
+                            "test_field_name*"
+                        ],
+                        "field_type_include_list": [
+                            "string"
+                        ]
+                    },
+                    "search_index_schema": {
+                        "technology_override_schema": {}
+                    },
+                    "storage_schema": {
+                        "enabled": true,
+                        "json": {
+                            "codec": "snappy"
+                        },
+                        "processed": {
+                            "codec": "fr.sz",
+                            "exist_age_max": "2 weeks",
+                            "grouping_time_period": "hourly"
+                        }
+                    },
+                    "temporal_schema": {
+                        "exist_age_max": "12 months",
+                        "grouping_time_period": "monthly",
+                        "time_field": "@timestamp"
+                    }
+                },
+                "full_name": "/bucket/test/enrichment/batch",
+                "poll_frequency": "1min"
+ }
