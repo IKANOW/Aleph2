@@ -18,13 +18,19 @@ package com.ikanow.aleph2.data_import_manager.analytics.actors;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,6 +39,8 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory;
@@ -43,23 +51,27 @@ import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class TestAnalyticsTriggerWorkerActor {
 
-	//TODO (ALEPH-12) testing
-	
 	private static final Logger _logger = LogManager.getLogger();	
 
 	@Inject 
@@ -82,12 +94,15 @@ public class TestAnalyticsTriggerWorkerActor {
 		}
 		@Override
 		public void onReceive(Object arg0) throws Exception {
-			_logger.info("Received message from singleton! " + arg0.getClass().toString());
-			
-			if (arg0 instanceof AnalyticTriggerMessage) {
+			if (arg0 instanceof BucketActionMessage.BucketActionOfferMessage) {
+				_logger.info("Accept OFFER");
+				this.sender().tell(new BucketActionReplyMessage.BucketActionWillAcceptMessage("dummy_data_bucket_change_actor"), this.self());
+			}
+			else {
+				_logger.info("Received message! " + arg0.getClass().toString());
 				_num_received.incrementAndGet();
 			}
-		}
+		}		
 	};
 	
 	@SuppressWarnings("deprecation")
@@ -127,13 +142,18 @@ public class TestAnalyticsTriggerWorkerActor {
 		
 		_trigger_worker = _actor_context.getActorSystem().actorOf(
 				Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
-				"test_woker"
+				"test_worker"
 				//hostname + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX
 				);
 
 		_test_crud = _service_context.getService(IManagementDbService.class, Optional.empty()).get().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		_test_crud.deleteDatastore().get();
 		
+		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor.class), "dummy_data_bucket_change_actor");
+		ManagementDbActorContext.get().getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
+		ManagementDbActorContext.get().getDistributedServices()
+			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
+			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" +  "dummy_data_bucket_change_actor");
 	}
 	
 	@After
@@ -142,7 +162,7 @@ public class TestAnalyticsTriggerWorkerActor {
 			_trigger_worker.tell(akka.actor.PoisonPill.getInstance(), _trigger_worker);
 		}
 	}
-	
+		
 	@Test
 	public void test_bucketLifecycle() throws InterruptedException {
 		
@@ -153,6 +173,9 @@ public class TestAnalyticsTriggerWorkerActor {
 		
 		final DataBucketBean manual_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", true);
 		
+		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
+				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+						
 		// 1) Send a message to the worker to fill in that bucket
 		{
 			final BucketActionMessage.NewBucketActionMessage msg = 
@@ -161,17 +184,239 @@ public class TestAnalyticsTriggerWorkerActor {
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			Thread.sleep(2000L);
+			Thread.sleep(500L);
 			
 			// Check the DB
 		
-			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
-					_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
-			
 			assertEquals(7L, trigger_crud.countObjects().join().intValue());
+			// Check they aren't suspended:
+			assertEquals(7L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
+					).join().intValue());
 		}
-		//TODO (ALEPH-12)
+		
+		// 2) Update in suspended mode
+		{
+			final BucketActionMessage.UpdateBucketActionMessage msg = 
+					new BucketActionMessage.UpdateBucketActionMessage(manual_trigger_bucket, false, manual_trigger_bucket, new HashSet<String>());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+		
+			assertEquals(7L, trigger_crud.countObjects().join().intValue());
+			// Check they are suspended:
+			assertEquals(7L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
+					).join().intValue());			
+		}
+		
+		// 3) Delete
+		{
+			final BucketActionMessage.DeleteBucketActionMessage msg = 
+					new BucketActionMessage.DeleteBucketActionMessage(manual_trigger_bucket, new HashSet<String>());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+		
+			assertEquals(0L, trigger_crud.countObjects().join().intValue());
+		}
 	}
 	
+	//TODO (ALEPH-12): do a test lifecycle (just a test start and then an update->suspended)
+
+	@Test
+	public void test_jobTriggerScenario() throws InterruptedException, IOException {
+		
+		// Tests a manual bucket that has inter-job dependencies		
+		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/simple_job_deps_bucket.json"), Charsets.UTF_8);		
+		final DataBucketBean job_dep_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		
+		// (have to save the bucket to make trigger checks work correctly)
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(job_dep_bucket, true).join();
+		
+		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
+				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
+		
+		// 1) Send a message to the worker to fill in that bucket
+		{
+			final BucketActionMessage.NewBucketActionMessage msg = 
+					new BucketActionMessage.NewBucketActionMessage(job_dep_bucket, false);
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+		
+			assertEquals(3L, trigger_crud.countObjects().join().intValue());
+			// Check they aren't suspended:
+			assertEquals(3L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
+					).join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());
+		}
+		
+		// 2) Perform a trigger check, make sure that nothing has activated
+		{
+			resetTriggerCheckTimes(trigger_crud);
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+		
+			// (ie no active records)
+			assertEquals(3L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());			
+		}		
+		
+		// 3a) Let the worker now that job1 has started (which should also launch the bucket)
+		{
+			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
+							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
+							JobMessageType.starting);
+
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+		
+			// (ie creates a bucket active record and a job active record)
+			assertEquals(5L, trigger_crud.countObjects().join().intValue());
+			
+			// Confirm the extra 2 records are as above
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.withNotPresent(AnalyticTriggerStateBean::job_name)
+					).join().intValue());
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.when(AnalyticTriggerStateBean::job_name, "initial_phase")
+					).join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());
+		}
+		
+		// 3b) Send a job completion message
+		{
+			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(job_dep_bucket, 
+							job_dep_bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("initial_phase")).collect(Collectors.toList()),
+							JobMessageType.stopping);
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+			
+			// Check the DB
+			
+			// (ie active job is removed, bucket remains)
+			assertEquals(4L, trigger_crud.countObjects().join().intValue());
+			
+			// Confirm the extra record is as above
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.withNotPresent(AnalyticTriggerStateBean::job_name)
+					).join().intValue());
+			
+			// Check the message bus - nothing yet!
+			
+			assertEquals(0, _num_received.get());
+		}
+		
+		
+		// 4) Perform a trigger check, make sure that only the right job ("next_phase") has started
+		{
+			resetTriggerCheckTimes(trigger_crud);
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			Thread.sleep(500L);
+
+			// Check the DB
+		
+			// (bucket active still present, now "next_phase" has started)
+			assertEquals(5L, trigger_crud.countObjects().join().intValue());
+			
+			// Confirm the extra 2 records are as above
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.withNotPresent(AnalyticTriggerStateBean::job_name)
+					).join().intValue());			
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.when(AnalyticTriggerStateBean::job_name, "next_phase")
+					).join().intValue());
+			
+			// Check the message bus - should have received a start message for the triggered job
+			
+			assertEquals(1, _num_received.get());
+		}		
+		
+		// 5) Send a job completion message
+		
+		//TODO (ALEPH-12): finish this test
+		
+		// 6) Perform a trigger check, make sure that only the right job ("final_phase") has started 
+		
+		// 7) Stop the final job
+		
+		// 8) Trigger - should complete the bucket
+	}
 	
+	//TODO (ALEPH-12): more tests
+	
+	/////////////////////////////////////////////////////
+	
+	// UTILITIES
+	
+	/** Utility to make trigger checks pending
+	 */
+	protected void resetTriggerCheckTimes(final ICrudService<AnalyticTriggerStateBean> trigger_crud) {
+		final UpdateComponent<AnalyticTriggerStateBean> update =
+				CrudUtils.update(AnalyticTriggerStateBean.class)
+					.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2L)));
+		
+		trigger_crud.updateObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class), Optional.of(false), update).join();
+	}
 }

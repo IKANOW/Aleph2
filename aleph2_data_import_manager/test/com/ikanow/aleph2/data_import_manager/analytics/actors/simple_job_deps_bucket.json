@@ -1,0 +1,95 @@
+{
+	"_id": "job_deps_test",
+    "aliases": [],
+    "analytic_thread": {
+        "jobs": [
+            {
+                "analytic_technology_name_or_id": "test_tech_id_analytics",
+                "analytic_type": "batch",
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "storage_service",
+                        "resource_name_or_id": "/bucket/test/flume_test"
+                    }
+                ],
+                "name": "initial_phase",
+                "output": {
+                    "is_transient": true,
+                    "transient_type": "batch"
+                }
+            },
+            {
+                "analytic_technology_name_or_id": "test_tech_id_analytics",
+                "analytic_type": "batch",
+                "dependencies": [
+                    "initial_phase"
+                ],
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "batch",
+                        "resource_name_or_id": "initial_phase"
+                    }
+                ],
+                "name": "next_phase",
+                "output": {
+                    "is_transient": false
+                }
+            },
+            {
+                "analytic_technology_name_or_id": "test_tech_id_analytics",
+                "analytic_type": "batch",
+                "dependencies": [
+                    "initial_phase",
+                    "next_phase"                    
+                ],
+                "enabled": true,
+                "inputs": [
+                    {
+                        "data_service": "batch",
+                        "resource_name_or_id": "initial_phase"
+                    },
+                    {
+                        "data_service": "batch",
+                        "resource_name_or_id": "next_phase"
+                    }                    
+                ],
+                "name": "final_phase",
+                "output": {
+                    "is_transient": false
+                }
+			}            
+        ]
+    },
+    "data_schema": {
+        "columnar_schema": {
+            "field_include_pattern_list": [
+                "test_field_name*"
+            ],
+            "field_type_include_list": [
+                "string"
+            ]
+        },
+        "search_index_schema": {
+            "technology_override_schema": {}
+        },
+        "storage_schema": {
+            "enabled": true,
+            "json": {
+                "codec": "snappy"
+            },
+            "processed": {
+                "codec": "fr.sz",
+                "exist_age_max": "2 weeks",
+                "grouping_time_period": "hourly"
+            }
+        },
+        "temporal_schema": {
+            "exist_age_max": "12 months",
+            "grouping_time_period": "monthly",
+            "time_field": "@timestamp"
+        }
+    },
+    "full_name": "/bucket/analytics_test/job/deps/test"
+}

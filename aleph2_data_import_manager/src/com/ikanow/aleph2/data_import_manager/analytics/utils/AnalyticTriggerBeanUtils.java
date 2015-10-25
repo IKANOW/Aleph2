@@ -173,7 +173,7 @@ public class AnalyticTriggerBeanUtils {
 		
 		// Only care about external sources:		
 		final String resource_name_or_id = Optional.ofNullable(input.resource_name_or_id()).orElse("");
-		if (!resource_name_or_id.startsWith("/")) {
+		if (!resource_name_or_id.startsWith("/")) { // (ie it's an internal job)
 			return Optional.empty();
 		}
 		else {
