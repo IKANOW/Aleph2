@@ -1267,13 +1267,25 @@ public class AnalyticsContext implements IAnalyticsContext {
 		final Consumer<IGenericDataService> switchPrimary = s -> {
 			getSecondaryBuffer(bucket, Optional.of(job), true, s)
 			.ifPresent(curr_secondary -> {
-				s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
-						IGenericDataService.SECONDARY_PING.equals(curr_secondary)
-							? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
-							: Optional.of(IGenericDataService.SECONDARY_PING)
-						,
-						job_name
-						); 
+				final CompletableFuture<BasicMessageBean> result = 
+					s.switchCrudServiceToPrimaryBuffer(bucket, Optional.of(curr_secondary), 
+							IGenericDataService.SECONDARY_PING.equals(curr_secondary)
+								? Optional.of(IGenericDataService.SECONDARY_PONG) //(primary must have been ping)
+								: Optional.of(IGenericDataService.SECONDARY_PING)
+							,
+							job_name
+							);
+				
+				// Log on error:
+				result.thenAccept(res -> {
+					/**/
+					//TODO ALEPH-12: diagnostic loggigg
+					if (!res.success() /**/||true) {
+						_logger.warn(ErrorUtils.get("Bucket:job {0}:{1} service {2}: {3}",
+								bucket.full_name(), job.name(), s.getClass().getSimpleName(), res.message()
+								));
+					}
+				});
 			});
 		}
 		;							
