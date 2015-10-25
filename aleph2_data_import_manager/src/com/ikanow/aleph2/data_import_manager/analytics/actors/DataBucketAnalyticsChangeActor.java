@@ -942,9 +942,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							
 							if (starting_thread) {
 								BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
-								_logger.info("Executing thread for bucket {0}, success={1} (error={2})",
+								_logger.info(ErrorUtils.get("Executing thread for bucket {0}, success={1} (error={2})",
 										bucket.full_name(), thread_start_result.success(),
-										thread_start_result.success() ? "none" : thread_start_result.message());
+										thread_start_result.success() ? "none" : thread_start_result.message()));
 							}
 							//(don't need the analog for stopping because the trigger will give me the notification once all jobs are completed)
 							

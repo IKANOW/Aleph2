@@ -24,6 +24,8 @@ import java.util.stream.Stream;
 
 import org.junit.Test;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
@@ -31,8 +33,7 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 public class TestAnalyticTriggerBeanUtils {
 
 	@Test
-	public void test_automaticTriggers() {
-		
+	public void test_automaticTriggers() {		
 		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);
 		
 		final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(auto_trigger_bucket, false, Optional.empty());
@@ -44,7 +45,37 @@ public class TestAnalyticTriggerBeanUtils {
 		assertEquals(7, test_list.size()); // (3 inputs + 4 job deps:)
 		assertEquals(3, test_list.stream().filter(trigger -> null == trigger.job_name()).count());
 		assertEquals(4, test_list.stream().filter(trigger -> null != trigger.job_name()).count());
+	}
+	
+	@Test
+	public void test_buildAutomaticTrigger() {		
+		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);
+		Optional<AnalyticThreadComplexTriggerBean> trigger = AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(auto_trigger_bucket);
+		assertTrue("Auto trigger present", trigger.isPresent());
+		assertEquals("Auto trigger has an 'and' operator", TriggerOperator.and, trigger.get().op());
+		assertEquals("Auto trigger length is correct", 3, trigger.get().dependency_list().size());		
+		assertTrue("Auto trigger is enabled", Optional.ofNullable(trigger.get().enabled()).orElse(true));
+		// Perform some quick checks of the trigger fields
+		trigger.get().dependency_list().stream()
+			.forEach(tr -> {
+				assertTrue("Auto trigger element is enabled", Optional.ofNullable(tr.enabled()).orElse(true));
+				assertTrue("Auto trigger element has resource", null != tr.resource_name_or_id());
+				assertTrue("Auto trigger element has data service", null != tr.data_service());				
+			});		
+	}
+	
+	@Test
+	public void test_buildManualTrigger() {
+		final DataBucketBean manual_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", true);
+		Optional<AnalyticThreadComplexTriggerBean> trigger = AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(manual_trigger_bucket);
+		assertTrue("Manual trigger present", trigger.isPresent());
+		assertEquals("Manual trigger returns itself", manual_trigger_bucket.analytic_thread().trigger_config().trigger(), trigger.get());
 		
+	}
+	
+	@Test
+	public void test_getNextCheckTime() {
+		//TODO (ALEPH-12): check the 3 different cases (2 locs + default)
 	}
 	
 }

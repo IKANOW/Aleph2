@@ -248,8 +248,8 @@ public class AnalyticTriggerBeanUtils {
 		final Optional<AnalyticThreadComplexTriggerBean> trigger_info = 
 				Optionals.of(() -> bucket.analytic_thread().trigger_config())
 				.map(info -> {
-					if (Optional.ofNullable(info.auto_calculate()).orElse(null != info.trigger())) {
-						return new AnalyticThreadComplexTriggerBean(null, null, getFullyAutomaticTriggerList(bucket));
+					if (Optional.ofNullable(info.auto_calculate()).orElse(null == info.trigger())) {
+						return new AnalyticThreadComplexTriggerBean(TriggerOperator.and, true, getFullyAutomaticTriggerList(bucket));
 					}
 					else {
 						return info.trigger();

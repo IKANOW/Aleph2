@@ -543,33 +543,30 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		
 		triggerChecks_processResults_currentlyActiveJobs(trigger_crud, bucket_to_check, locked_to_host, mutable_active_jobs);
 		
-		final Date next_check = AnalyticTriggerBeanUtils.getNextCheckTime(Date.from(Instant.now()), bucket_to_check);
+		final Date check_active_buckets_every_trigger = Date.from(Instant.now());
+		final Date next_inactive_bucket_check = AnalyticTriggerBeanUtils.getNextCheckTime(Date.from(Instant.now()), bucket_to_check);
 		
 		// 1) OK (in theory only one of these 2 things should occur)
 		
 		// 1.1) should we activate a bucket based on external dependencies
 		
-		triggerChecks_processResults_currentlyInactiveBuckets(trigger_crud, bucket_to_check, locked_to_host, next_check, mutable_external_triggers_active, mutable_external_triggers_dormant);		
+		triggerChecks_processResults_currentlyInactiveBuckets(trigger_crud, bucket_to_check, locked_to_host, next_inactive_bucket_check, mutable_external_triggers_active, mutable_external_triggers_dormant);		
 		
 		// 1.2) should we activate a job from an active bucket based on internal dependencies
 
-		triggerChecks_processResults_currentlyInactiveJobs(trigger_crud, bucket_to_check, locked_to_host, next_check, mutable_internal_triggers_active, mutable_internal_triggers_dormant);
+		triggerChecks_processResults_currentlyInactiveJobs(trigger_crud, bucket_to_check, locked_to_host, check_active_buckets_every_trigger, mutable_internal_triggers_active, mutable_internal_triggers_dormant);
 		
 		// 1.3) if there are no activated jobs either in the data or from step 1.3 then might need to de-active active buckets
 				
-		triggerChecks_processResults_currentActiveBuckets(trigger_crud, bucket_to_check, locked_to_host, next_check, mutable_external_triggers_active, mutable_internal_triggers_active);
+		triggerChecks_processResults_currentActiveBuckets(trigger_crud, bucket_to_check, locked_to_host, check_active_buckets_every_trigger, mutable_external_triggers_active, mutable_internal_triggers_active);
 		
-		// 2) Update all the unused triggers 
-		
-		if (!mutable_external_triggers_dormant.isEmpty() || !mutable_internal_triggers_dormant.isEmpty()) {			
-			
-			AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, 
-					Stream.concat(
-							mutable_external_triggers_dormant.stream(),
-							mutable_internal_triggers_dormant.stream()
-					),
-					next_check, Optional.empty()).join();				
-		}				
+		// 2) Update all the unused triggers (do these 2 steps separately, since the next check time is different) 
+		if (!mutable_external_triggers_dormant.isEmpty()) {
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_external_triggers_dormant.stream(), next_inactive_bucket_check, Optional.empty()).join();
+		}
+		if (!mutable_internal_triggers_dormant.isEmpty()) {
+			AnalyticTriggerCrudUtils.updateTriggerStatuses(trigger_crud, mutable_internal_triggers_dormant.stream(), check_active_buckets_every_trigger, Optional.empty()).join();			
+		}
 	}
 	
 	/** Specifically handles currently active jobs - here we have requested status information via asynchronous messaging
