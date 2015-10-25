@@ -94,7 +94,7 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 		_test_actor.get().tell("Ping!", test_deleter);
 		_test_actor.get().tell("Ping!", test_deleter);
 		
-		for (int ii = 0; (ii < 20) && (_num_received.get() <= 2); ++ii) Thread.sleep(500L);
+		for (int ii = 0; (ii < 20) && (_num_received.get() <= 2); ++ii) Thread.sleep(1000L);
 		assertTrue("Got some messages: " + _num_received.get(), _num_received.get() > 2); // (should have gotten mine + at least one from the scheduled)
 	}	
 	
