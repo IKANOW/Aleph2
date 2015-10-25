@@ -39,6 +39,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 
@@ -395,7 +396,7 @@ public class AnalyticTriggerCrudUtils {
 		
 		// 1) external inputs, ie from other buckets
 		// since these are external inputs, only care if the bucket is _not_ active
-		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_1 =
+		final QueryComponent<AnalyticTriggerStateBean> update_trigger_query_external =
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 					.when(AnalyticTriggerStateBean::input_resource_combined, bucket.full_name() + job.map(j -> ":" + j.name()).orElse("")) 
 					.withNotPresent(AnalyticTriggerStateBean::input_data_service)
@@ -421,18 +422,41 @@ public class AnalyticTriggerCrudUtils {
 								)
 								.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
 								.get();
-					return (QueryComponent<AnalyticTriggerStateBean>)CrudUtils.anyOf(update_trigger_query_1, update_trigger_query_2);
+					return (QueryComponent<AnalyticTriggerStateBean>)CrudUtils.anyOf(update_trigger_query_external, update_trigger_query_2);
 				})
-				.orElse(update_trigger_query_1);
+				.orElse(update_trigger_query_external);
 				
-				
+		final Date next_trigger_check = Date.from(Instant.now().minusSeconds(1L));
+		
 		final UpdateComponent<AnalyticTriggerStateBean> update =
 				CrudUtils.update(AnalyticTriggerStateBean.class)
 					.increment(AnalyticTriggerStateBean::curr_resource_size, 1L)
-					.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(1L))) // (Ensure it gets checked immediately)
+					.set(AnalyticTriggerStateBean::next_check, next_trigger_check) // (Ensure it gets checked immediately)
 				;
 		
-		return trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
+		// Update the values
+		
+		CompletableFuture<?> cf1 = trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
+		
+		// Also update the "next_check" time for all buckets with an affected _external trigger_
+		// (Note can fire and forget here since just updating the times)
+		
+		trigger_crud.getObjectsBySpec(update_trigger_query_external, //(only care about the bucket_name)
+							Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::bucket_name)), true)
+						.thenAccept(cursor -> {
+							trigger_crud.updateObjectsBySpec(
+									CrudUtils.allOf(AnalyticTriggerStateBean.class)
+										.withAny(AnalyticTriggerStateBean::bucket_name, Optionals.streamOf(cursor.iterator(), false).collect(Collectors.toList()))
+									, 
+									Optional.of(false), 
+									CrudUtils.update(AnalyticTriggerStateBean.class)
+										.set(AnalyticTriggerStateBean::next_check, next_trigger_check)
+									)
+									;
+						});
+				;
+		
+		return cf1;
 	}
 	
 	/** Updates relevant triggers to indicate that their bucket is now active
