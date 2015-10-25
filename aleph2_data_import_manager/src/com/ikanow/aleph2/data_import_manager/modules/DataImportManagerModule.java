@@ -240,7 +240,7 @@ public class DataImportManagerModule {
 			try {
 				final DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);
 				this.bind(DataImportConfigurationBean.class).toInstance(bean);
-				
+								
 				this.bind(AnalyticStateTriggerCheckFactory.class).in(Scopes.SINGLETON);
 			} 
 			catch (Exception e) {

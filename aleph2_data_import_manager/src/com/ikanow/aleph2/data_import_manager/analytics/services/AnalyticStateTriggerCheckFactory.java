@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -55,6 +56,7 @@ public class AnalyticStateTriggerCheckFactory {
 	
 	/** Guice c'tor
 	 */
+	@Inject
 	public AnalyticStateTriggerCheckFactory(IServiceContext service_context) {
 		_service_context = service_context;
 	}
