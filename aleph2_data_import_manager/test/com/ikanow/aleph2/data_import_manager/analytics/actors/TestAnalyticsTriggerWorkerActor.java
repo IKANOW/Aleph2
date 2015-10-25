@@ -57,6 +57,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
@@ -85,6 +86,7 @@ public class TestAnalyticsTriggerWorkerActor {
 	protected static AtomicLong _num_received = new AtomicLong();
 	
 	protected ActorRef _trigger_worker = null;
+	ActorRef _dummy_data_bucket_change_actor = null;
 	
 	ICrudService<AnalyticTriggerStateBean> _test_crud;
 	
@@ -142,15 +144,16 @@ public class TestAnalyticsTriggerWorkerActor {
 		
 		_trigger_worker = _actor_context.getActorSystem().actorOf(
 				Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
-				"test_worker"
+				UuidUtils.get().getRandomUuid()
 				//hostname + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX
 				);
 
 		_test_crud = _service_context.getService(IManagementDbService.class, Optional.empty()).get().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		_test_crud.deleteDatastore().get();
 		
-		ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor.class), "dummy_data_bucket_change_actor");
-		ManagementDbActorContext.get().getAnalyticsMessageBus().subscribe(handler, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
+		final String dummy_data_bucket_change_actor = UuidUtils.get().getRandomUuid();
+		_dummy_data_bucket_change_actor = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor.class), dummy_data_bucket_change_actor);
+		ManagementDbActorContext.get().getAnalyticsMessageBus().subscribe(_dummy_data_bucket_change_actor, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 		ManagementDbActorContext.get().getDistributedServices()
 			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
 			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" +  "dummy_data_bucket_change_actor");
@@ -161,6 +164,10 @@ public class TestAnalyticsTriggerWorkerActor {
 		if (null != _trigger_worker) {
 			_trigger_worker.tell(akka.actor.PoisonPill.getInstance(), _trigger_worker);
 		}
+		//(don't need to delete ZK, it only runs once per job)
+		
+		//Not sure about the bus:
+		ManagementDbActorContext.get().getAnalyticsMessageBus().unsubscribe(_dummy_data_bucket_change_actor);
 	}
 		
 	@Test

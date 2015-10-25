@@ -604,6 +604,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			// OK so no new triggering is occurring here
 			
 			// Check if we have an active bucket but no active jobs
+			// NOTE: one thing that is nice about this is that is handles "orphaned jobs" 
+			// (something of a theoretical case, maybe if the deps has a typo and I don't catch it in validation?) since
+			// the job just won't start but the bucket will be active so will fall through to this case anyway
 			
 			// If so:
 			
