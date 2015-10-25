@@ -1069,6 +1069,21 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 											_logger.info(ErrorUtils.get("Started analytic thread {0}", bucket.full_name()));											
 										}
 									}); 
+																		
+									// Now start any enabled jobs that have no dependencies
+									final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<BasicMessageBean>>> job_results = 
+											jobs.stream()
+												.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
+												.filter(job -> Optionals.ofNullable(job.dependencies()).isEmpty())
+												.peek(job -> setPerJobContextParams(job, context, libs)) //(WARNING: mutates context)
+												.map(job -> Tuples._2T(job, (CompletableFuture<BasicMessageBean>)
+														tech_module.startAnalyticJob(msg.bucket(), jobs, job, context)))
+												.collect(Collectors.toList());
+
+									// Only send on trigger events for messages that started
+									sendOnTriggerEventMessages(job_results, msg.bucket(), 
+																j_r -> j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(), 
+																me_sibling);									
 									
 									// Send a status message (Which will be ignored)
 									

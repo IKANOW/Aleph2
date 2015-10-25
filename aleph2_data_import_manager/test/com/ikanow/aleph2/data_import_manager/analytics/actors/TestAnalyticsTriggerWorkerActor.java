@@ -49,11 +49,13 @@ import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
@@ -74,6 +76,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			}
 			else {
 				_logger.info("Received message! " + arg0.getClass().toString());
+				if (arg0 instanceof BucketActionAnalyticJobMessage) {
+					final BucketActionAnalyticJobMessage msg = (BucketActionAnalyticJobMessage) arg0;
+					_logger.info("Message details: " + msg.type() + " jobs : " + Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")));
+				}				
 				_num_received.incrementAndGet();
 			}
 		}		
@@ -486,7 +492,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(2, _num_received.get());
 		}
 		
-		// 8) Trigger - should complete the bucket
+		//TODO: oh wait
+		// 8a) Trigger - should complete the bucket (since has had bucket activated, 60s timeout doesn't apply) 
 		{
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
@@ -609,20 +616,157 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the DB
 		
 			// external trigger + bucket active record + job active record
-			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			assertEquals(2L, trigger_crud.countObjects().join().intValue());
 			
 			// Check the message bus - should get a job start notification
 			
 			assertEquals(1, _num_received.get());						
 		}
 		
-		// 4) Check doesn't trigger when active, even with directories
+		// 4) Check doesn't trigger when active, even with files in directories .. but also that it doesn't shut the job down if it takes >10s for a job to start
+		{
+			resetTriggerCheckTimes(trigger_crud); // (since the external triggers
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			Thread.sleep(1000L);
+			
+			// Check the DB
 		
-		// 5) De-active
+			// external trigger + bucket active record + job active record
+			assertEquals(2L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing else received
+			
+			assertEquals(1, _num_received.get());						
+		}
 		
-		// 6) Check triggers again
+		// 4b) I should now receive some started messages back - again should do nothing
+		{
+			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("read_from_self_test")).collect(Collectors.toList()),
+							JobMessageType.starting);
+
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			waitForData(trigger_crud, 3, true);
+			
+			// Check the DB
 		
-		//TODO (ALEPH-12)		
+			// (ie creates a bucket active record and a job active record)
+			assertEquals(3L, trigger_crud.countObjects().join().intValue());
+			
+			// Confirm the extra 2 records are as above
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.withNotPresent(AnalyticTriggerStateBean::job_name)
+					).join().intValue());
+			assertEquals(1L, trigger_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+						.when(AnalyticTriggerStateBean::job_name, "read_from_self_test")
+					).join().intValue());
+			
+			// Check the message bus - nothing changed
+			
+			assertEquals(1, _num_received.get());
+		}
+		
+		
+		// 4c) Check doesn't trigger when active, even with files in directories .. 
+		{
+			resetTriggerCheckTimes(trigger_crud); // (since the external triggers
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			Thread.sleep(1000L);
+			
+			// Check the DB
+		
+			// external trigger + bucket active record + job active record
+			assertEquals(3L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - get a check completion message
+			
+			assertEquals(2, _num_received.get());						
+		}
+		
+		// 5) De-activate
+		{
+			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
+							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("read_from_self_test")).collect(Collectors.toList()),
+							JobMessageType.stopping);
+
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish			
+			waitForData(trigger_crud, 2, false);
+			
+			// Check the DB
+		
+			// (ie creates a bucket active record and the original trigger)
+			assertEquals(2L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - nothing new
+			
+			assertEquals(2, _num_received.get());									
+		}		
+		
+		// 6) Check triggers again - first bucket gets turned off
+		{
+			resetTriggerCheckTimes(trigger_crud); // (since the external triggers
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			waitForData(trigger_crud, 1, false);
+			
+			// Check the DB
+		
+			// back to the external trigger
+			assertEquals(1L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - get a bucket stopping message
+			
+			assertEquals(3, _num_received.get());						
+		}
+		
+		// 7) Check triggers again - finally .. we're off again since there are still files in the directory!
+		{
+			resetTriggerCheckTimes(trigger_crud); // (since the external triggers
+			
+			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
+			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			// Give it a couple of secs to finish
+			waitForData(trigger_crud, 1, false);
+			
+			// Check the DB
+		
+			// external trigger + bucket active record + job active record
+			assertEquals(2L, trigger_crud.countObjects().join().intValue());
+			
+			// Check the message bus - get a bucket starting message
+			
+			assertEquals(4, _num_received.get());						
+		}
 	}
 	
 	//TODO (ALEPH-12): more tests (bucket completion + file trigger)

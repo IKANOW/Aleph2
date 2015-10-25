@@ -100,7 +100,7 @@ public class AnalyticStateTriggerCheckFactory {
 				
 				// Count the files
 				
-				//TODO (ALEPH-12): need to check if this is permitted by security
+				//TODO (ALEPH-12): need to check if this is permitted by security in general (the input paths are pre-checked though)
 				
 				final long files = Lambdas.get(Lambdas.wrap_u(() -> {
 				
@@ -117,9 +117,9 @@ public class AnalyticStateTriggerCheckFactory {
 						
 						if (status.length > 0) {
 							_logger.info(ErrorUtils.get("For bucket:job {0}:{1}, foound {2} files in bucket {3}", bucket.full_name(), 
-									job.map(j -> j.name()).orElse("(no job)")),
+									job.map(j -> j.name()).orElse("(no job)"),
 									status.length, trigger.input_resource_name_or_id()
-									);
+									));
 						}
 						
 						return (long) status.length;

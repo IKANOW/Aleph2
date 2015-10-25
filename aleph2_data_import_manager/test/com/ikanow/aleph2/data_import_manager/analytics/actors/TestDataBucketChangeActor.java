@@ -1410,8 +1410,9 @@ public class TestDataBucketChangeActor {
 						
 			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
-			assertEquals(0, TestActor_Counter.job_counter.get());
-			assertEquals(0, TestActor_Counter.msg_counter.get());
+			assertEquals(2, TestActor_Counter.job_counter.get());
+			assertEquals(1, TestActor_Counter.msg_counter.get());
+			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.starting));
 		}
 		// 3) Instruction to start some jobs for an active bucket
 		{

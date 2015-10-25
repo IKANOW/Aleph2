@@ -245,7 +245,7 @@ public class TestAnalyticTriggerCrudUtils {
 								.stream()
 								.filter(job -> Optional.ofNullable(job.enabled()).orElse(true))
 								.forEach(job -> {
-									AnalyticTriggerCrudUtils.createActiveJobRecord(_test_crud, bucket, job, Optional.of("test_host"));
+									AnalyticTriggerCrudUtils.createActiveBucketOrJobRecord(_test_crud, bucket, Optional.of(job), Optional.of("test_host"));
 								});
 		
 		// 2) Activate then save suspended - check suspended goes to pending 		
@@ -411,10 +411,10 @@ public class TestAnalyticTriggerCrudUtils {
 		// Activate the jobs "properly"
 		
 		{
-			AnalyticTriggerCrudUtils.createActiveJobRecord(
+			AnalyticTriggerCrudUtils.createActiveBucketOrJobRecord(
 					_test_crud, 
 					bucket, 
-					bucket.analytic_thread().jobs().stream().findFirst().get(), 
+					Optional.of(bucket.analytic_thread().jobs().stream().findFirst().get()), 
 					Optional.empty()
 					).join();
 			

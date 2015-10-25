@@ -58,48 +58,54 @@ public class AnalyticTriggerCrudUtils {
 	 * @param job
 	 * @param locked_to_host
 	 */
-	public static CompletableFuture<?> createActiveJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final AnalyticThreadJobBean job, final Optional<String> locked_to_host) {
+	public static CompletableFuture<?> createActiveBucketOrJobRecord(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final Optional<String> locked_to_host) {
 		final AnalyticTriggerStateBean new_entry_pre =
 				BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 					.with(AnalyticTriggerStateBean::is_job_active, true)
 					.with(AnalyticTriggerStateBean::bucket_id, bucket._id())
 					.with(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
-					.with(AnalyticTriggerStateBean::job_name, job.name())
+					.with(AnalyticTriggerStateBean::job_name, job.map(j -> j.name()).orElse(null))
 					.with(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 					.with(AnalyticTriggerStateBean::last_checked, Date.from(Instant.now()))
 					.with(AnalyticTriggerStateBean::next_check, Date.from(Instant.now())) // (currently check active buckets every 10s)
 					.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 				.done().get();
 		
-		final AnalyticTriggerStateBean new_entry = BeanTemplateUtils.clone(new_entry_pre)
-													.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(new_entry_pre, false))
-													.done();
-		
-		final CompletableFuture<?> f1 = trigger_crud.storeObject(new_entry, true); //(fire and forget)
-		
-		final QueryComponent<AnalyticTriggerStateBean> active_job_query =
-				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
-					.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
-					.when(AnalyticTriggerStateBean::job_name, job.name())
-					.whenNot(AnalyticTriggerStateBean::is_job_active, true)
-				)
-				.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
-				.get();
-		
-		final UpdateComponent<AnalyticTriggerStateBean> active_job_update =
-				CrudUtils.update(AnalyticTriggerStateBean.class)
-					.set(AnalyticTriggerStateBean::is_bucket_active, true)
-					.set(AnalyticTriggerStateBean::is_job_active, true)
-					;
-		
-		final CompletableFuture<?> f2 = trigger_crud.updateObjectsBySpec(active_job_query, Optional.empty(), active_job_update);
-		
+		final CompletableFuture<?> f1 = job.map(j -> {
+			final AnalyticTriggerStateBean new_entry = BeanTemplateUtils.clone(new_entry_pre)
+														.with(AnalyticTriggerStateBean::_id, AnalyticTriggerStateBean.buildId(new_entry_pre, false))
+														.done();
+			
+			final CompletableFuture<?> f1_int = trigger_crud.storeObject(new_entry, true); //(fire and forget)
+			
+			final QueryComponent<AnalyticTriggerStateBean> active_job_query =
+					Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.when(AnalyticTriggerStateBean::bucket_name, bucket.full_name())
+						.when(AnalyticTriggerStateBean::job_name, j.name())
+						.whenNot(AnalyticTriggerStateBean::is_job_active, true)
+					)
+					.map(q -> locked_to_host.map(host -> q.when(AnalyticTriggerStateBean::locked_to_host, host)).orElse(q))
+					.get();
+			
+			final UpdateComponent<AnalyticTriggerStateBean> active_job_update =
+					CrudUtils.update(AnalyticTriggerStateBean.class)
+						.set(AnalyticTriggerStateBean::is_bucket_active, true)
+						.set(AnalyticTriggerStateBean::is_job_active, true)
+						;
+			
+			final CompletableFuture<?> f2_int = trigger_crud.updateObjectsBySpec(active_job_query, Optional.empty(), active_job_update);
+			
+			return CompletableFuture.allOf(f1_int, f2_int);
+		})
+		.orElseGet(() -> CompletableFuture.completedFuture(null))
+		;	
 		// Finally also create a bucket active notification record:
 		
 		final AnalyticTriggerStateBean new_bucket_entry_pre = 
 				BeanTemplateUtils.clone(new_entry_pre)
 					.with(AnalyticTriggerStateBean::job_name, null)
 					.with(AnalyticTriggerStateBean::is_job_active, null)
+					.with(AnalyticTriggerStateBean::last_resource_size, job.map(__ -> 1L).orElse(null))
 					.done();
 
 		final AnalyticTriggerStateBean new_bucket_entry = BeanTemplateUtils.clone(new_bucket_entry_pre)
@@ -110,7 +116,7 @@ public class AnalyticTriggerCrudUtils {
 		
 		//(note any notification of active jobs also updates the bucket active status, so don't need to worry about that here)
 		
-		return CompletableFuture.allOf(f1, f2, f3);
+		return CompletableFuture.allOf(f1, f3);
 	}
 	
 	/** Stores/updates the set of triggers derived from the bucket (replacing any previous ones ... with the exception that if the job to be replaced
@@ -358,10 +364,12 @@ public class AnalyticTriggerCrudUtils {
 											.map(size -> q.set(AnalyticTriggerStateBean::last_resource_size, size))
 											.orElse(q)
 									.set(AnalyticTriggerStateBean::is_job_active, true) // (this hasn't been confirmed by the tech yet but if it fails we'll find out in 10s time when we poll it)
+									.set(AnalyticTriggerStateBean::is_bucket_active, true)
 									;							
 						}
 						else {
-							return q.set(AnalyticTriggerStateBean::is_job_active, false) 
+							return q.set(AnalyticTriggerStateBean::is_job_active, false)
+									//(don't unset the bucket status, leave that alone)
 									;							
 						}
 					}).orElse(q))
@@ -499,11 +507,9 @@ public class AnalyticTriggerCrudUtils {
 						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
 						;
 				
-		final Instant now = Instant.now();
-		
 		final UpdateComponent<AnalyticTriggerStateBean> update = 
 				CrudUtils.update(AnalyticTriggerStateBean.class)
-						.set(AnalyticTriggerStateBean::last_checked, Date.from(now))
+						// (leave the "now" check on active records so that i can do timeouts)
 						.set(AnalyticTriggerStateBean::next_check, next_check)
 						;												
 		
@@ -580,7 +586,7 @@ public class AnalyticTriggerCrudUtils {
 				Optional.of(CrudUtils.allOf(AnalyticTriggerStateBean.class)
 							.when(AnalyticTriggerStateBean::bucket_name, bucket_name)
 							.whenNot(AnalyticTriggerStateBean::is_job_active, true)
-							.whenNot(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
+							.whenNot(AnalyticTriggerStateBean::trigger_type, TriggerType.none) //(important because active records don't get their last_checked updated)
 							.rangeBelow(AnalyticTriggerStateBean::last_checked, now, true)
 							)
 				.map(q -> job_names.map(j -> q.withAny(AnalyticTriggerStateBean::job_name, j)).orElse(q))

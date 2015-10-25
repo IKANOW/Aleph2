@@ -118,20 +118,24 @@ public class AnalyticTriggerStateBean implements Serializable {
 	public Boolean is_bucket_suspended() { return is_bucket_suspended; }
 	
 	/** whether the job/input is part of a _job_ that is currently active
+	 *  (not used by buckets)
 	 * @return  whether the job/input is part of a bucket that is currently active
 	 */
 	public Boolean is_job_active() { return is_job_active; }
 	
 	/** If a bucket is active then can't edit its trigger until its done - we store the state here and then overwrite 
+	 *  (Triggers only, not active records)
 	 * @return  whether the job/input is an update to an active bucket
 	 */
 	public Boolean is_pending() { return is_pending; }	
 	
 	/** the last time the trigger state was checked
+	 *  For active records, indicates when the job was started (or the last time a job was started in the case of bucket active records)
 	 * @return the last time the trigger state was checked
 	 */
 	public Date last_checked() { return last_checked; }
 	/** the next scheduled check
+	 *  (For active records, this is not used in the logic - active records are always checked every trigger)
 	 * @return the next scheduled check
 	 */
 	public Date next_check() { return next_check; }
@@ -143,35 +147,41 @@ public class AnalyticTriggerStateBean implements Serializable {
 	 * @return the full_name of the bucket
 	 */
 	public String bucket_name() { return bucket_name; }
-	/** the name of the job 
+	/** the name of the job  (not used for bucket active records or external triggers)
 	 * @return the name of the job 
 	 */
 	public String job_name() { return job_name; }
 	/** the data_service of the input
+	 *  (not used for active records)
 	 * @return the data_service of the input
 	 */
 	public String input_data_service() { return input_data_service; }
 	
 	/** the resource_name_or_id of the input - note _doesn't_ include any sub-channel information
+	 *  (not used for active records)
 	 * @return the resource_name_or_id of the input
 	 */
 	public String input_resource_name_or_id() { return input_resource_name_or_id; }
 	
 	/** For cases where the trigger depends on an intermediate result, this is in the form resource_name_or_id:subchannel
+	 *  (Not used for internal trigger records or active records)
 	 * @return combined resource-id or sub-channel of the resource, if present
 	 */
 	public String input_resource_combined() { return input_resource_combined; }
 	
 	/** the last resource size that triggered
+	 *  (not used for active records)
 	 * @return the last resource size that triggered
 	 */
 	public Long last_resource_size() { return last_resource_size; }
 	/** the current resource size
+	 *  (not used for job active records ; for bucket active records is 1 if the bucket has seen jobs since activation)
 	 * @return the current resource size
 	 */
 	public Long curr_resource_size() { return curr_resource_size; }	
 	
 	/** If populated, enables a quick check of the 2 resource values to determine whether to trigger (without hitting the DB)
+	 *  (not used for active records)
 	 * @return the limit to compare last-curr resource size
 	 */
 	public Long resource_limit() { return resource_limit; }
@@ -182,7 +192,7 @@ public class AnalyticTriggerStateBean implements Serializable {
 	public String locked_to_host() { return locked_to_host; }
 	
 	/** The type of the trigger ("none" if it's an active job notification)
-	 * @return The type of the trigger ("none" if it's an active job notification)
+	 * @return The type of the trigger ("none" if it's an active bucket.job notification)
 	 */
 	public TriggerType trigger_type() { return trigger_type; } 
 	
