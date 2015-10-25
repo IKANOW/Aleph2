@@ -660,7 +660,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								.collect(Collectors.toSet())
 								;
 								
-						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices);
+						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices, true);
 						
 						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
 								bucket_to_check.full_name()),

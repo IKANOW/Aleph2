@@ -17,21 +17,16 @@ package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,16 +36,9 @@ import akka.actor.UntypedActor;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.TestAnalyticTriggerCrudUtils;
-import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
-import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
-import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
@@ -58,10 +46,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
-import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
-import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
@@ -69,29 +54,10 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigValueFactory;
 
-public class TestAnalyticsTriggerWorkerActor {
-
+public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerCommon {
 	private static final Logger _logger = LogManager.getLogger();	
 
-	@Inject 
-	protected IServiceContext _service_context = null;	
-	
-	protected ICoreDistributedServices _cds = null;
-	protected IManagementDbService _core_mgmt_db = null;
-	protected IManagementDbService _under_mgmt_db = null;
-	protected ManagementDbActorContext _actor_context = null;
-	
-	protected static AtomicLong _num_received = new AtomicLong();
-	
-	protected ActorRef _trigger_worker = null;
-	ActorRef _dummy_data_bucket_change_actor = null;
-	
-	ICrudService<AnalyticTriggerStateBean> _test_crud;
-	
 	// This one always accepts, but then refuses when it comes down to it...
 	public static class TestActor extends UntypedActor {
 		public TestActor() {
@@ -109,41 +75,18 @@ public class TestAnalyticsTriggerWorkerActor {
 		}		
 	};
 	
-	@SuppressWarnings("deprecation")
+	protected static ActorRef _trigger_worker = null;
+	protected static ActorRef _dummy_data_bucket_change_actor = null;	
+	protected static ICrudService<AnalyticTriggerStateBean> _test_crud;
+
 	@Before
+	@Override
 	public void test_Setup() throws Exception {
-		
 		if (null != _service_context) {
 			return;
 		}
-		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
-		
-		// OK we're going to use guice, it was too painful doing this by hand...				
-		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_bucket_change.properties")))
-							.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-							.withValue("globals.local_cached_jar_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-							.withValue("globals.distributed_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
-							.withValue("globals.local_yarn_config_dir", ConfigValueFactory.fromAnyRef(temp_dir));
-		
-		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
-		app_injector.injectMembers(this);
-		
-		_cds = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
-		mcds.setApplicationName("DataImportManager");
-		
-		new ManagementDbActorContext(_service_context, true);		
-		_actor_context = ManagementDbActorContext.get();
-		
-		_core_mgmt_db = _service_context.getCoreManagementDbService();		
-		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
-
-		// need to create data import actor separately:
-		@SuppressWarnings("unused")
-		final DataImportActorContext singleton = new DataImportActorContext(_service_context, new GeneralInformationService(), 
-				BeanTemplateUtils.build(DataImportConfigurationBean.class).done().get(),
-				new AnalyticStateTriggerCheckFactory(_service_context));
-		
+		super.test_Setup();
+				
 		_trigger_worker = _actor_context.getActorSystem().actorOf(
 				Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
 				UuidUtils.get().getRandomUuid()
@@ -158,22 +101,13 @@ public class TestAnalyticsTriggerWorkerActor {
 		ManagementDbActorContext.get().getAnalyticsMessageBus().subscribe(_dummy_data_bucket_change_actor, ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 		ManagementDbActorContext.get().getDistributedServices()
 			.getCuratorFramework().create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
-			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" +  "dummy_data_bucket_change_actor");
+			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" +  "dummy_data_bucket_change_actor");				
 	}
 	
-	@After
-	public void tidyUpActor() {
-		if (null != _trigger_worker) {
-			_trigger_worker.tell(akka.actor.PoisonPill.getInstance(), _trigger_worker);
-		}
-		//(don't need to delete ZK, it only runs once per job)
-		
-		//Not sure about the bus:
-		ManagementDbActorContext.get().getAnalyticsMessageBus().unsubscribe(_dummy_data_bucket_change_actor);
-	}
-		
+	
 	@Test
 	public void test_bucketLifecycle() throws InterruptedException {
+		System.out.println("Starting test_bucketLifecycle");
 		
 		// Going to create a bucket, update it, and then suspend it
 		// Note not much validation here, since the actual triggers etc are created by the utils functions, which are tested separately
@@ -243,6 +177,7 @@ public class TestAnalyticsTriggerWorkerActor {
 	
 	@Test
 	public void test_bucketTestLifecycle() throws InterruptedException {
+		System.out.println("Starting test_bucketTestLifecycle");
 		
 		// Going to create a bucket, update it, and then suspend it
 		// Note not much validation here, since the actual triggers etc are created by the utils functions, which are tested separately
@@ -295,6 +230,7 @@ public class TestAnalyticsTriggerWorkerActor {
 	
 	@Test
 	public void test_jobTriggerScenario() throws InterruptedException, IOException {
+		System.out.println("Starting test_jobTriggerScenario");
 		
 		// Tests a manual bucket that has inter-job dependencies		
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/simple_job_deps_bucket.json"), Charsets.UTF_8);		

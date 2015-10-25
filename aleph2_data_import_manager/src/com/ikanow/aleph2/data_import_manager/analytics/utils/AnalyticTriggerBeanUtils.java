@@ -216,10 +216,10 @@ public class AnalyticTriggerBeanUtils {
 	 * @param resources_dataservices
 	 * @return
 	 */
-	public static boolean checkTrigger(final AnalyticThreadComplexTriggerBean trigger, Set<Tuple2<String, String>> resources_dataservices) {
+	public static boolean checkTrigger(final AnalyticThreadComplexTriggerBean trigger, final Set<Tuple2<String, String>> resources_dataservices, boolean pass_if_disabled) {
 				
-		if (Optional.ofNullable(trigger.enabled()).orElse(true)) {
-			return true;
+		if (!Optional.ofNullable(trigger.enabled()).orElse(true)) {
+			return pass_if_disabled;
 		}
 		else if (null == trigger.op()) { // end leaf node
 			return resources_dataservices.contains(Tuples._2T(trigger.resource_name_or_id(), trigger.data_service()));
@@ -227,15 +227,15 @@ public class AnalyticTriggerBeanUtils {
 		else { // flatten and combine			
 			if (TriggerOperator.and == trigger.op()) {
 				return Optionals.ofNullable(trigger.dependency_list()).stream()
-						.allMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices));
+						.allMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices, true));
 			}
 			else if (TriggerOperator.or == trigger.op()) {
 				return Optionals.ofNullable(trigger.dependency_list()).stream()
-						.anyMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices));				
+						.anyMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices, true));				
 			}
 			else { // not
 				return Optionals.ofNullable(trigger.dependency_list()).stream()
-						.noneMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices));								
+						.noneMatch(sub_trigger -> checkTrigger(sub_trigger, resources_dataservices, false));								
 			}
 		}
 	}

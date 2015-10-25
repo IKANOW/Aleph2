@@ -1278,9 +1278,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 				
 				// Log on error:
 				result.thenAccept(res -> {
-					/**/
-					//TODO ALEPH-12: diagnostic loggigg
-					if (!res.success() /**/||true) {
+					if (!res.success()) {
 						_logger.warn(ErrorUtils.get("Bucket:job {0}:{1} service {2}: {3}",
 								bucket.full_name(), job.name(), s.getClass().getSimpleName(), res.message()
 								));

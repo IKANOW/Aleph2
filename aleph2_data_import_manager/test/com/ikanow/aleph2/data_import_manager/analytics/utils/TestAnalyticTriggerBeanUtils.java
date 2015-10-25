@@ -19,15 +19,19 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.Test;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 
 public class TestAnalyticTriggerBeanUtils {
@@ -71,6 +75,93 @@ public class TestAnalyticTriggerBeanUtils {
 		assertTrue("Manual trigger present", trigger.isPresent());
 		assertEquals("Manual trigger returns itself", manual_trigger_bucket.analytic_thread().trigger_config().trigger(), trigger.get());
 		
+	}
+	
+	@Test
+	public void test_checkAutoTrigger() {
+		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);
+		Optional<AnalyticThreadComplexTriggerBean> trigger = AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(auto_trigger_bucket);
+		// this generates the following trigger:
+		// and: [ "/test_job1a_input_1":storage_service, "/test_job1a_input:temp":batch, "/test_job3_input_1":search_index_service ]
+		
+		// 1) fail (not enough terms)
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+			= Stream.of(
+					Tuples._2T( "/test_job1a_input_1", "storage_service"),
+					Tuples._2T( "/test_job1a_input:temp", "batch")
+					)
+					.collect(Collectors.toSet());
+		
+			assertFalse("Should fail (not enough terms)", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));			
+		}
+		// 2) succeed (multiple terms)
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+				= Stream.of(
+						Tuples._2T( "/test_job1a_input_1", "storage_service"),
+						Tuples._2T( "/test_job1a_input:temp", "batch"),
+						Tuples._2T( "/test_job3_input_1", "search_index_service")						
+					)
+					.collect(Collectors.toSet());
+		
+			assertTrue("Should match", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));			
+		}
+	}
+	
+	@Test
+	public void test_checkManualTrigger() {
+		
+		// Manual trigger for this bucket is
+		// and: [ or: and: [ "/input/test/1/1/1":search_index_service, and: [ "/input/test/1/1/2":storage_service , {"/input/test/1/1/3":(file)}, "/input/test/1/1/1":search_index_service] ] 
+		//        not: [ "/input/test/1/1/1":bucket, "/input/test/2/1:test":bucket]
+		//        {stuff}]
+		
+		final DataBucketBean manual_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", true);
+		Optional<AnalyticThreadComplexTriggerBean> trigger = AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(manual_trigger_bucket);
+
+		// 1) fail (not enough terms)
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+				= Stream.of(
+						Tuples._2T( "/input/test/1/1/1", "search_index_service")
+						)
+						.collect(Collectors.toSet());
+			
+			assertFalse("Should fail (not enough terms)", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));
+		}
+		// 2) fail (not enough terms)
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+				= Stream.of(
+						Tuples._2T( "/input/test/1/1/2", "storage_service")
+						)
+						.collect(Collectors.toSet());
+			
+			assertFalse("Should fail (not enough terms)", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));
+		}
+		// 3) succeed (multiple terms)
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+				= Stream.of(
+						Tuples._2T( "/input/test/1/1/2", "storage_service"),
+						Tuples._2T( "/input/test/1/1/1", "search_index_service")						
+					)
+					.collect(Collectors.toSet());
+		
+			assertTrue("Should match", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));			
+		}
+		// 4) failure vs not
+		{
+			final Set<Tuple2<String, String>> resources_dataservices
+				= Stream.of(
+					Tuples._2T( "/input/test/1/1/2", "storage_service"),
+					Tuples._2T( "/input/test/2/1:test", "bucket")
+					)
+					.collect(Collectors.toSet());
+		
+			assertFalse("Should fail (not)", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), resources_dataservices, true));
+		}
 	}
 	
 	@Test
