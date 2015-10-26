@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -74,8 +75,15 @@ public class AnalyticTriggerBeanUtils {
 				// (auto_calculate defaults to true if no trigger is specified, false otherwise)
 				return Optional.of(getFullyAutomaticTriggerList(bucket));
 			}
-			else if (trigger_info.map(info -> null != info.trigger()).orElse(false)) {
+			else if (trigger_info.map(info -> null != info.trigger()).orElse(false)) { // manually specified trigger
 				return Optional.of(getSemiAutomaticTriggerStream(trigger_info.get().trigger()).collect(Collectors.toList()));				
+			}
+			else if (trigger_info.map(info -> null != info.schedule()).orElse(false)) { // just run on a schedule, trivial trigger
+				return Optional.of(Arrays.asList(
+							BeanTemplateUtils.build(AnalyticThreadComplexTriggerBean.class)
+								.with(AnalyticThreadComplexTriggerBean::type, TriggerType.time)
+							.done().get()
+						));
 			}
 			else { // manual trigger again
 				return Optional.<List<AnalyticThreadComplexTriggerBean>>empty();				
