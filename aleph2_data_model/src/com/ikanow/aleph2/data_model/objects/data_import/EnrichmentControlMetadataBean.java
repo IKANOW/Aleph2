@@ -31,29 +31,36 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	
 	/** User constructor
 	 * @param name - The name of the job - optional but required if it is needed as a dependency
-	 * @param dependencies - 
+	 * @param dependencies -  the dependency order of enrichment - this can be used by the framework to optimize runtime
+	 * @param grouping_fields - where supported (analytic technology specific), each module instance will see a stream of data objects grouped by this field set 
 	 * @param enabled - Whether the job is currently enabled, defaults to true
 	 * @param module_name_or_id - An optional primary module containing application logic within the analytic technology
 	 * @param library_names_or_ids - An optional list of addition modules required on the classpath
 	 * @param entry_point - the entry point class of the module to execute; can be used to override the shared library's entry point (or if the entry point is not specified)
-	 * @param config - The analytic technology specific module configuration JSON
+	 * @param config - The enrichment module specific module configuration JSON
+	 * @param technology_override - The enrichment technology specific configuration JSON for how this module is executed (eg num_reducers in hadoop)
 	 */
 	public EnrichmentControlMetadataBean(
 			final String name,
 			final List<String> dependencies, 
+			final List<String> grouping_fields, 
 			final Boolean enabled,
 			final String module_name_or_id,
 			final List<String> library_names_or_ids,
 			final String entry_point,
-			final LinkedHashMap<String, Object> config) {
+			final LinkedHashMap<String, Object> config,
+			final LinkedHashMap<String, Object> technology_override
+			) {
 		super();
 		this.name = name;
 		this.dependencies = dependencies;
+		this.grouping_fields = grouping_fields;
 		this.enabled = enabled;
 		this.module_name_or_id = module_name_or_id;
 		this.library_names_or_ids = library_names_or_ids;
 		this.entry_point = entry_point;
 		this.config = config;
+		this.technology_override = technology_override;
 	}
 	/** The name of the enrichment - must be unique within the list of enrichments in this bucket (used for search/display/dependencies)
 	 * @return the name
@@ -66,6 +73,13 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	 */
 	public List<String> dependencies() {
 		return dependencies == null ? null : Collections.unmodifiableList(dependencies);
+	}
+	/** Where supported (will generally be supported with restrictions for enrichment technologies used in aleph2, eg in Hadoop only once per bucket) enables the 
+	 *  incoming data objects to be grouped by this list of fields (each module instance then sees only records with this grouping)
+	 * @return the field list to group
+	 */
+	public List<String> grouping_fields() {
+		return grouping_fields == null ? null : Collections.unmodifiableList(grouping_fields);
 	}
 	/** Returns if this enrichment is currently enabled - implicitly disables all dependent enrichments
 	 * @return the enabled
@@ -100,13 +114,22 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	public Map<String, Object> config() {
 		return config == null ? null : Collections.unmodifiableMap(config);
 	}
+	
+	/** The enrichment technology specific configuration JSON for how this module is executed (eg num_reducers in hadoop)
+	 * @return the technology override fields (documented per enrichment technology)
+	 */
+	public Map<String, Object> technology_override() {
+		return config == null ? null : Collections.unmodifiableMap(technology_override);
+	}
 	private String name;
 	private List<String> dependencies;
+	private List<String> grouping_fields;
 	private Boolean enabled;
 	private String module_name_or_id;
 	private List<String> library_names_or_ids;
 	private String entry_point;
 	private LinkedHashMap<String, Object> config;
+	private LinkedHashMap<String, Object> technology_override;
 	
 	// Legacy, renamed to "library_ids_or_names": just for bw-compatibility support:
 	private List<String> library_ids_or_names;

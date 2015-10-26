@@ -169,7 +169,7 @@ public class TestDataBucketChangeActor {
 		// Create a bucket
 		
 		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-				"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
+				"test_name", Collections.emptyList(), Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>(), new LinkedHashMap<>());
 		
 		final DataBucketBean bucket = // (don't convert to actor, this is going via the message bus, ie "raw") 				
 						BeanTemplateUtils.clone(createBucket("test_actor"))
@@ -261,7 +261,7 @@ public class TestDataBucketChangeActor {
 		// Create a bucket
 		
 		final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-				"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id"), null, new LinkedHashMap<>());
+				"test_name", Collections.emptyList(), null, true, null, Arrays.asList("test_tech_id_batch", "test_module_id"), null, new LinkedHashMap<>(), null);
 		
 		final DataBucketBean bucket = // (don't convert to actor, this is going via the message bus, ie "raw") 				
 						BeanTemplateUtils.clone(createBucket("test_actor"))
@@ -642,7 +642,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), null, true, null, Arrays.asList("test_tech_id_stream", "test_module_id"), null, new LinkedHashMap<>(), null);
 			
 			final DataBucketBean bucket2 =
 					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
@@ -672,7 +672,7 @@ public class TestDataBucketChangeActor {
 			// 3) Couple of error cases:
 			
 			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), null, new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), null, true, null, Arrays.asList("test_tech_id_stream", "test_module_id", "failtest"), null, new LinkedHashMap<>(), new LinkedHashMap<>());
 			
 			final DataBucketBean bucket3 = 
 					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
@@ -742,7 +742,7 @@ public class TestDataBucketChangeActor {
 			// 0b) Create the more complex bucket
 			
 			final EnrichmentControlMetadataBean enrichment_module = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id"), null, new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id"), null, new LinkedHashMap<>(), null);
 			
 			final DataBucketBean bucket2 =
 					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(
@@ -772,7 +772,7 @@ public class TestDataBucketChangeActor {
 			// 3) Couple of error cases:
 			
 			final EnrichmentControlMetadataBean enrichment_module2 = new EnrichmentControlMetadataBean(
-					"test_name", Collections.emptyList(), true, null, Arrays.asList("test_tech_id_batch", "test_module_id", "failtest"), null, new LinkedHashMap<>());
+					"test_name", Collections.emptyList(), null, true, null, Arrays.asList("test_tech_id_batch", "test_module_id", "failtest"), null, new LinkedHashMap<>(), null);
 			
 			final DataBucketBean bucket3 = 
 					DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(

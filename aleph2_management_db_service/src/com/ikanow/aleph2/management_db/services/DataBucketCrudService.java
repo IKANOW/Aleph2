@@ -822,7 +822,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			}
 		}
 
-		// (7)
+		// (7) note currently always allowed empty list
 		BiConsumer<Tuple2<String, EnrichmentControlMetadataBean>, Boolean> enrichment_test = (emeta, allowed_empty_list) -> {
 			if (Optional.ofNullable(emeta._2().enabled()).orElse(true)) {
 				if (!allowed_empty_list)
@@ -839,7 +839,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (null != bucket.batch_enrichment_configs()) {
 			for (int i = 0; i < bucket.batch_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.batch_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta), false);
+				enrichment_test.accept(Tuples._2T("batch_enrichment_configs." + Integer.toString(i), emeta), true);
 			}
 		}
 		if (null != bucket.streaming_enrichment_topology()) {
@@ -848,7 +848,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (null != bucket.streaming_enrichment_configs()) {
 			for (int i = 0; i < bucket.streaming_enrichment_configs().size(); ++i) {
 				final EnrichmentControlMetadataBean emeta = bucket.streaming_enrichment_configs().get(i);
-				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta), false);
+				enrichment_test.accept(Tuples._2T("streaming_enrichment_configs." + Integer.toString(i), emeta), true);
 			}
 		}
 		

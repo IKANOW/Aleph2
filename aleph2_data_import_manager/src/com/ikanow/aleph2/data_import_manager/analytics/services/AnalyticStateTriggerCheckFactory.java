@@ -76,6 +76,7 @@ public class AnalyticStateTriggerCheckFactory {
 	public AnalyticStateChecker getChecker(final TriggerType trigger_type, final Optional<String> data_service) {
 		return Patterns.match().<AnalyticStateChecker>andReturn()
 				.when(__ -> TriggerType.file == trigger_type, __ -> new InputFileChecker())
+				.when(__ -> TriggerType.time == trigger_type, __ -> new AlwaysChecker())
 				.when(__ -> (TriggerType.bucket == trigger_type) && !data_service.isPresent(), __ -> new NeverChecker())
 				.when(__ -> (TriggerType.bucket == trigger_type) && storage_service.equals(data_service), __ -> new BucketStorageChecker())
 				.when(__ -> (TriggerType.bucket == trigger_type) && search_index_service.equals(data_service), __ -> new SearchIndexChecker())
@@ -173,6 +174,22 @@ public class AnalyticStateTriggerCheckFactory {
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}
 		
+	}
+	
+	/** Always returns rue
+	 *  Used for pure time triggers
+	 * @author Alex
+	 *
+	 */
+	protected class AlwaysChecker implements AnalyticStateChecker {
+		
+		@Override
+		public CompletableFuture<Tuple2<Boolean, Long>> check(
+				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
+				AnalyticTriggerStateBean trigger)
+		{
+			return CompletableFuture.completedFuture(Tuples._2T(true, trigger.curr_resource_size()));
+		}		
 	}
 	
 	/** Always returns false

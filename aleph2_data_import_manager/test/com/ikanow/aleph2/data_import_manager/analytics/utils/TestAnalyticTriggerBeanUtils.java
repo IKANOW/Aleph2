@@ -72,6 +72,8 @@ public class TestAnalyticTriggerBeanUtils {
 		assertEquals(TriggerType.file, trigger.trigger_type());
 	}
 	
+	//TODO (ALEPH-12): test out pure time triggers
+	
 	@Test
 	public void test_buildAutomaticTrigger() {		
 		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);
