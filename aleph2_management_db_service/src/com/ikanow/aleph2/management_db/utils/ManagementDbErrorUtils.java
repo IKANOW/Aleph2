@@ -80,7 +80,6 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// - each data schema must: either be enabled or disabled
 	// - each harvest config must be: either be enabled or disabled
 	// - each enrichment config must be: either be enabled or disabled, have at least 1 lib id or name
-	//   ^ NOT TRUE, JUST ASSUME PASSTHROUGH IF NOT CONFIGURED - SO THE ERROR BELOW SHOULD NEVER BE USED
 
 	public static final String INVALID_ENRICHMENT_CONFIG_ELEMENTS_NO_LIBS = "Bucket {0}, enrichment config {1} must contain >= 1 library names/ids";
 	
