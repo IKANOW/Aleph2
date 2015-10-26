@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
@@ -138,7 +139,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			waitForData(trigger_crud, 7, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
 			
 			// Check the DB
 		
@@ -158,7 +159,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 7, true);
+			waitForData(() -> trigger_crud.countObjectsBySpec(
+												CrudUtils.allOf(AnalyticTriggerStateBean.class)
+												.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
+											).join(), 7, true);
 			
 			// Check the DB
 		
@@ -178,7 +182,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 0, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 0, false);
 			
 			// Check the DB
 		
@@ -211,7 +215,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 7, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
 			
 			// Check the DB
 		
@@ -231,7 +235,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 0, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 0, false);
 			
 			// Check the DB
 		
@@ -265,7 +269,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 3, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 3, true);
 			
 			// Check the DB
 		
@@ -312,7 +316,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 5, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 5, true);
 			
 			// Check the DB
 		
@@ -348,7 +352,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 4, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 4, false);
 			
 			// Check the DB
 			
@@ -375,7 +379,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 5, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 5, true);
+			waitForData(() -> _num_received.get(), 1, true);
 
 			// Check the DB
 		
@@ -411,7 +416,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 4, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 4, false);
 			
 			// Check the DB
 			
@@ -437,7 +442,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 5, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 5, true);
+			waitForData(() -> _num_received.get(), 2, true);
 
 			// Check the DB
 		
@@ -473,7 +479,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 4, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 4, false);
 			
 			// Check the DB
 			
@@ -492,15 +498,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(2, _num_received.get());
 		}
 		
-		//TODO: oh wait
-		// 8a) Trigger - should complete the bucket (since has had bucket activated, 60s timeout doesn't apply) 
+		// 8) Trigger - should complete the bucket (since has had bucket activated, 60s timeout doesn't apply) 
 		{
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 3, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 3, false);
+			waitForData(() -> _num_received.get(), 3, true);
 			
 			// Check the DB
 		
@@ -520,12 +526,14 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 		test_enrichment_common(enrichment_bucket);
 	}
+
 	
-	@Test
-	public void test_enrichment_enrichmentForm() {
-		//TODO (ALEPH-12) - create a batch enrichment version of the bucket
-	}
-	
+	/** (Was going to have 2 versions of this one for enrichment form and one for analytic form but I just realized that 
+	 *  they are identical as far as the trigger worker is concerned!)
+	 * @param bucket
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
 	public void test_enrichment_common(final DataBucketBean bucket) throws IOException, InterruptedException {
 
 		//setup
@@ -552,7 +560,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish	
-			waitForData(trigger_crud, 1, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 1, true);
 			
 			// Check the DB
 		
@@ -612,6 +620,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish
 			Thread.sleep(1000L);
+			waitForData(() -> _num_received.get(), 1, true);
 			
 			// Check the DB
 		
@@ -632,7 +641,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			waitForData(() -> trigger_crud.countObjects().join(), 2, true);
 			
 			// Check the DB
 		
@@ -656,7 +665,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 3, true);
+			waitForData(() -> trigger_crud.countObjects().join(), 3, true);
 			
 			// Check the DB
 		
@@ -691,6 +700,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish
 			Thread.sleep(1000L);
+			waitForData(() -> _num_received.get(), 2, true);
 			
 			// Check the DB
 		
@@ -714,7 +724,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
-			waitForData(trigger_crud, 2, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 2, false);
 			
 			// Check the DB
 		
@@ -735,7 +745,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			waitForData(trigger_crud, 1, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 1, false);
+			waitForData(() -> _num_received.get(), 3, true);
 			
 			// Check the DB
 		
@@ -756,7 +767,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			waitForData(trigger_crud, 1, false);
+			waitForData(() -> trigger_crud.countObjects().join(), 1, false);
+			waitForData(() -> _num_received.get(), 4, true);
 			
 			// Check the DB
 		
@@ -804,14 +816,14 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		}
 	}
 	
-	protected void waitForData(final ICrudService<AnalyticTriggerStateBean> trigger_crud, long exit_value, boolean ascending) {
+	protected void waitForData(Supplier<Long> getCount, long exit_value, boolean ascending) {
 		int ii = 0;
 		long curr_val = -1;
 		for (; ii < 10; ++ii) {
-			try { Thread.sleep(500L); } catch (Exception e) {}
-			curr_val = trigger_crud.countObjects().join();
+			curr_val = getCount.get();
 			if (ascending && (curr_val >= exit_value)) break;
 			else if (!ascending && (curr_val <= exit_value)) break;
+			try { Thread.sleep(500L); } catch (Exception e) {}
 		}
 		System.out.println("(Waited " + ii/2 + " (secs) for count=" + curr_val + ")");
 	}
