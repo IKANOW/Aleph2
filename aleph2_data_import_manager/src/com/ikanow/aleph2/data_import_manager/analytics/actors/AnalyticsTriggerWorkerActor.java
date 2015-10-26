@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
@@ -64,6 +65,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
+import fj.Unit;
 import akka.actor.UntypedActor;
 
 /** This actor is responsible for checking the state of the various active and inactive triggers in the system
@@ -238,8 +240,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						//(discard bucket active records)
 						kv.getValue().stream().findFirst().ifPresent(trigger -> {
 
-							final Optional<DataBucketBean> bucket_to_check_reply =
-									BucketUtils.isTestBucket(
+							final Optional<DataBucketBean> bucket_to_check_reply = Lambdas.wrap_u(__ -> {
+									return BucketUtils.isTestBucket(
 											BeanTemplateUtils.build(DataBucketBean.class)
 												.with(DataBucketBean::full_name, trigger.bucket_name())
 											.done().get())
@@ -255,9 +257,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 											Arrays.asList(BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::harvest_technology_name_or_id)),
 											false
 											)
-											.join() 
+											.join()
 									;
 									// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
+									
+								})
+								.<Optional<DataBucketBean>>andThen(maybe_bucket -> {
+									return maybe_bucket
+											.map(bucket -> (null == bucket.analytic_thread()) 
+													? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
+													: bucket);
+								})
+								.apply(Unit.unit());
 										
 							//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
 								
@@ -681,8 +692,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices, true);
 						
 						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
-								bucket_to_check.full_name()),
-								resources_dataservices.toString()
+								bucket_to_check.full_name(),
+								resources_dataservices.toString())
 								);							
 						
 						return b;

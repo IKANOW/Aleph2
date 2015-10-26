@@ -526,23 +526,29 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
 		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
+		// (have to save the bucket to make trigger checks work correctly)
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(enrichment_bucket, true).join();		
+		
 		test_enrichment_common(enrichment_bucket);
 	}
 
 	@Test
 	public void test_enrichment_enrichmentForm() throws IOException, InterruptedException {
-		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);		
-		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		final String json_bucket_in_db = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_in.json"), Charsets.UTF_8);		
+		final String json_bucket_in_mem = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);
 		
-		test_enrichment_common(enrichment_bucket);
+		final DataBucketBean enrichment_bucket_in_db = BeanTemplateUtils.from(json_bucket_in_db, DataBucketBean.class).get();
+		final DataBucketBean enrichment_bucket_in_mem = BeanTemplateUtils.from(json_bucket_in_mem, DataBucketBean.class).get();
+		
+		// (have to save the bucket to make trigger checks work correctly)
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(enrichment_bucket_in_db, true).join();		
+		
+		test_enrichment_common(enrichment_bucket_in_mem);
 	}
 	
 	public void test_enrichment_common(final DataBucketBean bucket) throws IOException, InterruptedException {
 
-		//setup
-		// (have to save the bucket to make trigger checks work correctly)
-		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(bucket, true).join();
-		
+		//setup		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		trigger_crud.deleteDatastore().join();
