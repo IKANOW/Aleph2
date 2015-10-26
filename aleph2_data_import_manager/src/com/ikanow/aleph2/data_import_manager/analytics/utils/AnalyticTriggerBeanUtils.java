@@ -312,6 +312,25 @@ public class AnalyticTriggerBeanUtils {
 				.validation(fail -> Date.from(from.toInstant().plus(10L, ChronoUnit.MINUTES)), success -> success);
 	}
 	
+	/** For analytic triggers, need to distinguish on update between the 2 cases:
+	 *  - "every 10 minutes" => run now and then in 10 minutes
+	 *  - "3am" => run at 3am every day
+	 *  This is kinda horrid, but we'll do this by running twice with slightly different times and comparing the results
+	 * @param from
+	 * @param bucket
+	 * @return
+	 */
+	public static boolean scheduleIsRelative(final Date now, final Date next_trigger, DataBucketBean bucket) {
+		
+		final boolean is_on_minute_boundary = 0 == (now.getTime() % 60L);
+		final int offset = is_on_minute_boundary ? +1 : -1;
+		
+		final Date d = getNextCheckTime(Date.from(now.toInstant().plusMillis(offset*500L)), bucket);
+
+		// (might get this wrong if next trigger and now are very close, but who cares in that case?!)
+		return d.getTime() != next_trigger.getTime();
+	}
+	
 	///////////////////////////////////////////////////////////////////////////
 	
 	// MESSAGING UTILS

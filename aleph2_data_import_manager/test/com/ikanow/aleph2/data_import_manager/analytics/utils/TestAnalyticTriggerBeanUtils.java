@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +31,8 @@ import scala.Tuple2;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
@@ -72,7 +75,35 @@ public class TestAnalyticTriggerBeanUtils {
 		assertEquals(TriggerType.file, trigger.trigger_type());
 	}
 	
-	//TODO (ALEPH-12): test out pure time triggers
+	@Test
+	public void test_timedTrigger() {
+		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);
+		final DataBucketBean timed_trigger_bucket = 
+				BeanTemplateUtils.clone(auto_trigger_bucket)
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.clone(auto_trigger_bucket.analytic_thread())
+								.with(AnalyticThreadBean::jobs, Arrays.asList())
+								.with(AnalyticThreadBean::trigger_config,
+										BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+											.with(AnalyticThreadTriggerBean::auto_calculate, false)
+											.with(AnalyticThreadTriggerBean::schedule, "10 minutes")
+										.done().get()
+										)
+							.done()
+							)
+				.done();
+		
+		final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(timed_trigger_bucket, false, Optional.empty());
+		final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
+		
+		System.out.println("Resources = \n" + 
+				test_list.stream().map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+		
+		assertEquals(1, test_list.size());
+		AnalyticTriggerStateBean trigger = test_list.get(0);
+		assertEquals(TriggerType.time, trigger.trigger_type());
+		
+	}
 	
 	@Test
 	public void test_buildAutomaticTrigger() {		
