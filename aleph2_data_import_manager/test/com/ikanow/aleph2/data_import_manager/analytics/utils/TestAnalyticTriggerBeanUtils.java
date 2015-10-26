@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -220,7 +221,55 @@ public class TestAnalyticTriggerBeanUtils {
 	
 	@Test
 	public void test_getNextCheckTime() {
-		//TODO (ALEPH-12): check the 3 different cases (2 locs + default)
+		
+		final Date now = new Date();
+
+		final DataBucketBean bucket0 = BeanTemplateUtils.build(DataBucketBean.class)
+			.done().get();		
+		
+		final DataBucketBean bucket1 = BeanTemplateUtils.build(DataBucketBean.class)
+											.with(DataBucketBean::poll_frequency, "1 hour")
+										.done().get();
+		
+		final DataBucketBean bucket2 = BeanTemplateUtils.build(DataBucketBean.class)
+											.with(DataBucketBean::analytic_thread,
+													BeanTemplateUtils.build(AnalyticThreadBean.class)
+														.with(AnalyticThreadBean::trigger_config,
+																BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+																	.with(AnalyticThreadTriggerBean::schedule, "2 hours")
+																.done().get()
+																)
+													.done().get()
+													)
+											.with(DataBucketBean::poll_frequency, "1 day") // this will be ignored
+										.done().get();
+		
+		assertEquals(now.toInstant().plusSeconds(600L), AnalyticTriggerBeanUtils.getNextCheckTime(now, bucket0).toInstant());
+		assertEquals(now.toInstant().plusSeconds(3600L), AnalyticTriggerBeanUtils.getNextCheckTime(now, bucket1).toInstant());
+		assertEquals(now.toInstant().plusSeconds(7200L), AnalyticTriggerBeanUtils.getNextCheckTime(now,bucket2).toInstant());
+	}
+	
+	@Test
+	public void test_testRelativeTime() {
+		
+		final Date now = new Date();
+
+		final DataBucketBean bucket0 = BeanTemplateUtils.build(DataBucketBean.class)
+											.with(DataBucketBean::poll_frequency, "3pm")
+										.done().get();		
+		
+		final DataBucketBean bucket1 = BeanTemplateUtils.build(DataBucketBean.class)
+											.with(DataBucketBean::poll_frequency, "1 hour")
+										.done().get();
+		
+		{
+			final Date next_0 = AnalyticTriggerBeanUtils.getNextCheckTime(now, bucket0);
+			assertFalse(AnalyticTriggerBeanUtils.scheduleIsRelative(now, next_0, bucket0));
+		}
+		{
+			final Date next_1 = AnalyticTriggerBeanUtils.getNextCheckTime(now, bucket1);
+			assertTrue(AnalyticTriggerBeanUtils.scheduleIsRelative(now, next_1, bucket1));
+		}
 	}
 	
 }

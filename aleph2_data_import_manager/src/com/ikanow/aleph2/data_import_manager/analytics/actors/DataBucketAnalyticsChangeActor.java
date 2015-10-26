@@ -507,7 +507,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			
 			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
 					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
-							false, // (not used for streaming) 
+							true, // (not used for streaming) 
 							false, // (not transient, ie final output) 
 							null,  // (no sub-bucket path)
 							DataBucketBean.MasterEnrichmentType.streaming // (not used for non-transient)
@@ -550,10 +550,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			
 			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
 					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
-							false, // (not used for streaming) 
+							true, // (preserve existing data by default) 
 							false, // (not transient, ie final output) 
 							null,  // (no sub-bucket path)
-							DataBucketBean.MasterEnrichmentType.batch // (not used for non-transient)
+							null // (not used for non-transient)
 							);					
 	
 			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(

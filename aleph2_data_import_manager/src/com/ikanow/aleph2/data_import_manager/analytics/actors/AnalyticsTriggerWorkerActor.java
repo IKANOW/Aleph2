@@ -46,7 +46,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
@@ -82,8 +81,6 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		_service_context = _local_actor_context.getServiceContext();
 		_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 	}
-	
-	//TODO (ALEPH-12): in at least one place it's enriching itself with the bucket from the DB which then doesn't work on test buckets...
 	
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
@@ -176,7 +173,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers).join();			
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(message.bucket(), trigger_crud, triggers).join();			
 		}
 		finally { // ie always run this:
 			// Unset the mutexes
@@ -275,31 +272,32 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								kv.getValue().stream().forEach(trigger_in -> {
 									
 									Patterns.match().andAct()
-										.when(__ -> TriggerType.none == trigger_in.trigger_type(), __ -> {
+										.when(__ -> AnalyticTriggerBeanUtils.isActiveBucketOrJobRecord(trigger_in), __ -> {
 											
 											// 1) This is an active job, want to know if the job is complete
 											
 											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
-													(null == trigger_in.job_name())
+													AnalyticTriggerBeanUtils.isActiveBucketRecord(trigger_in)
 													? Optional.empty()
-													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
+													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs()
+																						.stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
 											
 											analytic_job_opt.ifPresent(analytic_job -> onAnalyticTrigger_checkActiveJob(bucket_to_check, analytic_job, trigger_in));
 											
 											//(don't care about a reply, will come asynchronously)
-											if (null != trigger_in.job_name()) {
+											if (AnalyticTriggerBeanUtils.isActiveJobRecord(trigger_in)) {
 												mutable_active_jobs.add(trigger_in);
 											}
 											else { // bucket must be active since the bucket record exists
 												active_bucket_record.set(trigger_in); // (can call multiple times, will ignore all but the first)
 											}
 										})
-										.when(__ -> !trigger_in.is_bucket_active() && (null == trigger_in.job_name()), __ -> {
+										.when(__ -> !trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isExternalTrigger(trigger_in), __ -> {
 											
 											// 2) Inactive bucket, check external dependency											
 											onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
 										})
-										.when(__ -> trigger_in.is_bucket_active() && (null != trigger_in.job_name()), __ -> {
+										.when(__ -> trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isInternalTrigger(trigger_in), __ -> {
 											
 											// 3) Inactive job, active bucket
 											

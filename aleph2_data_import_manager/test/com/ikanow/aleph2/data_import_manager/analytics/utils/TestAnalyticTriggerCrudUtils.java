@@ -62,6 +62,49 @@ public class TestAnalyticTriggerCrudUtils {
 		_test_crud = factory.getMongoDbCrudService(AnalyticTriggerStateBean.class, String.class, factory.getMongoDbCollection("test.trigger_crud"), Optional.empty(), Optional.empty(), Optional.empty());
 		_test_crud.deleteDatastore().get();
 	}	
+
+	@Test
+	public void test_storeOrUpdateTriggerStage_relativeCheckTime() throws InterruptedException {
+		assertEquals(0, _test_crud.countObjects().join().intValue());
+		
+		// Same as start to test_storeOrUpdateTriggerStage_updateActivation, except check that the next check isn't scheduled immediately
+		
+		final DataBucketBean bucket = BeanTemplateUtils.clone(buildBucket("/test/store/trigger", true))
+											.with(DataBucketBean::poll_frequency, "2am tomorrow")
+										.done();
+
+		// Save a bucket
+		{		
+			final Stream<AnalyticTriggerStateBean> test_stream = AnalyticTriggerBeanUtils.generateTriggerStateStream(bucket, false, Optional.empty());
+			final List<AnalyticTriggerStateBean> test_list = test_stream.collect(Collectors.toList());
+			
+			System.out.println("Resources = \n" + 
+					test_list.stream().map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+			
+			assertEquals(8L, test_list.size()); //(8 not 7 cos haven't dedup'd yet)
+	
+			// 4 internal dependencies
+			assertEquals(4L, test_list.stream().filter(t -> null != t.job_name()).count());
+			// 4 external dependencies
+			assertEquals(4L, test_list.stream().filter(t -> null == t.job_name()).count());
+			
+			final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> grouped_triggers
+				= test_list.stream().collect(
+						Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
+			
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
+			
+			assertEquals(7L, _test_crud.countObjects().join().intValue());
+			
+			// Only the internal triggers are scheduled for an immediate check
+			assertEquals(4L, _test_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.rangeBelow(AnalyticTriggerStateBean::next_check, new Date(), false)
+					).join().intValue());			
+		}		
+		
+	}
+	
 	
 	@Test
 	public void test_storeOrUpdateTriggerStage_updateActivation() throws InterruptedException {
@@ -88,9 +131,16 @@ public class TestAnalyticTriggerCrudUtils {
 				= test_list.stream().collect(
 						Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
 			
 			assertEquals(7L, _test_crud.countObjects().join().intValue());
+			
+			// Time is relative (default bucket check freq == 2 minutes), so all the triggers should have been set for "now"
+			assertEquals(7L, _test_crud.countObjectsBySpec(
+					CrudUtils.allOf(AnalyticTriggerStateBean.class)
+						.rangeBelow(AnalyticTriggerStateBean::next_check, new Date(), false)
+					).join().intValue());
+			
 		}		
 		
 		//DEBUG
@@ -125,7 +175,7 @@ public class TestAnalyticTriggerCrudUtils {
 				= test_list.stream().collect(
 						Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 		
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
 		
 			//DEBUG
 			//this.printTriggerDatabase();
@@ -228,7 +278,7 @@ public class TestAnalyticTriggerCrudUtils {
 				= test_list.stream().collect(
 						Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
 			
 			assertEquals(7L, _test_crud.countObjects().join().intValue());
 			
@@ -264,7 +314,7 @@ public class TestAnalyticTriggerCrudUtils {
 			
 			assertEquals(13L, _test_crud.countObjects().join().intValue()); // ie 5 active jobs + 1 active bucket, 4 job dependencies, 3 external triggers 			
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
 
 			//DEBUG
 			//printTriggerDatabase();
@@ -329,7 +379,7 @@ public class TestAnalyticTriggerCrudUtils {
 				= test_list.stream().collect(
 					Collectors.groupingBy(t -> Tuples._2T(t.bucket_name(), null)));
 		
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(_test_crud, grouped_triggers).join();
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(bucket, _test_crud, grouped_triggers).join();
 		
 			assertEquals(7L, _test_crud.countObjects().join().intValue());
 		}		

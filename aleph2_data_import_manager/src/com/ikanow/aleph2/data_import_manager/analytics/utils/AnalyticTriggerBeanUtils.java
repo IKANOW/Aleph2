@@ -292,6 +292,42 @@ public class AnalyticTriggerBeanUtils {
 		else return false;																
 	}
 
+	/** Is the trigger external?
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isExternalTrigger(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none != trigger.trigger_type()) && (null == trigger.job_name());
+	}
+	/** Is the trigger internal?
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isInternalTrigger(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none != trigger.trigger_type()) && (null == trigger.job_name());
+	}
+	/** Is the "trigger" an active job record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveJobRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type()) && (null != trigger.job_name());
+	}
+	/** Is the "trigger" an active bucket record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveBucketRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type()) && (null == trigger.job_name());
+	}
+	/** Is the "trigger" an active bucket or job record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveBucketOrJobRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type());
+	}
+	
 	///////////////////////////////////////////////////////////////////////////
 	
 	// TIMING UTILS
@@ -322,12 +358,16 @@ public class AnalyticTriggerBeanUtils {
 	 */
 	public static boolean scheduleIsRelative(final Date now, final Date next_trigger, DataBucketBean bucket) {
 		
+		// Want to check we don't cross eg a day boundary and mess up when "3pm resolves to" - this is a safe way to do it because can't change hour
+		// without changing minute...
 		final boolean is_on_minute_boundary = 0 == (now.getTime() % 60L);
 		final int offset = is_on_minute_boundary ? +1 : -1;
 		
 		final Date d = getNextCheckTime(Date.from(now.toInstant().plusMillis(offset*500L)), bucket);
 
-		// (might get this wrong if next trigger and now are very close, but who cares in that case?!)
+		// Basic idea is that eg "every 10 minutes" will be relative to "now" at the second level, but eg "3pm" will be relative to "now" on a much higher level
+		// (eg day in that case) so we adjust by 0.5s and see if that causes the generated times to change
+		// (NOTE: might get this wrong if next trigger and now are very close, but who cares in that case?!)
 		return d.getTime() != next_trigger.getTime();
 	}
 	

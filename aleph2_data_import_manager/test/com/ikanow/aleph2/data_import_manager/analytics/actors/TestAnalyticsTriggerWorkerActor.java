@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -44,6 +45,7 @@ import com.ikanow.aleph2.data_import_manager.analytics.utils.TestAnalyticTrigger
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
@@ -527,13 +529,14 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		test_enrichment_common(enrichment_bucket);
 	}
 
+	@Test
+	public void test_enrichment_enrichmentForm() throws IOException, InterruptedException {
+		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);		
+		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
+		
+		test_enrichment_common(enrichment_bucket);
+	}
 	
-	/** (Was going to have 2 versions of this one for enrichment form and one for analytic form but I just realized that 
-	 *  they are identical as far as the trigger worker is concerned!)
-	 * @param bucket
-	 * @throws IOException
-	 * @throws InterruptedException
-	 */
 	public void test_enrichment_common(final DataBucketBean bucket) throws IOException, InterruptedException {
 
 		//setup
@@ -545,6 +548,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		trigger_crud.deleteDatastore().join();
 		
 		_num_received.set(0L);
+		
+		final AnalyticThreadJobBean job_to_run = bucket.analytic_thread().jobs().get(0);
 		
 		// 0) create input directory
 				
@@ -657,7 +662,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
-							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("read_from_self_test")).collect(Collectors.toList()),
+							Arrays.asList(job_to_run),
 							JobMessageType.starting);
 
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			
@@ -681,7 +686,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(1L, trigger_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::trigger_type, TriggerType.none)
-						.when(AnalyticTriggerStateBean::job_name, "read_from_self_test")
+						.when(AnalyticTriggerStateBean::job_name, job_to_run.name())
 					).join().intValue());
 			
 			// Check the message bus - nothing changed
@@ -716,7 +721,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
-							bucket.analytic_thread().jobs().stream().filter(j -> j.name().equals("read_from_self_test")).collect(Collectors.toList()),
+							Arrays.asList(job_to_run),
 							JobMessageType.stopping);
 
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(inner_msg);			

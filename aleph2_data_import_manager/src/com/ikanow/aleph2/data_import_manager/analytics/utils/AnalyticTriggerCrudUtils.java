@@ -124,9 +124,14 @@ public class AnalyticTriggerCrudUtils {
 	 * @param trigger_crud
 	 * @param triggers
 	 */
-	public static CompletableFuture<?> storeOrUpdateTriggerStage(final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
+	public static CompletableFuture<?> storeOrUpdateTriggerStage(final DataBucketBean bucket, final ICrudService<AnalyticTriggerStateBean> trigger_crud, final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers) {
 		
-		final Date now = Date.from(Instant.now());		
+		final Date now = Date.from(Instant.now());
+		final Date next_check_for_external_triggers_tmp = AnalyticTriggerBeanUtils.getNextCheckTime(now, bucket);
+		final Date next_check_for_external_triggers = AnalyticTriggerBeanUtils.scheduleIsRelative(now, next_check_for_external_triggers_tmp, bucket)
+														? now // eg for "hourly" check immediately
+														: next_check_for_external_triggers_tmp; // eg for "3pm" don't check until then
+							
 		final Map<Tuple2<String, Optional<String>>, Boolean> mutable_bucket_names = new HashMap<>();
 		
 		final Stream<CompletableFuture<?>> ret = triggers.entrySet().stream()
@@ -162,7 +167,8 @@ public class AnalyticTriggerCrudUtils {
 									.with(AnalyticTriggerStateBean::is_bucket_active, is_bucket_active)
 									.with(AnalyticTriggerStateBean::is_pending, is_job_active)
 									.with(AnalyticTriggerStateBean::last_checked, now)
-									.with(AnalyticTriggerStateBean::next_check, now)
+									.with(AnalyticTriggerStateBean::next_check,
+											AnalyticTriggerBeanUtils.isExternalTrigger(trigger) ? next_check_for_external_triggers : now)
 								.done()
 							)
 							.collect(Collectors.toList())
