@@ -47,10 +47,6 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 
-//TODO (ALEPH-12): in bucket change actor need to activate the bucket if any jobs manually triggered...
-
-//TODO (ALEPH-12): now copy internal job deps into resource_name_or_id, so need to sort that out
-
 public class TestAnalyticTriggerCrudUtils {
 
 	ICrudService<AnalyticTriggerStateBean> _test_crud;

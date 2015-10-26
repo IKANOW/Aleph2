@@ -448,7 +448,7 @@ public class AnalyticTriggerCrudUtils {
 		
 		// Update the values
 		
-		CompletableFuture<?> cf1 = trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
+		final CompletableFuture<?> cf1 = trigger_crud.updateObjectsBySpec(update_trigger_query, Optional.of(false), update);
 		
 		// Also update the "next_check" time for all buckets with an affected _external trigger_
 		// (Note can fire and forget here since just updating the times)
@@ -456,9 +456,15 @@ public class AnalyticTriggerCrudUtils {
 		trigger_crud.getObjectsBySpec(update_trigger_query_external, //(only care about the bucket_name)
 							Arrays.asList(BeanTemplateUtils.from(AnalyticTriggerStateBean.class).field(AnalyticTriggerStateBean::bucket_name)), true)
 						.thenAccept(cursor -> {
+							
+							final List<String> update_names =
+									Optionals.streamOf(cursor.iterator(), false)
+										.map(t -> t.bucket_name())
+										.collect(Collectors.toList());								
+
 							trigger_crud.updateObjectsBySpec(
 									CrudUtils.allOf(AnalyticTriggerStateBean.class)
-										.withAny(AnalyticTriggerStateBean::bucket_name, Optionals.streamOf(cursor.iterator(), false).collect(Collectors.toList()))
+										.withAny(AnalyticTriggerStateBean::bucket_name, update_names)
 									, 
 									Optional.of(false), 
 									CrudUtils.update(AnalyticTriggerStateBean.class)

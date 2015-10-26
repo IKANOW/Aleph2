@@ -95,7 +95,7 @@ public class AnalyticTriggerBeanUtils {
 		final Stream<AnalyticTriggerStateBean> external_state_beans =
 				bucket_dependencies.map(List::stream).orElseGet(Stream::empty)
 					.map(trigger -> {
-						final String[] resource_subchannel = Optional.ofNullable(trigger.resource_name_or_id()).orElse("").split(":");						
+						final String[] resource_subchannel = Optional.ofNullable(trigger.resource_name_or_id()).filter(s -> !s.isEmpty()).orElse(bucket.full_name()).split(":");						
 						
 						return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 									//(add the transient params later)
@@ -110,6 +110,7 @@ public class AnalyticTriggerBeanUtils {
 									.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
 									.with(AnalyticTriggerStateBean::input_resource_combined, trigger.resource_name_or_id())
 									//(more transient counts)
+									.with(AnalyticTriggerStateBean::last_resource_size, 0L)
 									.with(AnalyticTriggerStateBean::resource_limit, trigger.resource_trigger_limit())
 									.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 								.done().get();

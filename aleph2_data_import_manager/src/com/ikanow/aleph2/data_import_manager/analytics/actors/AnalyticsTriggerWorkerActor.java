@@ -254,6 +254,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									:
 									// Normal bucket get from bucket store
 									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id(),
+											//(this exclusion just transforms combined harvest+analytics buckets into analytics only, to avoid calling harvest call incorrectly)
 											Arrays.asList(BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::harvest_technology_name_or_id)),
 											false
 											)
@@ -269,7 +270,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 													: bucket);
 								})
 								.apply(Unit.unit());
-										
+														
 							//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
 								
 							final SetOnce<AnalyticTriggerStateBean> active_bucket_record = new SetOnce<>();
@@ -388,7 +389,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final List<AnalyticTriggerStateBean> mutable_trigger_list_active, final List<AnalyticTriggerStateBean> mutable_trigger_list_dormant)
 	{
 		final boolean is_already_triggered = AnalyticTriggerBeanUtils.checkTriggerLimits(trigger); 
-			
+		
 		//DEBUG
 		//System.out.println("? " + trigger.job_name() + " / " + trigger.input_resource_name_or_id() + ": " + trigger.curr_resource_size() + ": " + is_already_triggered);
 		
@@ -688,7 +689,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								.map(t -> Tuples._2T(t.input_resource_combined(), t.input_data_service()))
 								.collect(Collectors.toSet())
 								;
-								
+														
 						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices, true);
 						
 						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
