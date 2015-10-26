@@ -309,7 +309,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 											onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
 										})
 										.when(__ -> trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isInternalTrigger(trigger_in), __ -> {
-											
+
 											// 3) Inactive job, active bucket
 											
 											final Optional<AnalyticThreadJobBean> analytic_job_opt = 

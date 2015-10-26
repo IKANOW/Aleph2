@@ -304,7 +304,7 @@ public class AnalyticTriggerBeanUtils {
 	 * @return
 	 */
 	public static boolean isInternalTrigger(final AnalyticTriggerStateBean trigger) {
-		return (TriggerType.none != trigger.trigger_type()) && (null == trigger.job_name());
+		return (TriggerType.none != trigger.trigger_type()) && (null != trigger.job_name());
 	}
 	/** Is the "trigger" an active job record
 	 * @param trigger

@@ -22,7 +22,7 @@
 		        	}
 		        ],
 		        "output": {
-		        	"preserve_existing_data": false,
+		        	"preserve_existing_data": true,
 		        	"is_transient": false,
 		        	"transient_type": "streaming"
 		        }

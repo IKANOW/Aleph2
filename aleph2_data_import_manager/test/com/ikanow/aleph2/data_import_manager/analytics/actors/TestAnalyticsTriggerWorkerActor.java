@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -605,6 +606,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		{
 			createDirectory(root_dir, bucket.full_name(), suffix, 1, false);
 			
+			//DEBUG: leave this in since failed vs travis
+			_logger.info("(Added files)");
+			printTriggerDatabase();
+			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
 			_trigger_worker.tell(msg, _trigger_worker);
@@ -847,5 +852,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 					.set(AnalyticTriggerStateBean::next_check, Date.from(Instant.now().minusSeconds(2L)));
 		
 		trigger_crud.updateObjectsBySpec(CrudUtils.allOf(AnalyticTriggerStateBean.class), Optional.of(false), update).join();
+	}
+
+	public void printTriggerDatabase()
+	{
+		List<com.fasterxml.jackson.databind.JsonNode> ll = Optionals.streamOf(_test_crud.getRawService().getObjectsBySpec(CrudUtils.allOf())
+				.join().iterator(), true)
+				.collect(Collectors.toList())
+				;
+			System.out.println("DB_Resources = \n" + 
+					ll.stream().map(t -> t.toString()).collect(Collectors.joining("\n")));		
 	}
 }
