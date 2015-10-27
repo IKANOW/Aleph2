@@ -6,6 +6,7 @@
   <properties>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
 	<aleph2.scope>compile</aleph2.scope>
+	<aleph2.hadoop>2.6.0</aleph2.hadoop>
 	<!-- Overridden in test_depdendencies profile that is activated if skip tests is true -->
 	<maven.test.skip>true</maven.test.skip>
   </properties>
@@ -140,6 +141,12 @@
 		<artifactId>commons-io</artifactId>
 		<version>2.4</version>
 	</dependency>
+  	<dependency>
+  		<groupId>org.apache.hadoop</groupId>
+  		<artifactId>hadoop-common</artifactId>
+  		<version>${aleph2.hadoop}</version>
+  		<scope>provided</scope>
+  	</dependency>			
   </dependencies>
 	<!-- Test dependencies -->
   <profiles>
