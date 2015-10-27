@@ -273,7 +273,13 @@ public class BucketActionChooseActor extends AbstractActor {
 			if (!_state.data_import_manager_set.isEmpty()) {
 				
 				_system_context.getMessageBus(_zookeeper_path).publish(new BucketActionEventBusWrapper
-						(this.self(), new BucketActionOfferMessage(message.bucket(), message.getClass().toString())));
+						(this.self(), 
+								new BucketActionOfferMessage(message.bucket(),
+										Patterns.match(message).<String>andReturn()
+											.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
+													msg -> JobMessageType.check_completion != msg.type(), __ -> "") // (=> don't publish)
+											.otherwise(msg -> msg.getClass().toString()))))
+						;
 				
 				_state.current_timeout_id = UuidUtils.get().getRandomUuid();
 				_system_context.getActorSystem().scheduler().scheduleOnce(_timeout, 
