@@ -421,4 +421,19 @@ public class TestBeanTemplateUtils {
 		String j = BeanTemplateUtils.toJson(x).toString();
 		assertEquals("{\"is_transient\":true}", j);
 	}
+
+
+	public static class MapStringObjectBean {
+		Map<String, Object> a;
+	}	
+	@Test
+	public void test_nestedDeserialization() {
+		// Just checked that objects are denested as hashmaps all the way down...
+		
+		String s = "{\"a\": {\"b\": { \"c\": { \"d\": [ \"e\" ] } } } }";		
+		MapStringObjectBean test = BeanTemplateUtils.from(s, MapStringObjectBean.class).get();
+		System.out.println("?? " + test.a.get("b").getClass());
+		System.out.println("?? " + ((Map<?,?>)test.a.get("b")).get("c").getClass());
+	}
+
 }

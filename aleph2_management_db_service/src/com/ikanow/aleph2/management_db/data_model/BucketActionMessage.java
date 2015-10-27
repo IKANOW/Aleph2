@@ -76,9 +76,12 @@ public class BucketActionMessage implements Serializable {
 		/** User c'tor for creating a message to see which nodes can handle the given bucket
 		 * @param bucket - the bucket with an outstanding operation to apply
 		 */
-		public BucketActionOfferMessage(final DataBucketBean bucket) {
+		public BucketActionOfferMessage(final DataBucketBean bucket, String message_type) {
 			super(bucket);
+			this.message_type = message_type;
 		}
+		public String message_type() { return message_type; }
+		private String message_type;
 	}	
 	
 	/** Send a new bucket action message to one (single node) or many (distributed node) buckets

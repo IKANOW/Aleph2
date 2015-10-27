@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_import_manager.analytics.actors;
 
 import java.io.File;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -34,6 +35,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+
 
 
 
@@ -112,6 +114,7 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -120,6 +123,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
 
 
 
@@ -429,6 +433,37 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
 								msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
 						.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+					
+					/**/
+					//TODO (ALEPH-12): try serializing message, log on fail
+					try {
+						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+						ObjectOutputStream out = new ObjectOutputStream(baos);
+						out.writeObject(reply);
+					}
+					catch (Exception e) {
+						_logger.error("Failed output messsage (1)" + reply.getClass().getSimpleName());
+						try {
+							_logger.error("Failed output messsage (2)" + BeanTemplateUtils.toJson(reply).toString());							
+						}
+						catch (Exception ee) {
+							_logger.error("Failed to deser into jackson!");
+						}
+					}
+					try {
+						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+						ObjectOutputStream out = new ObjectOutputStream(baos);
+						out.writeObject(message);
+					}
+					catch (Exception e) {
+						_logger.error("Failed output messsage (1)" + message.getClass().getSimpleName());
+						try {
+							_logger.error("Failed output messsage (2)" + BeanTemplateUtils.toJson(message).toString());							
+						}
+						catch (Exception ee) {
+							_logger.error("Failed to deser into jackson!");
+						}
+					}
 					
 					closing_sender.tell(reply,  closing_self);
 				}
