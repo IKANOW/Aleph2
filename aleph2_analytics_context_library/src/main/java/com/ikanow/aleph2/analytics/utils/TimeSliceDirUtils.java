@@ -17,10 +17,8 @@ package com.ikanow.aleph2.analytics.utils;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang.time.DateUtils;
@@ -71,7 +69,7 @@ public class TimeSliceDirUtils {
 	 * @param dir_listing
 	 * @return
 	 */
-	public static List<Tuple3<String, Date, Date>> annotateTimedDirectories(final Stream<String> dir_listing) {
+	public static Stream<Tuple3<String, Date, Date>> annotateTimedDirectories(final Stream<String> dir_listing) {
 		return dir_listing
 			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("_")))
 			.filter(dir_date -> dir_date._2() >= 0)
@@ -90,7 +88,6 @@ public class TimeSliceDirUtils {
 							adjustTime(Date.from(dir_datestr_date._3().success().toInstant()), dir_datestr_date._2().get()._2())
 							)
 			)
-			.collect(Collectors.toList())
 			;
 	}
 	
@@ -99,10 +96,9 @@ public class TimeSliceDirUtils {
 	 * @param filter
 	 * @return
 	 */
-	public static List<String> filterTimedDirectories(List<Tuple3<String, Date, Date>> in, Tuple2<Optional<Date>, Optional<Date>> filter) {
+	public static Stream<String> filterTimedDirectories(Stream<Tuple3<String, Date, Date>> in, Tuple2<Optional<Date>, Optional<Date>> filter) {
 		
-		return in.stream()
-					.filter(t3 -> filter._1()
+		return in.filter(t3 -> filter._1()
 									.map(tmin -> { //lower bound
 										return tmin.getTime() < t3._3().getTime(); // just has to be smaller than the largest time in the group
 									}).orElse(true))
@@ -111,7 +107,6 @@ public class TimeSliceDirUtils {
 										return tmax.getTime() >= t3._2().getTime(); // just has to be larger than the smallest time in the group
 									}).orElse(true))
 					.map(t3 -> t3._1())
-					.collect(Collectors.toList())
 					;
 	}
 	

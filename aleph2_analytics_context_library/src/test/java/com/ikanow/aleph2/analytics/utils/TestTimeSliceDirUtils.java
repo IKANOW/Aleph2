@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 
@@ -112,7 +113,7 @@ public class TestTimeSliceDirUtils {
 				Tuples._3T("works_2015-01-01-01", d5, d6),
 				Tuples._3T("works_2015.10", d7, d8)
 				),
-				TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()));
+				TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()).collect(Collectors.toList()));
 	}
 	
 	@Test
@@ -138,7 +139,8 @@ public class TestTimeSliceDirUtils {
 			final List<String> res = 
 					TimeSliceDirUtils.filterTimedDirectories(
 							TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()), 
-							TimeSliceDirUtils.getQueryTimeRange(test, now));
+							TimeSliceDirUtils.getQueryTimeRange(test, now))
+							.collect(Collectors.toList());
 						
 			assertEquals(
 					Arrays.asList(
@@ -163,7 +165,8 @@ public class TestTimeSliceDirUtils {
 			final List<String> res = 
 					TimeSliceDirUtils.filterTimedDirectories(
 							TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()), 
-							TimeSliceDirUtils.getQueryTimeRange(test, now));
+							TimeSliceDirUtils.getQueryTimeRange(test, now))
+							.collect(Collectors.toList());
 						
 			assertEquals(
 					Arrays.asList(
@@ -186,7 +189,8 @@ public class TestTimeSliceDirUtils {
 			final List<String> res = 
 					TimeSliceDirUtils.filterTimedDirectories(
 							TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()), 
-							TimeSliceDirUtils.getQueryTimeRange(test, now));
+							TimeSliceDirUtils.getQueryTimeRange(test, now))
+							.collect(Collectors.toList());
 						
 			assertEquals(
 					Arrays.asList(
@@ -209,7 +213,8 @@ public class TestTimeSliceDirUtils {
 			final List<String> res = 
 					TimeSliceDirUtils.filterTimedDirectories(
 							TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()), 
-							TimeSliceDirUtils.getQueryTimeRange(test, now));
+							TimeSliceDirUtils.getQueryTimeRange(test, now))
+							.collect(Collectors.toList());
 						
 			assertEquals(
 					Arrays.asList(

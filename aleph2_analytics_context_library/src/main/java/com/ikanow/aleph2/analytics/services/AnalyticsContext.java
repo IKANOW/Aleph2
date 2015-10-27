@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -37,6 +38,8 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -47,6 +50,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
+import com.ikanow.aleph2.analytics.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
@@ -679,17 +683,37 @@ public class AnalyticsContext implements IAnalyticsContext {
 													.when(s -> s.endsWith(":json"), __ -> "json/current/")
 													.otherwise(__ -> "processed/current/");
 						
-						//TODO: ALEPH-12 enable time-based filtering
-						if (null != i.filter()) {
-							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
-						}
-						
-						final String suffix = "**/*";
-						return Arrays.asList(_storage_service.getBucketRootPath() + bucket_name + IStorageService.STORED_DATA_SUFFIX + sub_service + suffix);
+						final String base_path = _storage_service.getBucketRootPath() + bucket_name + IStorageService.STORED_DATA_SUFFIX + sub_service;
+						return Optional.ofNullable(i.config())
+								.filter(cfg -> (null != cfg.time_min()) || (null != cfg.time_max()))
+								.map(cfg -> {
+									try {
+										final FileContext fc = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+										final Stream<String> paths = 
+												Arrays.stream(fc.util().listStatus(new Path(base_path)))
+													.filter(f -> f.isDirectory())
+													.map(f -> f.getPath().toString())
+													;
+										
+										return TimeSliceDirUtils.filterTimedDirectories(
+													TimeSliceDirUtils.annotateTimedDirectories(paths), 
+													TimeSliceDirUtils.getQueryTimeRange(cfg, new Date()))
+													.map(s -> s + "/*")
+													.collect(Collectors.toList())
+													;
+									}
+									catch (Exception e) { return null; } // will fall through to...
+								})
+								.orElseGet(() -> {
+									// No time based filtering possible
+									final String suffix = "**/*";
+									return Arrays.asList(base_path + suffix);									
+								});
 					}
 				}))
 				.orElse(Collections.emptyList())
 				;		
+		
 	}
 
 	/* (non-Javadoc)
@@ -697,7 +721,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public boolean checkForListeners(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
-
+		
 		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		final AnalyticThreadJobOutputBean output = Optional.ofNullable(job.output()).orElseGet(() -> BeanTemplateUtils.build(AnalyticThreadJobOutputBean.class).done().get());		
 
