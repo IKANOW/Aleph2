@@ -628,7 +628,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 		
@@ -653,7 +653,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 		
@@ -673,7 +673,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			waitForData(() -> _num_received.get(), 1, true);
 			
 			// Check the DB
@@ -752,7 +752,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			waitForData(() -> _num_received.get(), 2, true);
 			
 			// Check the DB
@@ -893,7 +893,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 		
@@ -918,7 +918,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 		
@@ -938,7 +938,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 			
@@ -986,7 +986,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 		
@@ -1045,7 +1045,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			waitForData(() -> _num_received.get(), 2, true);
 			
 			// Check the DB
@@ -1155,7 +1155,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish
-			Thread.sleep(1000L);
+			Thread.sleep(2000L);
 			
 			// Check the DB
 			

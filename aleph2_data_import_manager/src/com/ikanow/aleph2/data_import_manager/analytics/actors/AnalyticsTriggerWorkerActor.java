@@ -44,7 +44,9 @@ import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerBean
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -249,7 +251,9 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									// Test bucket - get from test
 									_service_context.getCoreManagementDbService().readOnlyVersion().getBucketTestQueue(BucketTimeoutMessage.class)
 										.getObjectById(trigger.bucket_name()) //(test bucket use transformed full name as _id)
-										.<Optional<DataBucketBean>>thenApply(bucket_msg -> bucket_msg.map(msg -> msg.bucket()))
+										.<Optional<DataBucketBean>>thenApply(bucket_msg -> 
+											bucket_msg
+												.map(msg -> msg.bucket()))
 										.join()
 									:
 									// Normal bucket get from bucket store
@@ -267,7 +271,28 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									return maybe_bucket
 											.map(bucket -> (null == bucket.analytic_thread()) 
 													? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
-													: bucket);
+													: bucket)
+											.map(bucket -> {
+													return !BucketUtils.isTestBucket(bucket) // for test buckets, override the scheduler to something short
+													? 
+													bucket
+													:
+													BeanTemplateUtils.clone(bucket) 
+														.with(DataBucketBean::analytic_thread,
+															BeanTemplateUtils.clone(bucket.analytic_thread()) //(must exist by this point)
+																.with(AnalyticThreadBean::trigger_config,
+																		BeanTemplateUtils.clone(
+																				Optional.ofNullable(bucket.analytic_thread().trigger_config())
+																						.orElse(BeanTemplateUtils.build(AnalyticThreadTriggerBean.class).done().get())
+																		)
+																			.with(AnalyticThreadTriggerBean::schedule, "10 seconds")
+																		.done()
+																)
+															.done()		
+														)
+													.done();
+											})
+											;
 								})
 								.apply(Unit.unit());
 														

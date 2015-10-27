@@ -124,11 +124,14 @@ public class DataSchemaBean implements Serializable {
 			private static final long serialVersionUID = 867619105821121075L;
 			protected StorageSubSchemaBean() {}
 			
+			public enum TimeSourcePolicy { clock_time, batch, record };
+			
 			/** User constructor
 			 */
 			public StorageSubSchemaBean(
 					final Boolean enabled,
 					final String grouping_time_period,
+					final TimeSourcePolicy grouping_time_policy,
 					final String exist_age_max,
 					final String codec,
 					final WriteSettings target_write_settings
@@ -136,6 +139,7 @@ public class DataSchemaBean implements Serializable {
 			{
 				this.enabled = enabled;
 				this.grouping_time_period = grouping_time_period;
+				this.grouping_time_policy =  grouping_time_policy;
 				this.exist_age_max = exist_age_max;
 				this.codec = codec;
 				this.target_write_settings = target_write_settings;
@@ -154,6 +158,14 @@ public class DataSchemaBean implements Serializable {
 			 */
 			public String grouping_time_period() {
 				return grouping_time_period;
+			}
+			/** Defaults to "batch": if time field specified (from temporal schema), then groups all data object by the first timestamp in the write batch,
+			 *  if "clock_time" then just uses the current time to group them, if "record" (not always supported) then each record is written to the correct grouping based
+			 *  on its timestamp. Uses "clock_time" if no temporal schema is specified.
+			 * @return
+			 */
+			public TimeSourcePolicy grouping_time_policy() {
+				return grouping_time_policy;
 			}
 			/** A string describing the age at which documents in this bucket are deleted
 			 * (eg "10 days", "864000", "5 years")
@@ -179,6 +191,7 @@ public class DataSchemaBean implements Serializable {
 			
 			private Boolean enabled;
 			private String grouping_time_period;
+			private TimeSourcePolicy grouping_time_policy;
 			private String exist_age_max;
 			private String codec;			
 			private WriteSettings target_write_settings;

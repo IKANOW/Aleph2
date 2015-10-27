@@ -131,6 +131,7 @@ public class TimeUtils {
 		ChronoUnit.HOURS,
 		ChronoUnit.DAYS,
 		ChronoUnit.WEEKS,
+		ChronoUnit.MONTHS,
 		ChronoUnit.YEARS		
 	};
 	
