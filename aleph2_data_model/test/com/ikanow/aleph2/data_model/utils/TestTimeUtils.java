@@ -38,6 +38,12 @@ import fj.data.Validation;
 public class TestTimeUtils {
 
 	@Test
+	public void test_isoParsing() {
+		assertEquals("2015-10-16T18:19:26.566Z", TimeUtils.parseIsoString("2015-10-16T18:19:26.566Z").success().toInstant().toString());
+		assertEquals("2015-10-16T18:19:26.566Z", TimeUtils.parseIsoString("2015-10-16T18:19:26.566").success().toInstant().toString());
+	}
+	
+	@Test
 	public void test_getTimePeriod() {
 		
 		final List<String> secs = Arrays.asList("s", "1s", "sec", "1sec", "second", "1second", "1 second");

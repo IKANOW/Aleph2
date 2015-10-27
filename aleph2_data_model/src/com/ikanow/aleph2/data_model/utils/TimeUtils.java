@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.Optional;
 import java.text.ParseException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -145,6 +146,19 @@ public class TimeUtils {
 		Pattern.compile("[0-9]{4}")
 	};
 	
+	/** Returns a date representing an ISO date (with or without trailing "Z")
+	 * @param iso_date
+	 * @return
+	 */
+	public static Validation<String, Date> parseIsoString(final String iso_date) {
+		try {
+			if (iso_date.endsWith("Z")) return Validation.success(Date.from(Instant.parse(iso_date)));
+			return Validation.success(Date.from(Instant.parse(iso_date + "Z")));
+		}
+		catch (Exception e) {
+			return Validation.fail(e.getMessage());
+		}
+	}
 	
 	/** Gets the date format from a date in one of the formats 
 	 * @param date_suffix
