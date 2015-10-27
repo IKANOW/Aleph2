@@ -36,12 +36,14 @@ import scala.runtime.BoxedUnit;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionOfferMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionWillAcceptMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionIgnoredMessage;
@@ -180,7 +182,7 @@ public class BucketActionChooseActor extends AbstractActor {
 	
 	protected void abortAndRetry(boolean allow_retries) {
 		
-		_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+		_logger.warn("bucket=" + _state.original_message.get().bucket().full_name()
 				+ "; actor_id=" + this.self().toString()
 				+ "; abort_tries=" + _state.tries + "; allow_retries=" + allow_retries 
 				);
@@ -206,11 +208,12 @@ public class BucketActionChooseActor extends AbstractActor {
 			final Random r = new Random();
 			_state.targeted_source = _state.reply_list.get(r.nextInt(_state.reply_list.size()));
 			
-			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
-					+ "; actor_id=" + this.self().toString()
-					+ "; picking_actor=" + _state.targeted_source._2() 
-					+ "; picking_source=" + _state.targeted_source._1() 
-					);
+			if (shouldLog(_state.original_message.get()))
+				_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+						+ "; actor_id=" + this.self().toString()
+						+ "; picking_actor=" + _state.targeted_source._2() 
+						+ "; picking_source=" + _state.targeted_source._1() 
+						);
 			
 			// Forward the message on
 			_state.targeted_source._2().tell(_state.original_message.get(), this.self());
@@ -249,7 +252,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			}
 			catch (NoNodeException e) { 
 				// This is OK
-				_logger.info("bucket=" + _state.original_message.get().bucket().full_name() 
+				_logger.warn("bucket=" + _state.original_message.get().bucket().full_name() 
 						+ " ;actor_id=" + this.self().toString() + "; zk_path_not_found=" + _zookeeper_path);
 			}
 			
@@ -257,12 +260,13 @@ public class BucketActionChooseActor extends AbstractActor {
 			_state.data_import_manager_set.removeAll(_state.blacklist);
 			
 			//(log)
-			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
-					+ "; message_id=" + message
-					+ "; actor_id=" + this.self().toString()
-					+ "; candidates_found=" + _state.data_import_manager_set.size()
-					+ "; blacklisted=" + _state.blacklist.size()
-					);
+			if (shouldLog(_state.original_message.get()) || !_state.blacklist.isEmpty())
+				_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+						+ "; message_id=" + message
+						+ "; actor_id=" + this.self().toString()
+						+ "; candidates_found=" + _state.data_import_manager_set.size()
+						+ "; blacklisted=" + _state.blacklist.size()
+						);
 			
 			// 2) Then message all of the actors that we believe are present and wait for the response
 			
@@ -295,4 +299,26 @@ public class BucketActionChooseActor extends AbstractActor {
 				this.self());		
 		this.context().stop(this.self());
 	}
+	
+	////////////////////////////////////////////////////////////////
+	
+	/** Handy utility for deciding when to log
+	 * @param message
+	 * @return
+	 */
+	private static boolean shouldLog(final BucketActionMessage message) {
+		return _logger.isDebugEnabled() 
+				||
+				Patterns.match(message).<Boolean>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, 
+							msg -> Patterns.match(Optional.ofNullable(msg.message_type()).orElse("")).<Boolean>andReturn()
+										.when(type -> BucketActionMessage.PollFreqBucketActionMessage.class.toString().equals(type), __ -> false)
+										.when(type -> type.isEmpty(), __ -> false) // (leave "" as a catch all for "don't log")
+										.otherwise(__ -> true))
+					.when(BucketActionMessage.PollFreqBucketActionMessage.class, __ -> false)
+					.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, msg -> (JobMessageType.check_completion != msg.type()))
+					.otherwise(__ -> true)
+					;		
+	}
+	
 }

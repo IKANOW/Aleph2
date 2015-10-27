@@ -77,8 +77,10 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -168,7 +170,9 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
 import com.codepoetics.protonpack.StreamUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
@@ -384,7 +388,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	 * @param message
 	 * @return
 	 */
-	private static boolean shouldLog(final Object message) {
+	private static boolean shouldLog(final BucketActionMessage message) {
 		return _logger.isDebugEnabled() 
 				||
 				Patterns.match(message).<Boolean>andReturn()
@@ -461,38 +465,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
 									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
 							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
-					
-					/**/
-					//TODO (ALEPH-12): try serializing message, log on fail
-					try {
-						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-						ObjectOutputStream out = new ObjectOutputStream(baos);
-						out.writeObject(reply);
-					}
-					catch (Exception e) {
-						_logger.error("Failed output messsage (1)" + reply.getClass().getSimpleName(), e);
-						try {
-							_logger.error("Failed output messsage (2)" + BeanTemplateUtils.toJson(reply).toString());							
-						}
-						catch (Exception ee) {
-							_logger.error("Failed to deser into jackson!");
-						}
-					}
-					try {
-						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-						ObjectOutputStream out = new ObjectOutputStream(baos);
-						out.writeObject(message);
-					}
-					catch (Exception e) {
-						_logger.error("Failed input messsage (1)" + message.getClass().getSimpleName(), e);
-						try {
-							_logger.error("Failed input messsage (2)" + BeanTemplateUtils.toJson(message).toString());							
-						}
-						catch (Exception ee) {
-							_logger.error("Failed to deser into jackson!");
-						}
-					}
-					/**///end^^^^^^^^^^^^^
+
+					//DEBUG
+					// Example code to check if a message is serializable - should consider putting this somewhere? 
+//					try {
+//						java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+//						ObjectOutputStream out = new ObjectOutputStream(baos);
+//						out.writeObject(reply);
+//						out.writeObject(message);
+//					}
+//					catch (Exception e) {
+//					}
 					
 					closing_sender.tell(reply,  closing_self);
 				}
@@ -620,6 +603,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							null // (not used for non-transient)
 							);					
 	
+			//(needed below)
+			final ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+			
 			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
 					"batch_enrichment", //(name) 
 					true, // (enabled)
@@ -636,7 +622,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					,
 					null, // no concept of a single entry point for batch enrichment 
 					Maps.<String, Object>newLinkedHashMap(
-							bucket.batch_enrichment_configs().stream().collect(Collectors.toMap(cfg -> cfg.name(), cfg -> BeanTemplateUtils.toJson(cfg)))), //(config)
+							bucket.batch_enrichment_configs().stream().collect(Collectors.toMap(cfg -> cfg.name(), cfg -> object_mapper.convertValue(cfg, LinkedHashMap.class)))), 
+							//(config)
 					DataBucketBean.MasterEnrichmentType.batch, // (type) 
 					Collections.emptyList(), //(node rules)
 					false, //(multi node enabled)

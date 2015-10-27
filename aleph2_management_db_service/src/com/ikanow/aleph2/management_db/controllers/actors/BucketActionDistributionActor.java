@@ -32,11 +32,13 @@ import scala.concurrent.duration.FiniteDuration;
 import scala.runtime.BoxedUnit;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionEventBusWrapper;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionHandlerMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionIgnoredMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
@@ -163,7 +165,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 			}
 			catch (NoNodeException e) { 
 				// This is OK
-				_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+				_logger.warn("bucket=" + _state.original_message.get().bucket().full_name()
 						+ "; actor_id=" + this.self().toString() + "; zk_path_not_found=" + ActorUtils.BUCKET_ACTION_ZOOKEEPER);
 			}			
 			if (!message.handling_clients().isEmpty()) { // Intersection of: targeted clients and available clients
@@ -181,10 +183,11 @@ public class BucketActionDistributionActor extends AbstractActor {
 			}
 			
 			//(log)
-			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
-					+ "; message_id=" + message
-					+ "; actor_id=" + this.self().toString()
-					+ "; candidates_found=" + _state.data_import_manager_set.size());
+			if (shouldLog(_state.original_message.get()))
+				_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+						+ "; message_id=" + message
+						+ "; actor_id=" + this.self().toString()
+						+ "; candidates_found=" + _state.data_import_manager_set.size());
 			
 			// 2) Then message all of the actors that we believe are present and wait for the response
 
@@ -222,9 +225,10 @@ public class BucketActionDistributionActor extends AbstractActor {
 	}
 	protected void sendReplyAndClose() {
 		//(log)
-		_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
-				+ "; actor_id=" + this.self().toString()
-				+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size() + "; down=" + _state.down_targeted_clients.size());
+		if (shouldLog(_state.original_message.get()) || !_state.down_targeted_clients.isEmpty())
+			_logger.info("bucket=" + _state.original_message.get().bucket().full_name()
+					+ "; actor_id=" + this.self().toString()
+					+ "; replies=" + _state.reply_list.size() + "; timeouts=" + _state.data_import_manager_set.size() + "; down=" + _state.down_targeted_clients.size());
 
 		// (can mutate this since we're about to delete the entire object)
 		_state.down_targeted_clients.addAll(_state.data_import_manager_set);
@@ -247,5 +251,26 @@ public class BucketActionDistributionActor extends AbstractActor {
 		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), _state.reply_list, _state.down_targeted_clients), 
 									this.self());		
 		this.context().stop(this.self());
+	}
+
+	////////////////////////////////////////////////////////////////
+	
+	/** Handy utility for deciding when to log
+	 * @param message
+	 * @return
+	 */
+	private static boolean shouldLog(final BucketActionMessage message) {
+		return _logger.isDebugEnabled() 
+				||
+				Patterns.match(message).<Boolean>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, 
+							msg -> Patterns.match(Optional.ofNullable(msg.message_type()).orElse("")).<Boolean>andReturn()
+										.when(type -> BucketActionMessage.PollFreqBucketActionMessage.class.toString().equals(type), __ -> false)
+										.when(type -> type.isEmpty(), __ -> false) // (leave "" as a catch all for "don't log")
+										.otherwise(__ -> true))
+					.when(BucketActionMessage.PollFreqBucketActionMessage.class, __ -> false)
+					.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, msg -> (JobMessageType.check_completion != msg.type()))
+					.otherwise(__ -> true)
+					;		
 	}
 }

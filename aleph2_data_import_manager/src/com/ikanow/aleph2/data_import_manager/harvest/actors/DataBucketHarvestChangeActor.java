@@ -102,7 +102,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	 * @param message
 	 * @return
 	 */
-	private static boolean shouldLog(final Object message) {
+	private static boolean shouldLog(final BucketActionMessage message) {
 		return _logger.isDebugEnabled() 
 				||
 				Patterns.match(message).<Boolean>andReturn()
