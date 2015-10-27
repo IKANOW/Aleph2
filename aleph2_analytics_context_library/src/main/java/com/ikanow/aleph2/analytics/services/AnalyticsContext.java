@@ -683,6 +683,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 						if (null != i.filter()) {
 							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
 						}
+						
 						final String suffix = "**/*";
 						return Arrays.asList(_storage_service.getBucketRootPath() + bucket_name + IStorageService.STORED_DATA_SUFFIX + sub_service + suffix);
 					}

@@ -27,6 +27,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.time.DateUtils;
 
+import scala.Tuple2;
+
 import com.joestelmach.natty.CalendarSource;
 import com.joestelmach.natty.DateGroup;
 import com.joestelmach.natty.Parser;
@@ -113,9 +115,7 @@ public class TimeUtils {
 					);
 	}
 	
-	//TODO: need the opposite of the time-based suffix
-
-	public static String[] SUPPORTED_DATE_SUFFIXES = {
+	public final static String[] SUPPORTED_DATE_SUFFIXES = {
 		"yyyy-MM-dd-HH:mm:ss",
 		"yyyy-MM-dd-HH:mm",
 		"yyyy-MM-dd-HH",
@@ -124,6 +124,39 @@ public class TimeUtils {
 		"yyyy-MM",
 		"yyyy"
 	};
+	
+	public final static ChronoUnit[] SUPPORTED_DATE_UNITS = {
+		ChronoUnit.SECONDS,
+		ChronoUnit.MINUTES,
+		ChronoUnit.HOURS,
+		ChronoUnit.DAYS,
+		ChronoUnit.WEEKS,
+		ChronoUnit.YEARS		
+	};
+	
+	public final static Pattern[] SUPPORTED_DATE_PATTERNS = {
+		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}"),
+		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}"),
+		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}"),
+		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}"),
+		Pattern.compile("[0-9]{4}-[0-9]{2}"),
+		Pattern.compile("[0-9]{4}")
+	};
+	
+	
+	/** Gets the date format from a date in one of the formats 
+	 * @param date_suffix
+	 * @return
+	 */
+	public static Optional<Tuple2<String, ChronoUnit>> getFormatInfoFromDateString(final String date_suffix) {
+		for (int ii = 0; ii < SUPPORTED_DATE_PATTERNS.length; ++ii) {
+			if (SUPPORTED_DATE_PATTERNS[ii].matcher(date_suffix).matches()) {
+				return Optional.of(Tuples._2T(SUPPORTED_DATE_SUFFIXES[ii], SUPPORTED_DATE_UNITS[ii]));
+			}
+		}
+		return Optional.empty();
+	}
 	
 	/** Returns the date corresponding to a string in one of the formats returned by getTimeBasedSuffix
 	 * @param suffix - the date string
