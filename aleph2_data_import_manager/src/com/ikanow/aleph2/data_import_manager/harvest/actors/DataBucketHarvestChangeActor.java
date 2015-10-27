@@ -98,6 +98,24 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		_fs = _context.getServiceContext().getStorageService();
 	}
 	
+	/** Handy utility for deciding when to log
+	 * @param message
+	 * @return
+	 */
+	private static boolean shouldLog(final Object message) {
+		return _logger.isDebugEnabled() 
+				||
+				Patterns.match(message).<Boolean>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, 
+							msg -> Patterns.match(Optional.ofNullable(msg.message_type()).orElse("")).<Boolean>andReturn()
+										.when(type -> BucketActionMessage.PollFreqBucketActionMessage.class.toString().equals(type), __ -> false)
+										.when(type -> type.isEmpty(), __ -> false) // (leave "" as a catch all for "don't log")
+										.otherwise(__ -> true))
+					.when(BucketActionMessage.PollFreqBucketActionMessage.class, __ -> false)
+					.otherwise(__ -> true)
+					;		
+	}	
+	
 	///////////////////////////////////////////
 
 	// Stateless actor
@@ -113,7 +131,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
+	    				if (shouldLog(m))
+	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -152,15 +171,16 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    					})
 	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
 	    						// Some information logging:
-	    						Patterns.match(reply).andAct()
-	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage, 
-	    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
-	    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
-	    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-	    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
-	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-	    									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())))
-	    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
+	    	    				if (shouldLog(m))
+		    						Patterns.match(reply).andAct()
+		    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage, 
+		    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
+		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
+		    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+		    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
+		    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+		    									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())))
+		    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
@@ -264,9 +284,10 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 				,
 				// Normal
 				tech_module -> {
-					_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
-					Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
-					tech_module.onInit(context);
+    				if (shouldLog(m))
+						_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
+										Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
+										tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
 					//TODO (ALEPH-12): add test coverage for this

@@ -30,11 +30,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+
+
 
 
 
@@ -115,6 +118,8 @@ import org.apache.logging.log4j.Logger;
 
 
 
+import org.elasticsearch.common.collect.ImmutableSet;
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -123,6 +128,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
+
 
 
 
@@ -284,7 +291,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    					_batch_analytics_context.trySet(_stream_analytics_context.get());
 	    				}	    				
 	    				
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
+	    				if (shouldLog(m))
+	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();		    			
@@ -331,7 +339,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
 		    			
-		    			_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
+	    				if (shouldLog(m))
+	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
 		    			final ActorRef closing_self = this.self();		    			
 		    			
@@ -372,6 +381,25 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	
 	// TOP LEVEL MESSAGE PROCESSING
 
+	/** Handy utility for deciding when to log
+	 * @param message
+	 * @return
+	 */
+	private static boolean shouldLog(final Object message) {
+		return _logger.isDebugEnabled() 
+				||
+				Patterns.match(message).<Boolean>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, 
+							msg -> Patterns.match(Optional.ofNullable(msg.message_type()).orElse("")).<Boolean>andReturn()
+										.when(type -> BucketActionMessage.PollFreqBucketActionMessage.class.toString().equals(type), __ -> false)
+										.when(type -> type.isEmpty(), __ -> false) // (leave "" as a catch all for "don't log")
+										.otherwise(__ -> true))
+					.when(BucketActionMessage.PollFreqBucketActionMessage.class, __ -> false)
+					.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, msg -> (JobMessageType.check_completion != msg.type()))
+					.otherwise(__ -> true)
+					;		
+	}
+	
 	/** Send the specified message to the specified analytic technology
 	 * @param message - the message to process
 	 */
@@ -423,16 +451,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				
 				if (!(reply instanceof BucketActionReplyMessage.BucketActionNullReplyMessage)) {
 					// Some information logging:
-					Patterns.match(reply).andAct()
-						.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg ->
-								_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
-										message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
-								))
-						.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-								message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
-						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-								msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
-						.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+					if (shouldLog(message))
+						Patterns.match(reply).andAct()
+							.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg ->
+									_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
+											message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
+									))
+							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
+									message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
+							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
+									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
+							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
 					
 					/**/
 					//TODO (ALEPH-12): try serializing message, log on fail
@@ -442,7 +471,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						out.writeObject(reply);
 					}
 					catch (Exception e) {
-						_logger.error("Failed output messsage (1)" + reply.getClass().getSimpleName());
+						_logger.error("Failed output messsage (1)" + reply.getClass().getSimpleName(), e);
 						try {
 							_logger.error("Failed output messsage (2)" + BeanTemplateUtils.toJson(reply).toString());							
 						}
@@ -456,14 +485,15 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						out.writeObject(message);
 					}
 					catch (Exception e) {
-						_logger.error("Failed output messsage (1)" + message.getClass().getSimpleName());
+						_logger.error("Failed input messsage (1)" + message.getClass().getSimpleName(), e);
 						try {
-							_logger.error("Failed output messsage (2)" + BeanTemplateUtils.toJson(message).toString());							
+							_logger.error("Failed input messsage (2)" + BeanTemplateUtils.toJson(message).toString());							
 						}
 						catch (Exception ee) {
 							_logger.error("Failed to deser into jackson!");
 						}
 					}
+					/**///end^^^^^^^^^^^^^
 					
 					closing_sender.tell(reply,  closing_self);
 				}
@@ -907,9 +937,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				// Normal
 				techmodule_classloader -> {
 					final IAnalyticsTechnologyModule tech_module = techmodule_classloader._1();
-					_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
-					Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
-					tech_module.onInit(context);
+					
+					if (shouldLog(m))
+						_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
+										Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
+										tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
 					//TODO (ALEPH-12): add test coverage for this
