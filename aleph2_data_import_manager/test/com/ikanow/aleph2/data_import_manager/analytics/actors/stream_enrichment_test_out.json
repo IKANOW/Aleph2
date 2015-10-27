@@ -6,6 +6,7 @@
 			{
 				"name": "streaming_topology_1",
 				"enabled": true,
+				"analytic_type": "streaming",
 				"analytic_technology_name_or_id": "StreamingEnrichmentService",
 		        "module_name_or_id": "/app/aleph2/library/storm_js_main.jar",
 		        "library_names_or_ids": ["/app/aleph2/library/storm_js_test.jar"],
@@ -21,7 +22,7 @@
 		        	}
 		        ],
 		        "output": {
-		        	"preserve_existing_data": false,
+		        	"preserve_existing_data": true,
 		        	"is_transient": false,
 		        	"transient_type": "streaming"
 		        }

@@ -119,7 +119,7 @@ public class AnalyticStateTriggerCheckFactory {
 						FileStatus[] status = _file_context.util().listStatus(path);				
 						
 						if (status.length > 0) {
-							_logger.info(ErrorUtils.get("For bucket:job {0}:{1}, foound {2} files in bucket {3}", bucket.full_name(), 
+							_logger.info(ErrorUtils.get("For bucket:job {0}:{1}, found {2} files in bucket {3}", bucket.full_name(), 
 									job.map(j -> j.name()).orElse("(no job)"),
 									status.length, trigger.input_resource_name_or_id()
 									));

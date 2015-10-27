@@ -47,14 +47,16 @@ public class AnalyticThreadJobBean implements Serializable {
 	 * @param global_input_input - A global configuration for the inputs, can be overridden by each job
 	 * @param output - The configuration for the job's output
 	 */
-	public AnalyticThreadJobBean(final String name, final Boolean enabled, 
+	public AnalyticThreadJobBean(final String name, 
+									final Boolean enabled, 
 									final String analytic_technology_name_or_id, 
 									final String module_name_or_id, 
 									final List<String> library_names_or_ids, 
 									final String entry_point,
 									final LinkedHashMap<String, Object> config,
 									final DataBucketBean.MasterEnrichmentType analytic_type,
-									final List<String> node_list_rules, final Boolean multi_node_enabled,
+									final List<String> node_list_rules, 
+									final Boolean multi_node_enabled,
 									final List<String> dependencies,
 									final List<AnalyticThreadJobInputBean> inputs,
 									final AnalyticThreadJobInputConfigBean global_input_config,
@@ -68,6 +70,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		this.library_names_or_ids = library_names_or_ids;
 		this.entry_point = entry_point;
 		this.config = config;
+		this.analytic_type = analytic_type;
 		this.node_list_rules = node_list_rules;
 		this.multi_node_enabled = multi_node_enabled;
 		this.dependencies = dependencies;

@@ -44,13 +44,15 @@ import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerBean
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
-import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
@@ -65,6 +67,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
+import fj.Unit;
 import akka.actor.UntypedActor;
 
 /** This actor is responsible for checking the state of the various active and inactive triggers in the system
@@ -82,8 +85,6 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		_service_context = _local_actor_context.getServiceContext();
 		_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 	}
-	
-	//TODO (ALEPH-12): in at least one place it's enriching itself with the bucket from the DB which then doesn't work on test buckets...
 	
 	/* (non-Javadoc)
 	 * @see akka.actor.UntypedActor#onReceive(java.lang.Object)
@@ -176,7 +177,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(trigger_crud, triggers).join();			
+			AnalyticTriggerCrudUtils.storeOrUpdateTriggerStage(message.bucket(), trigger_crud, triggers).join();			
 		}
 		finally { // ie always run this:
 			// Unset the mutexes
@@ -241,8 +242,8 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						//(discard bucket active records)
 						kv.getValue().stream().findFirst().ifPresent(trigger -> {
 
-							final Optional<DataBucketBean> bucket_to_check_reply =
-									BucketUtils.isTestBucket(
+							final Optional<DataBucketBean> bucket_to_check_reply = Lambdas.wrap_u(__ -> {
+									return BucketUtils.isTestBucket(
 											BeanTemplateUtils.build(DataBucketBean.class)
 												.with(DataBucketBean::full_name, trigger.bucket_name())
 											.done().get())
@@ -250,18 +251,51 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 									// Test bucket - get from test
 									_service_context.getCoreManagementDbService().readOnlyVersion().getBucketTestQueue(BucketTimeoutMessage.class)
 										.getObjectById(trigger.bucket_name()) //(test bucket use transformed full name as _id)
-										.<Optional<DataBucketBean>>thenApply(bucket_msg -> bucket_msg.map(msg -> msg.bucket()))
+										.<Optional<DataBucketBean>>thenApply(bucket_msg -> 
+											bucket_msg
+												.map(msg -> msg.bucket()))
 										.join()
 									:
 									// Normal bucket get from bucket store
 									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id(),
+											//(this exclusion just transforms combined harvest+analytics buckets into analytics only, to avoid calling harvest call incorrectly)
 											Arrays.asList(BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::harvest_technology_name_or_id)),
 											false
 											)
-											.join() 
+											.join()
 									;
 									// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
-										
+									
+								})
+								.<Optional<DataBucketBean>>andThen(maybe_bucket -> {
+									return maybe_bucket
+											.map(bucket -> (null == bucket.analytic_thread()) 
+													? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
+													: bucket)
+											.map(bucket -> {
+													return !BucketUtils.isTestBucket(bucket) // for test buckets, override the scheduler to something short
+													? 
+													bucket
+													:
+													BeanTemplateUtils.clone(bucket) 
+														.with(DataBucketBean::analytic_thread,
+															BeanTemplateUtils.clone(bucket.analytic_thread()) //(must exist by this point)
+																.with(AnalyticThreadBean::trigger_config,
+																		BeanTemplateUtils.clone(
+																				Optional.ofNullable(bucket.analytic_thread().trigger_config())
+																						.orElse(BeanTemplateUtils.build(AnalyticThreadTriggerBean.class).done().get())
+																		)
+																			.with(AnalyticThreadTriggerBean::schedule, "10 seconds")
+																		.done()
+																)
+															.done()		
+														)
+													.done();
+											})
+											;
+								})
+								.apply(Unit.unit());
+														
 							//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
 								
 							final SetOnce<AnalyticTriggerStateBean> active_bucket_record = new SetOnce<>();
@@ -275,32 +309,33 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								kv.getValue().stream().forEach(trigger_in -> {
 									
 									Patterns.match().andAct()
-										.when(__ -> TriggerType.none == trigger_in.trigger_type(), __ -> {
+										.when(__ -> AnalyticTriggerBeanUtils.isActiveBucketOrJobRecord(trigger_in), __ -> {
 											
 											// 1) This is an active job, want to know if the job is complete
 											
 											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
-													(null == trigger_in.job_name())
+													AnalyticTriggerBeanUtils.isActiveBucketRecord(trigger_in)
 													? Optional.empty()
-													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
+													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs()
+																						.stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
 											
 											analytic_job_opt.ifPresent(analytic_job -> onAnalyticTrigger_checkActiveJob(bucket_to_check, analytic_job, trigger_in));
 											
 											//(don't care about a reply, will come asynchronously)
-											if (null != trigger_in.job_name()) {
+											if (AnalyticTriggerBeanUtils.isActiveJobRecord(trigger_in)) {
 												mutable_active_jobs.add(trigger_in);
 											}
 											else { // bucket must be active since the bucket record exists
 												active_bucket_record.set(trigger_in); // (can call multiple times, will ignore all but the first)
 											}
 										})
-										.when(__ -> !trigger_in.is_bucket_active() && (null == trigger_in.job_name()), __ -> {
+										.when(__ -> !trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isExternalTrigger(trigger_in), __ -> {
 											
 											// 2) Inactive bucket, check external dependency											
 											onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
 										})
-										.when(__ -> trigger_in.is_bucket_active() && (null != trigger_in.job_name()), __ -> {
-											
+										.when(__ -> trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isInternalTrigger(trigger_in), __ -> {
+
 											// 3) Inactive job, active bucket
 											
 											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
@@ -379,7 +414,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final List<AnalyticTriggerStateBean> mutable_trigger_list_active, final List<AnalyticTriggerStateBean> mutable_trigger_list_dormant)
 	{
 		final boolean is_already_triggered = AnalyticTriggerBeanUtils.checkTriggerLimits(trigger); 
-			
+		
 		//DEBUG
 		//System.out.println("? " + trigger.job_name() + " / " + trigger.input_resource_name_or_id() + ": " + trigger.curr_resource_size() + ": " + is_already_triggered);
 		
@@ -679,12 +714,12 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 								.map(t -> Tuples._2T(t.input_resource_combined(), t.input_data_service()))
 								.collect(Collectors.toSet())
 								;
-								
+														
 						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices, true);
 						
 						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
-								bucket_to_check.full_name()),
-								resources_dataservices.toString()
+								bucket_to_check.full_name(),
+								resources_dataservices.toString())
 								);							
 						
 						return b;

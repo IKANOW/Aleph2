@@ -29,6 +29,8 @@ import java.time.temporal.ChronoUnit;
 
 import org.junit.Test;
 
+import scala.Tuple2;
+
 import com.google.common.collect.ImmutableMap;
 
 import fj.data.Validation;
@@ -237,5 +239,55 @@ public class TestTimeUtils {
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isFail());
 		}
+	}
+	
+	@Test
+	public void test_getTimeInfo() {
+		{
+			final String suffix = "2012-11-14-13:49:48";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH:mm:ss", ChronoUnit.SECONDS)), res);
+		}
+		{
+			final String suffix = "2012-11-14-13:49";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH:mm", ChronoUnit.MINUTES)), res);
+		}
+		{
+			final String suffix = "2012-11-14-13";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH", ChronoUnit.HOURS)), res);
+		}
+		{
+			final String suffix = "2012-11-14";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd", ChronoUnit.DAYS)), res);
+		}
+		{
+			final String suffix = "2012.20";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("YYYY.ww", ChronoUnit.WEEKS)), res);
+		}
+		{
+			final String suffix = "2012-11";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy-MM", ChronoUnit.MONTHS)), res);
+		}
+		{
+			final String suffix = "2012";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.of(Tuples._2T("yyyy", ChronoUnit.YEARS)), res);
+		}
+		{
+			final String suffix = "299";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.empty(), res);
+		}
+		{
+			final String suffix = "fail";
+			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
+			assertEquals(Optional.empty(), res);
+		}
+		
 	}
 }

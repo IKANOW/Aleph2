@@ -32,7 +32,9 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
+
 
 
 
@@ -72,6 +74,7 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -154,6 +157,7 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
 import com.codepoetics.protonpack.StreamUtils;
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
@@ -173,6 +177,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
@@ -502,7 +507,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			
 			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
 					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
-							false, // (not used for streaming) 
+							true, // (not used for streaming) 
 							false, // (not transient, ie final output) 
 							null,  // (no sub-bucket path)
 							DataBucketBean.MasterEnrichmentType.streaming // (not used for non-transient)
@@ -545,10 +550,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			
 			final AnalyticThreadJobBean.AnalyticThreadJobOutputBean output =
 					new AnalyticThreadJobBean.AnalyticThreadJobOutputBean(
-							false, // (not used for streaming) 
+							true, // (preserve existing data by default) 
 							false, // (not transient, ie final output) 
 							null,  // (no sub-bucket path)
-							DataBucketBean.MasterEnrichmentType.batch // (not used for non-transient)
+							null // (not used for non-transient)
 							);					
 	
 			final AnalyticThreadJobBean job = new AnalyticThreadJobBean(
@@ -581,6 +586,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					.with(DataBucketBean::analytic_thread,
 							BeanTemplateUtils.build(AnalyticThreadBean.class)
 								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+								.with(AnalyticThreadBean::trigger_config, 
+										BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+											.with(AnalyticThreadTriggerBean::auto_calculate, true)
+										.done().get())
 							.done().get()
 					)
 					.done();

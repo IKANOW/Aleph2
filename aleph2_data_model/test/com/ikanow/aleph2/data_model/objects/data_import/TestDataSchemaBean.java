@@ -36,6 +36,7 @@ public class TestDataSchemaBean {
 		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean raw = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
 				true,
 				"raw_grouping_time_period",
+				DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.TimeSourcePolicy.batch,
 				"raw_exist_age_max",
 				"raw_codec",
 				null
@@ -43,6 +44,7 @@ public class TestDataSchemaBean {
 		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean json = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
 				false,
 				"json_grouping_time_period",
+				DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.TimeSourcePolicy.clock_time,
 				"json_exist_age_max",
 				null,
 				null
@@ -50,6 +52,7 @@ public class TestDataSchemaBean {
 		DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean processed = new DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean(
 				null,
 				"processed_grouping_time_period",
+				null,
 				"processed_exist_age_max",
 				"processed_codec",
 				null
@@ -73,6 +76,10 @@ public class TestDataSchemaBean {
 		assertEquals("Storage bean raw_grouping_time_period", storage_bean.raw().grouping_time_period(), "raw_grouping_time_period");
 		assertEquals("Storage bean json_grouping_time_period", storage_bean.json().grouping_time_period(), "json_grouping_time_period");
 		assertEquals("Storage bean processed_grouping_time_period", storage_bean.processed().grouping_time_period(), "processed_grouping_time_period");
+		assertEquals("Storage bean raw grouping_time_policy", storage_bean.raw().grouping_time_policy(), DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.TimeSourcePolicy.batch);
+		assertEquals("Storage bean json grouping_time_policy", storage_bean.json().grouping_time_policy(), DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean.TimeSourcePolicy.clock_time);
+		assertEquals("Storage bean processed grouping_time_policy", storage_bean.processed().grouping_time_policy(), null);
+
 		assertEquals("Storage bean raw_exist_age_max", storage_bean.raw().exist_age_max(), "raw_exist_age_max");
 		assertEquals("Storage bean json_exist_age_max", storage_bean.json().exist_age_max(), "json_exist_age_max");
 		assertEquals("Storage bean processed_exist_age_max", storage_bean.processed().exist_age_max(), "processed_exist_age_max");

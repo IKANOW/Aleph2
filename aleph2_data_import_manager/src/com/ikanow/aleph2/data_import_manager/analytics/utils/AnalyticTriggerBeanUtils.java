@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -74,8 +75,15 @@ public class AnalyticTriggerBeanUtils {
 				// (auto_calculate defaults to true if no trigger is specified, false otherwise)
 				return Optional.of(getFullyAutomaticTriggerList(bucket));
 			}
-			else if (trigger_info.map(info -> null != info.trigger()).orElse(false)) {
+			else if (trigger_info.map(info -> null != info.trigger()).orElse(false)) { // manually specified trigger
 				return Optional.of(getSemiAutomaticTriggerStream(trigger_info.get().trigger()).collect(Collectors.toList()));				
+			}
+			else if (trigger_info.map(info -> null != info.schedule()).orElse(false)) { // just run on a schedule, trivial trigger
+				return Optional.of(Arrays.asList(
+							BeanTemplateUtils.build(AnalyticThreadComplexTriggerBean.class)
+								.with(AnalyticThreadComplexTriggerBean::type, TriggerType.time)
+							.done().get()
+						));
 			}
 			else { // manual trigger again
 				return Optional.<List<AnalyticThreadComplexTriggerBean>>empty();				
@@ -87,7 +95,7 @@ public class AnalyticTriggerBeanUtils {
 		final Stream<AnalyticTriggerStateBean> external_state_beans =
 				bucket_dependencies.map(List::stream).orElseGet(Stream::empty)
 					.map(trigger -> {
-						final String[] resource_subchannel = Optional.ofNullable(trigger.resource_name_or_id()).orElse("").split(":");						
+						final String[] resource_subchannel = Optional.ofNullable(trigger.resource_name_or_id()).filter(s -> !s.isEmpty()).orElse(bucket.full_name()).split(":");						
 						
 						return BeanTemplateUtils.build(AnalyticTriggerStateBean.class)
 									//(add the transient params later)
@@ -102,6 +110,7 @@ public class AnalyticTriggerBeanUtils {
 									.with(AnalyticTriggerStateBean::input_resource_name_or_id, resource_subchannel[0])
 									.with(AnalyticTriggerStateBean::input_resource_combined, trigger.resource_name_or_id())
 									//(more transient counts)
+									.with(AnalyticTriggerStateBean::last_resource_size, 0L)
 									.with(AnalyticTriggerStateBean::resource_limit, trigger.resource_trigger_limit())
 									.with(AnalyticTriggerStateBean::locked_to_host, locked_to_host.orElse(null))
 								.done().get();
@@ -284,6 +293,42 @@ public class AnalyticTriggerBeanUtils {
 		else return false;																
 	}
 
+	/** Is the trigger external?
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isExternalTrigger(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none != trigger.trigger_type()) && (null == trigger.job_name());
+	}
+	/** Is the trigger internal?
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isInternalTrigger(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none != trigger.trigger_type()) && (null != trigger.job_name());
+	}
+	/** Is the "trigger" an active job record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveJobRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type()) && (null != trigger.job_name());
+	}
+	/** Is the "trigger" an active bucket record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveBucketRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type()) && (null == trigger.job_name());
+	}
+	/** Is the "trigger" an active bucket or job record
+	 * @param trigger
+	 * @return
+	 */
+	public static boolean isActiveBucketOrJobRecord(final AnalyticTriggerStateBean trigger) {
+		return (TriggerType.none == trigger.trigger_type());
+	}
+	
 	///////////////////////////////////////////////////////////////////////////
 	
 	// TIMING UTILS
@@ -302,6 +347,29 @@ public class AnalyticTriggerBeanUtils {
 		
 		return TimeUtils.getSchedule(check_time, Optional.of(from))
 				.validation(fail -> Date.from(from.toInstant().plus(10L, ChronoUnit.MINUTES)), success -> success);
+	}
+	
+	/** For analytic triggers, need to distinguish on update between the 2 cases:
+	 *  - "every 10 minutes" => run now and then in 10 minutes
+	 *  - "3am" => run at 3am every day
+	 *  This is kinda horrid, but we'll do this by running twice with slightly different times and comparing the results
+	 * @param from
+	 * @param bucket
+	 * @return
+	 */
+	public static boolean scheduleIsRelative(final Date now, final Date next_trigger, DataBucketBean bucket) {
+		
+		// Want to check we don't cross eg a day boundary and mess up when "3pm resolves to" - this is a safe way to do it because can't change hour
+		// without changing minute...
+		final boolean is_on_minute_boundary = 0 == (now.getTime() % 60L);
+		final int offset = is_on_minute_boundary ? +1 : -1;
+		
+		final Date d = getNextCheckTime(Date.from(now.toInstant().plusMillis(offset*500L)), bucket);
+
+		// Basic idea is that eg "every 10 minutes" will be relative to "now" at the second level, but eg "3pm" will be relative to "now" on a much higher level
+		// (eg day in that case) so we adjust by 0.5s and see if that causes the generated times to change
+		// (NOTE: might get this wrong if next trigger and now are very close, but who cares in that case?!)
+		return d.getTime() != next_trigger.getTime();
 	}
 	
 	///////////////////////////////////////////////////////////////////////////

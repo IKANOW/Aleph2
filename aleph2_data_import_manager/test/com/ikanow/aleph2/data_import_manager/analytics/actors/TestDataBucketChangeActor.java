@@ -1593,7 +1593,23 @@ public class TestDataBucketChangeActor {
 	}
 	
 	@Test
-	public void test_enrichToAnalyticsConversion() throws IOException {
+	public void test_enrichToAnalyticsConversion_batch() throws IOException {
+		// Simple functional test
+		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_in.json"), Charsets.UTF_8);
+		final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);
+		
+		final DataBucketBean in = BeanTemplateUtils.from(bucket_in_str, DataBucketBean.class).get();
+		final DataBucketBean out = BeanTemplateUtils.from(bucket_out_str, DataBucketBean.class).get();
+		
+		{
+			final DataBucketBean res = DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(in);
+			
+			assertEquals(BeanTemplateUtils.toJson(out).toString(), BeanTemplateUtils.toJson(res).toString());
+		}		
+	}
+	
+	@Test
+	public void test_enrichToAnalyticsConversion_streaming() throws IOException {
 		// Simple functional test
 		final String bucket_in_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/stream_enrichment_test_in.json"), Charsets.UTF_8);
 		final String bucket_out_str = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/stream_enrichment_test_out.json"), Charsets.UTF_8);
