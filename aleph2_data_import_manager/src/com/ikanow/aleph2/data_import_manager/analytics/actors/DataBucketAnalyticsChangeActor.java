@@ -118,7 +118,6 @@ import org.apache.logging.log4j.Logger;
 
 
 
-import org.elasticsearch.common.collect.ImmutableSet;
 
 import scala.PartialFunction;
 import scala.Tuple2;
