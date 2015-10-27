@@ -71,8 +71,7 @@ public class TimeSliceDirUtils {
 	 */
 	public static Stream<Tuple3<String, Date, Date>> annotateTimedDirectories(final Stream<String> dir_listing) {
 		return dir_listing
-			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("_")))
-			.filter(dir_date -> dir_date._2() >= 0)
+			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
 			.map(dir_date -> Tuples._2T(dir_date._1(), dir_date._1().substring(1 + dir_date._2())))
 			.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), TimeUtils.getDateFromSuffix(dir_date._2())))
 			.filter(dir_datestr_date -> dir_datestr_date._3().isSuccess())
