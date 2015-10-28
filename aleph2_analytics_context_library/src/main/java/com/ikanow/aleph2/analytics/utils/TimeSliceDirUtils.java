@@ -70,9 +70,13 @@ public class TimeSliceDirUtils {
 	 * @return
 	 */
 	public static Stream<Tuple3<String, Date, Date>> annotateTimedDirectories(final Stream<String> dir_listing) {
+		//(first get to last element in path, then if it ends _<date> then grab <date>, else assume it's the whole thing)
 		return dir_listing
-			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
+			.map(dir -> dir.endsWith("/") ? dir.substring(0, dir.length() - 1) : dir)
+			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("/"))) // if not present, returns -1 which means the substring below grabs the entire thing
 			.map(dir_date -> Tuples._2T(dir_date._1(), dir_date._1().substring(1 + dir_date._2())))
+			.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), dir_date._2().lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
+			.map(dir_date_index -> Tuples._2T(dir_date_index._1(), dir_date_index._2().substring(1 + dir_date_index._3())))
 			.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), TimeUtils.getDateFromSuffix(dir_date._2())))
 			.filter(dir_datestr_date -> dir_datestr_date._3().isSuccess())
 			.map(dir_datestr_date -> {

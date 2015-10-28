@@ -89,11 +89,14 @@ public class TestTimeSliceDirUtils {
 				Arrays.asList(
 					"fail1", 
 					"fail2_notdate",
+					"works_2015/",
 					"works_2015",
 					"works_2015-01",
 					"works_2015-01-01",
 					"works_2015-01-01-01",
 					"works_2015.10",
+					"works/2015.10",
+					"works_test/2015.10",
 					"2015-01", //(no _)
 					"2015.10"
 					);
@@ -110,10 +113,13 @@ public class TestTimeSliceDirUtils {
 		
 		assertEquals(Arrays.asList(
 				Tuples._3T("works_2015", d1, d2),
+				Tuples._3T("works_2015", d1, d2),
 				Tuples._3T("works_2015-01", d1, d3),
 				Tuples._3T("works_2015-01-01", d1, d4),
 				Tuples._3T("works_2015-01-01-01", d5, d6),
 				Tuples._3T("works_2015.10", d7, d8),
+				Tuples._3T("works/2015.10", d7, d8),
+				Tuples._3T("works_test/2015.10", d7, d8),
 				Tuples._3T("2015-01", d1, d3),
 				Tuples._3T("2015.10", d7, d8)
 				),
