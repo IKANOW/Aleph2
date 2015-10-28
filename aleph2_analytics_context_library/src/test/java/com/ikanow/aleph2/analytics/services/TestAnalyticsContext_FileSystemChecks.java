@@ -135,7 +135,7 @@ public class TestAnalyticsContext_FileSystemChecks {
 		
 		assertEquals("Timed slices: " + res.stream().collect(Collectors.joining(";")),
 				Arrays.asList("/current/test_2014/*", "/current/test_2015/*"),
-				res.stream().map(s -> s.substring(s.indexOf("/current/"))).collect(Collectors.toList())
+				res.stream().map(s -> s.substring(s.indexOf("/current/"))).sorted().collect(Collectors.toList())
 				);
 	}
 
