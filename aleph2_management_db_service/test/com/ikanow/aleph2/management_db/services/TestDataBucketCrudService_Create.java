@@ -805,11 +805,43 @@ public class TestDataBucketCrudService_Create {
 		}		
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 
+		//9a: check it's fine if entry point or module_name_or_id is inserted
+		{
+			final DataBucketBean bucket_9a = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test9a")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(
+							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.with(HarvestControlMetadataBean::entry_point, "test")
+								.done().get()))
+					.done();
+			
+			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_9a).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					DataBucketCrudService.staticValidation(bucket_9a).isEmpty());
+		}
+		//9b: ditto but module_name_or_id
+		{
+			final DataBucketBean bucket_9b = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test9b")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(
+							BeanTemplateUtils.build(HarvestControlMetadataBean.class)
+								.with(HarvestControlMetadataBean::enabled, true)
+								.with(HarvestControlMetadataBean::module_name_or_id, "test")
+								.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("xxx", ""))
+								.done().get()))
+					.done();
+			
+			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_9b).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					DataBucketCrudService.staticValidation(bucket_9b).isEmpty());			
+		}		
+		
 		// 10) Missing batch config enabled:
 		
 		try {
 			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
-					.with(DataBucketBean::full_name, "/validation/test10")
+					.with(DataBucketBean::full_name, "/validation/test10b")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
 					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
@@ -829,6 +861,38 @@ public class TestDataBucketCrudService_Create {
 		}				
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());			
 		
+		//10a: check it's fine if entry point or module_name_or_id is inserted
+		{
+			final DataBucketBean bucket_10a = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test10")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
+					.with(DataBucketBean::batch_enrichment_configs, 
+							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+									.with(EnrichmentControlMetadataBean::entry_point, "test")
+									.done().get()))
+							.done();
+			
+			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_10a).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					DataBucketCrudService.staticValidation(bucket_10a).isEmpty());
+		}
+		//10b: ditto but module_name_or_id
+		{
+			final DataBucketBean bucket_10b = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test10")
+					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
+					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
+					.with(DataBucketBean::batch_enrichment_configs, 
+							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+									.with(EnrichmentControlMetadataBean::module_name_or_id, "test")
+									.done().get()))
+							.done();
+			
+			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_10b).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					DataBucketCrudService.staticValidation(bucket_10b).isEmpty());			
+		}
 		
 		// 11) Missing streaming config enabled:
 		
