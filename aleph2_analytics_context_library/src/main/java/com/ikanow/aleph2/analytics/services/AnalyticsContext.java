@@ -693,7 +693,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 										_logger.warn("Trying to find paths in " + base_path);
 										
 										final FileContext fc = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-										final Stream<String> paths = 
+										final Stream<String> tmp_paths = 
 												Arrays.stream(fc.util().listStatus(new Path(base_path)))
 													.filter(f -> f.isDirectory())
 													.map(f -> f.getPath().toString())
@@ -701,8 +701,14 @@ public class AnalyticsContext implements IAnalyticsContext {
 
 										/**/
 										_logger.warn("Found1: " + Arrays.stream(fc.util().listStatus(new Path(base_path))).map(f -> f.getPath().toString()).collect(Collectors.joining(";")));																				
-										_logger.warn("Found2: " + TimeSliceDirUtils.annotateTimedDirectories(paths).map(t -> t.toString()).collect(Collectors.joining(";")));
+										_logger.warn("Found2: " + TimeSliceDirUtils.annotateTimedDirectories(tmp_paths).map(t -> t.toString()).collect(Collectors.joining(";")));
 										_logger.warn("Found3: " + TimeSliceDirUtils.getQueryTimeRange(cfg, new Date()));
+
+										final Stream<String> paths = 
+												Arrays.stream(fc.util().listStatus(new Path(base_path)))
+													.filter(f -> f.isDirectory())
+													.map(f -> f.getPath().toString())
+													;										
 										
 										return TimeSliceDirUtils.filterTimedDirectories(
 													TimeSliceDirUtils.annotateTimedDirectories(paths), 
