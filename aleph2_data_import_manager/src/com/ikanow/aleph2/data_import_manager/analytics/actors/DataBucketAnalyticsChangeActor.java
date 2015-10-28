@@ -988,7 +988,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							
 							// Only send on trigger events for messages that started
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
-														j_r -> j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(), 
+														j_r -> {
+															_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																	bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																	j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																	));																
+															return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(); 
+														},
 														me_sibling);									
 									
 							return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
@@ -1025,7 +1031,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
 														j_r -> {
 															if (msg.is_enabled() && Optional.ofNullable(j_r._1().enabled()).orElse(true)) {
-																_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}", bucket.full_name(), j_r._1().name(), j_r._2().success()));																
+																_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																		bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																		j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																		));																
 																return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();
 															}
 															else { // either stopping all, or have disabled certain jobs
@@ -1056,7 +1065,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							// Only send on trigger events for messages that started
 							sendOnTriggerEventMessages(job_results, msg.bucket(), 
 														j_r -> {
-															_logger.info(ErrorUtils.get("Starting test bucket:job {0}:{1} success={2}", bucket.full_name(), j_r._1().name(), j_r._2().success()));
+															_logger.info(ErrorUtils.get("Starting test bucket:job {0}:{1} success={2}{3}", 
+																	bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																	j_r._2().success() ? "" : (" error = " + j_r._2().message())																	
+																	));
 															return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(); 
 														},
 														me_sibling);									
@@ -1144,7 +1156,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 
 									// Only send on trigger events for messages that started
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
-																j_r -> j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(), 
+																j_r -> {
+																	_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																				bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																				j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																			));
+																	return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();																		
+																}, 
 																me_sibling);									
 									
 									// Send a status message (Which will be ignored)
