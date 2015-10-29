@@ -182,7 +182,7 @@ public class KafkaUtils {
 		kafka_properties = new Properties();
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				.put("group.id", "aleph2_unknown")				
-				.put("consumer.timeout.ms", "3000")
+//				.put("consumer.timeout.ms", "3000") //this determines how long a consumer.hasNext() will wait before crashing out (see WrappedConsumerIterator)
 		        .put("auto.commit.interval.ms", "1000")
 		        // Not sure which of these 2 sets is correct, so will list them both!
 		        // these are listed here: https://kafka.apache.org/08/configuration.html
@@ -207,12 +207,16 @@ public class KafkaUtils {
 		fullConfig.entrySet().stream().forEach(e -> kafka_properties.put(e.getKey(), e.getValue().unwrapped()));
 
 		//PRODUCER PROPERTIES		
-		String broker = fullConfig.getString("metadata.broker.list");
-		logger.debug("BROKER: " + broker);
+		if ( fullConfig.hasPath("metadata.broker.list") ) {
+			String broker = fullConfig.getString("metadata.broker.list");
+			logger.debug("BROKER: " + broker);
+		}
 		
-        //CONSUMER PROPERTIES		
-		String zk = fullConfig.getString("zookeeper.connect");
-		logger.debug("ZOOKEEPER: " + zk);
+        //CONSUMER PROPERTIES
+		if ( fullConfig.hasPath("zookeeper.connect") ) {
+			String zk = fullConfig.getString("zookeeper.connect");
+			logger.debug("ZOOKEEPER: " + zk);
+		}
         
         //reset producer so a new one will be created
         if ( producer != null )
@@ -284,7 +288,8 @@ public class KafkaUtils {
 				logger.debug("LEADER WAS ELECTED: " + leader_elected);
 				
 				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic);
+				//timeout is set to 1ms to immediately crash out, no need to waste time, it'll just block forever
+				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic, 1);
 				iter.hasNext();
 				
 				//debug info
