@@ -119,7 +119,7 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	 * @return the technology override fields (documented per enrichment technology)
 	 */
 	public Map<String, Object> technology_override() {
-		return config == null ? null : Collections.unmodifiableMap(technology_override);
+		return technology_override == null ? null : Collections.unmodifiableMap(technology_override);
 	}
 	private String name;
 	private List<String> dependencies;
