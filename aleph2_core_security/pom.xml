@@ -7,6 +7,9 @@
 	<properties>
 		<aleph2.scope>compile</aleph2.scope>
 		<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+		<!-- Overridden in test_depdendencies profile that is activated if skip 
+			tests is true -->
+		<maven.test.skip>true</maven.test.skip>
 	</properties>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
@@ -140,12 +143,12 @@
 			<version>${aleph2.version}</version>
 			<scope>${aleph2.scope}</scope>
 		</dependency>
-	  	<dependency>
-	  		<groupId>com.ikanow.aleph2</groupId>
-	  		<artifactId>aleph2_core_distributed_services_library</artifactId>
-	  		<version>${aleph2.version}</version>
+		<dependency>
+			<groupId>com.ikanow.aleph2</groupId>
+			<artifactId>aleph2_core_distributed_services_library</artifactId>
+			<version>${aleph2.version}</version>
 			<scope>${aleph2.scope}</scope>
-	  	</dependency>
+		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
@@ -153,32 +156,47 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-		  <groupId>org.apache.shiro</groupId>
-		  <artifactId>shiro-core</artifactId>
-		  <version>1.2.4</version>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-core</artifactId>
+			<version>1.2.4</version>
 		</dependency>
 		<dependency>
-		  <groupId>org.apache.shiro</groupId>
-		  <artifactId>shiro-guice</artifactId>
-		  <version>1.2.4</version>
-		</dependency>        
-        <!-- Shiro uses SLF4J for logging.  We'll use the 'simple' binding
-             in this example app.  See http://www.slf4j.org for more info. -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.6.1</version>
-            <scope>test</scope>
-        </dependency>		
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-guice</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+		<!-- Shiro uses SLF4J for logging. We'll use the 'simple' binding in this 
+			example app. See http://www.slf4j.org for more info. -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.6.1</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.shiro</groupId>
 			<artifactId>shiro-ehcache</artifactId>
 			<version>1.2.4</version>
 		</dependency>
-<!-- 		<dependency>
-			<groupId>net.sf.ehcache</groupId>
-			<artifactId>ehcache</artifactId>
-			<version>2.10.0</version>
-		</dependency> -->
+		<!-- <dependency> <groupId>net.sf.ehcache</groupId> <artifactId>ehcache</artifactId> 
+			<version>2.10.0</version> </dependency> -->
 	</dependencies>
+	<!-- Test dependencies -->
+	<profiles>
+		<profile>
+			<id>test_dependencies</id>
+			<activation>
+				<property>
+					<name>skipTests</name>
+					<value>!true</value>
+				</property>
+			</activation>
+			<properties>
+				<maven.test.skip>false</maven.test.skip>
+			</properties>
+			<dependencies>
+				<!--  TODO put contrib dependencies in here -->
+			</dependencies>
+		</profile>
+	</profiles>
 </project>
