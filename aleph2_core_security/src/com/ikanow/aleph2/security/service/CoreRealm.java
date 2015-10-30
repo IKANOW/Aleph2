@@ -162,12 +162,4 @@ public class CoreRealm extends AuthorizingRealm implements IClearableRealmCache 
 		
     }
      
-    protected void loadRoles(){
-		 logger.debug("loadRoles");
-    	
-    }
-
-    protected void loadUsers(){
-		 logger.debug("loadRoles");    	
-    }
 }

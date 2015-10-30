@@ -489,5 +489,10 @@ public class SecurityServiceTest {
 	public void testMisc() throws Exception{
 		((SecurityService)securityService).setSessionTimeout(900000);
 		assertNotNull(SecurityService.getExtraDependencyModules());
+		((SecurityService)securityService).youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules();
+		securityService.getUnderlyingArtefacts();
+		securityService.getUnderlyingPlatformDriver(this.getClass(), Optional.empty());
+		
+		
 	}
 }
