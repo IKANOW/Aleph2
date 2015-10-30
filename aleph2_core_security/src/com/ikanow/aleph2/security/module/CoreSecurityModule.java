@@ -28,7 +28,6 @@ import org.apache.shiro.mgt.SecurityManager;
 
 import com.google.inject.binder.AnnotatedBindingBuilder;
 import com.ikanow.aleph2.security.service.CoreRealm;
-import com.ikanow.aleph2.security.service.SecurityServiceTest;
 
 /** Core module for Security Service
  * @author Joern

@@ -336,6 +336,8 @@ public class SecurityServiceTest {
 		securedCrudService.getObjectBySpec(query);
 		securedCrudService.getObjectBySpec(query,Arrays.asList("f"),true);
 		securedCrudService.getObjectById(1,Arrays.asList("f"),true);
+		securedCrudService.optimizeQuery(Arrays.asList("f"));
+		securedCrudService.deregisterOptimizedQuery(Arrays.asList("f"));
 		
 	}
 
