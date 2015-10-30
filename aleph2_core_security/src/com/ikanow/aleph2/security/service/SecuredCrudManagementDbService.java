@@ -414,12 +414,14 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 */
 	protected boolean checkReadPermissions(Object new_object, boolean throwOrReturn) {
 		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
-		
-		boolean permitted = securityService.isPermitted(subject,permission); 
-		if(!permitted && throwOrReturn){
-			String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permission+")for "+new_object.getClass();
-			logger.error(msg);
-			throw new SecurityException(msg);					
+		boolean permitted = false;
+		if(permission!=null){
+			permitted = securityService.isPermitted(subject,permission); 
+			if(!permitted && throwOrReturn){
+				String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permission+")for "+new_object.getClass();
+				logger.error(msg);
+				throw new SecurityException(msg);					
+			}
 		}
 		return permitted;
 	}

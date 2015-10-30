@@ -36,6 +36,8 @@ public class PermissionExtractor {
 				return ((DataBucketBean) object)._id();
 			} else if (object instanceof DataBucketStatusBean) {
 				return ((DataBucketStatusBean) object)._id();
+			} else if (object instanceof String) {
+				return ((String)object);
 			} else {
 				// try using reflection getting id or _id() or getId()
 				try {
@@ -60,7 +62,7 @@ public class PermissionExtractor {
 					// Ignore by default
 				}
 				try {
-					Field f = object.getClass().getField("_id");
+					Field f = object.getClass().getDeclaredField("_id");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
 					return ""+retVal;
@@ -68,7 +70,7 @@ public class PermissionExtractor {
 					// Ignore by default
 				}
 				try {
-					Field f = object.getClass().getField("id");
+					Field f = object.getClass().getDeclaredField("id");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
 					return ""+retVal;
@@ -114,7 +116,7 @@ public class PermissionExtractor {
 					// Ignore by default
 				}
 				try {
-					Field f = object.getClass().getField("_ownerId");
+					Field f = object.getClass().getDeclaredField("_ownerId");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
 					return ""+retVal;
@@ -122,7 +124,7 @@ public class PermissionExtractor {
 					// Ignore by default
 				}
 				try {
-					Field f = object.getClass().getField("ownerId");
+					Field f = object.getClass().getDeclaredField("ownerId");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
 					return ""+retVal;
