@@ -74,9 +74,13 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	public List<String> dependencies() {
 		return dependencies == null ? null : Collections.unmodifiableList(dependencies);
 	}
+	
+	public static final String UNKNOWN_GROUPING_FIELDS = "?";
+	
 	/** Where supported (will generally be supported with restrictions for enrichment technologies used in aleph2, eg in Hadoop only once per bucket) enables the 
 	 *  incoming data objects to be grouped by this list of fields (each module instance then sees only records with this grouping)
-	 * @return the field list to group
+	 *  Can be set to "?" in which case it is the responsibility of the module to set the fields
+	 * @return the field list to group ("?" for unknown)
 	 */
 	public List<String> grouping_fields() {
 		return grouping_fields == null ? null : Collections.unmodifiableList(grouping_fields);

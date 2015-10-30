@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -40,10 +41,11 @@ public interface IEnrichmentBatchModule {
 	 *  then clone(IEnrichmentBatchModule) is called.
 	 * @param context - a context 
 	 * @param bucket - the bucket for which this enrichment is taking place
-	 * @param previous_next - the previous and next stages of the processing (note input/input is pre-deduplication/merge, output/output is post-deduplication/merge), note that prev only appears as grouping if the grouping key was the same 
+	 * @param previous_next - the previous and next stages of the processing (note input/input is pre-deduplication/merge, output/output is post-deduplication/merge), note that prev only appears as grouping if the grouping key was the same
+	 * @param next_grouping_fields - if the next stage requires grouped fields, this is the list. If it's present but empty, this means the stage has automated fields and the needs to be grouped on a per "emit" basis. 
 	 */
 	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final EnrichmentControlMetadataBean control, 
-								final Tuple2<ProcessingStage, ProcessingStage> previous_next);
+								final Tuple2<ProcessingStage, ProcessingStage> previous_next, final Optional<List<String>> next_grouping_fields);
 	
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a stream of (id, object, lazy binary stream) for processing 
@@ -54,7 +56,7 @@ public interface IEnrichmentBatchModule {
 
 	/** Called when a stage is complete - enables tidying up and similar (flushing)
 	 *  Is called on every instance of the IEnrichmentBatchModule spawned
-	 * @param is_original - the instance on which onStageInitialize (always called last, ie can clean up any shared resources)
+	 * @param is_original - the instance on which onStageInitialize was called (always called last, ie can clean up any shared resources)
 	 */
 	void onStageComplete(boolean is_original);	
 	

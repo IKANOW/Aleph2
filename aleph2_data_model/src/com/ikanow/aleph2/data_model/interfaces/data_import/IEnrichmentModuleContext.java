@@ -116,17 +116,19 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	/** The second stage of the nicer-looking but less efficient emit process - emit the mutated object
 	 * @param id - the id received with the object from the EnrichmentBatchModule call (NOT USED IN STREAMING ENRICHMENT)
 	 * @param mutated_json - the mutated object to emit
-	 * @param annotation - a set of annotations to include in the emitted object
+	 * @param annotations - a set of annotations to include in the emitted object
+	 * @param grouping_key - where the grouping fields are set to unknown ("?"), any JsonNode can be used as the grouping field and can be passed in here. In other cases the behavior of setting this is undefined.
 	 */
-	void emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotation);
+	void emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
 	
 	/** The most efficient (slightly uglier) emit process - emit the original object with a list of applied mutations
 	 * @param id - the id received with the object from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
 	 * @param original_json - the json doc received
 	 * @param mutations - a list of "mutations" that are applied to the original_json (replace values, merge maps and sets, append collections; null value unsets)
 	 * @param annotation - a set of annotations to include in the emitted object
+	 * @param grouping_key - where the grouping fields are set to root ("?"), any JsonNode can be used as the grouping field and can be passed in here. In other cases the behavior of setting this is undefined.
 	 */
-	void emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations);
+	void emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
 	
 	/** Enables the batch process to store an object that failed for future analysis
 	 * @param id the id of the object received from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
