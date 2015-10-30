@@ -17,6 +17,8 @@ package com.ikanow.aleph2.security.module;
 
 import java.util.Collection;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.config.ConfigurationException;
@@ -26,11 +28,14 @@ import org.apache.shiro.mgt.SecurityManager;
 
 import com.google.inject.binder.AnnotatedBindingBuilder;
 import com.ikanow.aleph2.security.service.CoreRealm;
+import com.ikanow.aleph2.security.service.SecurityServiceTest;
 
 /** Core module for Security Service
  * @author Joern
  */
 public class CoreSecurityModule extends ShiroModule {
+	private static final Logger logger = LogManager.getLogger(CoreSecurityModule.class);
+
 	static{
 		// prevent ehcache from making calls
 		System.setProperty("net.sf.ehcache.skipUpdateCheck","true");
@@ -74,18 +79,20 @@ public class CoreSecurityModule extends ShiroModule {
      * Place holder to overwrite. 
      */
     protected void bindCredentialsMatcher(){
-    	
+    	logger.debug("bindCredentialsMatcher -placeholder, override in sub-modules");
     }
     /** 
      * Place holder to overwrite. 
      */
     protected void bindAuthProviders(){
+    	logger.debug("bindAuthProviders -placeholder, override in sub-modules");
     }
 
     /** 
      * Place holder to overwrite. 
      */
     protected void bindRoleProviders(){
+    	logger.debug("bindRoleProviders - placeholder, override in sub-modules");
     }
     
     /**

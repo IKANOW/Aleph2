@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,21 +31,34 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.security.utils.ErrorUtils;
 import com.ikanow.aleph2.security.utils.ProfilingUtility;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
+import static org.mockito.Mockito.*;
+
+
 public class SecurityServiceTest {
 	private static final Logger logger = LogManager.getLogger(SecurityServiceTest.class);
 
 	protected Config config = null;
+	
 
 	@Inject
 	protected IServiceContext _temp_service_context = null;
@@ -75,8 +89,8 @@ public class SecurityServiceTest {
 			}
 			this.securityService = _service_context.getSecurityService();
 		} catch (Throwable e) {
+			logger.error(ErrorUtils.getLongForm(ErrorUtils.EXCEPTION_CAUGHT, e));
 
-			e.printStackTrace();
 		}
 
 	}
@@ -248,7 +262,6 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	@Ignore
 	public void testJvmSecurity(){
 		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
@@ -298,6 +311,31 @@ public class SecurityServiceTest {
 		ISubject subject = securityService.loginAsSystem();			
 		securityService.releaseRunAs(subject);		
 		securityService.runAs(subject, Arrays.asList("testUser"));
+		
+	}
+	
+	@Test
+	public void testSecuredCrudManagementService(){
+		 AuthorizationBean authBean = new AuthorizationBean("admin");
+		
+		IDummyCrudService mockedDelegate = mock(IDummyCrudService.class);
+		
+		
+		CompletableFuture<Optional<String>> future = CompletableFuture.completedFuture(Optional.of("abc"));
+		ManagementFuture<Optional<String>> managedFuture =  FutureUtils.createManagementFuture(future);
+		when(mockedDelegate.getObjectBySpec(any())).thenReturn(managedFuture);
+		when(mockedDelegate.getObjectById(any())).thenReturn(managedFuture);
+		
+		DummySecuredCrudService securedCrudService = new DummySecuredCrudService(_service_context, mockedDelegate, authBean);
+		
+		securedCrudService.storeObject("abc");
+		securedCrudService.storeObjects(Arrays.asList("abc","efg"));
+		securedCrudService.storeObjects(Arrays.asList("abc","efg"),false);
+		securedCrudService.optimizeQuery(Arrays.asList("f"));
+		SingleQueryComponent<String> query = CrudUtils.allOf(String.class);
+		securedCrudService.getObjectBySpec(query);
+		securedCrudService.getObjectBySpec(query,Arrays.asList("f"),true);
+		securedCrudService.getObjectById(1,Arrays.asList("f"),true);
 		
 	}
 
