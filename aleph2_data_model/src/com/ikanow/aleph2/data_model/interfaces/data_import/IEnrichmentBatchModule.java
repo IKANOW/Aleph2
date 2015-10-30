@@ -15,6 +15,7 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -30,24 +31,32 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
  */
 public interface IEnrichmentBatchModule {
 
+	/** The different types of processing stage
+	 * @author Alex
+	 */
+	public enum ProcessingStage { input, batch, grouping, output, unknown };
+	
 	/** Called when the stage (eg map or reduce) is starting
 	 *  Note that this is only called once per set of onObjectBatches - if multiple instances of the batch module are spawned (eg when grouping)
 	 *  then clone(IEnrichmentBatchModule) is called.
 	 * @param context - a context 
 	 * @param bucket - the bucket for which this enrichment is taking place
-	 * @param final_stage - this is true if this is the final step before the object is stored
+	 * @param previous_next - the previous and next stages of the processing (note input/input is pre-deduplication/merge, output/output is post-deduplication/merge), note that prev only appears as grouping if the grouping key was the same
+	 * @param next_grouping_fields - if the next stage requires grouped fields, this is the list. If it's present but empty, this means the stage has automated fields and the needs to be grouped on a per "emit" basis. 
 	 */
-	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final EnrichmentControlMetadataBean control, final boolean final_stage);
+	void onStageInitialize(final IEnrichmentModuleContext context, final  DataBucketBean bucket, final EnrichmentControlMetadataBean control, 
+								final Tuple2<ProcessingStage, ProcessingStage> previous_next, final Optional<List<String>> next_grouping_fields);
 	
 	/** A batch of objects is ready for processing (unless one of the context.emitObjects is called, the object will be discarded)
 	 * @param batch a stream of (id, object, lazy binary stream) for processing 
 	 * @param batch_size - if this is present then the stream corresponds to a set of records of known size, if not then it's a stream of unknown size (this normally only occurs
+	 * @param grouping_key - if this stage has records grouped by a grouping key (represented as a JsonNode) - note that if prev stage is also grouping this indicates an intermediate grouping took place (Eg combine)
 	 */
 	void onObjectBatch(final Stream<Tuple2<Long, IBatchRecord>> batch, Optional<Integer> batch_size, Optional<JsonNode> grouping_key);
 
 	/** Called when a stage is complete - enables tidying up and similar (flushing)
 	 *  Is called on every instance of the IEnrichmentBatchModule spawned
-	 * @param is_original - the instance on which onStageInitialize (always called last, ie can clean up any shared resources)
+	 * @param is_original - the instance on which onStageInitialize was called (always called last, ie can clean up any shared resources)
 	 */
 	void onStageComplete(boolean is_original);	
 	
