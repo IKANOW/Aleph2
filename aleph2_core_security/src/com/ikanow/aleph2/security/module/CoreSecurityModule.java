@@ -49,6 +49,8 @@ public class CoreSecurityModule extends ShiroModule {
     }
 
     protected void bindCacheManager() {
+    	
+    	System.setProperty("ehcache.disk.store.dir", System.getProperty("java.io.tmpdir") +"/shiro-cache-" + System.getProperty("user.name"));
     	bind(CacheManager.class).toInstance(new EhCacheManager(){
     	    public String getCacheManagerConfigFile() {
     	        return "classpath:ehcache.xml";
