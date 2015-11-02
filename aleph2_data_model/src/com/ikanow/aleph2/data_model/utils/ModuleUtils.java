@@ -31,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -113,7 +114,7 @@ public class ModuleUtils {
 	 * @throws Exception 
 	 */
 	protected static void loadModulesFromConfig(Config config) throws Exception {
-		initialize(config);		
+		initialize(config, Optional.empty());		
 	}
 	
 	/**
@@ -416,7 +417,7 @@ public class ModuleUtils {
 	 * @param config
 	 * @throws Exception
 	 */
-	private static void initialize(Config config) throws Exception {
+	private static void initialize(Config config, Optional<Function<List<Module>, Injector>> injector_builder_lambda) throws Exception {
 		saved_config = config;
 		final Config subconfig = PropertiesUtils.getSubConfig(config, GlobalPropertiesBean.PROPERTIES_ROOT).orElse(null);
 		synchronized (ModuleUtils.class) {
@@ -425,7 +426,8 @@ public class ModuleUtils {
 		if ( parent_injector != null)
 			logger.warn("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
 		interfaceHasDefault = new HashSet<Class<?>>();
-		parent_injector = Guice.createInjector(new ServiceModule());		
+		final ServiceModule service_module = new ServiceModule();
+		parent_injector = injector_builder_lambda.map(f -> f.apply(Arrays.asList(service_module))).orElseGet(() -> Guice.createInjector(service_module));		
 		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
 	}
 	
@@ -440,13 +442,13 @@ public class ModuleUtils {
 	 * @return
 	 * @throws Exception
 	 */
-	private static Injector createInjector(List<Module> modules, Optional<Config> config) throws Exception {		
+	private static Injector createInjector(List<Module> modules, Optional<Config> config, Optional<Function<List<Module>, Injector>> injector_builder_lambda) throws Exception {		
 			
 		try {
 		if ( parent_injector == null && !config.isPresent() )
 			config = Optional.of(ConfigFactory.load());
 		if ( config.isPresent() )
-			initialize(config.get());
+			initialize(config.get(), injector_builder_lambda);
 		
 		} catch (Throwable e) {
 			System.out.println(e.getMessage());
@@ -471,7 +473,7 @@ public class ModuleUtils {
 	 */
 	public static Injector createTestInjector(List<Module> modules, Optional<Config> config) throws Exception {
 		_test_mode.set(true); 
-		final Injector i = createInjector(modules, config);
+		final Injector i = createInjector(modules, config, Optional.empty());
 		_test_injector.obtrudeValue(i);
 		return i;
 	}
@@ -503,6 +505,24 @@ public class ModuleUtils {
 	 * @throws Exception
 	 */
 	public static <T> T initializeApplication(final List<Module> modules, final Optional<Config> config, final Either<Class<T>, T> application) throws Exception {
+		return initializeApplication(modules, config, application, Optional.empty());
+		
+	}
+	/** APP LEVEL VERSION - ONLY CREATES STUFF ONCE. CANNOT NORMALLY BE CALLED FROM JUNIT TESTS - USE createTestInjector for that
+	 * Creates a single application level injector and either injects members into application, or 
+	 * If called multiple times, will wait for the first time to complete before performing the desired action.
+	 * To get the created injector, use getAppInjector
+	 * 
+	 * @param modules Any modules you wanted added to your child injector (put your bindings in these)
+	 * @param config If exists will reset injectors to create defaults via the config
+	 * @param application - either a class to create, or an object to inject
+	 * @return
+	 * @throws Exception
+	 */
+	public static <T> T initializeApplication(final List<Module> modules, final Optional<Config> config, final Either<Class<T>, T> application,
+			Optional<Function<List<Module>, Injector>> injector_builder_lambda
+			) throws Exception
+	{
 		_test_mode.set(false); 
 		boolean initializing = false;
 		T return_val = null;
@@ -543,7 +563,7 @@ public class ModuleUtils {
 		else { // this version actually gets to complete it
 			try {
 				// If here then we're the only person that gets to initialize guice
-				_app_injector.complete(createInjector(modules, config));
+				_app_injector.complete(createInjector(modules, config, injector_builder_lambda));
 				return_val = Lambdas.wrap_u(on_complete).get();
 				_called_ctor.complete(true);
 			}

@@ -27,7 +27,8 @@
             user.dir - User's current working directory
             java.io.tmpdir - Default temp file path
     -->
-    <diskStore path="java.io.tmpdir/shiro-ehcache/user.home/"/>
+<!--     <diskStore path="java.io.tmpdir/shiro-ehcache/1/user.name/"/> -->
+    <diskStore path="ehcache.disk.store.dir"/>
 
 
     <!--Default Cache configuration. These will applied to caches programmatically created through

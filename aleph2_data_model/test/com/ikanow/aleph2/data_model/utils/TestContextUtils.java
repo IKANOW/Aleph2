@@ -492,13 +492,13 @@ public class TestContextUtils {
 
 		@Override
 		public void emitMutableObject(long id, ObjectNode mutated_json,
-				Optional<AnnotationBean> annotation) {
+				Optional<AnnotationBean> annotation, Optional<JsonNode> grouping_fields) {
 		}
 
 		@Override
 		public void emitImmutableObject(long id, JsonNode original_json,
 				Optional<ObjectNode> mutations,
-				Optional<AnnotationBean> annotations) {
+				Optional<AnnotationBean> annotations, Optional<JsonNode> grouping_fields) {
 		}
 
 		@Override

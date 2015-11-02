@@ -54,19 +54,6 @@ public class ProfilingUtility
 	 * This method start the time measurement for one key (method Name) , e.g. if you want to track a time, e.g. before a function entry.
 	 * @param key
 	 */
-	public static void timeStopAndOut(String key){
-		long timeStop = System.currentTimeMillis();
-		Long timeStart = (Long)getInstance().times.get(key);
-		long timeUsed =0;
-		if(timeStart!=null){
-			timeUsed = timeStop - timeStart.longValue();
-		}
-		System.out.println("Profiled: "+key+"="+timeUsed);		
-	}
-	/** 
-	 * This method start the time measurement for one key (method Name) , e.g. if you want to track a time, e.g. before a function entry.
-	 * @param key
-	 */
 	public static void timeStopAndLog(String key){
 		long timeStop = System.currentTimeMillis();
 		Long timeStart = (Long)getInstance().times.get(key);

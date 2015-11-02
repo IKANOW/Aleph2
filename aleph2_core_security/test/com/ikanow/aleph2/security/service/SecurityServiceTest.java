@@ -16,12 +16,24 @@
 package com.ikanow.aleph2.security.service;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyCollectionOf;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,19 +44,34 @@ import org.junit.Test;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean.LibraryType;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
+import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.security.utils.ErrorUtils;
 import com.ikanow.aleph2.security.utils.ProfilingUtility;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
+
 public class SecurityServiceTest {
 	private static final Logger logger = LogManager.getLogger(SecurityServiceTest.class);
 
 	protected Config config = null;
+	
 
 	@Inject
 	protected IServiceContext _temp_service_context = null;
@@ -75,8 +102,8 @@ public class SecurityServiceTest {
 			}
 			this.securityService = _service_context.getSecurityService();
 		} catch (Throwable e) {
+			logger.error(ErrorUtils.getLongForm(ErrorUtils.EXCEPTION_CAUGHT, e));
 
-			e.printStackTrace();
 		}
 
 	}
@@ -87,10 +114,11 @@ public class SecurityServiceTest {
         try {
 		} catch (AuthenticationException e) {
 			logger.info("Caught (expected) Authentication exception:"+e.getMessage());
-			
+		}	
 		
-		assertEquals(true, subject.isAuthenticated());		
-		}
+		assertEquals(true, subject.isAuthenticated());
+		logger.info("Authentication successful for "+subject.getName());
+		
 	}
 	
 	@Test
@@ -248,7 +276,6 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	@Ignore
 	public void testJvmSecurity(){
 		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
@@ -300,5 +327,172 @@ public class SecurityServiceTest {
 		securityService.runAs(subject, Arrays.asList("testUser"));
 		
 	}
+	
+	@Test
+	public void testSecuredCrudManagementService() throws Exception{
+		 AuthorizationBean authBean = new AuthorizationBean("admin");
+		
+		IDummyCrudService mockedDelegate = mock(IDummyCrudService.class);
+		
+		
+		CompletableFuture<Optional<String>> future = CompletableFuture.completedFuture(Optional.of("abc"));
+		ManagementFuture<Optional<String>> managedFuture =  FutureUtils.createManagementFuture(future);
+		when(mockedDelegate.getObjectBySpec(any())).thenReturn(managedFuture);
+		when(mockedDelegate.getObjectById(any())).thenReturn(managedFuture);
+		when(mockedDelegate.getFilteredRepo(any(),any(),any())).thenReturn(mockedDelegate);
+		
+		Cursor<String> cursor = new Cursor<String>(){
+			private List<String> l = Arrays.asList("a","b","c");
+			private Iterator<String> iterator = l.iterator();
+			@Override
+			public Iterator<String> iterator() {
+				return iterator;
+			}
 
+			@Override
+			public void close() throws Exception {				
+				
+			}
+
+			@Override
+			public long count() {
+				return l.size();
+			}
+			
+		};
+		CompletableFuture<Cursor<String>> future2 = CompletableFuture.completedFuture(cursor);
+		ManagementFuture<Cursor<String>> result2 =  FutureUtils.createManagementFuture(future2);
+		when(mockedDelegate.getObjectsBySpec(any())).thenReturn(result2);		
+		when(mockedDelegate.getObjectsBySpec(any(),(List<String>) anyCollectionOf(String.class),anyBoolean())).thenReturn(result2);
+		
+		IManagementCrudService<String> securedCrudService = securityService.secured(mockedDelegate, authBean);
+		//DummySecuredCrudService securedCrudService = new DummySecuredCrudService(_service_context, mockedDelegate, authBean);
+		((SecuredCrudManagementDbService<String>)securedCrudService).setPermissionExtractor(((SecuredCrudManagementDbService<String>)securedCrudService).getPermissionExtractor());
+		securedCrudService.storeObject("abc");
+		securedCrudService.storeObject("abc",true);
+		securedCrudService.storeObjects(Arrays.asList("abc","efg"));
+		securedCrudService.storeObjects(Arrays.asList("abc","efg"),false);
+		securedCrudService.optimizeQuery(Arrays.asList("f"));
+		SingleQueryComponent<String> query = CrudUtils.allOf(String.class);
+		securedCrudService.getObjectBySpec(query);
+		securedCrudService.getObjectBySpec(query,Arrays.asList("f"),true);
+		securedCrudService.getObjectById(1);
+		securedCrudService.getObjectById(1,Arrays.asList("f"),true);
+		securedCrudService.optimizeQuery(Arrays.asList("f"));
+		securedCrudService.deregisterOptimizedQuery(Arrays.asList("f"));
+		securedCrudService.getFilteredRepo("a",Optional.empty(),Optional.empty());
+		ManagementFuture<Cursor<String>> result3 = securedCrudService.getObjectsBySpec(query);
+		Cursor<String> c3 = result3.get();
+		while(c3.iterator().hasNext()){
+			c3.iterator().next();
+		}
+		c3.count();
+		c3.close();
+		securedCrudService.getObjectsBySpec(query,Arrays.asList("f"),true);
+		securedCrudService.countObjectsBySpec(query);
+		securedCrudService.countObjects();
+		UpdateComponent<String> uc = CrudUtils.update(String.class);
+		securedCrudService.updateObjectById(1, uc);
+		securedCrudService.updateObjectBySpec(query,Optional.empty(),uc);
+		securedCrudService.updateObjectsBySpec(query,Optional.empty(),uc);
+		securedCrudService.updateAndReturnObjectBySpec(query,Optional.empty(),uc,Optional.empty(),Arrays.asList("f"),true);
+		securedCrudService.deleteObjectById(1);
+		securedCrudService.deleteObjectBySpec(query);
+		securedCrudService.deleteObjectsBySpec(query);
+		securedCrudService.deleteDatastore();
+		securedCrudService.getRawService();
+		securedCrudService.getSearchService();
+		securedCrudService.getUnderlyingPlatformDriver(this.getClass(),Optional.empty());
+		securedCrudService.getCrudService();
+		
+		}
+		
+	@Test
+	public void testPermissionExtractor(){
+		PermissionExtractor extractor = new PermissionExtractor();
+		SharedLibraryBean libraryBean = new SharedLibraryBean("1", "display_name", "path_name",
+				LibraryType.misc_archive, "subtype", "owner_id",
+				new HashSet(), 
+				"batch_streaming_entry_point","batch_enrichment_entry_point"," misc_entry_point",
+				new HashMap());
+		assertNotNull(extractor.extractPermissionIdentifier(libraryBean));
+		
+		DataBucketBean dataBucketBean = mock(DataBucketBean.class);
+		when(dataBucketBean._id()).thenReturn("1");
+		when(dataBucketBean.owner_id()).thenReturn("99");
+		assertNotNull(extractor.extractPermissionIdentifier(dataBucketBean));
+		DataBucketStatusBean dataBucketStatusBean = mock(DataBucketStatusBean.class);
+		when(dataBucketStatusBean._id()).thenReturn("2");
+		
+		assertNotNull(extractor.extractPermissionIdentifier(
+				new TestWithId(){
+			public String _id(){
+				return "1";
+			};
+		}));
+		assertNotNull(extractor.extractPermissionIdentifier(
+				new TestWithId(){
+			public String id(){
+				return "2";
+			};
+		}));
+		assertNotNull(extractor.extractPermissionIdentifier(
+				new TestWithId(){
+			public String getId(){
+				return "3";
+			};
+		}));
+		assertNotNull(extractor.extractPermissionIdentifier(
+				new TestWithId(){
+					protected String _id = "4";
+					
+		}));		
+		assertNotNull(extractor.extractPermissionIdentifier(new TestWithId()));
+		
+		assertNotNull(extractor.extractOwnerIdentifier(libraryBean));
+		assertNotNull(extractor.extractOwnerIdentifier(dataBucketBean));
+		assertNotNull(extractor.extractOwnerIdentifier(
+				new TestWithOwnerId(){
+			public String _ownerId(){
+				return "91";
+			};
+		}));
+		assertNotNull(extractor.extractOwnerIdentifier(
+				new TestWithOwnerId(){
+			public String ownerId(){
+				return "92";
+			};
+		}));
+		assertNotNull(extractor.extractOwnerIdentifier(
+				new TestWithOwnerId(){
+			public String getOwnerId(){
+				return "93";
+			};
+		}));
+		assertNotNull(extractor.extractOwnerIdentifier(
+				new TestWithOwnerId(){
+					protected String _ownerId = "94";
+					
+		}));		
+		assertNotNull(extractor.extractOwnerIdentifier(new TestWithOwnerId()));
+				
+	}
+	
+	private class TestWithId {
+		protected String id = "5";
+	}
+	private class TestWithOwnerId {
+		protected String ownerId = "95";
+	}
+
+	@Test
+	public void testMisc() throws Exception{
+		((SecurityService)securityService).setSessionTimeout(900000);
+		assertNotNull(SecurityService.getExtraDependencyModules());
+		((SecurityService)securityService).youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules();
+		securityService.getUnderlyingArtefacts();
+		securityService.getUnderlyingPlatformDriver(this.getClass(), Optional.empty());
+		
+		
+	}
 }
