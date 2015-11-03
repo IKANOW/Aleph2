@@ -18,8 +18,11 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -33,6 +36,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.Operator;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleBeanQueryComponent;
 
 public class TestBucketUtils {
 
@@ -157,6 +163,81 @@ public class TestBucketUtils {
 		assertEquals("misc_test1", BucketUtils.getEntryPoint(test_map, libs_case).get());
 		assertFalse("Entry point not found", BucketUtils.getEntryPoint(test_map, libs_case2).isPresent());
 		assertEquals("batch_test2", BucketUtils.getBatchEntryPoint(test_map, libs_case3).get());
+	}
+	
+	@Test
+	public void test_multiBuckets() {
+		
+		// 1) Quick test of the lowest level util:
+		
+		{
+			assertEquals("aley", BucketUtils.getUpperLimit("alex"));
+		}
+		
+		// 2) Let's test the predicate we get returned:
+		
+		final List<String> test_in_list = 
+				Arrays.asList(
+						"/easy_case",
+						"/easy_case/suffix",
+						"/wildcard_case/**",
+						"/another/wild*card/case",
+						"/final*"
+						);
+		
+		{
+			final Predicate<String> filter = BucketUtils.refineMultiBucketQuery(test_in_list);
+			
+			// Ones that match:
+			final List<String> test_out_list_pass = 
+					Arrays.asList(
+							"/easy_case",
+							"/easy_case/suffix",
+							"/wildcard_case/nested1/nested2",
+							"/another/wildXXXcard/case",
+							"/finally"			
+							);
+			
+			// Ones that don't:
+			final List<String> test_out_list_fail = 
+					Arrays.asList(
+							"",
+							"/easy_case/nonmatching",
+							"/easy_case/suffix/more",
+							"/wildcard_caseSUFFIX",
+							"/another/wildXXXcare/case",
+							"/final/nested"			
+							);
+			
+			final List<String> should_pass = test_out_list_pass.stream().filter(filter).collect(Collectors.toList());
+			final List<String> should_fail = test_out_list_fail.stream().filter(filter).collect(Collectors.toList());
+			
+			assertEquals("Should all pass: " + should_pass.stream().collect(Collectors.joining(";")), test_out_list_pass.size(), should_pass.size());
+			assertEquals("Should all fail: " + should_fail.stream().collect(Collectors.joining(";")), 0, should_fail.size());
+		}
+		
+		// 3) Test the query generation
+		{
+			final MultiQueryComponent<DataBucketBean> query = (MultiQueryComponent<DataBucketBean>)BucketUtils.getApproxMultiBucketQuery(test_in_list);
+			
+			// The multi query:
+			assertEquals(2, query.getElements().size());
+			assertEquals(Operator.any_of, query.getOp());
+			
+			// Now the 2 elements:
+			// have to use low level understanding to validate these:
+			SingleBeanQueryComponent<DataBucketBean> query_1 = (SingleBeanQueryComponent<DataBucketBean>)query.getElements().get(0);
+			
+			// ie an array of all the hardcoded cases
+			assertEquals(Operator.any_of, query_1.getOp());
+			assertEquals("{full_name=[(any_of,([/easy_case, /wildcard_case, /easy_case/suffix],null))]}", query_1.getAll().toString());
+			
+			SingleBeanQueryComponent<DataBucketBean> query_2 = (SingleBeanQueryComponent<DataBucketBean>)query.getElements().get(1);
+			
+			// ie a big OR of ranges
+			assertEquals(Operator.any_of, query_1.getOp());
+			assertEquals("{full_name=[(range_closed_open,(/wildcard_case/,/wildcard_case0)), (range_closed_open,(/another/wild,/another/wile)), (range_closed_open,(/final,/finam))]}", query_2.getAll().toString());
+		}
 	}
 	
 }

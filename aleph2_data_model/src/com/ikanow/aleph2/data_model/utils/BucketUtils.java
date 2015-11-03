@@ -200,7 +200,7 @@ public class BucketUtils {
 	 */
 	protected static String getUpperLimit(final String in) {
 		char x = in.charAt(in.length() - 1);
-		return in.substring(0, in.length() - 1) + (x + 1);
+		return in.substring(0, in.length() - 1) + ((char)(x + 1));
 	}
 	
 	/** Returns a predicate that can be used in a Stream.filter operation to filter out any non-matching buckets
@@ -228,7 +228,7 @@ public class BucketUtils {
 					final String trans_s = s.replaceFirst(regex, "");
 					return (s.length() != trans_s.length());
 				})
-				.map(s -> FileSystems.getDefault().getPathMatcher(s))
+				.map(s -> FileSystems.getDefault().getPathMatcher("glob:" + s))
 				.collect(Collectors.toList())
 				;
 			
