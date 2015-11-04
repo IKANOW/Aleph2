@@ -40,6 +40,7 @@ import org.apache.shiro.util.ThreadContext;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
@@ -193,7 +194,13 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return new SecuredCrudManagementDbService<O>(serviceContext, crud, authorizationBean);
 	}
 
-
+	@Override
+	public IDataServiceProvider secured(IDataServiceProvider provider,
+			AuthorizationBean authorizationBean) {
+		return new SecuredDataServiceProvider(serviceContext, provider, authorizationBean);
+	}
+	
+	
 	@Override
 	public ISubject loginAsSystem() {
 		ISubject subject = login(systemUsername,systemPassword);			
@@ -301,5 +308,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 			} 
 		}
 	}
+
+
 	
 }

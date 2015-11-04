@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** Provides an optional generic data service interface
@@ -109,4 +110,12 @@ public interface IDataServiceProvider {
 		return Optional.empty();
 	}
 	
+	/** Returns a secured version of the data provider service. 
+	 * @param service_context - the system service context
+	 * @param auth_bean - the authorization context of the calling user
+	 * @return the secured version of the CRUD service
+	 */
+	default IDataServiceProvider secured(IServiceContext service_context, AuthorizationBean auth_bean) {		
+		return service_context.getSecurityService().secured(this, auth_bean);
+	}	
 }

@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.interfaces.data_services.samples;
 import java.util.Collection;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
@@ -67,34 +68,33 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
+	public IDataServiceProvider secured(IDataServiceProvider provider,
+			AuthorizationBean authorizationBean) {
+		return null;
+	}
+	
+	@Override
 	public ISubject loginAsSystem() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public void invalidateAuthenticationCache(Collection<String> principalNames) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void invalidateCache() {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void enableJvmSecurityManager(boolean enabled) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void enableJvmSecurity(boolean enabled) {
-		// TODO Auto-generated method stub
 		
 	}
-
-
 }

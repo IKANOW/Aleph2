@@ -261,16 +261,17 @@ public interface IManagementCrudService<O> extends ICrudService<O> {
 	@Override
 	IManagementCrudService<JsonNode> getRawService();
 
-	/** Returns a definitely read only version of the CRUD service. The interface is the same, but writable calls will exception.
-	 * @param _service_context 
-	 * @return the definitely read only version of the CRUD service
+	/** Returns a secured version of the CRUD service. 
+	 * @param service_context - the system service context
+	 * @param auth_bean - the security context of the calling user
+	 * @return the secured version of the CRUD service
 	 */
-	default IManagementCrudService<O> secured(IServiceContext _service_context, AuthorizationBean authorizationBean) {
-		if (authorizationBean==null) {
+	default IManagementCrudService<O> secured(IServiceContext service_context, AuthorizationBean auth_bean) {
+		if (auth_bean==null) {
 			return this;
 		}
 		else {
-			return _service_context.getSecurityService().secured(this,authorizationBean);
+			return service_context.getSecurityService().secured(this, auth_bean);
 		}
 	}	
 	
