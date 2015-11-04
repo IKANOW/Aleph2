@@ -628,7 +628,7 @@ public class CrudUtils {
 		 */
 		@Override
 		public String toString() {
-			return ErrorUtils.get("({0}: limit={1} sort={2} op={3} element={4} extra={4})", 
+			return ErrorUtils.get("({0}: limit={1} sort={2} op={3} element={4} extra={5})", 
 					this.getClass().getSimpleName(),
 					Optional.ofNullable(_limit).map(l -> l.toString()).orElse("(none)"),
 					Optional.ofNullable(_orderBy).map(o -> o.stream().map(t2 -> t2._1() + ":" + t2._2()).collect(Collectors.joining(";"))).orElse("(none)"),
