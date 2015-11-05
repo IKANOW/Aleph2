@@ -95,7 +95,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 */
 		public boolean checkWritePermission(final DataBucketBean bucket) {
 			//TODO (ALEPH-41): implement this
-			return true;
+			return false;
 		}
 		
 		/** Checks the bucket path for read permission
@@ -141,7 +141,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 
 			final Collection<DataBucketBean> verified_buckets =			
 				buckets.stream()
-					.filter(b -> !checkReadPermission(b))
+					.filter(b -> checkReadPermission(b))
 					.map(b -> {
 						return Optional.ofNullable(b.multi_bucket_children())
 									.filter(m -> !m.isEmpty())
@@ -153,7 +153,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 									})
 									.map(m -> {
 										return BeanTemplateUtils.clone(b)
-												.with(DataBucketBean::multi_bucket_children, m)
+												.with(DataBucketBean::multi_bucket_children, m.collect(Collectors.toSet()))
 												.done()
 												;
 									})
@@ -173,7 +173,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		public Set<String> getSecondaryBuffers(DataBucketBean bucket,
 				Optional<String> intermediate_step) {
 			return checkReadPermission(bucket)
-					? getSecondaryBuffers(bucket, intermediate_step)
+					? _delegate.getSecondaryBuffers(bucket, intermediate_step)
 					: Collections.emptySet()
 					;
 		}
@@ -185,7 +185,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		public Optional<String> getPrimaryBufferName(DataBucketBean bucket,
 				Optional<String> intermediate_step) {
 			return checkReadPermission(bucket)
-					? getPrimaryBufferName(bucket, intermediate_step)
+					? _delegate.getPrimaryBufferName(bucket, intermediate_step)
 					: Optional.empty()
 					;
 		}
