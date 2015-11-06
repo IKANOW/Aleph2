@@ -40,10 +40,13 @@ import org.apache.logging.log4j.Logger;
 public class DirUtils {
 	private static final Logger logger = LogManager.getLogger(DirUtils.class);
 
-	/**
-	 * This method returns the path to the first subdirectory matching the subDirectoryName parameter or null if not found.
+	 /** This method returns the path to the first subdirectory matching the subDirectoryName parameter or null if not found.
+	 * @param fileContext
+	 * @param start
+	 * @param subDirectoryName
+	 * @return
 	 */
-	 public static Path findOneSubdirectory(FileContext fileContext, Path start, String subDirectoryName) {	 
+	public static Path findOneSubdirectory(FileContext fileContext, Path start, String subDirectoryName) {	 
 		Path p = null;
 		try {
 			logger.debug("findOneSubdirectory :"+start.toString());
@@ -73,6 +76,10 @@ public class DirUtils {
 
 	public static final FsPermission DEFAULT_DIR_PERMS = FsPermission.valueOf("drwxrwxrwx");		 
 	 
+	/** Creates a directory in the storage servce
+	 * @param fileContext
+	 * @param pathString
+	 */
 	public static void createDirectory(FileContext fileContext,String pathString) {
 		if(fileContext!=null && pathString !=null){
 			try {
@@ -88,6 +95,13 @@ public class DirUtils {
 		
 	}
 
+	/**
+	 * @param allPaths
+	 * @param fileContext
+	 * @param start
+	 * @param subDirectoryName
+	 * @param includeMatched
+	 */
 	public static void findAllSubdirectories(List<Path> allPaths, FileContext fileContext, Path start, String subDirectoryName,boolean includeMatched) {		
 		try {
 			logger.debug("findAllSubdirectories :"+start.toString());
@@ -105,9 +119,6 @@ public class DirUtils {
 						}
 					}else{
 						findAllSubdirectories(allPaths, fileContext, dir.getPath(),  subDirectoryName,includeMatched);
-						/*if(paths!=null){
-							allPaths.addAll(paths);							
-						}*/
 					}
 				}
 			}
@@ -117,6 +128,11 @@ public class DirUtils {
 		}		
 	}
 
+	/** Creates a text file  in the storage service 
+	 * @param fileContext
+	 * @param fileNameString
+	 * @param sb
+	 */
 	public static void createUTF8File(FileContext fileContext,String fileNameString, StringBuffer sb) {
 		if(fileContext!=null && fileNameString !=null){
 			try {
