@@ -83,10 +83,9 @@ public class TestJarBuilderUtils {
 		assertEquals(file3.lastModified(), JarBuilderUtil.getMostRecentlyUpdatedFile(files1).getTime());
 		assertEquals(file3.lastModified(), JarBuilderUtil.getMostRecentlyUpdatedFile(files2).getTime());
 	
-		JarBuilderUtil.updateJarModifiedTime(file1.toString());
-
 		Thread.sleep(1200L); // (makes the dates below different)
 		
+		JarBuilderUtil.updateJarModifiedTime(file1.toString());
 		assertNotEquals(file3.lastModified(), JarBuilderUtil.getMostRecentlyUpdatedFile(files1).getTime());
 		
 		//cleanup
