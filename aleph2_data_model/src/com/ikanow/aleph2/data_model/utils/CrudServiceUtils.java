@@ -38,6 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudSe
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
@@ -612,26 +613,31 @@ public class CrudServiceUtils {
 				
 				// Special cases for: readOnlyVersion, getFilterdRepo / countObjects / getRawService / *byId
 				final Object o = Lambdas.get(() -> {
+					final SingleQueryComponent<T> base_query = JsonNode.class.equals(clazz)
+							? (SingleQueryComponent<T>) CrudUtils.allOf()
+							: CrudUtils.allOf(clazz);
+					
 					try {
 						if (extra_query.isPresent() && m.getName().equals("countObjects")) { // special case....change method and apply spec
 							return delegate.countObjectsBySpec(extra_query.get());
 						}
 						else if (extra_query.isPresent() && m.getName().equals("getObjectById")) { // convert from id to spec and append extra_query
 							if (1 == args.length) {
-								return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])));
+								return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), base_query.when("_id", args[0])));
 							}
 							else {
-								return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), (List<String>)args[1], (Boolean)args[2]);							
+								return delegate.getObjectBySpec(CrudUtils.allOf(extra_query.get(), base_query.when("_id", args[0])), (List<String>)args[1], (Boolean)args[2]);							
 							}
 						}
 						else if (extra_query.isPresent() && m.getName().equals("deleteDatastore")) {
-							return delegate.deleteObjectsBySpec(extra_query.get());
+							CompletableFuture<Long> l = delegate.deleteObjectsBySpec(extra_query.get());
+							return l.thenApply(ll -> ll > 0);
 						}
 						else if (extra_query.isPresent() && m.getName().equals("deleteObjectById")) { // convert from id to spec and append extra_query
-							return delegate.deleteObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])));
+							return delegate.deleteObjectBySpec(CrudUtils.allOf(extra_query.get(), base_query.when("_id", args[0])));
 						}
 						else if (extra_query.isPresent() && m.getName().equals("updateObjectById")) { // convert from id to spec and append extra_query
-							return delegate.updateObjectBySpec(CrudUtils.allOf(extra_query.get(), CrudUtils.allOf(clazz).when("_id", args[0])), Optional.empty(), (UpdateComponent<T>)args[1]);
+							return delegate.updateObjectBySpec(CrudUtils.allOf(extra_query.get(), base_query.when("_id", args[0])), Optional.empty(), (UpdateComponent<T>)args[1]);
 						}
 						else if (m.getName().equals("getRawService")) { // special case....convert the default query to JSON, if present
 							Object o_internal = m.invoke(delegate, args_with_extra_query);

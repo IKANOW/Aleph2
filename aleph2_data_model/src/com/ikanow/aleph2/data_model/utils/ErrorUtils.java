@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.text.MessageFormat;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
@@ -94,41 +95,21 @@ public class ErrorUtils {
 		}
 		catch (Exception e) {
 			// Try to handle known offenders for this:
-			if (t instanceof com.google.inject.ConfigurationException) {
-				com.google.inject.ConfigurationException ce1 = (com.google.inject.ConfigurationException) t;
-				if (!ce1.getErrorMessages().isEmpty()) {
-					Message msg = ce1.getErrorMessages().iterator().next();
-					if (null != msg.getCause()) {
-						return longExceptionMessage(msg.getCause());
-					}
-					else {
-						message = ce1.getErrorMessages().iterator().next().toString();
-					}
+			final Collection<Message> error_messages = Patterns.match(t).<Collection<Message>>andReturn()
+					.when(com.google.inject.ConfigurationException.class, ex -> ex.getErrorMessages())
+					.when(com.google.inject.CreationException.class, ex -> ex.getErrorMessages())						
+					.when(com.google.inject.ProvisionException.class, ex -> ex.getErrorMessages())
+					.otherwise(__ -> Collections.emptyList())
+					;
+			
+			if (!error_messages.isEmpty()) {
+				Message msg = error_messages.iterator().next();
+				if (null != msg.getCause()) {
+					return longExceptionMessage(msg.getCause());
 				}
-			}
-			else if (t instanceof com.google.inject.CreationException) {
-				com.google.inject.CreationException ce1 = (com.google.inject.CreationException) t;
-				if (!ce1.getErrorMessages().isEmpty()) {
-					Message msg = ce1.getErrorMessages().iterator().next();
-					if (null != msg.getCause()) {
-						return longExceptionMessage(msg.getCause());
-					}
-					else {
-						message = ce1.getErrorMessages().iterator().next().toString();
-					}
-				}				
-			}
-			else if (t instanceof com.google.inject.ProvisionException) {
-				com.google.inject.ProvisionException ce1 = (com.google.inject.ProvisionException) t;
-				if (!ce1.getErrorMessages().isEmpty()) {
-					Message msg = ce1.getErrorMessages().iterator().next();
-					if (null != msg.getCause()) {
-						return longExceptionMessage(msg.getCause());
-					}
-					else {
-						message = ce1.getErrorMessages().iterator().next().toString();
-					}
-				}				
+				else {
+					message = error_messages.iterator().next().toString();
+				}
 			}
 			//else just carry on
 		} 
