@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 
 import org.junit.Test;
 
+import com.ikanow.aleph2.data_model.utils.Lambdas.ThrowableWrapper;
+
 import scala.Tuple2;
 import fj.data.Either;
 import fj.data.Validation;
@@ -391,7 +393,31 @@ public class TestLambdas {
 	
 	@Test
 	public void testMisc_biFunctions() {
-		//TODO including reduce test for binary operator 
+		final ThrowableWrapper.BiFunction<String, String, String> test_method =
+				(a, b) -> {
+					if (null == a) throw new RuntimeException("a");
+					if (null == b) throw new IllegalArgumentException("b");
+					return a + b;
+				};					
+		
+		try {
+			assertEquals(IllegalArgumentException.class, Lambdas.wrap_e(test_method).apply("a", null).fail().getClass());
+			Lambdas.wrap_u(test_method).apply("a", null);
+			fail("");
+		}
+		catch (Exception e) {
+			assertEquals(RuntimeException.class, e.getClass());
+		}
+		try {
+			assertEquals(RuntimeException.class, Lambdas.wrap_e(test_method).apply(null, "b").fail().getClass());
+			Lambdas.wrap_u((String a, String b) -> test_method.apply(a, b)).apply(null, "b");
+			fail("");
+		}
+		catch (Exception e) {
+			assertEquals(RuntimeException.class, e.getClass());
+		}
+		assertEquals("ab", Lambdas.wrap_e(test_method).apply("a", "b").success());			
+		assertEquals("ab", Lambdas.wrap_u(test_method).apply("a", "b"));			
 	}
 	
 	@Test

@@ -290,13 +290,14 @@ public interface ICrudService<O> extends IDataWriteService<O> {
 		Table getTable();		
 	}
 	
-	/** Returns a definitely read only version of the CRUD service. The interface is the same, but writable calls will exception.
-	 * @param _service_context 
-	 * @return the definitely read only version of the CRUD service
+	/** Returns a secured version of the CRUD service. 
+	 *  THIS HAS NO DEFAULT IMPLEMENTATION (since there's no obvious context to what this means, unlike say a management bean)
+	 * @param service_context - the system service context
+	 * @param auth_bean - the authorization context of the calling user
+	 * @return the secured version of the CRUD service
 	 */
-	default ICrudService<O> secured(IServiceContext _service_context, AuthorizationBean authorizationBean) {		
-			return this;
-		
+	default ICrudService<O> secured(IServiceContext service_context, AuthorizationBean auth_bean) {		
+		return this;		
 	}	
 
 }

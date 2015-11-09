@@ -245,6 +245,7 @@ public class TestCrudUtils {
 		// No meta:
 		
 		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(BeanTemplate.of(new TestBean())); 
+		System.out.println(query_comp_1.toString());
 		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 
@@ -259,7 +260,8 @@ public class TestCrudUtils {
 		
 		final SingleQueryComponent<TestBean> query_comp_2 = CrudUtils.anyOf(template2)
 													.orderBy(Tuples._2T("test_field_1", 1), Tuples._2T("test_field_2", -1));		
-
+		System.out.println(query_comp_2.toString());
+		
 		assertEquals(template2.get(), query_comp_2.getElement());				
 		
 		final Tuple2<DBObject, DBObject> query_meta_2 = convertToMongoQuery(query_comp_2);
@@ -281,18 +283,23 @@ public class TestCrudUtils {
 		BeanTemplate<TestBean> template1 = BeanTemplateUtils.build(TestBean.class).with(TestBean::string_field, "string_field").done();
 		
 		final SingleQueryComponent<TestBean> query_comp_1 = CrudUtils.allOf(template1).when(TestBean::bool_field, true);
+		System.out.println(query_comp_1.toString());
 
 		final SingleQueryComponent<JsonNode> query_comp_1_json1 = query_comp_1.toJson();		
+		System.out.println(query_comp_1_json1.toString());
 		
 		final SingleQueryComponent<TestBean> query_comp_1b = CrudUtils.allOf(TestBean.class)
 				.when("bool_field", true)
 				.when("string_field", "string_field");
+		System.out.println(query_comp_1b.toString());
 		
 		final SingleQueryComponent<JsonNode> query_comp_1b_json1 = query_comp_1b.toJson();
+		System.out.println(query_comp_1b_json1.toString());
 		
 		final SingleQueryComponent<JsonNode> query_comp_1b_json2= CrudUtils.allOf()
 																	.when("bool_field", true)
 																	.when("string_field", "string_field");
+		System.out.println(query_comp_1b_json2.toString());
 		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 		final Tuple2<DBObject, DBObject> query_meta_1_json = convertToMongoQuery(query_comp_1_json1);
@@ -444,7 +451,8 @@ public class TestCrudUtils {
 														.withPresent("long_field")
 														.limit(5) 
 														.orderBy(Tuples._2T("test_field_2", -1));
-														
+		System.out.println(query_comp_1.toString());
+
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 		
 				
@@ -483,7 +491,8 @@ public class TestCrudUtils {
 							.rangeIn("nested_string_field", "ccc", false, "ddd", true)
 				)
 				.withPresent("long_field");
-
+		
+		System.out.println(query_comp_2.toString());
 				
 		final Tuple2<DBObject, DBObject> query_meta_2 = convertToMongoQuery(query_comp_2);
 		
@@ -569,6 +578,8 @@ public class TestCrudUtils {
 
 		final MultiQueryComponent<TestBean> multi_query_1 = CrudUtils.<TestBean>allOf(query_comp_1).orderBy(Tuples._2T("test_field_2", -1)).limit(5);
 		final MultiQueryComponent<TestBean> multi_query_2 = CrudUtils.<TestBean>anyOf(query_comp_1);
+		System.out.println(multi_query_1.toString());
+		System.out.println(multi_query_2.toString());
 				
 		final QueryBuilder expected_1 = QueryBuilder.start().and(
 				QueryBuilder.start("string_field").greaterThan("bbb").get(), 
@@ -620,9 +631,13 @@ public class TestCrudUtils {
 		
 		final MultiQueryComponent<TestBean> multi_query_3 = CrudUtils.allOf(query_comp_1, query_comp_2).limit(5);
 		final MultiQueryComponent<TestBean> multi_query_4 = CrudUtils.anyOf(query_comp_1, query_comp_2).orderBy(Tuples._2T("test_field_2", -1));
+		System.out.println(multi_query_3.toString());
+		System.out.println(multi_query_4.toString());
 
 		final MultiQueryComponent<TestBean> multi_query_5 = CrudUtils.<TestBean>allOf(Stream.of(query_comp_1)).also(query_comp_2).limit(5);
 		final MultiQueryComponent<TestBean> multi_query_6 = CrudUtils.<TestBean>anyOf(query_comp_1).also(query_comp_2).orderBy().orderBy(Tuples._2T("test_field_2", -1));
+		System.out.println(multi_query_5.toString());
+		System.out.println(multi_query_6.toString());
 		
 		
 		final Tuple2<DBObject, DBObject> query_meta_3 = convertToMongoQuery(multi_query_3);
@@ -669,6 +684,7 @@ public class TestCrudUtils {
 		// No meta:
 		
 		final SingleQueryComponent<JsonNode> query_comp_1 = CrudUtils.allOf_json(BeanTemplate.of(new TestBean())); 
+		System.out.println(query_comp_1.toString());
 		
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 
@@ -835,7 +851,8 @@ public class TestCrudUtils {
 														.withPresent("long_field")
 														.limit(5) 
 														.orderBy(Tuples._2T("test_field_2", -1));
-														
+		System.out.println(query_comp_1.toString());
+
 		final Tuple2<DBObject, DBObject> query_meta_1 = convertToMongoQuery(query_comp_1);
 		
 				
@@ -960,6 +977,8 @@ public class TestCrudUtils {
 
 		final MultiQueryComponent<JsonNode> multi_query_1 = CrudUtils.<JsonNode>allOf(query_comp_1).orderBy(Tuples._2T("test_field_2", -1)).limit(5);
 		final MultiQueryComponent<JsonNode> multi_query_2 = CrudUtils.<JsonNode>anyOf(Stream.of(query_comp_1));
+		System.out.println(multi_query_1.toString());
+		System.out.println(multi_query_2.toString());
 				
 		final QueryBuilder expected_1 = QueryBuilder.start().and(
 				QueryBuilder.start("string_field").greaterThan("bbb").get(), 
@@ -1011,6 +1030,8 @@ public class TestCrudUtils {
 		
 		final MultiQueryComponent<JsonNode> multi_query_3 = CrudUtils.allOf(Arrays.asList(query_comp_1, query_comp_2)).limit(5);
 		final MultiQueryComponent<JsonNode> multi_query_4 = CrudUtils.anyOf(Arrays.asList(query_comp_1, query_comp_2)).orderBy(Tuples._2T("test_field_2", -1));
+		System.out.println(multi_query_3.toString());
+		System.out.println(multi_query_4.toString());
 
 		final MultiQueryComponent<JsonNode> multi_query_5 = CrudUtils.<JsonNode>allOf(query_comp_1).also(query_comp_2).limit(5);
 		final MultiQueryComponent<JsonNode> multi_query_6 = CrudUtils.<JsonNode>anyOf(query_comp_1).also(query_comp_2).orderBy().orderBy(Tuples._2T("test_field_2", -1));
@@ -1064,6 +1085,8 @@ public class TestCrudUtils {
 		
 		final MultiQueryComponent<JsonNode> multi_query_test_1 = CrudUtils.anyOf(multi_query_1, multi_query_2).toJson();
 		final MultiQueryComponent<JsonNode> multi_query_test_2 = CrudUtils.allOf(multi_query_1, query_comp_1b).toJson();
+		System.out.println(multi_query_test_1.toString());
+		System.out.println(multi_query_test_2.toString());
 		
 		final Tuple2<DBObject, DBObject> multi_query_meta_1 = convertToMongoQuery(multi_query_test_1);
 		final Tuple2<DBObject, DBObject> multi_query_meta_2 = convertToMongoQuery(multi_query_test_2);
@@ -1156,6 +1179,7 @@ public class TestCrudUtils {
 		assertEquals(TestBean.class, test1.getElementClass());
 		
 		final UpdateComponent<JsonNode> test1_json = test1.toJson();
+		System.out.println(test1_json.toString());
 		
 		final DBObject result1 = createUpdateObject(test1);
 		final DBObject result1_json = createUpdateObject(test1_json);
@@ -1200,6 +1224,9 @@ public class TestCrudUtils {
 					.remove("nested_list", CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
 					;
 		final UpdateComponent<JsonNode> test1b_json2 = test1b.toJson();
+
+		System.out.println(test1b.toString());
+		System.out.println(test1b_json2.toString());
 		
 		final DBObject result1b = createUpdateObject(test1b);
 		final DBObject result1b_json1 = createUpdateObject(test1b_json1);
@@ -1296,6 +1323,7 @@ public class TestCrudUtils {
 					.unset(TestBean::nested_object) //(3c)
 					.remove(TestBean::nested_list, CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
 					;
+		System.out.println(test1.toString());
 		
 		final DBObject result1 = createUpdateObject(test1);
 		
@@ -1322,7 +1350,8 @@ public class TestCrudUtils {
 					.unset("nested_object") //(3c)
 					.remove("nested_list", CrudUtils.allOf(TestBean.NestedTestBean.class).when("nested_string_field", "1")) //6)
 					;
-		
+		System.out.println(test1b.toString());
+
 		final DBObject result1b = createUpdateObject(test1b);
 		
 		final String expected1b = "{ \"$push\" : { \"string_fields\" : \"AA\"} , \"$inc\" : { \"long_field\" : 4} , \"$set\" : { \"nested_list.nested_string_field\" : \"test1\"} , \"$unset\" : { \"nested_list.nested_string_field\" : 1 , \"bool_field\" : 1 , \"nested_object\" : 1} , \"$pullAll\" : { \"nested_list.nested_string_list\" : [ \"x\"]} , \"$addToSet\" : { \"nested_list.nested_string_list\" : \"A\"} , \"$pull\" : { \"nested_list\" : { \"$and\" : [ { \"nested_string_field\" : \"1\"}]}}}";
@@ -1344,6 +1373,9 @@ public class TestCrudUtils {
 								.add(TestBean.NestedTestBean::nested_string_list, "A", false) // (will be overwritten)
 							)
 					.add("nested_list.nested_string_list", Arrays.asList("x", "y"), false); //(2)
+		
+		System.out.println(test2.toString());
+		
 		
 		final DBObject result2 = createUpdateObject(test2);
 		

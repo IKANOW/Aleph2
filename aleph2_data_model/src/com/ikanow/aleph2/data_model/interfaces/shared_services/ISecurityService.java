@@ -77,7 +77,19 @@ public interface ISecurityService extends IUnderlyingService {
      */
     Collection<String> releaseRunAs(ISubject subject);
 
+	/** Returns a secured management CRUD
+	 * @param crud - the delegate 
+	 * @param authorizationBean - the authorization context of the calling "user"
+	 * @return
+	 */
 	<O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean);
+
+	/** Returns a secure data provider
+	 * @param provider
+	 * @param authorizationBean - the authorization context of the calling "user"
+	 * @return
+	 */
+	IDataServiceProvider secured(IDataServiceProvider provider, AuthorizationBean authorizationBean);
 	
 	void invalidateAuthenticationCache(Collection<String> principalNames);
 

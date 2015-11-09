@@ -30,9 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
@@ -407,6 +405,7 @@ public class SecurityServiceTest {
 		
 		}
 		
+	@SuppressWarnings({ "rawtypes", "unchecked", "unused"})
 	@Test
 	public void testPermissionExtractor(){
 		PermissionExtractor extractor = new PermissionExtractor();

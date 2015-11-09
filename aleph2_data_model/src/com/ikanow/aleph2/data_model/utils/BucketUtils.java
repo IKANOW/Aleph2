@@ -15,19 +15,27 @@
  ******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 
 /**
  * Provides a set of util functions for DataBucketBean
@@ -61,10 +69,6 @@ public class BucketUtils {
 	public static boolean isTestBucket(final DataBucketBean bucket) {
 		return bucket.full_name().startsWith(TEST_BUCKET_PREFIX);
 	}
-	
-	///////////////////////////////////////////////////////////////////////////
-	
-	//TODO: create sub-bucket
 	
 	//////////////////////////////////////////////////////////////////////////
 
@@ -132,6 +136,116 @@ public class BucketUtils {
 	private static String safeTruncate(final String in, final int max_len) {
 		return in.length() < max_len ? in : in.substring(0, max_len);
 	}
+	
+	///////////////////////////////////////////////////////////////////////////
+
+	// BUCKET CRUD UTILS
+	
+	/** Returns a CRUD query that returns a minimal superset of the requested buckets from the specified globs
+	 *  which can be used together with refineMultiBucketQuery to return exactly the desired buckets
+	 * @param buckets - a list of bucket paths including globs (eg ** and *)
+	 * @return
+	 */
+	public static QueryComponent<DataBucketBean> getApproxMultiBucketQuery(final Collection<String> buckets) {
+		// (just do this simply to start with and add performance if needed)
+		
+		// Split into simple and complex cases:
+		final String regex = "[?*].*$";
+		
+		// Simple case:
+		final Set<String> simple_case = buckets.stream()
+			.flatMap(s -> {
+				final String trans_s = s.replaceFirst(regex, "");
+				if (s.length() == trans_s.length()) {
+					return Stream.of(s); // no change
+				}
+				else if (trans_s.endsWith("/")) { // is included in simple and complex case, see below
+					return Stream.of(trans_s.substring(0, trans_s.length() - 1)); // (remove the trailing '/')				
+				}
+				else {
+					return Stream.empty();
+				}
+			})			
+			.collect(Collectors.toSet())
+			;
+
+		final QueryComponent<DataBucketBean> complex_case = buckets.stream()
+			.flatMap(s -> {
+				final String trans_s = s.replaceFirst(regex, "");
+				if (s.length() == trans_s.length()) {
+					return Stream.empty(); // already handled by simple case above
+				}
+				else {
+					return Stream.of(Tuples._2T(trans_s, getUpperLimit(trans_s)));
+				}
+			})
+			.reduce(CrudUtils.anyOf(DataBucketBean.class)
+					,
+					(acc, v) -> acc.rangeIn(DataBucketBean::full_name, v._1(), false, v._2(), true)
+					,
+					(acc1, acc2) -> acc1 //(not reachable)
+					)
+			;		
+		
+		return CrudUtils.anyOf( // (big OR statement)
+				CrudUtils.anyOf(DataBucketBean.class).withAny(DataBucketBean::full_name, simple_case)
+				,
+				complex_case
+				);
+	}
+	
+	/** Utility function for queries
+	 * @param in
+	 * @return
+	 */
+	protected static String getUpperLimit(final String in) {
+		char x = in.charAt(in.length() - 1);
+		return in.substring(0, in.length() - 1) + ((char)(x + 1));
+	}
+	
+	/** Returns a predicate that can be used in a Stream.filter operation to filter out any non-matching buckets
+	 * @param buckets - a list of bucket paths including globs (eg ** and *)
+	 * @return
+	 */
+	public static Predicate<String> refineMultiBucketQuery(final Collection<String> buckets) {
+		// (just do this simply to start with and add performance if needed)
+		
+		// Split into simple and complex cases:
+		final String regex = "[?*].*$";
+		
+		// simple case:
+		final Set<String> simple_case = buckets.stream()
+				.filter(s -> {
+					final String trans_s = s.replaceFirst(regex, "");
+					return (s.length() == trans_s.length());
+				})
+				.collect(Collectors.toSet())
+				;
+		
+		// complex case:
+		final List<PathMatcher> complex_case = buckets.stream()
+				.filter(s -> {
+					final String trans_s = s.replaceFirst(regex, "");
+					return (s.length() != trans_s.length());
+				})
+				.map(s -> FileSystems.getDefault().getPathMatcher("glob:" + s))
+				.collect(Collectors.toList())
+				;
+			
+		return s -> {
+			if (simple_case.contains(s)) {
+				return true;
+			}
+			else {
+				final java.nio.file.Path p = FileSystems.getDefault().getPath(s);
+				return complex_case.stream().anyMatch(matcher -> matcher.matches(p));
+			}
+		};
+	}
+	
+	///////////////////////////////////////////////////////////////////////////
+
+	// ENTRY POINT UTILS FOR HARVEST/ENRICHMENT/ANALYTICS TECHNOLOGY		
 	
 	/** Gets the entry point for modular batch processing (enrichment)
 	 * @param library_beans - the map of library beans from the context

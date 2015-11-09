@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -86,6 +87,17 @@ public class CrudUtils {
 				throw new RuntimeException(e);
 			}
 		}
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		@Override
+		public String toString() {
+			return ErrorUtils.get("({0}: elements={1})", 
+					this.getClass().getSimpleName(),
+					Optional.ofNullable(getAll()).map(m -> m.toString()).orElse("(none)")
+					);
+		}				
 		
 		/** All update elements  
 		 * @return the list of all update elements  
@@ -360,6 +372,20 @@ public class CrudUtils {
 			return this;
 		}		
 		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		@Override
+		public String toString() {
+			return ErrorUtils.get("({0}: limit={1} sort={2} op={3} elements={4})", 
+					this.getClass().getSimpleName(),
+					Optional.ofNullable(_limit).map(l -> l.toString()).orElse("(none)"),
+					Optional.ofNullable(_orderBy).map(o -> o.stream().map(t2 -> t2._1() + ":" + t2._2()).collect(Collectors.joining(";"))).orElse("(none)"),
+					Optional.ofNullable(_op).map(o -> o.toString()).orElse("(none)"),
+					Optionals.ofNullable(_elements).stream().map(e -> e.toString()).collect(Collectors.joining(";"))
+					);
+		}				
+		
 		// Implementation
 		
 		protected Long _limit;
@@ -596,6 +622,21 @@ public class CrudUtils {
 			}
 			return this;
 		}
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#toString()
+		 */
+		@Override
+		public String toString() {
+			return ErrorUtils.get("({0}: limit={1} sort={2} op={3} element={4} extra={5})", 
+					this.getClass().getSimpleName(),
+					Optional.ofNullable(_limit).map(l -> l.toString()).orElse("(none)"),
+					Optional.ofNullable(_orderBy).map(o -> o.stream().map(t2 -> t2._1() + ":" + t2._2()).collect(Collectors.joining(";"))).orElse("(none)"),
+					Optional.ofNullable(_op).map(o -> o.toString()).orElse("(none)"),
+					(null == _element) ? "(none)" : ((_element instanceof JsonNode) ? _element.toString() : BeanTemplateUtils.toJson(_element).toString()),
+					Optional.ofNullable(_extra).map(e -> e.toString()).orElse("(none)")
+					);
+		}			
 		
 		// Implementation
 		

@@ -18,6 +18,7 @@ package com.ikanow.aleph2.core.shared.utils;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,8 +36,8 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.typesafe.config.Config;
 
-public class DirUtilsTest {
-    private static final Logger logger = LogManager.getLogger(DirUtilsTest.class);
+public class TestDirUtils {
+    private static final Logger logger = LogManager.getLogger(TestDirUtils.class);
 
 	protected String _temp_dir;
 	
@@ -62,6 +63,8 @@ public class DirUtilsTest {
 		DirUtils.createDirectory(fileContext,_temp_dir+"/data/misc/bucket3/managed_bucket/import/ready");
 		DirUtils.createDirectory(fileContext,_temp_dir+"/data/misc/bucket_parent/bucket4/managed_bucket/import/ready");
 		DirUtils.createDirectory(fileContext,_temp_dir+"/data/misc/bucket_parent/onemore/bucket5/managed_bucket/import/ready");
+		
+		new DirUtils(); //coverage!
 }
 	
 	@Test
@@ -82,5 +85,11 @@ public class DirUtilsTest {
 
 	}
 
+	@Test
+	public void test_createTextFile() throws IOException {
+		DirUtils.createUTF8File(fileContext, _temp_dir+"/data/misc/test.txt", new StringBuffer("test"));
+		
+		assertEquals("test", FileUtils.readFileToString(new File(_temp_dir+"/data/misc/test.txt")));
+	}
 	
 }

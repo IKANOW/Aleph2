@@ -16,11 +16,16 @@
 package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import com.google.inject.spi.Message;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 public class TestErrorUtils {
@@ -76,7 +81,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test5 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 5);
 			
-			assertEquals("This is test 5: [test 5a: RuntimeException]:[TestErrorUtils.java:74:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test5);			
+			assertEquals("This is test 5: [test 5a: RuntimeException]:[TestErrorUtils.java:79:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test5);			
 		}		
 		
 		try {
@@ -85,7 +90,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test6 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 6);
 			
-			assertEquals("This is test 6: [test 6a: RuntimeException]:[TestErrorUtils.java:83:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils] ([test 6b: RuntimeException]:[TestErrorUtils.java:83:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils])", test6);			
+			assertEquals("This is test 6: [test 6a: RuntimeException]:[TestErrorUtils.java:88:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils] ([test 6b: RuntimeException]:[TestErrorUtils.java:88:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils])", test6);			
 		}
 		
 		try {
@@ -94,7 +99,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test5 = TestErrorUtilsOverride.getLongForm(TestErrorUtilsOverride.EXCEPTION_HANDLE, e, 7);
 			
-			assertEquals("This is test 7: [null: RuntimeException]:[TestErrorUtils.java:92:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test5);			
+			assertEquals("This is test 7: [null: RuntimeException]:[TestErrorUtils.java:97:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test5);			
 		}		
 		
 		try {
@@ -103,7 +108,7 @@ public class TestErrorUtils {
 		catch (Exception e) {
 			final String test8 = TestErrorUtilsOverride.getLongForm("{0}", e);
 			
-			assertEquals("[test 8a: RuntimeException]:[TestErrorUtils.java:101:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test8);			
+			assertEquals("[test 8a: RuntimeException]:[TestErrorUtils.java:106:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_errorUtils]", test8);			
 		}		
 		
 	}
@@ -139,6 +144,15 @@ public class TestErrorUtils {
 			assertEquals("testmsg", me.getMessageBean().message());
 			assertEquals("testsrc", me.getMessageBean().source());
 		}
+	}
+	
+	@Test
+	public void test_guiceErrors() {
+		final com.google.inject.CreationException e = Mockito.mock(com.google.inject.CreationException.class);
+		Mockito.when(e.getMessage()).thenThrow(new RuntimeException("test"));
+		Mockito.when(e.getErrorMessages()).thenReturn(Arrays.asList(new Message(Arrays.asList(), "test_message", new RuntimeException("test_cause"))));
+		
+		assertEquals("Test: [test_cause: RuntimeException]:[TestErrorUtils.java:153:com.ikanow.aleph2.data_model.utils.TestErrorUtils:test_guiceErrors]", ErrorUtils.getLongForm("Test: {0}", e));
 	}
 	
 	@Test

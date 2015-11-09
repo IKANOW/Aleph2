@@ -47,7 +47,6 @@ public class MockSecurityService implements ISecurityService {
 
 		@Override
 		public String getName() {
-			// TODO Auto-generated method stub
 			return null;
 		}
 		
@@ -118,6 +117,11 @@ public class MockSecurityService implements ISecurityService {
 		return crud;
 	}
 
+	@Override
+	public IDataServiceProvider secured(IDataServiceProvider provider, AuthorizationBean authorizationBean) {
+		return provider;
+	}	
+	
 	//////////////////////////
 	
 	// Some override code we'll add to as needed
@@ -139,26 +143,18 @@ public class MockSecurityService implements ISecurityService {
 
 	@Override
 	public void invalidateAuthenticationCache(Collection<String> principalNames) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void invalidateCache() {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void enableJvmSecurityManager(boolean enabled) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void enableJvmSecurity(boolean enabled) {
-		// TODO Auto-generated method stub
-		
 	}
-	
+
 }
