@@ -121,15 +121,15 @@ public class TestTimeUtils {
 	public void test_timePeriods() {
 		String s1, s2, s3, s4, s5, s6, s7;
 		
-		assertEquals("yyyy-MM-dd-HH:mm:ss", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.empty()));
-		assertEquals("yyyy-MM-dd-HH:mm", s2 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MINUTES, Optional.empty()));
-		assertEquals("yyyy-MM-dd-HH", s3 = TimeUtils.getTimeBasedSuffix(ChronoUnit.HOURS, Optional.empty()));
-		assertEquals("yyyy-MM-dd", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.empty()));
-		assertEquals("YYYY.ww", s5 = TimeUtils.getTimeBasedSuffix(ChronoUnit.WEEKS, Optional.empty()));
-		assertEquals("yyyy-MM", s6 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MONTHS, Optional.empty()));
+		assertEquals("yyyy.MM.dd.HH:mm:ss", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.empty()));
+		assertEquals("yyyy.MM.dd.HH:mm", s2 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MINUTES, Optional.empty()));
+		assertEquals("yyyy.MM.dd.HH", s3 = TimeUtils.getTimeBasedSuffix(ChronoUnit.HOURS, Optional.empty()));
+		assertEquals("yyyy.MM.dd", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.empty()));
+		assertEquals("YYYY-ww", s5 = TimeUtils.getTimeBasedSuffix(ChronoUnit.WEEKS, Optional.empty()));
+		assertEquals("yyyy.MM", s6 = TimeUtils.getTimeBasedSuffix(ChronoUnit.MONTHS, Optional.empty()));
 		assertEquals("yyyy", s7 = TimeUtils.getTimeBasedSuffix(ChronoUnit.YEARS, Optional.empty()));
-		assertEquals("yyyy-MM-dd-HH", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.of(ChronoUnit.HOURS)));
-		assertEquals("yyyy-MM-dd", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.of(ChronoUnit.HOURS)));
+		assertEquals("yyyy.MM.dd.HH", s1 = TimeUtils.getTimeBasedSuffix(ChronoUnit.SECONDS, Optional.of(ChronoUnit.HOURS)));
+		assertEquals("yyyy.MM.dd", s4 = TimeUtils.getTimeBasedSuffix(ChronoUnit.DAYS, Optional.of(ChronoUnit.HOURS)));
 		assertEquals("", TimeUtils.getTimeBasedSuffix(ChronoUnit.CENTURIES, Optional.empty()));
 	}		
 	
@@ -199,37 +199,37 @@ public class TestTimeUtils {
 	@Test
 	public void test_getDateFromSuffix() {
 		{
-			final String suffix = "2012-11-14-13:49:48";
+			final String suffix = "2012.11.14.13:49:48";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Wed Nov 14 13:49:48 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
 		}
 		{
-			final String suffix = "2012-11-14-13:49";
+			final String suffix = "2012.11.14.13:49";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Wed Nov 14 13:49:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
 		}
 		{
-			final String suffix = "2012-11-14-13";
+			final String suffix = "2012.11.14.13";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Wed Nov 14 13:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
 		}
 		{
-			final String suffix = "2012-11-14";
+			final String suffix = "2012.11.14";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Wed Nov 14 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
 		}
 		{
-			final String suffix = "2012.20";
+			final String suffix = "2012-20";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Sun May 13 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
 		}
 		{
-			final String suffix = "2012-11";
+			final String suffix = "2012.11";
 			final Validation<String, Date> v = TimeUtils.getDateFromSuffix(suffix);
 			assertTrue("Date was parsed: " + suffix, v.isSuccess());
 			assertEquals("Thu Nov 01 00:00:00 2012", v.success().toString().replaceAll(" [A-Z]{3,} ", " "));
@@ -250,34 +250,34 @@ public class TestTimeUtils {
 	@Test
 	public void test_getTimeInfo() {
 		{
-			final String suffix = "2012-11-14-13:49:48";
+			final String suffix = "2012.11.14.13:49:48";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH:mm:ss", ChronoUnit.SECONDS)), res);
+			assertEquals(Optional.of(Tuples._2T("yyyy.MM.dd.HH:mm:ss", ChronoUnit.SECONDS)), res);
 		}
 		{
-			final String suffix = "2012-11-14-13:49";
+			final String suffix = "2012.11.14.13:49";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH:mm", ChronoUnit.MINUTES)), res);
+			assertEquals(Optional.of(Tuples._2T("yyyy.MM.dd.HH:mm", ChronoUnit.MINUTES)), res);
 		}
 		{
-			final String suffix = "2012-11-14-13";
+			final String suffix = "2012.11.14.13";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd-HH", ChronoUnit.HOURS)), res);
+			assertEquals(Optional.of(Tuples._2T("yyyy.MM.dd.HH", ChronoUnit.HOURS)), res);
 		}
 		{
-			final String suffix = "2012-11-14";
+			final String suffix = "2012.11.14";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("yyyy-MM-dd", ChronoUnit.DAYS)), res);
+			assertEquals(Optional.of(Tuples._2T("yyyy.MM.dd", ChronoUnit.DAYS)), res);
 		}
 		{
-			final String suffix = "2012.20";
+			final String suffix = "2012-20";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("YYYY.ww", ChronoUnit.WEEKS)), res);
+			assertEquals(Optional.of(Tuples._2T("YYYY-ww", ChronoUnit.WEEKS)), res);
 		}
 		{
-			final String suffix = "2012-11";
+			final String suffix = "2012.11";
 			final Optional<Tuple2<String, ChronoUnit>> res = TimeUtils.getFormatInfoFromDateString(suffix);
-			assertEquals(Optional.of(Tuples._2T("yyyy-MM", ChronoUnit.MONTHS)), res);
+			assertEquals(Optional.of(Tuples._2T("yyyy.MM", ChronoUnit.MONTHS)), res);
 		}
 		{
 			final String suffix = "2012";

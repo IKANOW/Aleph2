@@ -105,24 +105,24 @@ public class TimeUtils {
 				.map(lg -> grouping_period.compareTo(lg) < 0  ? getTimeBasedSuffix(lg, Optional.empty()) : null )
 				.orElse(
 					Patterns.match(grouping_period).<String>andReturn()
-						.when(p -> ChronoUnit.SECONDS == p, __ -> "yyyy-MM-dd-HH:mm:ss") 
-						.when(p -> ChronoUnit.MINUTES == p, __ -> "yyyy-MM-dd-HH:mm") 
-						.when(p -> ChronoUnit.HOURS == p, __ -> "yyyy-MM-dd-HH")
-						.when(p -> ChronoUnit.DAYS == p, __ -> "yyyy-MM-dd")
-						.when(p -> ChronoUnit.WEEKS == p, __ -> "YYYY.ww") // (deliberately 'Y' (week-year) not 'y' since 'w' is week-of-year 
-						.when(p -> ChronoUnit.MONTHS == p, __ -> "yyyy-MM")
+						.when(p -> ChronoUnit.SECONDS == p, __ -> "yyyy.MM.dd.HH:mm:ss") 
+						.when(p -> ChronoUnit.MINUTES == p, __ -> "yyyy.MM.dd.HH:mm") 
+						.when(p -> ChronoUnit.HOURS == p, __ -> "yyyy.MM.dd.HH")
+						.when(p -> ChronoUnit.DAYS == p, __ -> "yyyy.MM.dd")
+						.when(p -> ChronoUnit.WEEKS == p, __ -> "YYYY-ww") // (deliberately 'Y' (week-year) not 'y' since 'w' is week-of-year 
+						.when(p -> ChronoUnit.MONTHS == p, __ -> "yyyy.MM")
 						.when(p -> ChronoUnit.YEARS == p, __ -> "yyyy")
 						.otherwise(__ -> "")
 					);
 	}
 	
 	public final static String[] SUPPORTED_DATE_SUFFIXES = {
-		"yyyy-MM-dd-HH:mm:ss",
-		"yyyy-MM-dd-HH:mm",
-		"yyyy-MM-dd-HH",
-		"yyyy-MM-dd",
-		"YYYY.ww",
-		"yyyy-MM",
+		"yyyy.MM.dd.HH:mm:ss",
+		"yyyy.MM.dd.HH:mm",
+		"yyyy.MM.dd.HH",
+		"yyyy.MM.dd",
+		"YYYY-ww",
+		"yyyy.MM",
 		"yyyy"
 	};
 	
@@ -137,12 +137,12 @@ public class TimeUtils {
 	};
 	
 	public final static Pattern[] SUPPORTED_DATE_PATTERNS = {
-		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}"),
-		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}"),
-		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}"),
-		Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}"),
-		Pattern.compile("[0-9]{4}[.][0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}[.][0-9]{2}[.][0-9]{2}:[0-9]{2}:[0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}[.][0-9]{2}[.][0-9]{2}:[0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}[.][0-9]{2}[.][0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}[.][0-9]{2}"),
 		Pattern.compile("[0-9]{4}-[0-9]{2}"),
+		Pattern.compile("[0-9]{4}[.][0-9]{2}"),
 		Pattern.compile("[0-9]{4}")
 	};
 	
