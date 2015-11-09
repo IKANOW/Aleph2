@@ -91,14 +91,14 @@ public class TestTimeSliceDirUtils {
 					"fail2_notdate",
 					"works_2015/",
 					"works_2015",
-					"works_2015-01",
-					"works_2015-01-01",
-					"works_2015-01-01-01",
-					"works_2015.10",
-					"works/2015.10",
-					"works_test/2015.10",
-					"2015-01", //(no _)
-					"2015.10"
+					"works_2015.01",
+					"works_2015.01.01",
+					"works_2015.01.01.01",
+					"works_2015-10",
+					"works/2015-10",
+					"works_test/2015-10",
+					"2015.01", //(no _)
+					"2015-10"
 					);
 		
 		final Date d1 = Date.from(LocalDateTime.of(2015, 1, 1, 0, 0).atZone(ZoneOffset.systemDefault()).toInstant());
@@ -108,20 +108,20 @@ public class TestTimeSliceDirUtils {
 		final Date d5 = Date.from(LocalDateTime.of(2015, 1, 1, 1, 0).atZone(ZoneOffset.systemDefault()).toInstant());
 		final Date d6 = Date.from(LocalDateTime.of(2015, 1, 1, 2, 0).atZone(ZoneOffset.systemDefault()).toInstant());
 				
-		final Date d7 = new SimpleDateFormat("YYYY.ww").parse("2015.10");
-		final Date d8 = new SimpleDateFormat("YYYY.ww").parse("2015.11");
+		final Date d7 = new SimpleDateFormat("YYYY-ww").parse("2015-10");
+		final Date d8 = new SimpleDateFormat("YYYY-ww").parse("2015-11");
 		
 		assertEquals(Arrays.asList(
 				Tuples._3T("works_2015", d1, d2),
 				Tuples._3T("works_2015", d1, d2),
-				Tuples._3T("works_2015-01", d1, d3),
-				Tuples._3T("works_2015-01-01", d1, d4),
-				Tuples._3T("works_2015-01-01-01", d5, d6),
-				Tuples._3T("works_2015.10", d7, d8),
-				Tuples._3T("works/2015.10", d7, d8),
-				Tuples._3T("works_test/2015.10", d7, d8),
-				Tuples._3T("2015-01", d1, d3),
-				Tuples._3T("2015.10", d7, d8)
+				Tuples._3T("works_2015.01", d1, d3),
+				Tuples._3T("works_2015.01.01", d1, d4),
+				Tuples._3T("works_2015.01.01.01", d5, d6),
+				Tuples._3T("works_2015-10", d7, d8),
+				Tuples._3T("works/2015-10", d7, d8),
+				Tuples._3T("works_test/2015-10", d7, d8),
+				Tuples._3T("2015.01", d1, d3),
+				Tuples._3T("2015-10", d7, d8)
 				),
 				TimeSliceDirUtils.annotateTimedDirectories(test_dirs.stream()).collect(Collectors.toList()));
 	}
@@ -132,10 +132,10 @@ public class TestTimeSliceDirUtils {
 		final List<String> test_dirs = 
 				Arrays.asList(
 					"fail",
-					"works_2015-06-01",
-					"works_2015-06-03",
-					"works_2015-01-01-01",
-					"works_2035-01-01-01"
+					"works_2015.06.01",
+					"works_2015.06.03",
+					"works_2015.01.01.01",
+					"works_2035.01.01.01"
 					);
 		
 		// No filters:
@@ -154,10 +154,10 @@ public class TestTimeSliceDirUtils {
 						
 			assertEquals(
 					Arrays.asList(
-							"works_2015-06-01",
-							"works_2015-06-03",
-							"works_2015-01-01-01",
-							"works_2035-01-01-01"
+							"works_2015.06.01",
+							"works_2015.06.03",
+							"works_2015.01.01.01",
+							"works_2035.01.01.01"
 							)
 					, 
 					res);
@@ -180,8 +180,8 @@ public class TestTimeSliceDirUtils {
 						
 			assertEquals(
 					Arrays.asList(
-							"works_2015-06-03",
-							"works_2035-01-01-01"
+							"works_2015.06.03",
+							"works_2035.01.01.01"
 							)
 					, 
 					res);
@@ -204,8 +204,8 @@ public class TestTimeSliceDirUtils {
 						
 			assertEquals(
 					Arrays.asList(
-							"works_2015-06-01",
-							"works_2015-01-01-01"
+							"works_2015.06.01",
+							"works_2015.01.01.01"
 							)
 					, 
 					res);
@@ -228,8 +228,8 @@ public class TestTimeSliceDirUtils {
 						
 			assertEquals(
 					Arrays.asList(
-							"works_2015-06-01",
-							"works_2015-06-03"
+							"works_2015.06.01",
+							"works_2015.06.03"
 							)
 					, 
 					res);
