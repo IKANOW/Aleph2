@@ -257,7 +257,7 @@ public class TestSecuredDataServiceProvider {
 			;
 		
 		final DataBucketBean multi_1b = BeanTemplateUtils.build(DataBucketBean.class) //allowed
-				.with(DataBucketBean::full_name, "/multi/1b")
+				//(no full name - this gets treated as a dumb container ie no auth is needed)
 				.with(DataBucketBean::multi_bucket_children, new HashSet<String>(Arrays.asList("/allowed/1")))
 			.done().get()
 			;
@@ -295,7 +295,7 @@ public class TestSecuredDataServiceProvider {
 		secure_provider.getDataService().get().getReadableCrudService(String.class, Arrays.asList(
 				fixed_1, fixed_1b, fixed_2, fixed_3, multi_1, multi_1b, multi_2, multi_3
 				), Optional.empty());
-		assertEquals(Arrays.asList("/fixed/1", "/fixed/1b", "/multi/1", "/multi/1b"), test_harness.normal_buckets);
+		assertEquals(Arrays.asList("/fixed/1", "/fixed/1b", "/multi/1"), test_harness.normal_buckets);
 		assertEquals(Arrays.asList("/test/allowed"), test_harness.multi_buckets);
 
 		// All multi buckets not allowed

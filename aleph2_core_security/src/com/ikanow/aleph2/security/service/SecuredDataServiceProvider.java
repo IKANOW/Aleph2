@@ -141,7 +141,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 
 			final Collection<DataBucketBean> verified_buckets =			
 				buckets.stream()
-					.filter(b -> checkReadPermission(b))
+					.filter(b -> (null == b.full_name()) || checkReadPermission(b)) // (if full_name == null then it's just a container for the paths...)
 					.map(b -> {
 						return Optional.ofNullable(b.multi_bucket_children())
 									.filter(m -> !m.isEmpty())
@@ -160,6 +160,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 									.orElse(b)
 									;
 					})
+					.filter(b -> (null != b.full_name())) // (...but ignore them down here)
 					.collect(Collectors.toList())
 					;
 			
