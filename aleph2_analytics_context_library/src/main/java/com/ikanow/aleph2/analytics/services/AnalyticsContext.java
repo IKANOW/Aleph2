@@ -1036,6 +1036,26 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job, 
 			final AnalyticThreadJobInputBean job_input)
 	{	
+		// First off, check we have permissions:
+		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		
+		final AuthorizationBean auth_bean = new AuthorizationBean(my_bucket.owner_id());
+		final ICrudService<DataBucketBean> secured_bucket_crud = _core_management_db.readOnlyVersion().getDataBucketStore().secured(_service_context, auth_bean);
+		
+		final boolean found_bucket = Lambdas.wrap_u(() -> secured_bucket_crud
+				.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, job_input.resource_name_or_id()),
+								Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
+								true
+						)
+				.get()
+				.isPresent()).get()
+				;		
+		if (!found_bucket) {
+			throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, job_input.resource_name_or_id()));
+		}		
+		
+		// Now try to get the technology driver
+		
 		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job_input).toString());
 		if ("storage_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
