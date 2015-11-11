@@ -578,7 +578,7 @@ public class TestAnalyticsContext {
 	public interface StringAnalyticsAccessContext extends IAnalyticsAccessContext<String> {}
 	
 	@Test
-	public void test_serviceInputsAndOutputs() {
+	public void test_serviceInputsAndOutputs() throws InterruptedException, ExecutionException {
 		
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);		
 		
@@ -612,16 +612,36 @@ public class TestAnalyticsContext {
 						)
 				.done().get();
 				
-		//TODO (ALEPH-72): add proper test cases for getServiceInput
-//		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input1));
-//		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, analytic_input2));
-//		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input3));
+		
+		// Check that it fails if the input is not present in the DB
+		try {
+			test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input1);
+			fail("Should have thrown security exception");
+		}
+		catch (Exception e) {}
+		
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(test_bucket, true).get();
+
+		// (check bucket not present failure case)
+		try {
+			test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, analytic_input2);
+			fail("Should have thrown security exception");
+		}
+		catch (Exception e) {}
+		
+		test_context.setBucket(test_bucket);
+		
+		// Check standard cases
+		
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input1));
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, analytic_input2));
+		assertEquals(Optional.empty(), test_context.getServiceInput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input3));
 		
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "search_index_service"));
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, "storage_service"));
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "random_string"));
 	}
-	
+		
 	@Test
 	public void test_batch_inputAndOutputUtilities() throws InterruptedException, ExecutionException {
 
@@ -768,7 +788,7 @@ public class TestAnalyticsContext {
 
 		// Add the bucket to the CRUD store:
 
-		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(other_bucket).get();
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(other_bucket, true).get();
 
 		// Now do all the other checks:
 
