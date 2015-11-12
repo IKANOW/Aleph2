@@ -482,7 +482,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			})
 			.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 				// Some information logging:
-				_logger.warn(ErrorUtils.get("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name()));
+				_logger.warn(ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name()));
 				
 				final BasicMessageBean error_bean = 
 						SharedErrorUtils.buildErrorMessage(hostname, message,

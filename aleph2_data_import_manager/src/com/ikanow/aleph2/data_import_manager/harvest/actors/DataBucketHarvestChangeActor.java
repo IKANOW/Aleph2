@@ -186,7 +186,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    					})
 	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 	    						// Some information logging:
-	    						_logger.warn("Unexpected error replying to '{0}': error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
+	    						_logger.warn("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name());
 	    						
 			    				final BasicMessageBean error_bean = 
 			    						SharedErrorUtils.buildErrorMessage(hostname, m,
