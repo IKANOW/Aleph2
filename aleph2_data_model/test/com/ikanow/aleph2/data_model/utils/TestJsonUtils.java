@@ -17,12 +17,14 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Optional;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -82,5 +84,17 @@ public class TestJsonUtils {
 		catch (Exception e) {} // json error, check
 		
 		new JsonUtils(); // (just for coverage)		
+	}
+	
+	@Test
+	public void test_getProperty() throws JsonProcessingException, IOException {
+		final JsonNode test = BeanTemplateUtils.configureMapper(Optional.empty()).readTree("{\"a\": {\"aa\": [ {\"aaa\":true}, {} ], \"b\": false }}");
+		
+		assertEquals(false, JsonUtils.getProperty("a.b", test).get().asBoolean());
+		assertEquals(true, JsonUtils.getProperty("a.aa.aaa", test).get().asBoolean());
+		assertEquals(Optional.empty(), JsonUtils.getProperty("a.b.c", test));
+		assertEquals(Optional.empty(), JsonUtils.getProperty("a.z", test));
+		assertEquals(Optional.empty(), JsonUtils.getProperty("z", test));
+		
 	}
 }
