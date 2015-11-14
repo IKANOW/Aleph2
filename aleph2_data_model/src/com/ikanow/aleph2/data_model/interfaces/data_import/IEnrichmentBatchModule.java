@@ -61,14 +61,11 @@ public interface IEnrichmentBatchModule {
 	void onStageComplete(boolean is_original);	
 	
 	/** This is called once per key in reduce type cases
-	 * Can be left blank if no state is required, otherwise can copy across any initializations from onStageInitialize
+	 * Can be left blank if no state is required(the same object will be returned), otherwise can create a new object 
+	 * and copy across any initializations from onStageInitialize
 	 * @return the instance of IEnrichmentBatchModule on which onStageComplete is called
 	 */
 	default IEnrichmentBatchModule cloneForNewGrouping() {
-		try {
-			return this.getClass().newInstance();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		return this;
 	}
 }
