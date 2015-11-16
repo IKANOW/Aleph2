@@ -1168,7 +1168,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> element = 
 					_mutable_state.external_buckets.computeIfAbsent(external_bucket.full_name(), s -> getNewExternalEndpoint(s));
 			
-			return element.either(
+			return element.<Validation<BasicMessageBean, JsonNode>>either(
 					e -> e.either(batch -> {
 						batch.storeObject(obj_json);
 						return Validation.success(obj_json);
