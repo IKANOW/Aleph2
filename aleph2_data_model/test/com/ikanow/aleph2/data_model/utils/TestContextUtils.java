@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 import fj.data.Either;
+import fj.data.Validation;
 
 public class TestContextUtils {
 
@@ -384,9 +385,10 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void sendObjectToStreamingPipeline(
+		public Validation<BasicMessageBean, JsonNode> sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job,
 				Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations) {
+			return null;
 		}
 
 		@Override
@@ -404,9 +406,10 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void emitObject(Optional<DataBucketBean> bucket,
+		public Validation<BasicMessageBean, JsonNode> emitObject(Optional<DataBucketBean> bucket,
 				AnalyticThreadJobBean job,
 				Either<JsonNode, Map<String, Object>> object, Optional<AnnotationBean> annotations) {
+			return null;
 		}
 
 		@Override
@@ -491,14 +494,16 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void emitMutableObject(long id, ObjectNode mutated_json,
+		public Validation<BasicMessageBean, JsonNode> emitMutableObject(long id, ObjectNode mutated_json,
 				Optional<AnnotationBean> annotation, Optional<JsonNode> grouping_fields) {
+			return null;
 		}
 
 		@Override
-		public void emitImmutableObject(long id, JsonNode original_json,
+		public Validation<BasicMessageBean, JsonNode> emitImmutableObject(long id, JsonNode original_json,
 				Optional<ObjectNode> mutations,
 				Optional<AnnotationBean> annotations, Optional<JsonNode> grouping_fields) {
+			return null;
 		}
 
 		@Override
@@ -567,6 +572,14 @@ public class TestContextUtils {
 		@Override
 		public CompletableFuture<?> flushBatchOutput(
 				Optional<DataBucketBean> bucket) {
+			return null;
+		}
+
+		@Override
+		public Validation<BasicMessageBean, JsonNode> externalEmit(
+				DataBucketBean bucket,
+				Either<JsonNode, Map<String, Object>> object,
+				Optional<AnnotationBean> annotations) {
 			return null;
 		}
 		

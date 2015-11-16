@@ -105,8 +105,9 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	/** The storage service  retains data from 0-3 different stages of the processing:
 	 *  "raw" - is the unprocessed data, "json" is the data after serialization but otherwise untouched (eg before enrichment/analytics), "processed" is post-processing/analytics
 	 *  "transient_output" - for analytic engines, temporary storage shared between jobs within an analytic thread (and with external analytic threads)
+	 *  "transient_input" - the input directory for the bucket - allows buckets to write to inputs of other buckets directly
 	 */
-	public enum StorageStage { raw, json, processed, transient_output };
+	public enum StorageStage { raw, json, processed, transient_output, transient_input };
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate

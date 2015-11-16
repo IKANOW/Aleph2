@@ -60,13 +60,16 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvi
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
@@ -81,6 +84,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import fj.data.Either;
+import fj.data.Validation;
 
 public class TestAnalyticsContext {
 
@@ -1305,4 +1309,177 @@ public class TestAnalyticsContext {
 		}
 		assertEquals(4,count);
 	}
+	
+	@Test
+	public void test_externalEmit() throws JsonProcessingException, IOException {
+		
+		final MockSecurityService mock_security = (MockSecurityService) _service_context.getSecurityService();
+		
+		// Create some buckets:
+
+		// 0) My bucket
+		
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+		
+		final AnalyticThreadJobInputBean input =
+				BeanTemplateUtils.build(AnalyticThreadJobInputBean.class)
+					.with(AnalyticThreadJobInputBean::resource_name_or_id, "/test")
+				.done().get();
+		
+		final AnalyticThreadJobBean job = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+					.with(AnalyticThreadJobBean::name, "test")
+					.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch)
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList(input))
+				.done().get();
+		
+		final DataBucketBean my_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::full_name, "/test/me")
+				.with(DataBucketBean::owner_id, "me")
+			.done().get();		
+		
+		test_context.setBucket(my_bucket);
+		
+		// 1) Streaming enrichment bucket
+		
+		final DataBucketBean stream_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/stream")
+					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+				.done().get();
+				
+		// save in the DB:
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(stream_bucket, true).join();
+		mock_security.setGlobalMockRole(stream_bucket.full_name(), true);		
+		
+		// 2) Batch analytic bucket
+				
+		//(see TestAnalyticsContext_FileSystemChecks)
+		
+		// 3) Analytic bucket that doesn't use a "self" input
+		
+		final DataBucketBean analytic_bucket_no_self_input = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/analytics/no_input")
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+							.done().get()
+							)
+				.done().get();
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_no_self_input, true).join();
+		mock_security.setGlobalMockRole(analytic_bucket_no_self_input.full_name(), true);		
+		
+		// 4) Bucket that we don't have write permission for
+		
+		final DataBucketBean stream_bucket_no_perms = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/noperms/stream")
+					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+				.done().get();		
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(stream_bucket_no_perms, true).join();
+		
+		// 5) bucket that's not even in the DB
+		
+		final DataBucketBean stream_bucket_not_in_db = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/notpresent/stream")
+					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+				.done().get();		
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(stream_bucket_no_perms, true).join();
+		mock_security.setGlobalMockRole(stream_bucket_not_in_db.full_name(), true);		
+		
+		// Tests:
+		
+		//1) Streaming enrichment
+		{
+			Validation<BasicMessageBean, JsonNode> ret_val_1 =
+					test_context.emitObject(Optional.of(stream_bucket), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream1\"}")), Optional.empty());
+			
+			final String listen_topic = test_context._distributed_services.generateTopicName(stream_bucket.full_name(), Optional.empty());
+			
+			// Will fail because nobody is listening
+			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());
+
+			// check it's cached though
+			assertEquals(Either.right(listen_topic), test_context._mutable_state.external_buckets.get(stream_bucket.full_name()));
+			
+			// Start listening
+			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			
+			Validation<BasicMessageBean, JsonNode> ret_val_2 =
+					test_context.emitObject(Optional.of(stream_bucket), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream2\"}")), Optional.empty());
+			
+			assertTrue("Should work: " + ret_val_2.toString(), ret_val_2.isSuccess());
+
+			//grab message to check actually emitted			
+			Iterator<String> iter = test_context._distributed_services.consumeAs(listen_topic, Optional.empty());
+			long count = 0;			
+			while ( iter.hasNext() ) {
+				String msg = iter.next();
+				assertTrue("Sent this message: " + msg, msg.equals(ret_val_2.success().toString()));
+				count++;
+			}
+			assertEquals(1,count);			
+			
+		}
+		// 2) Batch analytic bucket
+		
+		//(see TestAnalyticsContext_FileSystemChecks)
+		
+		// 3)  Analytic bucket that doesn't use a "self" input
+		{
+			Validation<BasicMessageBean, JsonNode> ret_val_1 =
+					test_context.emitObject(Optional.of(analytic_bucket_no_self_input), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"batch_fail\"}")), Optional.empty());
+		
+			final String listen_topic = test_context._distributed_services.generateTopicName(analytic_bucket_no_self_input.full_name(), Optional.empty());			
+			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			
+			// Will fail because nobody is listening
+			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());		
+			
+			// check failure is cached though
+			assertTrue("Not cached: " + test_context._mutable_state.external_buckets, test_context._mutable_state.external_buckets.containsKey(analytic_bucket_no_self_input.full_name()));
+			assertEquals(null, test_context._mutable_state.external_buckets.get(analytic_bucket_no_self_input.full_name()).right().value());
+			
+		}
+		
+		// 4) Bucket that we don't have write permission for
+		{
+			Validation<BasicMessageBean, JsonNode> ret_val_1 =
+					test_context.emitObject(Optional.of(stream_bucket_no_perms), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream1\"}")), Optional.empty());
+
+			final String listen_topic = test_context._distributed_services.generateTopicName(stream_bucket_no_perms.full_name(), Optional.empty());
+			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			
+			// Will fail because nobody has write perms
+			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());
+			
+			// check failure is cached though
+			assertTrue("Not cached: " + test_context._mutable_state.external_buckets, test_context._mutable_state.external_buckets.containsKey(stream_bucket_no_perms.full_name()));
+			assertEquals(null, test_context._mutable_state.external_buckets.get(stream_bucket_no_perms.full_name()).right().value());
+			
+		}
+		
+		// 5) bucket that's not even in the DB
+		{
+			Validation<BasicMessageBean, JsonNode> ret_val_1 =
+					test_context.emitObject(Optional.of(stream_bucket_not_in_db), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream1\"}")), Optional.empty());
+			
+			final String listen_topic = test_context._distributed_services.generateTopicName(stream_bucket_not_in_db.full_name(), Optional.empty());
+			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			
+			// Will fail because not in the DB
+			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());
+			
+			// check failure is cached though
+			assertTrue("Not cached: " + test_context._mutable_state.external_buckets, test_context._mutable_state.external_buckets.containsKey(stream_bucket_not_in_db.full_name()));
+			assertEquals(null, test_context._mutable_state.external_buckets.get(stream_bucket_not_in_db.full_name()).right().value());
+		}
+		
+		
+	}
+	
+	//TODO test sub-buckets once implemented
 }

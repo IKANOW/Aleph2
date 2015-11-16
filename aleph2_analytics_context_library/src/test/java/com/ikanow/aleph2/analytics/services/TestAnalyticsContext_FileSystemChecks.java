@@ -18,6 +18,7 @@ package com.ikanow.aleph2.analytics.services;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -31,21 +32,31 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+
+import fj.data.Either;
+import fj.data.Validation;
 
 public class TestAnalyticsContext_FileSystemChecks {
 
@@ -139,6 +150,91 @@ public class TestAnalyticsContext_FileSystemChecks {
 				);
 	}
 
+	@Test
+	public void test_externalEmit() throws JsonProcessingException, IOException, InterruptedException {
+		
+		final MockSecurityService mock_security = (MockSecurityService) _service_context.getSecurityService();
+		
+		// Create some buckets:
+
+		// 0) My bucket
+		
+		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+		
+		final AnalyticThreadJobInputBean input =
+				BeanTemplateUtils.build(AnalyticThreadJobInputBean.class)
+					.with(AnalyticThreadJobInputBean::resource_name_or_id, "/test/analytics/batch")
+				.done().get();
+		
+		final AnalyticThreadJobBean job = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+					.with(AnalyticThreadJobBean::name, "test")
+					.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.batch)
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList(input))
+				.done().get();
+		
+		final DataBucketBean my_bucket = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::full_name, "/test/me")
+				.with(DataBucketBean::owner_id, "me")
+			.done().get();		
+		
+		test_context.setBucket(my_bucket);
+				
+		// 2) Batch analytic bucket
+		
+		//(see TestAnalyticsContext_FileSystemChecks)
+		
+		final DataBucketBean analytic_bucket_batch = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/analytics/batch")
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+							.done().get()
+							)
+				.done().get();
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_batch, true).join();
+		mock_security.setGlobalMockRole(analytic_bucket_batch.full_name(), true);		
+		
+		File f_tmp = new File(_service_context.getStorageService().getBucketRootPath() + analytic_bucket_batch.full_name() + IStorageService.TEMP_DATA_SUFFIX);
+		File f_import = new File(_service_context.getStorageService().getBucketRootPath() + analytic_bucket_batch.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX);
+		FileUtils.deleteQuietly(f_tmp);		
+		FileUtils.deleteQuietly(f_import);						
+		createDirs(f_tmp, Arrays.asList(""));
+		createDirs(f_import, Arrays.asList(""));		
+		assertTrue("Should exist:" + f_tmp, f_tmp.exists());
+		assertTrue("Should exist:" + f_import, f_import.exists());
+		
+		// create some directories
+		
+		// emit the objects
+		
+		final Validation<BasicMessageBean, JsonNode> ret_val_1 =
+				test_context.emitObject(Optional.of(analytic_bucket_batch), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"batch_succeed\"}")), Optional.empty());
+
+		assertTrue("Should work: " + ret_val_1.validation(f -> f.message(), s -> s.toString()), ret_val_1.isSuccess());
+		assertTrue(test_context._mutable_state.external_buckets.get(analytic_bucket_batch.full_name()).isLeft());
+
+		// no files to start with (because the output hasn't been flushed)
+		Thread.sleep(500L); //(safety)
+		
+		assertEquals(0, f_import.list().length);
+		assertFalse(0 == f_tmp.list().length);
+		
+		test_context.flushBatchOutput(Optional.of(my_bucket), job);
+		
+		// now check again (after a "safety sleep")
+		Thread.sleep(500L);
+
+		assertEquals(0, f_tmp.list().length);
+		assertFalse(0 == f_import.list().length);		
+	}
+	
+	//////////////////////////////////////////////////////////////
+	
+	//UTILS
+	
 	public void createDirs(File f, List<String> dirs) {
 		dirs.stream().forEach(dir -> {
 			try {

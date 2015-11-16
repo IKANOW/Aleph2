@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.interfaces.data_import;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +35,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+
+import fj.data.Either;
+import fj.data.Validation;
 
 public interface IEnrichmentModuleContext extends IUnderlyingService {
 
@@ -118,8 +122,9 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 * @param mutated_json - the mutated object to emit
 	 * @param annotations - a set of annotations to include in the emitted object
 	 * @param grouping_key - where the grouping fields are set to unknown ("?"), any JsonNode can be used as the grouping field and can be passed in here. In other cases the behavior of setting this is undefined.
+	 * @returns a validation containing and error, or the emitted JsonNode if successful
 	 */
-	void emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
+	Validation<BasicMessageBean, JsonNode> emitMutableObject(final long id, final ObjectNode mutated_json, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
 	
 	/** The most efficient (slightly uglier) emit process - emit the original object with a list of applied mutations
 	 * @param id - the id received with the object from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
@@ -127,14 +132,25 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 * @param mutations - a list of "mutations" that are applied to the original_json (replace values, merge maps and sets, append collections; null value unsets)
 	 * @param annotation - a set of annotations to include in the emitted object
 	 * @param grouping_key - where the grouping fields are set to root ("?"), any JsonNode can be used as the grouping field and can be passed in here. In other cases the behavior of setting this is undefined.
+	 * @returns a validation containing and error, or the emitted JsonNode if successful
 	 */
-	void emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
+	Validation<BasicMessageBean, JsonNode> emitImmutableObject(final long id, final JsonNode original_json, final Optional<ObjectNode> mutations, final Optional<AnnotationBean> annotations, final Optional<JsonNode> grouping_key);
 	
 	/** Enables the batch process to store an object that failed for future analysis
 	 * @param id the id of the object received from the IEnrichmentBatchModule onObjectBatch or onAggregatedObjectBatch call (NOT USED IN STREAMING ENRICHMENT)
 	 * @param original_json
 	 */
 	void storeErroredObject(final long id, final JsonNode original_json);
+	
+	/**
+	 *  Supports: a) writing objects to sub-buckets (use the sub-bucket full_name - the system will fill the rest in) b) external buckets (again - only the full name is required, the system will authorize and fill in)
+	 * @param bucket - the external or sub-bucket (if it's the principal bucket then will immediately output regardless of where in the enrichment pipeline this is) 
+	 * @param json - the object to emit
+	 * @param mutations - a list of "mutations" that are applied to the json (replace values, merge maps and sets, append collections; null value unsets)
+	 * @param annotation - a set of annotations to include in the emitted object
+	 * @return
+	 */
+	Validation<BasicMessageBean, JsonNode> externalEmit(final DataBucketBean bucket, final Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations);
 	
 	/** Flushes any pending batch output, eg before a process exits
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
