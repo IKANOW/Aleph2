@@ -152,6 +152,14 @@ public class TestAnalyticsContext_FileSystemChecks {
 
 	@Test
 	public void test_externalEmit() throws JsonProcessingException, IOException, InterruptedException {
+		test_externalEmit_worker(false);
+	}
+	@Test
+	public void test_externalEmit_testMode() throws JsonProcessingException, IOException, InterruptedException {
+		test_externalEmit_worker(true);
+	}
+		
+	public void test_externalEmit_worker(boolean is_test) throws JsonProcessingException, IOException, InterruptedException {
 		
 		final MockSecurityService mock_security = (MockSecurityService) _service_context.getSecurityService();
 		
@@ -175,7 +183,7 @@ public class TestAnalyticsContext_FileSystemChecks {
 		
 		final DataBucketBean my_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
-				.with(DataBucketBean::full_name, "/test/me")
+				.with(DataBucketBean::full_name, is_test ? "/aleph2_testing/useriid/test/me" : "/test/me")
 				.with(DataBucketBean::owner_id, "me")
 			.done().get();		
 		
@@ -220,7 +228,8 @@ public class TestAnalyticsContext_FileSystemChecks {
 		Thread.sleep(500L); //(safety)
 		
 		assertEquals(0, f_import.list().length);
-		assertFalse(0 == f_tmp.list().length);
+		if (is_test) assertTrue(0 == f_tmp.list().length);
+		else assertFalse(0 == f_tmp.list().length);
 		
 		test_context.flushBatchOutput(Optional.of(my_bucket), job);
 		
@@ -228,7 +237,8 @@ public class TestAnalyticsContext_FileSystemChecks {
 		Thread.sleep(500L);
 
 		assertEquals(0, f_tmp.list().length);
-		assertFalse(0 == f_import.list().length);		
+		if (is_test) assertTrue(0 == f_import.list().length);
+		else assertFalse(0 == f_import.list().length);
 	}
 	
 	//////////////////////////////////////////////////////////////

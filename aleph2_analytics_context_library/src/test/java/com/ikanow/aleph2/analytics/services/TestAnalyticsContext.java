@@ -1312,7 +1312,14 @@ public class TestAnalyticsContext {
 	
 	@Test
 	public void test_externalEmit() throws JsonProcessingException, IOException {
+		test_externalEmit_worker(false);
+	}
+	@Test
+	public void test_externalEmit_testMode() throws JsonProcessingException, IOException {
+		test_externalEmit_worker(true);
+	}
 		
+	public void test_externalEmit_worker(boolean is_test) throws JsonProcessingException, IOException {
 		final MockSecurityService mock_security = (MockSecurityService) _service_context.getSecurityService();
 		
 		// Create some buckets:
@@ -1335,7 +1342,7 @@ public class TestAnalyticsContext {
 		
 		final DataBucketBean my_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
-				.with(DataBucketBean::full_name, "/test/me")
+				.with(DataBucketBean::full_name, is_test ? "/aleph2_testing/useriid/test/me" : "/test/me")
 				.with(DataBucketBean::owner_id, "me")
 			.done().get();		
 		
@@ -1421,7 +1428,7 @@ public class TestAnalyticsContext {
 				assertTrue("Sent this message: " + msg, msg.equals(ret_val_2.success().toString()));
 				count++;
 			}
-			assertEquals(1,count);			
+			assertEquals(is_test ? 0 : 1, count);			
 			
 		}
 		// 2) Batch analytic bucket

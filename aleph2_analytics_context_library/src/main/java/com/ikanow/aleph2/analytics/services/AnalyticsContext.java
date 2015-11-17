@@ -80,6 +80,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -1158,23 +1159,25 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @return
 	 */
 	protected Validation<BasicMessageBean, JsonNode> externalEmit(final DataBucketBean external_bucket, final AnalyticThreadJobBean job, final JsonNode obj_json) {
-		
 		// Do we already know about this object:
 		final IAnalyticsContext sub_context = _mutable_state.sub_buckets.get(external_bucket.full_name());
 		if (null != sub_context) { //easy case, sub-buckets are constructed dynamically
 			return sub_context.emitObject(sub_context.getBucket(), job, Either.left(obj_json), Optional.empty());
 		}
-		else { // this is more complicated
+		else { // this is more complicated			
+			// First off - if this is a test bucket then we're not going to write anything, but we will do all the authentication	
+			final boolean is_test_bucket = BucketUtils.isTestBucket(_mutable_state.bucket.get());
+			
 			final Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> element = 
 					_mutable_state.external_buckets.computeIfAbsent(external_bucket.full_name(), s -> getNewExternalEndpoint(s));
 			
 			return element.<Validation<BasicMessageBean, JsonNode>>either(
 					e -> e.either(batch -> {
-						batch.storeObject(obj_json);
+						if (!is_test_bucket) batch.storeObject(obj_json);
 						return Validation.success(obj_json);
 					}, 
 					slow -> {
-						slow.storeObject(obj_json);
+						if (!is_test_bucket) slow.storeObject(obj_json);
 						return Validation.success(obj_json);
 					})
 					,
@@ -1184,7 +1187,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 						}
 						else if (_distributed_services.doesTopicExist(topic)) {
 							// (ie someone is listening in on our output data, so duplicate it for their benefit)
-							_distributed_services.produce(topic, obj_json.toString());
+							if (!is_test_bucket) _distributed_services.produce(topic, obj_json.toString());
 							return Validation.success(obj_json);
 						}
 						else {
