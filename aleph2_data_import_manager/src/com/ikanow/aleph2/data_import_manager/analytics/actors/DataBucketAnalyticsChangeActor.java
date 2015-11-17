@@ -79,6 +79,7 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -122,7 +123,6 @@ import org.apache.logging.log4j.Logger;
 
 
 
-import org.elasticsearch.common.collect.ImmutableMap;
 
 import scala.PartialFunction;
 import scala.Tuple2;
@@ -175,8 +175,10 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
 import com.codepoetics.protonpack.StreamUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
