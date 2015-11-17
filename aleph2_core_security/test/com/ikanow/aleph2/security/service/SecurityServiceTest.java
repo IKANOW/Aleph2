@@ -409,44 +409,45 @@ public class SecurityServiceTest {
 	@Test
 	public void testPermissionExtractor(){
 		PermissionExtractor extractor = new PermissionExtractor();
-		SharedLibraryBean libraryBean = new SharedLibraryBean("1", "display_name", "path_name",
+		SharedLibraryBean libraryBean = new SharedLibraryBean("1", "display_name", "/tmp/bucket1",
 				LibraryType.misc_archive, "subtype", "owner_id",
 				new HashSet(), 
 				"batch_streaming_entry_point","batch_enrichment_entry_point"," misc_entry_point",
 				new HashMap());
-		assertNotNull(extractor.extractPermissionIdentifier(libraryBean));
+		assertNotNull(extractor.extractPermissionIdentifiers(libraryBean));
 		
 		DataBucketBean dataBucketBean = mock(DataBucketBean.class);
 		when(dataBucketBean._id()).thenReturn("1");
 		when(dataBucketBean.owner_id()).thenReturn("99");
-		assertNotNull(extractor.extractPermissionIdentifier(dataBucketBean));
+		assertNotNull(extractor.extractPermissionIdentifiers(dataBucketBean));
+		assertEquals(2, extractor.extractPermissionIdentifiers(dataBucketBean).size());
 		DataBucketStatusBean dataBucketStatusBean = mock(DataBucketStatusBean.class);
 		when(dataBucketStatusBean._id()).thenReturn("2");
 		
-		assertNotNull(extractor.extractPermissionIdentifier(
+		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String _id(){
 				return "1";
 			};
 		}));
-		assertNotNull(extractor.extractPermissionIdentifier(
+		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String id(){
 				return "2";
 			};
 		}));
-		assertNotNull(extractor.extractPermissionIdentifier(
+		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String getId(){
 				return "3";
 			};
 		}));
-		assertNotNull(extractor.extractPermissionIdentifier(
+		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 					protected String _id = "4";
 					
 		}));		
-		assertNotNull(extractor.extractPermissionIdentifier(new TestWithId()));
+		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId()));
 		
 		assertNotNull(extractor.extractOwnerIdentifier(libraryBean));
 		assertNotNull(extractor.extractOwnerIdentifier(dataBucketBean));

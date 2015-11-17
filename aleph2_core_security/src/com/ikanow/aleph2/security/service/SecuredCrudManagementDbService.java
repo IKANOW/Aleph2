@@ -66,13 +66,13 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 			    };
 	
 
-     protected BiConsumer<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>, ? super Throwable> readCheckMany = (c, t) -> {
+   /*  protected BiConsumer<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>, ? super Throwable> readCheckMany = (c, t) -> {
 	      logger.debug("readCheckMany:"+c+",t="+t);
 	      //System.out.println(t);
 			//checkReadPermissions(c);
 	      
 	    };
-
+*/
 		Function<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>,? extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> convertCursor = (c)->{
 			return new SecuredCursor(c);
 		};
@@ -380,12 +380,17 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	}
 	
 	protected void checkWritePermissions(T new_object) {
-		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
 		
-		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN); 
+		//String permission = permissionExtractor.extractPermissionIdentifiers(new_object);
+		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN);
 //		boolean permitted = securityService.isPermitted(subject,permission); 
 		if(!permitted){
-			String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permission+")for "+new_object.getClass();
+			//test individual write permissions
+		}
+		//still not permitted, we are out of luck
+		if(!permitted){
+			//String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permissions+")for "+new_object.getClass();
+			String msg = "Subject "+subject.getSubject()+" has no write permissions for "+new_object.getClass();
 			logger.error(msg);
 			throw new SecurityException(msg);					
 		}
@@ -413,12 +418,17 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @param new_object
 	 */
 	protected boolean checkReadPermissions(Object new_object, boolean throwOrReturn) {
-		String permission = permissionExtractor.extractPermissionIdentifier(new_object);
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object);
 		boolean permitted = false;
-		if(permission!=null){
-			permitted = securityService.isPermitted(subject,permission); 
+		if(permissions!=null && permissions.size()>0){
+			for (String permission : permissions) {
+				permitted = securityService.isPermitted(subject,permission);
+				if(permitted){
+					break;
+				}
+			}
 			if(!permitted && throwOrReturn){
-				String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permission+")for "+new_object.getClass();
+				String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permissions+")for "+new_object.getClass();
 				logger.error(msg);
 				throw new SecurityException(msg);					
 			}

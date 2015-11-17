@@ -17,6 +17,8 @@ package com.ikanow.aleph2.security.service;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -24,63 +26,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 public class PermissionExtractor {
 	
-	/** 
-	 * This class extracts permission values from known classes,e.g._id() or ownerId etc matching permissions.
-	 * @return
-	 */
-	public String extractPermissionIdentifier(Object object) {
-		if (object != null) {
-			if (object instanceof SharedLibraryBean) {
-				return ((SharedLibraryBean) object)._id();
-			} else if (object instanceof DataBucketBean) {
-				return ((DataBucketBean) object)._id();
-			} else if (object instanceof DataBucketStatusBean) {
-				return ((DataBucketStatusBean) object)._id();
-			} else if (object instanceof String) {
-				return ((String)object);
-			} else {
-				// try using reflection getting id or _id() or getId()
-				try {
-					Method m = object.getClass().getMethod("_id");					
-					Object retVal = m.invoke(object);
-					return ""+retVal;
-				} catch (Exception e) {
-					// Ignore by default
-				}
-				try {
-					Method m = object.getClass().getMethod("id");					
-					Object retVal = m.invoke(object);
-						return ""+retVal;
-				} catch (Exception e) {
-					// Ignore by default
-				}
-				try {
-					Method m = object.getClass().getMethod("getId");					
-					Object retVal = m.invoke(object);
-					return ""+retVal;
-				} catch (Exception e) {
-					// Ignore by default
-				}
-				try {
-					Field f = object.getClass().getDeclaredField("_id");
-					f.setAccessible(true);
-					Object retVal = f.get(object);
-					return ""+retVal;
-				} catch (Exception e) {
-					// Ignore by default
-				}
-				try {
-					Field f = object.getClass().getDeclaredField("id");
-					f.setAccessible(true);
-					Object retVal = f.get(object);
-					return ""+retVal;
-				} catch (Exception e) {
-					// Ignore by default
-				}
-			}
-		}
-		return null;
-	}
+
 
 	/** 
 	 * This class extracts permission values from known classes,e.g._id() or ownerId etc matching permissions.
@@ -135,5 +81,103 @@ public class PermissionExtractor {
 		}
 		return null;
 	}
+
+	
+	/** 
+	 * This class extracts permission values from known classes,e.g._id() or fullName or ownerId etc matching permissions.
+	 * @return
+	 */
+	public List<String> extractPermissionIdentifiers(Object object) {
+		List<String> permIds =  new ArrayList<String>();
+		
+		if (object != null) {
+			if (object instanceof SharedLibraryBean) {
+				permIds.add(((SharedLibraryBean) object).path_name());
+				permIds.add(((SharedLibraryBean) object)._id());
+				return permIds;
+			} else if (object instanceof DataBucketBean) {
+				permIds.add(((DataBucketBean) object).full_name());
+				permIds.add(((DataBucketBean) object)._id());
+				return permIds;
+			} else if (object instanceof DataBucketStatusBean) {
+				permIds.add(((DataBucketStatusBean) object).bucket_path());
+				permIds.add(((DataBucketStatusBean) object)._id());
+				return permIds;
+			} else if (object instanceof String) {
+				// adds the object itself
+				permIds.add(((String)object));
+				return permIds;
+			} else {
+				// try using reflection getting id or _id() or getId()
+				try {
+					Method m = object.getClass().getMethod("_id");					
+					Object retVal = m.invoke(object);
+					permIds.add(""+retVal);
+				} catch (Exception e) {
+					// Ignore by default
+				}
+				try {
+					Method m = object.getClass().getMethod("id");					
+					Object retVal = m.invoke(object);
+					permIds.add(""+retVal);
+				} catch (Exception e) {
+					// Ignore by default
+				}
+				try {
+					Method m = object.getClass().getMethod("getId");					
+					Object retVal = m.invoke(object);
+					permIds.add(""+retVal);
+				} catch (Exception e) {
+					// Ignore by default
+				}
+				try {
+					Field f = object.getClass().getDeclaredField("_id");
+					f.setAccessible(true);
+					Object retVal = f.get(object);
+					permIds.add(""+retVal);
+				} catch (Exception e) {
+					// Ignore by default
+				}
+				try {
+					Field f = object.getClass().getDeclaredField("id");
+					f.setAccessible(true);
+					Object retVal = f.get(object);
+					permIds.add(""+retVal);
+				} catch (Exception e) {
+					// Ignore by default
+				}
+			}
+		}
+		return permIds;
+	}
+
+
+	public static String createPathPermission(Object permissionRoot, String action, String bucketPath) {		
+		String bucketPermission = bucketPath;
+		if(bucketPermission!=null ){
+			bucketPermission = bucketPermission.replace("/", ":");
+			if(bucketPermission.startsWith(":")){
+				bucketPermission = bucketPermission.substring(1);
+			}
+		}
+		String prefix = ""; 
+		if(permissionRoot instanceof String){
+			prefix = (String)permissionRoot;
+		}else{
+			prefix = permissionRoot.getClass().getSimpleName();
+		}
+		return prefix+":"+action+":"+bucketPermission;
+	}
+
+	public static String createPermission(Object permissionRoot,String action , String permission) {		
+		String prefix = ""; 
+		if(permissionRoot instanceof String){
+			prefix = (String)permissionRoot;
+		}else{
+			prefix = permissionRoot.getClass().getSimpleName();
+		}
+		return prefix+":"+permission;
+	}
+
 
 }
