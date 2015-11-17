@@ -1352,7 +1352,7 @@ public class TestAnalyticsContext {
 		
 		final DataBucketBean stream_bucket = 
 				BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::full_name, "/test/stream")
+					.with(DataBucketBean::full_name, is_test ? "/test/stream/test" : "/test/stream")
 					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 				.done().get();
 				

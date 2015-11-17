@@ -29,6 +29,10 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	private static final long serialVersionUID = 2550210707023662158L;
 	protected EnrichmentControlMetadataBean() {}
 	
+	/** If used in an analytic thread then should be in this array inside the job's "config" field
+	 */
+	public static final String ENRICHMENT_PIPELINE = "enrich_pipeline";
+	
 	/** User constructor
 	 * @param name - The name of the job - optional but required if it is needed as a dependency
 	 * @param dependencies -  the dependency order of enrichment - this can be used by the framework to optimize runtime
