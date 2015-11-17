@@ -17,7 +17,7 @@
                             ],
                             "name": "batch_enrichment",
                              "library_names_or_ids": [],
-                              "config": {},
+                              "config": { "enrich_pipeline": [] },
                               "node_list_rules": [],
                                "multi_node_enabled": false,
                                 "dependencies": [],

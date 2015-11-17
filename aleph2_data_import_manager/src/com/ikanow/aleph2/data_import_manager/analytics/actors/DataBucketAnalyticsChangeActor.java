@@ -78,6 +78,7 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -121,6 +122,8 @@ import org.apache.logging.log4j.Logger;
 
 
 
+import org.elasticsearch.common.collect.ImmutableMap;
+
 import scala.PartialFunction;
 import scala.Tuple2;
 import scala.runtime.BoxedUnit;
@@ -129,6 +132,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.japi.pf.ReceiveBuilder;
+
 
 
 
@@ -619,8 +623,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					,
 					null, // no concept of a single entry point for batch enrichment 
 					Maps.<String, Object>newLinkedHashMap(
-							bucket.batch_enrichment_configs().stream().collect(Collectors.toMap(cfg -> cfg.name(), cfg -> object_mapper.convertValue(cfg, LinkedHashMap.class)))), 
-							//(config)
+							ImmutableMap.<String, Object>builder().put(
+									EnrichmentControlMetadataBean.ENRICHMENT_PIPELINE, 
+									bucket.batch_enrichment_configs().stream().map(cfg -> object_mapper.convertValue(cfg, LinkedHashMap.class)).collect(Collectors.toList()))
+									.build()
+					)
+					//(config)
+					,									
 					DataBucketBean.MasterEnrichmentType.batch, // (type) 
 					Collections.emptyList(), //(node rules)
 					false, //(multi node enabled)
