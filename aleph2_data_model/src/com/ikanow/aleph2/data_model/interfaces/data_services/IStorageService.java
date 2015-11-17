@@ -1,18 +1,18 @@
 /*******************************************************************************
  * Copyright 2015, The IKANOW Open Source Project.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.data_services;
 
 import java.util.List;
@@ -105,8 +105,9 @@ public interface IStorageService extends IUnderlyingService, IDataServiceProvide
 	/** The storage service  retains data from 0-3 different stages of the processing:
 	 *  "raw" - is the unprocessed data, "json" is the data after serialization but otherwise untouched (eg before enrichment/analytics), "processed" is post-processing/analytics
 	 *  "transient_output" - for analytic engines, temporary storage shared between jobs within an analytic thread (and with external analytic threads)
+	 *  "transient_input" - the input directory for the bucket - allows buckets to write to inputs of other buckets directly
 	 */
-	public enum StorageStage { raw, json, processed, transient_output };
+	public enum StorageStage { raw, json, processed, transient_output, transient_input };
 	
 	/** Validate the schema for this service
 	 * @param schema - the schema to validate

@@ -1,18 +1,18 @@
 /*******************************************************************************
  * Copyright 2015, The IKANOW Open Source Project.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 
 import fj.data.Either;
+import fj.data.Validation;
 
 public class TestContextUtils {
 
@@ -384,9 +385,10 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void sendObjectToStreamingPipeline(
+		public Validation<BasicMessageBean, JsonNode> sendObjectToStreamingPipeline(
 				Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job,
 				Either<JsonNode, Map<String, Object>> object, final Optional<AnnotationBean> annotations) {
+			return null;
 		}
 
 		@Override
@@ -404,9 +406,10 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void emitObject(Optional<DataBucketBean> bucket,
+		public Validation<BasicMessageBean, JsonNode> emitObject(Optional<DataBucketBean> bucket,
 				AnalyticThreadJobBean job,
 				Either<JsonNode, Map<String, Object>> object, Optional<AnnotationBean> annotations) {
+			return null;
 		}
 
 		@Override
@@ -491,14 +494,16 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void emitMutableObject(long id, ObjectNode mutated_json,
+		public Validation<BasicMessageBean, JsonNode> emitMutableObject(long id, ObjectNode mutated_json,
 				Optional<AnnotationBean> annotation, Optional<JsonNode> grouping_fields) {
+			return null;
 		}
 
 		@Override
-		public void emitImmutableObject(long id, JsonNode original_json,
+		public Validation<BasicMessageBean, JsonNode> emitImmutableObject(long id, JsonNode original_json,
 				Optional<ObjectNode> mutations,
 				Optional<AnnotationBean> annotations, Optional<JsonNode> grouping_fields) {
+			return null;
 		}
 
 		@Override
@@ -567,6 +572,14 @@ public class TestContextUtils {
 		@Override
 		public CompletableFuture<?> flushBatchOutput(
 				Optional<DataBucketBean> bucket) {
+			return null;
+		}
+
+		@Override
+		public Validation<BasicMessageBean, JsonNode> externalEmit(
+				DataBucketBean bucket,
+				Either<JsonNode, Map<String, Object>> object,
+				Optional<AnnotationBean> annotations) {
 			return null;
 		}
 		

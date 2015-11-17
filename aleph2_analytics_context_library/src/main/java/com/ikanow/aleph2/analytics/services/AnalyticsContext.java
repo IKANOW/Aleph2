@@ -1,18 +1,18 @@
 /*******************************************************************************
-* Copyright 2015, The IKANOW Open Source Project.
-* 
-* This program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU Affero General Public License, version 3,
-* as published by the Free Software Foundation.
-* 
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU Affero General Public License for more details.
-* 
-* You should have received a copy of the GNU Affero General Public License
-* along with this program. If not, see <http://www.gnu.org/licenses/>.
-******************************************************************************/
+ * Copyright 2015, The IKANOW Open Source Project.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *******************************************************************************/
 package com.ikanow.aleph2.analytics.services;
 
 import java.io.File;
@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,6 +64,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
@@ -78,6 +80,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -98,6 +101,7 @@ import com.typesafe.config.ConfigValueFactory;
 
 import fj.Unit;
 import fj.data.Either;
+import fj.data.Validation;
 
 /** The implementation of the analytics context interface
  * @author Alex
@@ -124,6 +128,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();
+		final ConcurrentHashMap<String, Either<Either<IDataWriteService.IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>> external_buckets = new ConcurrentHashMap<>();
+		final HashMap<String, AnalyticsContext> sub_buckets = new HashMap<>();
 	};	
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -1008,7 +1014,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#sendObjectToStreamingPipeline(java.util.Optional, java.util.Optional, fj.data.Either)
 	 */
 	@Override
-	public void sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket,
+	public Validation<BasicMessageBean, JsonNode> sendObjectToStreamingPipeline(final Optional<DataBucketBean> bucket,
 			final AnalyticThreadJobBean job, 
 			final Either<JsonNode, Map<String, Object>> object, 
 			final Optional<AnnotationBean> annotations)
@@ -1018,11 +1024,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
 
-		this.getOutputTopic(bucket, job).ifPresent(topic -> {	
+		return this.getOutputTopic(bucket, job).<Validation<BasicMessageBean, JsonNode>>map(topic -> {	
 			if (_distributed_services.doesTopicExist(topic)) {
 				// (ie someone is listening in on our output data, so duplicate it for their benefit)
 				_distributed_services.produce(topic, obj_json.toString());
+				return Validation.success(obj_json);
 			}
+			else {
+				return Validation.fail(ErrorUtils.buildSuccessMessage(this.getClass().getSimpleName(), "sendObjectToStreamingPipeline", "Bucket:job {0}:{1} topic {2} has no listeners", 
+						bucket.map(b-> b.full_name()).orElse("(unknown)"), job.name(), topic));
+			}
+		})
+		.orElseGet(() -> {
+			return  Validation.fail(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "sendObjectToStreamingPipeline", "Bucket:job {0}:{1} has no output topic", 
+					bucket.map(b-> b.full_name()).orElse("(unknown)"), job.name()));
 		});
 	}
 
@@ -1094,7 +1109,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#emitObject(java.util.Optional, com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean, fj.data.Either, java.util.Optional)
 	 */
 	@Override
-	public void emitObject(final Optional<DataBucketBean> bucket,
+	public Validation<BasicMessageBean, JsonNode> emitObject(final Optional<DataBucketBean> bucket,
 			final AnalyticThreadJobBean job,
 			final Either<JsonNode, Map<String, Object>> object, 
 			final Optional<AnnotationBean> annotations)
@@ -1105,6 +1120,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
 		}
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
+		
+		if (!this_bucket.full_name().equals(_mutable_state.bucket.get().full_name())) {
+			return externalEmit(this_bucket, job, obj_json);
+		}
 		
 		if (_batch_index_service.isPresent()) {
 			_batch_index_service.get().storeObject(obj_json);
@@ -1125,11 +1144,169 @@ public class AnalyticsContext implements IAnalyticsContext {
 			_distributed_services.produce(topic, obj_json.toString());
 		}
 		//(else nothing to do)
+		
+		return Validation.success(obj_json);
 	}
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	// External emit logic
+	
+	/** Handles sending of objects to other parts of the system
+	 * @param external_bucket
+	 * @param job
+	 * @param obj_json
+	 * @return
+	 */
+	protected Validation<BasicMessageBean, JsonNode> externalEmit(final DataBucketBean external_bucket, final AnalyticThreadJobBean job, final JsonNode obj_json) {
+		// Do we already know about this object:
+		final IAnalyticsContext sub_context = _mutable_state.sub_buckets.get(external_bucket.full_name());
+		if (null != sub_context) { //easy case, sub-buckets are constructed dynamically
+			return sub_context.emitObject(sub_context.getBucket(), job, Either.left(obj_json), Optional.empty());
+		}
+		else { // this is more complicated			
+			// First off - if this is a test bucket then we're not going to write anything, but we will do all the authentication	
+			final boolean is_test_bucket = BucketUtils.isTestBucket(_mutable_state.bucket.get());
+			
+			final Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> element = 
+					_mutable_state.external_buckets.computeIfAbsent(external_bucket.full_name(), s -> getNewExternalEndpoint(s));
+			
+			return element.<Validation<BasicMessageBean, JsonNode>>either(
+					e -> e.either(batch -> {
+						if (!is_test_bucket) batch.storeObject(obj_json);
+						return Validation.success(obj_json);
+					}, 
+					slow -> {
+						if (!is_test_bucket) slow.storeObject(obj_json);
+						return Validation.success(obj_json);
+					})
+					,
+					topic -> {
+						if (null == topic) { // this hack means not present
+							return Validation.fail(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "externalEmit", "Bucket {0} not found or not authorized", external_bucket.full_name()));								
+						}
+						else if (_distributed_services.doesTopicExist(topic)) {
+							// (ie someone is listening in on our output data, so duplicate it for their benefit)
+							if (!is_test_bucket) _distributed_services.produce(topic, obj_json.toString());
+							return Validation.success(obj_json);
+						}
+						else {
+							return Validation.fail(ErrorUtils.buildSuccessMessage(this.getClass().getSimpleName(), "sendObjectToStreamingPipeline", "Bucket:job {0}:{1} topic {2} has no listeners", 
+									external_bucket.full_name(), job.name(), topic));								
+						}
+					});
+		}
+	}
+	
+	
+	/** Validates and retrieves (and caches) a requested output
+	 * @param bucket_name
+	 * @return
+	 */
+	protected Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> getNewExternalEndpoint(final String bucket_name) {
+		
+		final Optional<DataBucketBean> validated_external_bucket = 
+				_core_management_db.readOnlyVersion().getDataBucketStore().getObjectBySpec(
+						CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_name)
+						)
+						.<Optional<DataBucketBean>>thenApply(maybe_bucket -> {
+							return maybe_bucket.<DataBucketBean>map(bucket -> {
+								final ISubject system_user = _service_context.getSecurityService().loginAsSystem();
+								try {
+									_service_context.getSecurityService().runAs(system_user, Arrays.asList(_mutable_state.bucket.get().owner_id())); // (Switch to bucket owner user)
+									
+									//TODO: need to fix this when Joern's code is in place
+									if (_service_context.getSecurityService().isPermitted(system_user, bucket_name)) {
+										return bucket;
+									}
+									else {
+										return null; 
+									}
+								}
+								finally {
+									_service_context.getSecurityService().releaseRunAs(system_user);
+								}
+							});
+						})
+						.join()
+						;
+		
+		return validated_external_bucket
+				.<Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>>
+				map(bucket -> {
+					
+					// easy case:
+					if (null != bucket.master_enrichment_type()) {
+						return getExternalEndpoint(bucket, bucket.master_enrichment_type());
+					}
+					else { // Analytic bucket, this is more complicated
+						
+						final MasterEnrichmentType streaming_type_guess =
+								Optionals.of(() -> bucket.analytic_thread().jobs()).orElse(Collections.emptyList())
+									.stream()
+									.filter(j -> {
+										return Optionals.ofNullable(j.inputs()).stream()
+											.anyMatch(i -> {
+												final String resource_name_or_id = Optional.ofNullable(i.resource_name_or_id()).orElse("");
+												final boolean matches =
+														(resource_name_or_id.isEmpty()
+														|| 
+														resource_name_or_id.equals(bucket.full_name())
+														);
+												return matches;
+											});
+									})
+									.map(j -> j.analytic_type())
+									.findFirst()
+									.orElse(MasterEnrichmentType.none)
+									;
+						
+						return getExternalEndpoint(bucket, streaming_type_guess);
+					}			
+			
+		}).orElse(Either.right(null));
+	}
+	
+	/** Utility given the streaming/batch type to return the corresponding data service
+	 * @param bucket
+	 * @param type
+	 * @return
+	 */
+	protected Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> getExternalEndpoint(final DataBucketBean bucket, MasterEnrichmentType type) {
+		if (type.equals(MasterEnrichmentType.none)) {
+			return null;
+		}
+		else if (type.equals(MasterEnrichmentType.streaming)
+				||
+				type.equals(MasterEnrichmentType.streaming_and_batch)
+				)
+		{
+			return Either.right(_distributed_services.generateTopicName(bucket.full_name(), ICoreDistributedServices.QUEUE_START_NAME));
+		}
+		else { // batch
+			final Optional<IDataWriteService<JsonNode>> crud_storage_service = 
+					_storage_service.getDataService()
+										.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
+														Optional.of(IStorageService.StorageStage.transient_input.toString()), Optional.empty()));
+			
+			final Optional<IDataWriteService.IBatchSubservice<JsonNode>> 
+				batch_storage_service = crud_storage_service.flatMap(IDataWriteService::getBatchWriteSubservice);
+			
+			return batch_storage_service.<Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>>map(
+					batch -> Either.left(Either.left(batch)))
+						.orElseGet(() -> {
+							return crud_storage_service.<Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>>map
+										(slow -> Either.left(Either.right(slow))).orElse(null);
+						})
+						;
+		}		
+	}
+	
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	// LOTS AND LOTS OF LOGIC TO MANAGE THE OUTPUTS
+	
+	//TODO: need to add sub-bucket support everywhere here
 	
 	////////////////////////////////////////////////////
 	
@@ -1157,6 +1334,24 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		final CompletableFuture<Object> cf1 = flusher.apply(_batch_index_service);
 		final CompletableFuture<Object> cf2 = flusher.apply(_batch_storage_service);
+
+		// Flush external and sub-buckets:
+		_mutable_state.external_buckets.values().stream().forEach(e -> {
+			e.either(ee -> ee.either(batch -> {
+				batch.flushOutput(); // flush external output
+				return Unit.unit();
+			}, 
+			slow -> {
+				//(nothing to do)
+				return Unit.unit();
+				
+			}), 
+			topic -> {			
+				//(nothing to do)
+				return Unit.unit();
+			});
+		});
+		_mutable_state.sub_buckets.values().stream().forEach(sub_context -> sub_context.flushBatchOutput(bucket, job));
 		
 		return CompletableFuture.allOf(cf1, cf2);
 	}

@@ -1,18 +1,18 @@
 /*******************************************************************************
  * Copyright 2015, The IKANOW Open Source Project.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
 import java.math.BigDecimal;
@@ -68,7 +68,31 @@ public class JsonUtils {
 		catch (Exception e) { throw new RuntimeException(e); } // (convert to unchecked exception)
 	}
 	
-	//TODO (ALEPH-3): need a NestedAccessHelper for nested access to objects that can include maps
-	//(see Joern's code for the harvester...)
+	/** Returns a nested sub-element from a path in dot notation, else empty 
+	 * @param path in dot notation
+	 * @return
+	 */
+	public static Optional<JsonNode> getProperty(final String path, final JsonNode obj) {
+		final String[] paths = path.split("[.]");
+		final String last = paths[paths.length - 1];
+		JsonNode mutable_curr = obj;
+		for (String p: paths) {
+			final JsonNode j = mutable_curr.get(p);
+			if (last == p) { 
+				return Optional.ofNullable(j).filter(__ -> !j.isNull());
+			}
+			else if (null == j) {
+				return Optional.empty();
+			}
+			else if (j.isArray()) { // if it's an array get the first value - for anything more complicated need jpath
+				mutable_curr = j.get(0);
+			}
+			else if (j.isObject()) {
+				mutable_curr = j;
+			}
+			else return Optional.empty(); // not at the end of the chain and it's not something you can map through
+		}
+		return Optional.empty();
+	}
 	
 }
