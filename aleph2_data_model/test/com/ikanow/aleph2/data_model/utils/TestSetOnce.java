@@ -17,6 +17,8 @@ package com.ikanow.aleph2.data_model.utils;
 
 import static org.junit.Assert.*;
 
+import java.util.Optional;
+
 import org.junit.Test;
 
 public class TestSetOnce {
@@ -29,6 +31,8 @@ public class TestSetOnce {
 		
 		assertTrue("Initially not set", !set_once.isSet());
 		
+		assertEquals(Optional.empty().toString(), set_once.toString());
+		
 		try {
 			set_once.get();
 			fail("Should have thrown an exception");
@@ -40,6 +44,7 @@ public class TestSetOnce {
 		assertTrue("Gets set: ", set_once.set(1));
 		
 		assertTrue("Now set", set_once.isSet());
+		assertEquals(Optional.of(1).toString(), set_once.toString());
 		
 		assertEquals((int)1, (int)set_once.get());
 		

@@ -88,4 +88,12 @@ public class SetOnce<T> {
 		_t = t;
 		return t;
 	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return optional().toString(); 
+	}
 }
