@@ -418,7 +418,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @param new_object
 	 */
 	protected boolean checkReadPermissions(Object new_object, boolean throwOrReturn) {
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object);
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,ISecurityService.ACTION_READ);
 		boolean permitted = false;
 		if(permissions!=null && permissions.size()>0){
 			for (String permission : permissions) {
@@ -428,7 +428,30 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 				}
 			}
 			if(!permitted && throwOrReturn){
-				String msg = "Subject "+subject.getSubject()+" has no read permissions ("+permissions+")for "+new_object.getClass();
+				String msg = "Subject '"+subject.getName()+"' has no read permissions ("+permissions+")for "+new_object.getClass();
+				logger.error(msg);
+				throw new SecurityException(msg);					
+			}
+		}
+		return permitted;
+
+	}
+	/**
+	 * Read permissions are the default permissions. 
+	 * @param new_object
+	 */
+	protected boolean checkPermissions(Object new_object, String action, boolean throwOrReturn) {
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,action);
+		boolean permitted = false;
+		if(permissions!=null && permissions.size()>0){
+			for (String permission : permissions) {
+				permitted = securityService.isPermitted(subject,permission);
+				if(permitted){
+					break;
+				}
+			}
+			if(!permitted && throwOrReturn){
+				String msg = "Subject '"+subject.getName()+"' has no  permissions ("+permissions+")for "+action+" on "+new_object.getClass();
 				logger.error(msg);
 				throw new SecurityException(msg);					
 			}

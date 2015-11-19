@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean.LibraryType;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
@@ -414,13 +415,13 @@ public class SecurityServiceTest {
 				new HashSet(), 
 				"batch_streaming_entry_point","batch_enrichment_entry_point"," misc_entry_point",
 				new HashMap());
-		assertNotNull(extractor.extractPermissionIdentifiers(libraryBean));
+		assertNotNull(extractor.extractPermissionIdentifiers(libraryBean,null));
 		
 		DataBucketBean dataBucketBean = mock(DataBucketBean.class);
 		when(dataBucketBean._id()).thenReturn("1");
 		when(dataBucketBean.owner_id()).thenReturn("99");
-		assertNotNull(extractor.extractPermissionIdentifiers(dataBucketBean));
-		assertEquals(2, extractor.extractPermissionIdentifiers(dataBucketBean).size());
+		assertNotNull(extractor.extractPermissionIdentifiers(dataBucketBean,null));
+		assertEquals(2, extractor.extractPermissionIdentifiers(dataBucketBean,null).size());
 		DataBucketStatusBean dataBucketStatusBean = mock(DataBucketStatusBean.class);
 		when(dataBucketStatusBean._id()).thenReturn("2");
 		
@@ -429,25 +430,25 @@ public class SecurityServiceTest {
 			public String _id(){
 				return "1";
 			};
-		}));
+		},null));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String id(){
 				return "2";
 			};
-		}));
+		},null));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String getId(){
 				return "3";
 			};
-		}));
+		},null));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 					protected String _id = "4";
 					
-		}));		
-		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId()));
+		},null));		
+		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId(),null));
 		
 		assertNotNull(extractor.extractOwnerIdentifier(libraryBean));
 		assertNotNull(extractor.extractOwnerIdentifier(dataBucketBean));
@@ -491,8 +492,31 @@ public class SecurityServiceTest {
 		assertNotNull(SecurityService.getExtraDependencyModules());
 		((SecurityService)securityService).youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules();
 		securityService.getUnderlyingArtefacts();
-		securityService.getUnderlyingPlatformDriver(this.getClass(), Optional.empty());
-		
-		
+		securityService.getUnderlyingPlatformDriver(this.getClass(), Optional.empty());				
+	}
+	
+	@Test 
+	public void testBucketAccess() throws Exception{
+		// test read access
+     	AuthorizationBean authBean = new AuthorizationBean("user");		
+     	MockSecuredCrudServiceBean mockedDelegate = mock(MockSecuredCrudServiceBean.class);
+		SingleQueryComponent<DataBucketBean> query = CrudUtils.allOf(DataBucketBean.class);
+
+		DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::full_name, "/test/allowed")
+				.with(DataBucketBean::_id, "bucketId1")
+			.done().get();
+
+		IManagementCrudService<DataBucketBean> securedCrudService = securityService.secured(mockedDelegate, authBean);
+
+		CompletableFuture<Optional<DataBucketBean>> future = CompletableFuture.completedFuture(Optional.of(bucket));
+		ManagementFuture<Optional<DataBucketBean>> managedFuture =  FutureUtils.createManagementFuture(future);
+		when(mockedDelegate.getObjectBySpec(any())).thenReturn(managedFuture);
+		when(mockedDelegate.getObjectById(any())).thenReturn(managedFuture);
+
+		ManagementFuture<Optional<DataBucketBean>> f = securedCrudService.getObjectBySpec(query);
+		Optional<DataBucketBean> o = f.get();
+		DataBucketBean b = o.get();
+		assertNotNull(b);
 	}
 }
