@@ -97,4 +97,11 @@ public class SampleSecurityService implements ISecurityService {
 	public void enableJvmSecurity(boolean enabled) {
 		
 	}
+
+	@Override
+	public boolean isUserPermitted(String userID, Object assetOrPermission,
+			String action) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

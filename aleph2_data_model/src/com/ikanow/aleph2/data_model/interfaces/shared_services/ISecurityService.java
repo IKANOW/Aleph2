@@ -121,5 +121,13 @@ public interface ISecurityService extends IUnderlyingService {
 		return false;
 	}
 
-	
+	/** 
+	 * Checks if a user has permission on a specific object,e.g.a DataBucketBEan etc. The service must be logged in as a system user to check the permission.
+	 * The objectId or fullName wilbe extracted and the check will be performed.
+	 * @param userID useId of the asset 'owner' or whoever has potentially the permission
+	 * @param assetOrPermission the permissible object.
+	 * @param action - read,write wor wildcard action for permission
+	 * @return true if user has permission, false otherwise
+	 */
+	public boolean isUserPermitted(String userID, Object assetOrPermission, String action);
 }

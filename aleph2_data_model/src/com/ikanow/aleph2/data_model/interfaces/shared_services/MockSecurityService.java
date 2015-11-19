@@ -157,4 +157,10 @@ public class MockSecurityService implements ISecurityService {
 	public void enableJvmSecurity(boolean enabled) {
 	}
 
+	@Override
+	public boolean isUserPermitted(String userID, Object assetOrPermission,
+			String action) {
+		return _mock_role_map.getOrDefault(userID, false);		
+	}
+
 }

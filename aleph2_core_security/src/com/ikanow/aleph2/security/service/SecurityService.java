@@ -52,7 +52,7 @@ import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
-	protected ISubject currentSubject = null;
+	protected ThreadLocal<ISubject> tlCurrentSubject = new ThreadLocal<ISubject>();
 	private static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
 	protected static String systemUsername = null;
@@ -65,6 +65,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 	protected JVMSecurityManager jvmSecurityManager;
 
+	protected PermissionExtractor permissionExtractor = new PermissionExtractor();
+	
 	@Inject
 	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager, CacheManager cacheManager) {
 		this.serviceContext = serviceContext;
@@ -81,20 +83,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-/*	protected void init(){
-		try {
 
-	        // get the currently executing user:
-	        Subject currentUser = SecurityUtils.getSubject();
-	        this.currentSubject = new SubjectWrapper(currentUser);
-	        // Do some stuff with a Session (no need for a web or EJB container!!!)
-			
-		} catch (Throwable e) {
-			logger.error("Caught exception",e);
-		}
-
-	}
-	*/
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
 		return Arrays.asList(new PermissionExtractor()); 
@@ -117,7 +106,9 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
         ensureUserIsLoggedOut();
         Subject shiroSubject = getShiroSubject();
         shiroSubject.login((AuthenticationToken)token);
-        currentSubject = new SubjectWrapper(shiroSubject);
+        tlCurrentSubject.remove();
+        ISubject currentSubject = new SubjectWrapper(shiroSubject);
+        tlCurrentSubject.set(currentSubject);
         if(jvmSecurityManager!=null){
         	jvmSecurityManager.setSubject(currentSubject);
         }
@@ -183,7 +174,11 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 	@Override
 	public boolean isPermitted(ISubject subject, String permission) {
-		boolean ret = ((Subject)subject.getSubject()).isPermitted(permission);
+		boolean ret = false;
+		if(subject!=null)
+		{
+			ret = ((Subject)subject.getSubject()).isPermitted(permission);
+		}
 		return ret;
 	}
 
@@ -203,7 +198,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	
 	@Override
 	public ISubject loginAsSystem() {
-		ISubject subject = login(systemUsername,systemPassword);			
+		ISubject subject = login(systemUsername,systemPassword);		
 		return subject;
 	}
 
@@ -280,7 +275,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 					this.jvmSecurityManager = (JVMSecurityManager) currSysManager;
 				} else {
 					this.jvmSecurityManager = new JVMSecurityManager(this);
-					this.jvmSecurityManager.setSubject(currentSubject);
+					this.jvmSecurityManager.setSubject(tlCurrentSubject.get());
 					System.setSecurityManager(jvmSecurityManager);
 				}				
 			}
@@ -310,5 +305,21 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+	@Override
+	public boolean isUserPermitted(String userID, Object assetOrPermission,
+			String action) {
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
+		boolean permitted = false;
+		if (permissions != null && permissions.size() > 0) {
+			for (String permission : permissions) {
+				permitted = isPermitted(tlCurrentSubject.get(), permission);
+				if (permitted) {
+					break;
+				}
+			}
+		}
+		return permitted;
+
+	}
 	
 }
