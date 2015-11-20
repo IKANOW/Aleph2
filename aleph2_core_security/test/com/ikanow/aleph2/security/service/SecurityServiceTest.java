@@ -415,13 +415,13 @@ public class SecurityServiceTest {
 				new HashSet(), 
 				"batch_streaming_entry_point","batch_enrichment_entry_point"," misc_entry_point",
 				new HashMap());
-		assertNotNull(extractor.extractPermissionIdentifiers(libraryBean,null));
+		assertNotNull(extractor.extractPermissionIdentifiers(libraryBean,Optional.empty()));
 		
 		DataBucketBean dataBucketBean = mock(DataBucketBean.class);
 		when(dataBucketBean._id()).thenReturn("1");
 		when(dataBucketBean.owner_id()).thenReturn("99");
-		assertNotNull(extractor.extractPermissionIdentifiers(dataBucketBean,null));
-		assertEquals(2, extractor.extractPermissionIdentifiers(dataBucketBean,null).size());
+		assertNotNull(extractor.extractPermissionIdentifiers(dataBucketBean,Optional.empty()));
+		assertEquals(2, extractor.extractPermissionIdentifiers(dataBucketBean,Optional.empty()).size());
 		DataBucketStatusBean dataBucketStatusBean = mock(DataBucketStatusBean.class);
 		when(dataBucketStatusBean._id()).thenReturn("2");
 		
@@ -430,25 +430,25 @@ public class SecurityServiceTest {
 			public String _id(){
 				return "1";
 			};
-		},null));
+		},Optional.empty()));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String id(){
 				return "2";
 			};
-		},null));
+		},Optional.empty()));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 			public String getId(){
 				return "3";
 			};
-		},null));
+		},Optional.empty()));
 		assertNotNull(extractor.extractPermissionIdentifiers(
 				new TestWithId(){
 					protected String _id = "4";
 					
-		},null));		
-		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId(),null));
+		},Optional.empty()));		
+		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId(),Optional.empty()));
 		
 		assertNotNull(extractor.extractOwnerIdentifier(libraryBean));
 		assertNotNull(extractor.extractOwnerIdentifier(dataBucketBean));
