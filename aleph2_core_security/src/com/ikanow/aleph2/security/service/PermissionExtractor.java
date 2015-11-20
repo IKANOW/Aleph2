@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -86,48 +87,49 @@ public class PermissionExtractor {
 	
 	/** 
 	 * This class extracts permission values from known classes,e.g._id() or fullName or ownerId etc matching permissions.
+	 * If action is not supplied, widlcard is assumed for all actions.
 	 * @return
 	 */
-	public List<String> extractPermissionIdentifiers(Object object,String action) {
+	public List<String> extractPermissionIdentifiers(Object object,Optional<String> oAction) {
 		List<String> permIds =  new ArrayList<String>();
 		
 		if (object != null) {
 			if (object instanceof SharedLibraryBean) {
-				permIds.add(createPathPermission(object, action, ((SharedLibraryBean) object).path_name()));
-				permIds.add(createPermission(object, action, ((SharedLibraryBean) object)._id()));
+				permIds.add(createPathPermission(object, oAction, ((SharedLibraryBean) object).path_name()));
+				permIds.add(createPermission(object, oAction, ((SharedLibraryBean) object)._id()));
 				return permIds;
 			} else if (object instanceof DataBucketBean) {
-				permIds.add(createPathPermission(object, action,((DataBucketBean) object).full_name()));
-				permIds.add(createPermission(object, action,((DataBucketBean) object)._id()));
+				permIds.add(createPathPermission(object, oAction,((DataBucketBean) object).full_name()));
+				permIds.add(createPermission(object, oAction,((DataBucketBean) object)._id()));
 				return permIds;
 			} else if (object instanceof DataBucketStatusBean) {
-				permIds.add(createPathPermission(object, action,((DataBucketStatusBean) object).bucket_path()));
-				permIds.add(createPermission(object, action,((DataBucketStatusBean) object)._id()));
+				permIds.add(createPathPermission(object, oAction,((DataBucketStatusBean) object).bucket_path()));
+				permIds.add(createPermission(object, oAction,((DataBucketStatusBean) object)._id()));
 				return permIds;
 			} else if (object instanceof String) {
 				// adds the object itself
-				permIds.add(createPermission(object, action,((String)object)));
+				permIds.add(createPermission(object, oAction,((String)object)));
 				return permIds;
 			} else {
 				// try using reflection getting id or _id() or getId()
 				try {
 					Method m = object.getClass().getMethod("_id");					
 					Object retVal = m.invoke(object);
-					permIds.add(createPermission(object, action,""+retVal));
+					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
 					// Ignore by default
 				}
 				try {
 					Method m = object.getClass().getMethod("id");					
 					Object retVal = m.invoke(object);
-					permIds.add(createPermission(object, action,""+retVal));
+					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
 					// Ignore by default
 				}
 				try {
 					Method m = object.getClass().getMethod("getId");					
 					Object retVal = m.invoke(object);
-					permIds.add(createPermission(object, action,""+retVal));
+					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
 					// Ignore by default
 				}
@@ -135,7 +137,7 @@ public class PermissionExtractor {
 					Field f = object.getClass().getDeclaredField("_id");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
-					permIds.add(createPermission(object, action,""+retVal));
+					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
 					// Ignore by default
 				}
@@ -143,7 +145,7 @@ public class PermissionExtractor {
 					Field f = object.getClass().getDeclaredField("id");
 					f.setAccessible(true);
 					Object retVal = f.get(object);
-					permIds.add(createPermission(object, action,""+retVal));
+					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
 					// Ignore by default
 				}
@@ -153,7 +155,7 @@ public class PermissionExtractor {
 	}
 
 
-	public static String createPathPermission(Object permissionRoot, String action, String bucketPath) {		
+	public static String createPathPermission(Object permissionRoot, Optional<String> oAction, String bucketPath) {		
 		String bucketPermission = bucketPath;
 		if(bucketPermission!=null ){
 			bucketPermission = bucketPermission.replace("/", ":");
@@ -162,9 +164,8 @@ public class PermissionExtractor {
 			}
 		}
 		String prefix = ""; 
-		if(action == null){
-			action = ISecurityService.ACTION_WILDCARD;
-		}
+		String action = oAction.isPresent() ? oAction.get():ISecurityService.ACTION_WILDCARD;
+		
 		if(permissionRoot instanceof String){
 			prefix = (String)permissionRoot;
 		}else{
@@ -173,11 +174,9 @@ public class PermissionExtractor {
 		return prefix+":"+action+":"+bucketPermission;
 	}
 
-	public static String createPermission(Object permissionRoot,String action , String permission) {		
+	public static String createPermission(Object permissionRoot,Optional<String> oAction , String permission) {		
 		String prefix = "";
-		if(action == null){
-			action = ISecurityService.ACTION_WILDCARD;
-		}
+		String action = oAction.isPresent() ? oAction.get():ISecurityService.ACTION_WILDCARD;
 		if(permissionRoot instanceof String){
 			prefix = (String)permissionRoot;
 		}else{

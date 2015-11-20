@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
@@ -124,10 +125,11 @@ public interface ISecurityService extends IUnderlyingService {
 	/** 
 	 * Checks if a user has permission on a specific object,e.g.a DataBucketBEan etc. The service must be logged in as a system user to check the permission.
 	 * The objectId or fullName wilbe extracted and the check will be performed.
-	 * @param userID useId of the asset 'owner' or whoever has potentially the permission
+	 * @param Optional<String> userID useId of the asset 'owner' or whoever has potentially the permission. 
+	 * If not set then one as to use runAs witjh the userId the user beforehand, and releaseRunAs() afterwards,e.g. if one wants to check multiple times with the same userId. 
 	 * @param assetOrPermission the permissible object.
 	 * @param action - read,write wor wildcard action for permission
 	 * @return true if user has permission, false otherwise
 	 */
-	public boolean isUserPermitted(String userID, Object assetOrPermission, String action);
+	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action);
 }

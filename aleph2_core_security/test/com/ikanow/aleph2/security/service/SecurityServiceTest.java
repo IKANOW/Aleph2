@@ -518,5 +518,19 @@ public class SecurityServiceTest {
 		Optional<DataBucketBean> o = f.get();
 		DataBucketBean b = o.get();
 		assertNotNull(b);
+		// test read by being logged in from before		
+		boolean permitted = securityService.isUserPermitted(Optional.empty(), bucket, Optional.of("read"));
+		assertTrue(permitted);
+		// test read with a different user
+		permitted = securityService.isUserPermitted(Optional.of("testUser"), bucket, Optional.of("read"));
+		assertFalse(permitted);
+		// test write with a user who has (only) read permissions
+		permitted = securityService.isUserPermitted(Optional.of("user"), bucket, Optional.of("write"));
+		assertFalse(permitted);
+		// test read  by logging in as system but testing with userId permissions
+		securityService.loginAsSystem();
+		permitted = securityService.isUserPermitted(Optional.of("user"), bucket, Optional.of("read"));
+		assertTrue(permitted);
+
 	}
 }

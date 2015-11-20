@@ -418,7 +418,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @param new_object
 	 */
 	protected boolean checkReadPermissions(Object new_object, boolean throwOrReturn) {
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,ISecurityService.ACTION_READ);
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,Optional.of(ISecurityService.ACTION_READ));
 		boolean permitted = false;
 		if(permissions!=null && permissions.size()>0){
 			for (String permission : permissions) {
@@ -440,8 +440,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * Read permissions are the default permissions. 
 	 * @param new_object
 	 */
-	protected boolean checkPermissions(Object new_object, String action, boolean throwOrReturn) {
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,action);
+	protected boolean checkPermissions(Object new_object, Optional<String> oAction, boolean throwOrReturn) {
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(new_object,oAction);
 		boolean permitted = false;
 		if(permissions!=null && permissions.size()>0){
 			for (String permission : permissions) {
@@ -451,7 +451,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 				}
 			}
 			if(!permitted && throwOrReturn){
-				String msg = "Subject '"+subject.getName()+"' has no  permissions ("+permissions+")for "+action+" on "+new_object.getClass();
+				String msg = "Subject '"+subject.getName()+"' has no  permissions ("+permissions+")for "+oAction+" on "+new_object.getClass();
 				logger.error(msg);
 				throw new SecurityException(msg);					
 			}

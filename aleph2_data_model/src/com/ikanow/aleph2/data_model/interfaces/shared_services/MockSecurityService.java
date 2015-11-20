@@ -158,8 +158,8 @@ public class MockSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public boolean isUserPermitted(String userID, Object assetOrPermission,
-			String action) {
+	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission,
+			Optional<String> oAction) {
 		return _mock_role_map.getOrDefault(userID, false);		
 	}
 

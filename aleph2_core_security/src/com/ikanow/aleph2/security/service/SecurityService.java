@@ -306,10 +306,14 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public boolean isUserPermitted(String userID, Object assetOrPermission,
-			String action) {
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
+	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
 		boolean permitted = false;
+		ISubject currentSubject = null;
+		if (userID.isPresent() && tlCurrentSubject.get() != null) {
+			currentSubject = tlCurrentSubject.get();
+			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
+		}
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
 		if (permissions != null && permissions.size() > 0) {
 			for (String permission : permissions) {
 				permitted = isPermitted(tlCurrentSubject.get(), permission);
@@ -318,8 +322,11 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 				}
 			}
 		}
-		return permitted;
 
+		if (currentSubject != null) {
+			((Subject) currentSubject.getSubject()).releaseRunAs();
+		}
+		return permitted;
 	}
 	
 }
