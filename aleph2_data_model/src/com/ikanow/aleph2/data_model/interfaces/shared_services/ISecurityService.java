@@ -39,6 +39,7 @@ public interface ISecurityService extends IUnderlyingService {
 	public static String ROOT_PERMISSION_SOURCE="source";
 
 	public static String ACTION_READ="read";
+	public static String ACTION_READ_WRITE="read,write";
 	public static String ACTION_WRITE="read";
 	public static String ACTION_WILDCARD="*";
 
