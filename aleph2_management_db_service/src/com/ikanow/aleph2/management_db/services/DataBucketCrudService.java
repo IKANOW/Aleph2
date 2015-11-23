@@ -685,6 +685,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				}
 			}
 		}		
+		else return Tuples._2T(bucket, errors); // (this is catastrophic obviously)
 
 		// Some static validation moved into a separate function for testability
 		
