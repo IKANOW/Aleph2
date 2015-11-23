@@ -721,7 +721,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::full_name, "/validation/test6")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
-					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming)
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
@@ -744,7 +744,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::full_name, "/validation/test7")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
-					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
 					.with(DataBucketBean::streaming_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(bucket);
@@ -982,9 +982,37 @@ public class TestDataBucketCrudService_Create {
 		
 		// (TESTED IN NON STATIC CODE - ABOVE)
 		
+		// (2- not allowed buckets that start with "aleph2_")
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/aleph2_something/blah")
+					.done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());			
+		}
+		
 		// 3) Zero length fields
 		
 		// (TESTED IN NON STATIC CODE - ABOVE)
+		
+		// 4-) Not currently supported combined master batch+streaming enrichment (need to tidy up logic and I suppose decide if there are really any use cases... can always use 2xjob analytic thread versions if really really needed?)
+
+		{
+			final DataBucketBean bucket = BeanTemplateUtils.clone(new_valid_bucket)
+					.with(DataBucketBean::full_name, "/validation/test4_")
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::streaming_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get())				
+					.with(DataBucketBean::batch_enrichment_topology, 
+							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get())
+					.done();
+			
+			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket);
+			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
+			assertEquals(1, errs.size());			
+		}
 		
 		// 4) Enrichment but no harvest (THIS IS NOW FINE)
 		
@@ -1022,7 +1050,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::full_name, "/validation/test6")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
-					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming)
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			
@@ -1038,7 +1066,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::full_name, "/validation/test7")
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class).with(HarvestControlMetadataBean::enabled, true).done().get()))
-					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.streaming_and_batch)
+					.with(DataBucketBean::master_enrichment_type, DataBucketBean.MasterEnrichmentType.batch)
 					.with(DataBucketBean::streaming_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			

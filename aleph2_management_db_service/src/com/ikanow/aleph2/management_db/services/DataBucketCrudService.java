@@ -752,6 +752,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	protected static final LinkedList<BasicMessageBean> staticValidation(final DataBucketBean bucket) {
 		LinkedList<BasicMessageBean> errors = new LinkedList<>();
 		
+		// More full_name checks
+		
+		if (bucket.full_name().startsWith("/aleph2_")) {
+			errors.add(MgmtCrudUtils.createValidationError(
+					ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_RESERVED_ERROR, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));				
+		}
+				
 		// More complex missing field checks
 		
 		// - if has enrichment then must have harvest_technology_name_or_id (1) - REMOVED THIS .. eg can upload data/copy directly into Kafka/file system 
@@ -759,6 +766,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// - if has enrichment then must have master_enrichment_type (3)
 		// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology (4)
 		// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology (5)
+		//(- for now ... don't support streaming_and_batch, the current enrichment logic doesn't support it (X1))
 
 		//(1, 3, 4, 5)
 		if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
@@ -768,6 +776,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		{
 			if (null == bucket.master_enrichment_type()) { // (3)
 				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
+			}
+			else if (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()) { //(X1)
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_AND_BATCH_NOT_SUPPORTED, bucket.full_name())));
 			}
 			else {
 				// (4)
@@ -1326,6 +1337,11 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				if (null == job.analytic_type() || (MasterEnrichmentType.none == job.analytic_type())) {
 					errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_JOB_MUST_HAVE_TYPE, bean.full_name(), job_identifier));					
 				}
+				
+				if (null != job.analytic_type() && (MasterEnrichmentType.streaming_and_batch == job.analytic_type())) {
+					//(temporary restriction - jobs cannot be both batch and streaming, even though that option exists as a enum)
+					errs.add(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_AND_BATCH_NOT_SUPPORTED, bean.full_name()));					
+				}				
 				
 				// 3) Inputs
 				

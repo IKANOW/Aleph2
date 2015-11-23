@@ -37,6 +37,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String DELETE_TOUCH_FILE_PRESENT = "Bucket {0} was recently deleted and has not yet been cleaned up";
 	public static final String BUCKET_FULL_NAME_UNIQUENESS = "Bucket {0} already exists, choose another full_name";
 	public static final String BUCKET_FULL_NAME_FORMAT_ERROR = "Bucket {0} should have the format /path/to/here (as deep as desired) with leading /, no trailing / and no '//'s or '..'s or '.'s";
+	public static final String BUCKET_FULL_NAME_RESERVED_ERROR = "Bucket {0} cannot start with \"/aleph2_\" - these are reserved for system use";
 	
 	// Simple field rules
 	
@@ -68,6 +69,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// - if master_enrichment_type == batch/both then must have either batch_enrichment_configs or batch_enrichment_topology
 	// - if master_enrichment_type == streaming/both then must have either streaming_enrichment_configs or streaming_enrichment_topology
 
+	public static final String STREAMING_AND_BATCH_NOT_SUPPORTED = "Bucket {0}: streaming_and_batch master_enrichment_type or analytic_thread.jobs.analytic_type not currently supported";
 	public static final String FIELD_MUST_NOT_HAVE_ZERO_LENGTH = "Bucket {0} has a zero-length field: {1}";
 	public static final String ENRICHMENT_BUT_NO_HARVEST_TECH = "Bucket {0} has enrichment but no harvest_technology_name_or_id field";
 	public static final String HARVEST_BUT_NO_HARVEST_CONFIG = "Bucket {0} has harvest but no harvest configuration elements";

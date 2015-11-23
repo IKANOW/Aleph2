@@ -122,6 +122,18 @@ public class TestDataBucketCrudService_Analytics {
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
+		{
+			final AnalyticThreadJobBean job = BeanTemplateUtils.clone(getBaseJob("name", null, null, null))
+					.with(AnalyticThreadJobBean::analytic_type, MasterEnrichmentType.streaming_and_batch)
+					.done();
+
+			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
+					.done();
+
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
+			assertEquals(1, res.size());			
+		}
 
 		// 3) Inputs
 
