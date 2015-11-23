@@ -229,6 +229,21 @@ public class TestLambdas {
 		assertEquals(0, ret_val2.size());
 	}
 	
+	@Test
+	public void testMisc_filterWithIgnore_Optionals() {
+		
+		// Flat map to ignore
+
+		final Optional<String> s_pass = Optional.of("java.lang.String");
+		final Optional<String> s_fail = Optional.of("java.lang.xxxxString");
+
+		final Optional<Object> res_pass = s_pass.flatMap(Lambdas.maybeWrap_i(clazz -> Class.forName(clazz)));
+		assertTrue(res_pass.isPresent());
+		
+		final Optional<Object> res_fail = s_fail.flatMap(Lambdas.maybeWrap_i(clazz -> Class.forName(clazz)));
+		assertFalse(res_fail.isPresent());
+	}
+	
 	/////////////////////////////////////////////
 	
 	@Test

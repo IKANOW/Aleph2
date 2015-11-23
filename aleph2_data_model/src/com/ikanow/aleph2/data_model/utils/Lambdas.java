@@ -272,6 +272,21 @@ public class Lambdas {
 		};
 	}
 
+	/** Wraps a function that returns a checked throwable (Exception/error) into one that ignores it, using flatMap to remove the element
+	 * @param f - the lambda that can return a checked throwable
+	 * @return - an identical function except throws unchecked instead of checked throwable
+	 */
+	public static <T, R> Function<T, Optional<R>> maybeWrap_i(ThrowableWrapper.Function<T, R> f) {
+		return t -> {
+			try {
+				return Optional.ofNullable(f.apply(t));
+			}
+			catch (Throwable err) {
+				return Optional.empty();
+			}
+		};
+	}
+
 	/** Wraps a function that returns a checked or unchecked throwable (Exception/error) into one that returns an Validation<Throwable, ?> but no exception
 	 * @param f - the lambda that can return a checked throwable
 	 * @return - an identical function except throws unchecked instead of checked throwable
