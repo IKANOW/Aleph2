@@ -353,16 +353,16 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public ManagementFuture<Boolean> testBucket(DataBucketBean to_test, ProcessingTestSpecBean test_spec) {		
 		//create a test bucket to put data into instead of the specified bucket
-		DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());		
+		final DataBucketBean test_bucket = BucketUtils.convertDataBucketBeanToTest(to_test, to_test.owner_id());		
 		// - validate the bucket
-		Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation = this._data_bucket_service.validateBucket(test_bucket);
+		final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation = this._data_bucket_service.validateBucket(test_bucket, true);
 		if (validation._2().stream().anyMatch(m -> !m.success())) {
 			return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false), CompletableFuture.completedFuture(validation._2()));
 		}
 		DataBucketBean validated_test_bucket = validation._1();
 		
 		// - is there any test data already present for this user, delete if so (?)
-		CompletableFuture<BasicMessageBean> base_future = Lambdas.get(() -> {
+		final CompletableFuture<BasicMessageBean> base_future = Lambdas.get(() -> {
 			if ( Optional.ofNullable(test_spec.overwrite_existing_data()).orElse(true) ) {
 				return purgeBucket(validated_test_bucket, Optional.empty()).exceptionally( t -> {
 					_logger.error("Error clearing output datastore, probably okay: " + "ingest."+validated_test_bucket._id(), t);

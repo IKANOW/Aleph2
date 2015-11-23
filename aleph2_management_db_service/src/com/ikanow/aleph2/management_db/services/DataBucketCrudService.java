@@ -215,7 +215,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 			// Validation (also generates a clone of the bucket with the data_locations written in)
 			
-			final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation_info = validateBucket(new_object, old_bucket, true);
+			final Tuple2<DataBucketBean, Collection<BasicMessageBean>> validation_info = validateBucket(new_object, old_bucket, true, false);
 			
 			if (!validation_info._2().isEmpty() && validation_info._2().stream().anyMatch(m -> !m.success())) {
 				return FutureUtils.createManagementFuture(
@@ -627,9 +627,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param bucket
 	 * @return
 	 */
-	public Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket) {
+	public Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final boolean allow_system_names) {
 		try {
-			return validateBucket(bucket, Optional.empty(), false);
+			return validateBucket(bucket, Optional.empty(), false, allow_system_names);
 		} catch (InterruptedException | ExecutionException e) {
 			return Tuples._2T(bucket, Arrays.asList(ErrorUtils.buildErrorMessage("DataBucketCrudService", "validateBucket", ErrorUtils.getLongForm("Unknown error = {0}" , e))));
 		}
@@ -641,7 +641,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @throws ExecutionException 
 	 * @throws InterruptedException 
 	 */
-	protected Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version, boolean do_full_checks) throws InterruptedException, ExecutionException {
+	protected Tuple2<DataBucketBean, Collection<BasicMessageBean>> validateBucket(final DataBucketBean bucket, final Optional<DataBucketBean> old_version, boolean do_full_checks, final boolean allow_system_names) throws InterruptedException, ExecutionException {
 		
 		// (will live with this being mutable)
 		final LinkedList<BasicMessageBean> errors = new LinkedList<BasicMessageBean>();
@@ -688,7 +688,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 
 		// Some static validation moved into a separate function for testability
 		
-		errors.addAll(staticValidation(bucket));		
+		errors.addAll(staticValidation(bucket, allow_system_names));		
 
 		// OK before I do any more stateful checking, going to stop if we have logic errors first 
 		
@@ -749,14 +749,16 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 * @param bucket - the bucket to test
 	 * @return - a list of errors
 	 */
-	protected static final LinkedList<BasicMessageBean> staticValidation(final DataBucketBean bucket) {
+	protected static final LinkedList<BasicMessageBean> staticValidation(final DataBucketBean bucket, final boolean allow_system_names) {
 		LinkedList<BasicMessageBean> errors = new LinkedList<>();
 		
 		// More full_name checks
 		
-		if (bucket.full_name().startsWith("/aleph2_")) {
-			errors.add(MgmtCrudUtils.createValidationError(
-					ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_RESERVED_ERROR, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));				
+		if (!allow_system_names) {
+			if (bucket.full_name().startsWith("/aleph2_")) {
+				errors.add(MgmtCrudUtils.createValidationError(
+						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_FULL_NAME_RESERVED_ERROR, Optional.ofNullable(bucket.full_name()).orElse("(unknown)"))));				
+			}
 		}
 				
 		// More complex missing field checks

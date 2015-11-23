@@ -55,7 +55,7 @@ public class TestDataBucketCrudService_Analytics {
 										.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 										.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			assertEquals(1, res.size());
 		}		
 		{
@@ -63,7 +63,7 @@ public class TestDataBucketCrudService_Analytics {
 										.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.none)
 										.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			assertEquals(0, res.size());
 		}		
 		
@@ -77,7 +77,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			assertEquals(1, res.size());
 		}		
 
@@ -91,7 +91,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -106,7 +106,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -118,7 +118,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -130,7 +130,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb2a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());			
 		}
@@ -149,7 +149,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -164,7 +164,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3b", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -180,7 +180,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3c", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -195,7 +195,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3d", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -210,7 +210,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3e", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -228,7 +228,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3f", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -243,7 +243,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3g", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}		
@@ -259,7 +259,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3h", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -274,7 +274,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3i", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -289,7 +289,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3j", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -304,7 +304,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3k", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}		
@@ -323,7 +323,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3l", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(2, res.size());
 			
@@ -341,7 +341,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3m", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(2, res.size());
 			
@@ -359,7 +359,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3n", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());			
 		}
@@ -376,7 +376,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4a", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(2, res.size());
 		}
@@ -389,7 +389,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4b", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
 		}
@@ -403,7 +403,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4c", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}
@@ -416,7 +416,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4d", job, null))
 					.done();
 
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}
@@ -436,7 +436,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4d", null, getBaseTriggerBean("rabbit", getComplexTriggerBean(0))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());			
 		}
@@ -447,7 +447,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/1", null, getBaseTriggerBean(null, getComplexTriggerBean(1))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());						
 		}
@@ -455,7 +455,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/2", null, getBaseTriggerBean(null, getComplexTriggerBean(2))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(2, res.size());						
 		}
@@ -463,7 +463,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/3", null, getBaseTriggerBean(null, getComplexTriggerBean(3))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());						
 		}
@@ -471,7 +471,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/31", null, getBaseTriggerBean(null, getComplexTriggerBean(31))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(0, res.size());
 		}
@@ -479,7 +479,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/4", null, getBaseTriggerBean(null, getComplexTriggerBean(4))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());						
 		}
@@ -487,7 +487,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/5/1", null, getBaseTriggerBean(null, getComplexTriggerBean(51))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(2, res.size());						
 		}
@@ -495,7 +495,7 @@ public class TestDataBucketCrudService_Analytics {
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb4e/5/2", null, getBaseTriggerBean(null, getComplexTriggerBean(52))))
 					.done();
 			
-			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb);
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());						
 		}
