@@ -47,6 +47,8 @@ import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBe
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
@@ -104,6 +106,8 @@ public class TestBucketPollFreqSingletonActor {
 	@SuppressWarnings("deprecation")
 	@Before
 	public void testSetup() throws Exception {
+		//WARN if tests run concurrently this is going to break
+		TestActor_Accepter.num_accepted_messages = 0; //reset the actor messages before each test
 		
 		if (null != _service_context) {
 			return;
@@ -143,14 +147,109 @@ public class TestBucketPollFreqSingletonActor {
 		_logger.debug("ABOUT TO ADD A NEW ACTOR");		
 		insertActor(TestActor_Accepter.class);
 		assertEquals("No messages should be accepted yet", 0, TestActor_Accepter.num_accepted_messages);
+		
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketStatusBean> underlying_crud_status = (
+				ICrudService<DataBucketStatusBean>) this._core_mgmt_db.getDataBucketStatusStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();				
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> underlying_crud = (
+				ICrudService<DataBucketBean>) this._core_mgmt_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		underlying_crud.deleteDatastore().get();
+		underlying_crud_status.deleteDatastore().get();
+		assertEquals(0, underlying_crud.countObjects().get().intValue());
+		assertEquals(0, underlying_crud_status.countObjects().get().intValue());	
+		
 		//create a bucket that has a poll freq	
-		final DataBucketBean bucket_poll_now = createBucket("5 min", new Date());		
+		final DataBucketBean bucket_poll_now = createBucket("5 min");		
 		//create another that doesn't have one until later
-		final DataBucketBean bucket_poll_later = createBucket("7m",  new Date(System.currentTimeMillis() + 3600000));
+		final DataBucketBean bucket_poll_later = createBucket("7 min");
 		//create another that doesn't have a poll frequency
-		final DataBucketBean bucket_no_poll = createBucket(null, null);
+		final DataBucketBean bucket_no_poll = createBucket(null);
+		
+		//put it in the datastore		
+		storeBucketAndStatus(bucket_poll_now, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		storeBucketAndStatus(bucket_poll_later, true, Optional.of(new Date(System.currentTimeMillis() + 3600000)), underlying_crud_status, underlying_crud);
+		storeBucketAndStatus(bucket_no_poll, true, Optional.empty(), underlying_crud_status, underlying_crud);
+		final DataBucketStatusBean bucket_poll_now_status = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+		final DataBucketStatusBean bucket_poll_later_status = underlying_crud_status.getObjectById(bucket_poll_later._id()).get().get();
+		
+		//actor checks every second, give it long enough to hit a cycle
+		Thread.sleep(5000);
+		
+		//get the (hopefully) updated bucket		
+		final DataBucketStatusBean bucket_poll_now_updated = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+		final DataBucketStatusBean bucket_poll_later_updated = underlying_crud_status.getObjectById(bucket_poll_later._id()).get().get();
+		final DataBucketStatusBean bucket_no_poll_updated = underlying_crud_status.getObjectById(bucket_no_poll._id()).get().get();
+		//make sure the actor 
+		//1. updates freq (means it received the messaage)
+		assertTrue("Next poll time should have been greater than what we set poll_time to", bucket_poll_now_updated.next_poll_date().getTime() > bucket_poll_now_status.next_poll_date().getTime());
+		assertTrue("Poll later time should not have been updated", bucket_poll_later_updated.next_poll_date().getTime() == bucket_poll_later_status.next_poll_date().getTime());
+		assertTrue("Poll never time should not have been set", bucket_no_poll_updated.next_poll_date() == null );
+		
+		//2. tries to send out poll messsage	
+		assertEquals("Actor should have received 1 poll request and accepted it", 1, TestActor_Accepter.num_accepted_messages);
+	}
+	
+	@Test
+	public void test_suspend() throws Exception {
+		_logger.debug("ABOUT TO ADD A NEW ACTOR");				
+		insertActor(TestActor_Accepter.class);
+		assertEquals("No messages should be accepted yet", 0, TestActor_Accepter.num_accepted_messages);		
+		
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketStatusBean> underlying_crud_status = (
+				ICrudService<DataBucketStatusBean>) this._core_mgmt_db.getDataBucketStatusStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();				
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> underlying_crud = (
+				ICrudService<DataBucketBean>) this._core_mgmt_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		underlying_crud.deleteDatastore().get();
+		underlying_crud_status.deleteDatastore().get();
+		assertEquals(0, underlying_crud.countObjects().get().intValue());
+		assertEquals(0, underlying_crud_status.countObjects().get().intValue());
+		
+		//1. insert a bucket, ping pollFreq, see bucket respond
+		final DataBucketBean bucket_poll_now = createBucket("5 min");
 		
 		//put it in the datastore
+				
+		storeBucketAndStatus(bucket_poll_now, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		final DataBucketStatusBean bucket_poll_now_status = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+		assertEquals(1, underlying_crud.countObjects().get().intValue());
+		assertEquals(1, underlying_crud_status.countObjects().get().intValue());
+		//actor checks every second, give it long enough to hit a cycle
+		Thread.sleep(5000);
+		//get the (hopefully) updated bucket		
+		final DataBucketStatusBean bucket_poll_now_updated = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+		assertTrue("Next poll time should have been greater than what we set poll_time to", bucket_poll_now_updated.next_poll_date().getTime() > bucket_poll_now_status.next_poll_date().getTime());
+		assertEquals("Actor should have received 1 poll request and accepted it", 1, TestActor_Accepter.num_accepted_messages);
+		
+		//2a. suspend bucket
+		_logger.debug("SUSPENDING BUCKET FOR POLL TEST");
+		suspendBucket(bucket_poll_now, underlying_crud_status);
+		//2b. set poll time to before now again
+		_logger.debug("SETTING BUCKETS NEXT POLL TIME TO RIGHT NOW (WILL TRIGGER IF IT DOESNT IGNORE SUSPENDED BUCKETS)");
+		final Date updated_poll_date = new Date();
+		updateNextPollTime(bucket_poll_now, underlying_crud_status, updated_poll_date);
+		assertEquals(1, underlying_crud.countObjects().get().intValue());
+		assertEquals(1, underlying_crud_status.countObjects().get().intValue());	
+		
+		//3. ping pollFreq, bucket should not respond
+		//actor checks every second, give it long enough to hit a cycle
+		Thread.sleep(5000);
+		final DataBucketStatusBean bucket_poll_untouched = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+		assertEquals("Next poll time should be the same as what we set poll_time to", bucket_poll_untouched.next_poll_date().getTime(), updated_poll_date.getTime());
+		assertEquals("Actor should have received 2 poll request and accepted only 1", 1, TestActor_Accepter.num_accepted_messages);
+	}
+	
+	@Test
+	public void test_mulitple_poll_trigger() throws Exception {
+		//tests multiple polls hitting to make sure the service works on more than 1 poll at a time
+		// Setup: register an accepting actor to listen:
+		_logger.debug("ABOUT TO ADD A NEW ACTOR");		
+		insertActor(TestActor_Accepter.class);
+		assertEquals("No messages should be accepted yet", 0, TestActor_Accepter.num_accepted_messages);
+		
+		//get datastores
 		@SuppressWarnings("unchecked")
 		final ICrudService<DataBucketStatusBean> underlying_crud_status = (
 				ICrudService<DataBucketStatusBean>) this._core_mgmt_db.getDataBucketStatusStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();				
@@ -161,25 +260,38 @@ public class TestBucketPollFreqSingletonActor {
 		underlying_crud_status.deleteDatastore().get();
 		assertEquals(0, underlying_crud.countObjects().get().intValue());
 		assertEquals(0, underlying_crud_status.countObjects().get().intValue());		
-		storeBucketAndStatus(bucket_poll_now, true, underlying_crud_status, underlying_crud);
-		storeBucketAndStatus(bucket_poll_later, true, underlying_crud_status, underlying_crud);
-		storeBucketAndStatus(bucket_no_poll, true, underlying_crud_status, underlying_crud);
+		
+		//create a bucket that has a poll freq	
+		final DataBucketBean bucket_poll_now_1 = createBucket("5 min");		
+		//create another that doesn't have one until later
+		final DataBucketBean bucket_poll_now_2 = createBucket("7 min");
+		//create another that doesn't have a poll frequency
+		final DataBucketBean bucket_no_poll = createBucket(null);		
+		
+		//put it in the datastore		
+		storeBucketAndStatus(bucket_poll_now_1, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		storeBucketAndStatus(bucket_poll_now_2, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		storeBucketAndStatus(bucket_no_poll, true, Optional.empty(), underlying_crud_status, underlying_crud);
+		
+		final DataBucketStatusBean bucket_poll_now_1_status = underlying_crud_status.getObjectById(bucket_poll_now_1._id()).get().get();
+		final DataBucketStatusBean bucket_poll_now_2_status = underlying_crud_status.getObjectById(bucket_poll_now_2._id()).get().get();
 				
 		//actor checks every second, give it long enough to hit a cycle
-		Thread.sleep(10000);
+		Thread.sleep(5000);
 		
 		//get the (hopefully) updated bucket		
-		final DataBucketBean bucket_poll_now_updated = underlying_crud.getObjectById(bucket_poll_now._id()).get().get();
-		final DataBucketBean bucket_poll_later_updated = underlying_crud.getObjectById(bucket_poll_later._id()).get().get();
-		final DataBucketBean bucket_no_poll_updated = underlying_crud.getObjectById(bucket_no_poll._id()).get().get();
+		final DataBucketStatusBean bucket_poll_now_1_updated = underlying_crud_status.getObjectById(bucket_poll_now_1._id()).get().get();
+		final DataBucketStatusBean bucket_poll_now_2_updated = underlying_crud_status.getObjectById(bucket_poll_now_2._id()).get().get();
+		final DataBucketStatusBean bucket_no_poll_updated = underlying_crud_status.getObjectById(bucket_no_poll._id()).get().get();
 		//make sure the actor 
 		//1. updates freq (means it received the messaage)
-		assertTrue("Next poll time should have been greater than what we set poll_time to", bucket_poll_now_updated.next_poll_date().getTime() > bucket_poll_now.next_poll_date().getTime());
-		assertTrue("Poll later time should not have been updated", bucket_poll_later_updated.next_poll_date().getTime() == bucket_poll_later.next_poll_date().getTime());
+		assertTrue("Next poll time 1 should have been greater than what we set poll_time to", bucket_poll_now_1_updated.next_poll_date().getTime() > bucket_poll_now_1_status.next_poll_date().getTime());
+		assertTrue("Next poll time 2 should have been greater than what we set poll_time to", bucket_poll_now_2_updated.next_poll_date().getTime() > bucket_poll_now_2_status.next_poll_date().getTime());
 		assertTrue("Poll never time should not have been set", bucket_no_poll_updated.next_poll_date() == null );
 		
 		//2. tries to send out poll messsage	
-		assertEquals("Actor should have received 1 poll request and accepted it", 1, TestActor_Accepter.num_accepted_messages);
+		assertEquals("Actor should have received 2 poll request and accepted it", 2, TestActor_Accepter.num_accepted_messages);
+		
 	}
 
 	@After
@@ -187,7 +299,7 @@ public class TestBucketPollFreqSingletonActor {
 		_actor_context.onTestComplete();
 	}
 	
-	protected DataBucketBean createBucket(String poll_frequency, Date next_poll_date) {
+	protected DataBucketBean createBucket(String poll_frequency) {
 		if ( poll_frequency != null ) {
 			return BeanTemplateUtils.build(DataBucketBean.class)
 					.with(DataBucketBean::_id, UuidUtils.get().getRandomUuid())
@@ -197,8 +309,7 @@ public class TestBucketPollFreqSingletonActor {
 					.with(DataBucketBean::description, "asdf")
 					.with(DataBucketBean::modified, new Date())
 					.with(DataBucketBean::display_name, "asdf")							
-					.with(DataBucketBean::poll_frequency, poll_frequency)
-					.with(DataBucketBean::next_poll_date, next_poll_date)					
+					.with(DataBucketBean::poll_frequency, poll_frequency)									
 					.with(DataBucketBean::multi_node_enabled, false) 
 					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
@@ -229,18 +340,42 @@ public class TestBucketPollFreqSingletonActor {
 	}
 	
 	private void storeBucketAndStatus(DataBucketBean bucket,
-			boolean store_status,
+			boolean store_status, Optional<Date> next_poll_date,
 			ICrudService<DataBucketStatusBean> underlying_crud_status,
 			ICrudService<DataBucketBean> underlying_crud) throws InterruptedException, ExecutionException {				
 		underlying_crud.storeObject(bucket).get();
 		if (store_status) {
-			DataBucketStatusBean status_bean = BeanTemplateUtils.build(DataBucketStatusBean.class)
-														.with(DataBucketStatusBean::_id, bucket._id())
-														.with(DataBucketStatusBean::bucket_path, bucket.full_name())
-														.with(DataBucketStatusBean::node_affinity, Collections.emptyList())
-														.done().get();
-			underlying_crud_status.storeObject(status_bean).get();			
+			if ( next_poll_date.isPresent()) {
+				DataBucketStatusBean status_bean = BeanTemplateUtils.build(DataBucketStatusBean.class)
+															.with(DataBucketStatusBean::_id, bucket._id())
+															.with(DataBucketStatusBean::bucket_path, bucket.full_name())
+															.with(DataBucketStatusBean::node_affinity, Collections.emptyList())
+															.with(DataBucketStatusBean::suspended, false)
+															.with(DataBucketStatusBean::next_poll_date, next_poll_date.get())
+															.done().get();			
+				underlying_crud_status.storeObject(status_bean).get();		
+			} else {
+				DataBucketStatusBean status_bean = BeanTemplateUtils.build(DataBucketStatusBean.class)
+						.with(DataBucketStatusBean::_id, bucket._id())
+						.with(DataBucketStatusBean::bucket_path, bucket.full_name())
+						.with(DataBucketStatusBean::node_affinity, Collections.emptyList())
+						.with(DataBucketStatusBean::suspended, false)						
+						.done().get();			
+				underlying_crud_status.storeObject(status_bean).get();
+			}
 		}
+	}
+	
+	private void suspendBucket(final DataBucketBean bucket, final ICrudService<DataBucketStatusBean> underlying_crud_status) throws InterruptedException, ExecutionException {
+		final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
+				.set(DataBucketStatusBean::suspended, true);
+		underlying_crud_status.updateObjectById(bucket._id(), update).get();
+	}
+	
+	private void updateNextPollTime(final DataBucketBean bucket, ICrudService<DataBucketStatusBean> underlying_status_crud, final Date updated_poll_date) throws InterruptedException, ExecutionException {
+		final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
+				.set(DataBucketStatusBean::next_poll_date, updated_poll_date);
+		underlying_status_crud.updateObjectById(bucket._id(), update).get();
 	}
 	
 	public String insertActor(Class<? extends UntypedActor> actor_clazz) throws Exception {

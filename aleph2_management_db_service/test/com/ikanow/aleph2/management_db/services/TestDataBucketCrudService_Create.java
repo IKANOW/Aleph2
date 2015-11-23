@@ -1521,9 +1521,10 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());
 		
 		//finally check that next_poll_date was set
-		final DataBucketBean valid_bucket_retrieved = _bucket_crud.getObjectById(valid_bucket._id()).get().get();
-		assertTrue("Next poll date should not be set in the object we submitted", valid_bucket.next_poll_date() == null);
-		assertTrue("Next poll date should have been set during store", valid_bucket_retrieved.next_poll_date() != null);
+		final DataBucketStatusBean valid_bucket_status_retrieved = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+//		final DataBucketBean valid_bucket_retrieved = _bucket_crud.getObjectById(valid_bucket._id()).get().get();
+//		assertTrue("Next poll date should not be set in the object we submitted", valid_bucket.next_poll_date() == null);
+		assertTrue("Next poll date should have been set during store", valid_bucket_status_retrieved.next_poll_date() != null);
 	}
 
 	@Test

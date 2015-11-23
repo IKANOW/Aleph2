@@ -18,6 +18,7 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -34,7 +35,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -60,6 +63,7 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 	protected final ManagementDbActorContext _system_context;
 	protected final IManagementDbService _underlying_management_db;	
 	protected final SetOnce<ICrudService<DataBucketBean>> _bucket_crud = new SetOnce<>();
+	protected final SetOnce<ICrudService<DataBucketStatusBean>> _bucket_status_crud = new SetOnce<>();
 	protected final SetOnce<Cancellable> _ticker = new SetOnce<>();
 	
 	public BucketPollFreqSingletonActor() {
@@ -84,6 +88,7 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		//TODO get the bucket db and optimize it's query path
 		if (!_bucket_crud.isSet()) { // (for some reason, core_mdb.anything() can fail in the c'tor)			
 			_bucket_crud.set(_underlying_management_db.getDataBucketStore());
+			_bucket_status_crud.set(_underlying_management_db.getDataBucketStatusStore());
 		}
 	}
 
@@ -96,7 +101,7 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		//i.e. we only think it's going to be the string "Tick" sent from the scheduler we setup in the c'tor
 		setup();
 		getExpiredBuckets().thenAccept(m -> {
-			final List<DataBucketBean> buckets = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());
+			final List<DataBucketBean> buckets = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());			
 			buckets.stream().forEach(bucket -> {
 				_logger.debug("Poll Expired for bucket: " + bucket.full_name());				
 				updateBucketNextPollTime(bucket).thenAccept(x -> {
@@ -124,11 +129,15 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 	}
 
 	private CompletableFuture<Cursor<DataBucketBean>> getExpiredBuckets() {
-		//find any buckets with next_date < NOW
-		final Date now = new Date();
-		final QueryComponent<DataBucketBean> expired_buckets = 
-				CrudUtils.allOf(DataBucketBean.class).rangeBelow(DataBucketBean::next_poll_date, now, false);		
-		return _bucket_crud.get().getObjectsBySpec(expired_buckets);
+		//they are buckets where suspended:false AND next_poll_date < now
+		final QueryComponent<DataBucketStatusBean> non_suspended_expired_buckets = CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::suspended, false).rangeBelow(DataBucketStatusBean::next_poll_date, new Date(), false);
+		//first get the status items where suspended:false and next_poll_date < now
+		return _bucket_status_crud.get().getObjectsBySpec(non_suspended_expired_buckets).thenCompose(c -> {
+			//match those to databuckets with the ids
+			Set<String> bucket_ids = Optionals.streamOf(c.iterator(), false).map(b->b._id()).collect(Collectors.toSet());			
+			final QueryComponent<DataBucketBean> matching_ids = CrudUtils.allOf(DataBucketBean.class).withAny(DataBucketBean::_id, bucket_ids);			
+			return _bucket_crud.get().getObjectsBySpec(matching_ids);
+		});
 	}
 	
 	private CompletableFuture<Boolean> updateBucketNextPollTime(DataBucketBean bucket)  {
@@ -136,11 +145,11 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		//TODO handle validation failure (shouldn't happen if poll date was already set? (i.e. instead of calling .success())
 		final Date next_poll_date = TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date())).success();
 		_logger.debug("Setting next poll time to: " + next_poll_date.toString());
-		final QueryComponent<DataBucketBean> expired_bucket = 
-				CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::_id, bucket._id());
-		final UpdateComponent<DataBucketBean> update = CrudUtils.update(DataBucketBean.class)
-				.set(DataBucketBean::next_poll_date, next_poll_date);
-		return _bucket_crud.get().updateObjectBySpec(expired_bucket, Optional.of(false), update);
+		final QueryComponent<DataBucketStatusBean> expired_bucket_status = 
+				CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, bucket._id());
+		final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
+				.set(DataBucketStatusBean::next_poll_date, next_poll_date);
+		return _bucket_status_crud.get().updateObjectBySpec(expired_bucket_status, Optional.of(false), update);
 	}
 
 	/* (non-Javadoc)
