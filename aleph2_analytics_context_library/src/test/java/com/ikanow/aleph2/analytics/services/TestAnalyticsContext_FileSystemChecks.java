@@ -41,6 +41,7 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
@@ -203,7 +204,7 @@ public class TestAnalyticsContext_FileSystemChecks {
 							)
 				.done().get();
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_batch, true).join();
-		mock_security.setGlobalMockRole(analytic_bucket_batch.full_name(), true);		
+		mock_security.setUserMockRole("me", analytic_bucket_batch.full_name(), ISecurityService.ACTION_READ_WRITE, true);
 		
 		File f_tmp = new File(_service_context.getStorageService().getBucketRootPath() + analytic_bucket_batch.full_name() + IStorageService.TEMP_DATA_SUFFIX);
 		File f_import = new File(_service_context.getStorageService().getBucketRootPath() + analytic_bucket_batch.full_name() + IStorageService.TO_IMPORT_DATA_SUFFIX);

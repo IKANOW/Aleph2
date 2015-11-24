@@ -15,13 +15,18 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 
 /** A useful mock object for unit testing. Allows everything
  *  TODO (ALEPH-31): provide an interface to add overrides for testing
@@ -82,7 +87,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public boolean hasRole(ISubject subject, String role) {		
-		return _mock_role_map.getOrDefault(role, false);
+		return _mock_role_map.get().getOrDefault(role, false);
 	}
 
 	/* (non-Javadoc)
@@ -90,7 +95,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public boolean isPermitted(ISubject subject, String string) {
-		return _mock_role_map.getOrDefault(string, false);
+		return _mock_role_map.get().getOrDefault(string, false);
 	}
 
 	/* (non-Javadoc)
@@ -117,6 +122,9 @@ public class MockSecurityService implements ISecurityService {
 		return crud;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#secured(com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider, com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean)
+	 */
 	@Override
 	public IDataServiceProvider secured(IDataServiceProvider provider, AuthorizationBean authorizationBean) {
 		return provider;
@@ -126,41 +134,94 @@ public class MockSecurityService implements ISecurityService {
 	
 	// Some override code we'll add to as needed
 	
-	protected Map<String, Boolean> _mock_role_map = new HashMap<>();
+	protected Map<String, Boolean> _test_role_map = new HashMap<>();
+	
+	protected ThreadLocal<Map<String, Boolean>> _mock_role_map = new ThreadLocal<Map<String, Boolean>>() {
 
-	/** Set a mock role
+		/* (non-Javadoc)
+		 * @see java.lang.ThreadLocal#initialValue()
+		 */
+		@Override
+		protected Map<String, Boolean> initialValue() {
+			return new HashMap<>();
+		}
+		
+	};
+
+	/** Set a mock role (completely generic - for use when testing "isPermitted")
 	 * @param role
 	 * @param permission
 	 */
 	public void setGlobalMockRole(String role, boolean permission) {
-		_mock_role_map.put(role, permission);
+		_test_role_map.put(role, permission);
 	}
 
+	/** More faithful approximation of user perms (for use when testing "isUserPermitted")
+	 * @param user_id
+	 * @param asset
+	 * @param role
+	 * @param permission
+	 */
+	public void setUserMockRole(String user_id, String asset, String action, boolean permission) {
+		_test_role_map.put(user_id + ":" + asset + ":" + action, permission);
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#loginAsSystem()
+	 */
 	@Override
 	public ISubject loginAsSystem() {
+		// (not quite right because this should only be written in when run as user, but in most cases will be using higher level code that
+		//  does this for me)
+		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
 		return new MockSubject();
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateAuthenticationCache(java.util.Collection)
+	 */
 	@Override
 	public void invalidateAuthenticationCache(Collection<String> principalNames) {
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateCache()
+	 */
 	@Override
 	public void invalidateCache() {
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#enableJvmSecurityManager(boolean)
+	 */
 	@Override
 	public void enableJvmSecurityManager(boolean enabled) {
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#enableJvmSecurity(boolean)
+	 */
 	@Override
 	public void enableJvmSecurity(boolean enabled) {
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#isUserPermitted(java.util.Optional, java.lang.Object, java.util.Optional)
+	 */
 	@Override
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission,
 			Optional<String> oAction) {
-		return _mock_role_map.getOrDefault(userID, false);		
+		
+		return Patterns.match(assetOrPermission).<List<String>>andReturn()
+			.when(DataBucketBean.class, b -> Arrays.asList(b._id(), b.full_name()))
+			.when(SharedLibraryBean.class, s -> Arrays.asList(s._id(), s.path_name()))
+			.otherwise(s -> Arrays.asList(s.toString()))
+			.stream()
+			.anyMatch(to_check -> {
+				final String test_string = userID.orElse("*") + ":" + to_check + ":" + oAction.orElse("*");
+				return _mock_role_map.get().getOrDefault(test_string, false);
+			})
+			;
 	}
 
 }
