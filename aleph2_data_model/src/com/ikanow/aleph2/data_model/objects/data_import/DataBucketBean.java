@@ -309,14 +309,4 @@ public class DataBucketBean implements Serializable {
 	
 	private List<Template> templates;
 	private Map<String, Object> misc_properties;
-	
-	////////////////////////////////////////
-	
-	// Misc internals
-
-	/** (For internal use by the management DB) The date when the next poll should occur (determined by poll_frequency)
-	 * @return
-	 */
-	public Date next_poll_date() { return next_poll_date; }
-	private Date next_poll_date;
 }

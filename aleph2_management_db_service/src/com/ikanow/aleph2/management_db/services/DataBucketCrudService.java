@@ -280,17 +280,18 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					);
 		}
 		
-		// Made it this far, try to set the next_poll_time
-		final DataBucketBean new_bucket_poll = (null != new_object.poll_frequency() ) 
-			? BeanTemplateUtils.clone(new_object)
-				.with(DataBucketBean::next_poll_date, TimeUtils.getSchedule(new_object.poll_frequency(), Optional.of(new Date())).success())
-				.done()
-			: new_object;
+		// Made it this far, try to set the next_poll_time in the status object
+		if ( null != new_object.poll_frequency()) {
+			//get the next poll time
+			final Date next_poll_time = TimeUtils.getSchedule(new_object.poll_frequency(), Optional.of(new Date())).success();
+			//update the status
+			_underlying_data_bucket_status_db.get().updateObjectById(new_object._id(), CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::next_poll_date, next_poll_time));
+		}
 		
 		// Create the directories
 		
 		try {
-			createFilePaths(new_bucket_poll, _storage_service);
+			createFilePaths(new_object, _storage_service);
 		}
 		catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
 			return FutureUtils.createManagementFuture(
@@ -299,19 +300,19 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// OK if the bucket is validated we can store it (and create a status object)
 				
-		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.get().storeObject(new_bucket_poll, replace_if_present);
+		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.get().storeObject(new_object, replace_if_present);
 
 		// Get the status and then decide whether to broadcast out the new/update message
 		
 		final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
 		final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
-				? requestUpdatedBucket(new_bucket_poll, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db.get(), _bucket_action_retry_store.get())
-				: requestNewBucket(new_bucket_poll, is_suspended, _underlying_data_bucket_status_db.get(), _actor_context);
+				? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db.get(), _bucket_action_retry_store.get())
+				: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db.get(), _actor_context);
 			
 		// Update the status depending on the results of the management channels
 				
 		return FutureUtils.createManagementFuture(ret_val,
-				MgmtCrudUtils.handleUpdatingStatus(new_bucket_poll, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db.get())					
+				MgmtCrudUtils.handleUpdatingStatus(new_object, corresponding_status.get().get(), is_suspended, mgmt_results, _underlying_data_bucket_status_db.get())					
 									.thenApply(msgs -> Stream.concat(msgs.stream(), validation_info.stream()).collect(Collectors.toList())));
 	}
 

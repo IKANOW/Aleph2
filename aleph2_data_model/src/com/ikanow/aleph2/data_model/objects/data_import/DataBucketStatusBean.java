@@ -140,6 +140,12 @@ public class DataBucketStatusBean implements Serializable {
 	public Map<String, BasicMessageBean> last_storage_status_messages() {
 		return last_storage_status_messages == null ? null : Collections.unmodifiableMap(last_storage_status_messages);
 	}
+	
+	/** The date when the next poll should occur (determined by poll_frequency)
+	 * @return
+	 */
+	public Date next_poll_date() { return next_poll_date; }
+		
 	private String _id;
 	private String bucket_path;
 	private Boolean suspended;
@@ -152,9 +158,17 @@ public class DataBucketStatusBean implements Serializable {
 	private Boolean confirmed_suspended;
 	private Boolean confirmed_multi_node_enabled;
 	private DataBucketBean.MasterEnrichmentType confirmed_master_enrichment_type;
+	private Date next_poll_date;
 	
 	private Map<String, BasicMessageBean> last_harvest_status_messages;
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;
 	private Map<String, BasicMessageBean> last_storage_status_messages;
+
+	
+	////////////////////////////////////////
+	
+	// Misc internals
+
+	
 }
 
