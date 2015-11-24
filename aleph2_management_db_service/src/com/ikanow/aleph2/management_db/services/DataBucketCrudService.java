@@ -726,10 +726,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		if (old_version.isPresent()) {
 			final DataBucketBean old_bucket = old_version.get();
 			if (!bucket.full_name().equals(old_bucket.full_name())) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_FULLNAME_CHANGED, bucket.full_name(), old_bucket.full_name())));
 			}
 			if (!bucket.owner_id().equals(old_bucket.owner_id())) {
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name())));
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_OWNERID_CHANGED, bucket.full_name(), old_bucket.owner_id())));
 			}
 		}
 		

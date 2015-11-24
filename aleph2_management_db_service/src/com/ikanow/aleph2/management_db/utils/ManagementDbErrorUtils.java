@@ -131,8 +131,8 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	// BUCKET UPDATE
 	
 	public static final String BUCKET_UPDATE_ID_CHANGED = "Bucket {0}: can't update _id";
-	public static final String BUCKET_UPDATE_FULLNAME_CHANGED = "Bucket {0}: can't _currently_ update full_name";
-	public static final String BUCKET_UPDATE_OWNERID_CHANGED = "Bucket {0}: can't _currently_ update owner_id";	
+	public static final String BUCKET_UPDATE_FULLNAME_CHANGED = "Bucket {0}: can't _currently_ update full_name (was {1})";
+	public static final String BUCKET_UPDATE_OWNERID_CHANGED = "Bucket {0}: can't _currently_ update owner_id (was {1})";	
 	public static final String BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE = "Bucket {0}: can only change field {1} when bucket is suspended";
 	public static final String BUCKET_UPDATE_MULTI_NODE_ENABLED_WARNING = "WARNING (Bucket {0}). field 'multi_node_enabled' is set, but only one node is handling the bucket. If you are switching to multi-node, note that this will not function correctly unless the source is suspended first. If you just have a one node system, then carry on!";
 	
