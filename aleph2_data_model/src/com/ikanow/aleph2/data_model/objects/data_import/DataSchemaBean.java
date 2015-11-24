@@ -261,17 +261,27 @@ public class DataSchemaBean implements Serializable {
 		private static final long serialVersionUID = 6407137348665175660L;
 		protected DocumentSchemaBean() {}
 		
+		public enum DeduplicationTiming { none, start, end, custom };
+		public enum DeduplicationPolicy { leave, update, overwrite, custom };
+		
 		/** User constructor
 		 */
 		public DocumentSchemaBean(final Boolean enabled, 
 				final String service_name,
-				final Boolean deduplicate,
+				final DeduplicationTiming deduplication_timing,
+				final DeduplicationPolicy deduplication_policy,
 				final List<String> deduplication_fields,
-				final Map<String, Object> technology_override_schema) {
+				final List<String> deduplication_contexts,
+				final List<EnrichmentControlMetadataBean> custom_deduplication_configs,
+				final Map<String, Object> technology_override_schema)
+		{
 			this.enabled = enabled;
 			this.service_name = service_name;
-			this.deduplicate = deduplicate;
+			this.deduplication_timing = deduplication_timing;
+			this.deduplication_policy = deduplication_policy;
 			this.deduplication_fields = deduplication_fields;
+			this.deduplication_contexts = deduplication_contexts;
+			this.custom_deduplication_configs = custom_deduplication_configs;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -286,14 +296,24 @@ public class DataSchemaBean implements Serializable {
 		public String service_name() {
 			return service_name;
 		}
-		/** If enabled, then deduplication-during-the-harvest-phase is engaged
-		 *  The default field is "_id" (which is then by default generated from the object body, which can be computationally expensive)
+		/** If enabled (not "none"), then deduplication during the enrichment stage is enabled, at this point (if custom it is the user responsibiltiy to call the correct enrichment job when desired)
 		 * @return the deduplicate
 		 */
-		public Boolean deduplicate() {
-			return deduplicate;
+		public DeduplicationTiming deduplication_timing() {
+			return deduplication_timing;
 		}
+		/** If deduplication is enabled then this describes what happens if a matching document is found:
+		 *  "leave" - the existing data object is left and the new one is discarded
+		 *  "update" - the existing data object is left unless the new one is newer, in which case nothing occurs
+		 *  "overwrite" - the new data object replaces the old one (but with the same _id)
+		 *  "custom" - the enrichment job specified by "custom_deduplication_configs" is run (as if a grouping had occurred), the result for each group overwrites the existing object (or if nothing is emitted, the object is left alone)  
+		 * @return what to do if a matching data object already exists
+		 */
+		public DeduplicationPolicy deduplication_policy() {
+			return deduplication_policy;
+		}		
 		/** If deduplication is enabled then this ordered list of fields is the deduplication key (together with bucket)
+		 *  If this is disabled
 		 * @return the deduplication_fields
 		 */
 		public List<String> deduplication_fields() {
@@ -306,6 +326,12 @@ public class DataSchemaBean implements Serializable {
 		public List<String> deduplication_contexts() {
 			return deduplication_contexts;
 		}
+		/** For "custom" deduplication policy, this bean determines the 
+		 * @return
+		 */
+		public List<EnrichmentControlMetadataBean> custom_deduplication_configs() {
+			return custom_deduplication_configs;
+		}		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -315,9 +341,11 @@ public class DataSchemaBean implements Serializable {
 		}
 		private Boolean enabled;
 		private String service_name;
-		private Boolean deduplicate;
+		private DeduplicationTiming deduplication_timing;
+		private DeduplicationPolicy deduplication_policy;
 		private List<String> deduplication_fields;
 		private List<String> deduplication_contexts;
+		private List<EnrichmentControlMetadataBean> custom_deduplication_configs;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service

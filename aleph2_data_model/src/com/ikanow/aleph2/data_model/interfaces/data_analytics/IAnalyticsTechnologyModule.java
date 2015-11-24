@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.BucketDiffBean;
@@ -246,4 +247,17 @@ public interface IAnalyticsTechnologyModule {
 	 */
 	ManagementFuture<Boolean> checkAnalyticJobProgress(final DataBucketBean analytic_bucket, final Collection<AnalyticThreadJobBean> jobs, final AnalyticThreadJobBean job_to_check, final IAnalyticsContext context);
 	
+	/* Determines whether the job should be sent to (a) random node(s) every time (cardinality depending on multi_node_enabled/node_rules), or will "stick" with whatever nodes
+	 * first process it. Setting to "false" will improve the robustness when the underlying technology is fundamentally distributed (ie all you're doing is making an
+	 * API call to an external service, vs launching a process on box)
+	 * Defaults to true for harvest technologies and false for analytic technologies.
+	 * Very odd and not necessaritly easily recoverable results will occur if this is wrong, so beware of changing from the default unless you know 
+	 * what you're doing!
+	 * @param completed_bucket
+	 * @param context
+	 * @return
+	 */
+	default boolean applyNodeAffinity(final DataBucketBean completed_bucket, final IHarvestContext context) {
+		return false;
+	}
 }
