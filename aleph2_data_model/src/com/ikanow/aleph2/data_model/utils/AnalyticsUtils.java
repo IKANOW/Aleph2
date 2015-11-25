@@ -49,6 +49,7 @@ public class AnalyticsUtils {
 					@Override
 					public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 						final Method m = implementation.getClass().getMethod(method.getName(), method.getParameterTypes());
+						m.setAccessible(true);
 						return m.invoke(implementation, args);
 					}				
 		});
