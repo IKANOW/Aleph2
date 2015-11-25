@@ -244,6 +244,12 @@ public class ManagementDbActorContext {
 		return _analytics_trigger_round_robin_bus.get();
 	}
 	
+	/** Just routes the application name on so actors/services don't need to access CDS just for that purpose
+	 * @return the application name, or empty() for transients
+	 */
+	public Optional<String> getApplication() {
+		return _distributed_services.getApplicationName();
+	}
 	
 	/** Returns a static accessor to the designated message bus
 	 * @return the designated message bus

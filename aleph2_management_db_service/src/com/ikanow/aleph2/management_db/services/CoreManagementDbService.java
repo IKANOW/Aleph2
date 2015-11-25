@@ -58,6 +58,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketDeletionActor;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
@@ -88,7 +89,13 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
 	
-	protected final boolean _read_only;
+	protected class ReadOnly extends SetOnce<Boolean> {
+		@Override
+		public Boolean get() {
+			return super.optional().orElseGet(() -> _actor_context.getApplication().isPresent());
+		}
+	}	
+	protected final ReadOnly _read_only = new ReadOnly();
 	
 	/** Guice invoked constructor
 	 * @param underlying_management_db
@@ -110,8 +117,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		
 		_auth = Optional.empty();
 		_project = Optional.empty();
+
+		// (leave _read_only alone, unless manually set will default to read-write for applications and read-only otherwise) 
 		
-		_read_only = false;
 		_security_service = service_context.getSecurityService();
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
@@ -140,7 +148,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_auth = auth;
 		_project = project;		
 		
-		_read_only = read_only;
+		_read_only.set(read_only);
 		_security_service = service_context.getSecurityService();
 	}
 	
@@ -152,7 +160,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	{
 		return new CoreManagementDbService(_service_context, _underlying_management_db, 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service, _actor_context,
-				client_auth, project_auth, _read_only);
+				client_auth, project_auth, _read_only.get());
 	}
 	
 	/* (non-Javadoc)
@@ -169,9 +177,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getSharedLibraryStore()
 	 */
 	public IManagementCrudService<SharedLibraryBean> getSharedLibraryStore() {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _shared_library_service.readOnlyVersion(_read_only);
+		return _shared_library_service.readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -179,25 +187,25 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
 			SharedLibraryBean library, Optional<String> sub_collection) {		
-		return _underlying_management_db.getPerLibraryState(clazz, library, sub_collection).readOnlyVersion(_read_only);
+		return _underlying_management_db.getPerLibraryState(clazz, library, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStore()
 	 */
 	public IManagementCrudService<DataBucketBean> getDataBucketStore() {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _data_bucket_service.readOnlyVersion(_read_only);
+		return _data_bucket_service.readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService#getDataBucketStatusStore()
 	 */
 	public IManagementCrudService<DataBucketStatusBean> getDataBucketStatusStore() {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
-		return _data_bucket_status_service.readOnlyVersion(_read_only);
+		return _data_bucket_status_service.readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -206,7 +214,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketHarvestState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
+		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -215,7 +223,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketEnrichmentState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
+		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -224,7 +232,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only);
+		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -256,9 +264,9 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public <T> ICrudService<T> getRetryStore(
 			Class<T> retry_message_clazz) {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
-		return _underlying_management_db.getRetryStore(retry_message_clazz).readOnlyVersion(_read_only);
+		return _underlying_management_db.getRetryStore(retry_message_clazz).readOnlyVersion(_read_only.get());
 	}
 	
 	/* (non-Javadoc)
@@ -267,10 +275,10 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public <T> ICrudService<T> getBucketDeletionQueue(
 			Class<T> deletion_queue_clazz) {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
-		return _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only);
+		return _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -280,7 +288,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
 			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only);
+		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only.get());
 	}
 	
 
@@ -310,7 +318,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public ManagementFuture<Boolean> purgeBucket(DataBucketBean to_purge, Optional<Duration> in) {
-		if (!_read_only)
+		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
 		if (in.isPresent()) { // perform scheduled purge
