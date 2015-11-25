@@ -2,6 +2,8 @@
 				"_id": "batch_convert_test",
                 "aliases": [],
                 "batch_enrichment_configs": [],
+                "harvest_technology_name_or_id": "check_removed_multi_node_unset",
+                "multi_node_enabled": true,
                 "data_schema": {
                     "columnar_schema": {
                         "field_include_pattern_list": [

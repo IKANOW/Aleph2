@@ -951,16 +951,12 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 										tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
-					//TODO (ALEPH-12): add test coverage for this					
-					if (!BucketActionMessage.BucketActionAnalyticJobMessage.class.isAssignableFrom(m.getClass())) {
-						// NOTE: if the message is coming from the analytic trigger then don't do this since the harvest_tech_name_or_id has been removed
-						if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
-							if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
-								if (!tech_module.supportsMultiNode(bucket, jobs, context)) {
-									return CompletableFuture.completedFuture(
-											new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-												ErrorUtils.get(AnalyticsErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
-								}
+					if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
+						if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
+							if (!tech_module.supportsMultiNode(bucket, jobs, context)) {
+								return CompletableFuture.completedFuture(
+										new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+											ErrorUtils.get(AnalyticsErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
 							}
 						}
 					}

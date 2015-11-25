@@ -257,27 +257,32 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 										.join()
 									:
 									// Normal bucket get from bucket store
-									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id(),
-											//(this exclusion just transforms combined harvest+analytics buckets into analytics only, to avoid calling harvest call incorrectly)
-											Arrays.asList(BeanTemplateUtils.from(DataBucketBean.class).field(DataBucketBean::harvest_technology_name_or_id)),
-											false
-											)
+									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id())
 											.join()
 									;
 									// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
-									
 								})
 								.<Optional<DataBucketBean>>andThen(maybe_bucket -> {
 									return maybe_bucket
 											.map(bucket -> (null == bucket.analytic_thread()) 
 													? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
 													: bucket)
+											.map(bucket ->
+													BeanTemplateUtils.clone(bucket)
+														.with(DataBucketBean::harvest_technology_name_or_id, null) // remove this so that only gets sent to analytics/enrichment engine
+														.with(DataBucketBean::multi_node_enabled, 
+																(null != bucket.harvest_technology_name_or_id()) // if harvest_tech is non-null then multi-node applies to that so ignore here
+																? false
+																: Optional.ofNullable(bucket.multi_node_enabled()).orElse(false) // if harvest_tech is null then multi-node did apply to leave alone
+																)
+														.done()
+													)
 											.map(bucket -> {
 													return !BucketUtils.isTestBucket(bucket) // for test buckets, override the scheduler to something short
 													? 
 													bucket
 													:
-													BeanTemplateUtils.clone(bucket) 
+													BeanTemplateUtils.clone(bucket)
 														.with(DataBucketBean::analytic_thread,
 															BeanTemplateUtils.clone(bucket.analytic_thread()) //(must exist by this point)
 																.with(AnalyticThreadBean::trigger_config,

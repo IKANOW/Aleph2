@@ -87,6 +87,16 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 				if (arg0 instanceof BucketActionAnalyticJobMessage) {
 					final BucketActionAnalyticJobMessage msg = (BucketActionAnalyticJobMessage) arg0;
 					_logger.info("Message details: " + msg.type() + " jobs : " + Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")));
+					
+					final DataBucketBean bucket = msg.bucket();
+					if (null != bucket.harvest_configs()) {
+						_num_received_errors.incrementAndGet();						
+					}
+					if (null != bucket.multi_node_enabled()) {
+						if (bucket.multi_node_enabled()) {
+							_num_received_errors.incrementAndGet();
+						}
+					}
 				}				
 				_num_received.incrementAndGet();
 			}
@@ -100,6 +110,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Before
 	@Override
 	public void test_Setup() throws Exception {
+		_num_received_errors.set(0L); //(do this for every test)
 		if (null != _service_context) {
 			return;
 		}
@@ -199,6 +210,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 			assertEquals(0L, trigger_crud.countObjects().join().intValue());
 		}
+		// Check no malformed buckets
+		assertEquals(0L, _num_received_errors.get());
 	}
 	
 	@Test
@@ -252,7 +265,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 			assertEquals(0L, trigger_crud.countObjects().join().intValue());
 		}
-		
+		// Check no malformed buckets
+		assertEquals(0L, _num_received_errors.get());
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -554,6 +568,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(3, _num_received.get()); 
 		}
 		_num_received.set(prev);
+		
+		// Check no malformed buckets
+		assertEquals(0L, _num_received_errors.get());
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -832,6 +849,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			assertEquals(4, _num_received.get());						
 		}
+		// Check no malformed buckets
+		assertEquals(0L, _num_received_errors.get());
 	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -1166,6 +1185,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			assertEquals(4, _num_received.get());									
 		}				
+		// Check no malformed buckets
+		assertEquals(0L, _num_received_errors.get());
 	}
 
 	/////////////////////////////////////////////////////

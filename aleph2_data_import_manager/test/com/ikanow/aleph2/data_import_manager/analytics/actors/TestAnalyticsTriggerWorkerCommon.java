@@ -53,6 +53,7 @@ public class TestAnalyticsTriggerWorkerCommon {
 	protected static ManagementDbActorContext _actor_context = null;
 	
 	protected static AtomicLong _num_received = new AtomicLong();
+	protected static AtomicLong _num_received_errors = new AtomicLong(); // counts malformed buckets
 	
 	@SuppressWarnings("deprecation")
 	@Before

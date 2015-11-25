@@ -171,7 +171,6 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    					})
 	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
 	    						// Some information logging:
-	    	    				//if (shouldLog(m))
 	    						Patterns.match(reply).andAct()
 	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage,
 	    									// (always log these)

@@ -893,6 +893,26 @@ public class TestDataBucketChangeActor {
 			assertEquals("test_message", test1err.reply().command());
 			assertEquals("test_error", test1err.reply().message());
 		}		
+		// Test 1b: check errors 
+		{
+			final DataBucketBean fail_test =
+					BeanTemplateUtils.clone(bucket)
+						.with(DataBucketBean::harvest_technology_name_or_id, null)
+						.with(DataBucketBean::multi_node_enabled, true)
+					.done();
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					fail_test, offer,
+					"test2", 
+					_actor_context.getNewAnalyticsContext(), null,
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test2.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test2.get();					
+			assertEquals(false, test_reply.reply().success());			
+		}
 		// Test 2: offer
 		{
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
