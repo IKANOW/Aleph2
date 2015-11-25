@@ -92,7 +92,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected class ReadOnly extends SetOnce<Boolean> {
 		@Override
 		public Boolean get() {
-			return super.optional().orElseGet(() -> _actor_context.getApplication().isPresent());
+			return super.optional().orElseGet(() -> !_actor_context.getApplication().isPresent());
 		}
 	}	
 	protected final ReadOnly _read_only = new ReadOnly();

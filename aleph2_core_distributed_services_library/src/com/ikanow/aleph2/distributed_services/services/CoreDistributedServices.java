@@ -45,6 +45,7 @@ import org.apache.zookeeper.CreateMode;
 
 import scala.Tuple2;
 import scala.Tuple3;
+import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
@@ -75,6 +76,8 @@ import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
 import com.typesafe.config.ConfigFactory;
+
+import fj.Unit;
 
 //TODO: ALEPH-12: have a singleton actor responsible for checking N topics/minute, and deciding if they still exist or not
 
@@ -196,25 +199,47 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			ZookeeperClusterSeed.get(_akka_system.get()).join();
 			
 			_shutdown_hook.set(Lambdas.wrap_runnable_u(() -> {
+				final CompletableFuture<Unit> wait_for_member_to_leave =  new CompletableFuture<>();
+				Cluster.get(_akka_system.get()).registerOnMemberRemoved(() -> wait_for_member_to_leave.complete(Unit.unit()));
+				
 				_joined_akka_cluster = new CompletableFuture<>(); //(mainly just for testing)
 				Cluster.get(_akka_system.get()).leave(ZookeeperClusterSeed.get(_akka_system.get()).address());
+				
 				// If it's an application, not transient, then handle synchronization
-				if (null != application_name) {
-					try {
-						logger.info("Shutting down in 5s");
-					}
-					catch (Exception e) {} // logging might not still work at this point
-					
-					// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
-					//this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
-					Thread.sleep(5000L);
+				try {
+					logger.error("(Not really an error) Shutting down in ~10s");
 				}
-				else {
-					try {
-						logger.info("Shutting down now");					
-					}
-					catch (Exception e) {} // logging might not still work at this point
+				catch (Exception e) {} // logging might not still work at this point
+				
+				// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
+				//if (null != application_name) {
+				//	this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
+				//}
+				try {
+					wait_for_member_to_leave.get(10L, TimeUnit.SECONDS);
 				}
+				catch (Exception e) {
+					try {
+						logger.error("Akka Cluster departure was not able to complete in time");
+					}
+					catch (Exception ee) {} // logging might not still work at this point					
+				}
+				try {
+					Await.result(_akka_system.get().terminate(), Duration.create(10L, TimeUnit.SECONDS));
+				}
+				catch (Exception e) {
+					try {
+						logger.error("Akka System termination was not able to complete in time");
+					}
+					catch (Exception ee) {} // logging might not still work at this point										
+				}
+
+				// All done
+				
+				try {
+					logger.error("(Not really an error) Akka shut down complete, now leave");
+				}
+				catch (Exception e) {} // logging might not still work at this point				
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
 				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");
