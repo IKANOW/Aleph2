@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 
 import com.google.inject.Inject;
@@ -41,6 +43,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class TestAnalyticsTriggerWorkerCommon {
+	private static final Logger _parent_logger = LogManager.getLogger();	
 
 	@Inject 
 	protected IServiceContext _temp_service_context = null;
@@ -58,7 +61,8 @@ public class TestAnalyticsTriggerWorkerCommon {
 	@SuppressWarnings("deprecation")
 	@Before
 	public void test_Setup() throws Exception {
-		
+		_parent_logger.info("runnnig parent test_Setup");
+				
 		if (null != _service_context) {
 			return;
 		}

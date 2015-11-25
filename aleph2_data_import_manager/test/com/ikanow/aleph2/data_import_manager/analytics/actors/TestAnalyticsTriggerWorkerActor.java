@@ -75,6 +75,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	// This one always accepts, but then refuses when it comes down to it...
 	public static class TestActor extends UntypedActor {
 		public TestActor() {
+			_logger.info("started TestActor");
 		}
 		@Override
 		public void onReceive(Object arg0) throws Exception {
@@ -110,6 +111,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Before
 	@Override
 	public void test_Setup() throws Exception {
+		_logger.info("runnnig test_Setup");
 		_num_received_errors.set(0L); //(do this for every test)
 		if (null != _service_context) {
 			return;
@@ -579,6 +581,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	
 	@Test
 	public void test_enrichment_analyticForm() throws IOException, InterruptedException {
+		System.out.println("Starting test_enrichment_analyticForm");
+		
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
 		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
@@ -590,6 +594,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 
 	@Test
 	public void test_enrichment_enrichmentForm() throws IOException, InterruptedException {
+		System.out.println("Starting test_enrichment_enrichmentForm");
+		
 		final String json_bucket_in_db = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_in.json"), Charsets.UTF_8);		
 		final String json_bucket_in_mem = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);
 		
@@ -603,6 +609,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	}
 	
 	public void test_enrichment_common(final DataBucketBean bucket) throws IOException, InterruptedException {
+		System.out.println("Starting test_enrichment_common");
 
 		//setup		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
@@ -859,6 +866,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	
 	@Test
 	public void test_externalTriggers() throws IOException, InterruptedException {
+		System.out.println("Starting test_externalTriggers");
 
 		//setup		
 		final String json = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/trigger_bucket.json"), Charsets.UTF_8);
