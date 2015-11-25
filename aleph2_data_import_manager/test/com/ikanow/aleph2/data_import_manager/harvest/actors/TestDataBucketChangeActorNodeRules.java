@@ -63,7 +63,6 @@ public class TestDataBucketChangeActorNodeRules {
 	protected IServiceContext _service_context = null;
 	
 	protected DataImportActorContext _actor_context;
-	protected ManagementDbActorContext _db_actor_context;
 	
 	@SuppressWarnings("deprecation")
 	public IHarvestTechnologyModule setupDependencies(final Set<String> node_rules) throws Exception {

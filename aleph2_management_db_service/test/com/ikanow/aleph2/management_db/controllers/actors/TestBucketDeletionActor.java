@@ -147,11 +147,12 @@ public class TestBucketDeletionActor {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		_core_mgmt_db = _service_context.getCoreManagementDbService();		
+		_core_mgmt_db = _service_context.getCoreManagementDbService();
+		
+		//(this has to happen after the call to _service_context.getCoreManagementDbService() - bizarrely the actor context is not set before that?!)
+		_actor_context = ManagementDbActorContext.get();		
 		
 		_mock_index = (MockSearchIndexService) _service_context.getSearchIndexService().get();
-		
-		_actor_context = ManagementDbActorContext.get();
 		
 		_logger.info("(Setup complete: " + _core_mgmt_db.getClass() + " / " + _mock_index.getClass() + ")");		
 	}	

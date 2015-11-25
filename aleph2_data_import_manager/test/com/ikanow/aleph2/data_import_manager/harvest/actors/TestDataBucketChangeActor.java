@@ -121,6 +121,8 @@ public class TestDataBucketChangeActor {
 		
 		// Have to do this in order for the underlying management db to live...		
 		_service_context.getCoreManagementDbService();
+		
+		_db_actor_context = ManagementDbActorContext.get();		
 	}
 	
 	@Test

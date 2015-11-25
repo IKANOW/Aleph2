@@ -295,7 +295,7 @@ public class ModuleUtils {
 	private static List<Module> getExtraDepedencyModules(Class<?> serviceClazz) throws Exception {
 		//if serviceClazz implements IExtraDepedency then add those bindings
 		if ( IExtraDependencyLoader.class.isAssignableFrom(serviceClazz) ) {
-			logger.debug("Loading Extra Depedency Modules");
+			logger.debug("Loading Extra Dependency Modules");
 			List<Module> modules = new ArrayList<Module>();
 			Class[] param_types = new Class[0];
 			Object[] params = new Object[0];			

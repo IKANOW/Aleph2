@@ -74,14 +74,15 @@ public class TestSecurityCacheInvalidationSingletonActor {
 		
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
-		
+	
 		_cds = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		_actor_context = ManagementDbActorContext.get();
+		_core_mgmt_db = _service_context.getCoreManagementDbService();
 		
-		_core_mgmt_db = _service_context.getCoreManagementDbService();		
+		//(this has to happen after the call to _service_context.getCoreManagementDbService() - bizarrely the actor context is not set before that?!)
+		_actor_context = ManagementDbActorContext.get();		
 	}
 	
 

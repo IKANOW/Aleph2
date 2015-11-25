@@ -85,11 +85,11 @@ public class TestAnalyticsTriggerWorkerCommon {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		_actor_context = ManagementDbActorContext.get();
-		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 
+		_actor_context = ManagementDbActorContext.get();
+		
 		// need to create data import actor separately:
 		@SuppressWarnings("unused")
 		final DataImportActorContext singleton = new DataImportActorContext(_service_context, new GeneralInformationService(), 

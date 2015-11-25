@@ -130,9 +130,10 @@ public class TestBucketPollFreqSingletonActor {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		_actor_context = ManagementDbActorContext.get();
+		_core_mgmt_db = _service_context.getCoreManagementDbService();
 		
-		_core_mgmt_db = _service_context.getCoreManagementDbService();		
+		//(this has to happen after the call to _service_context.getCoreManagementDbService() - bizarrely the actor context is not set before that?!)
+		_actor_context = ManagementDbActorContext.get();		
 		
 		Thread.sleep(100L); // (since we're in test mode, give the injectors a few ms to sort themselves out - seems like a _very_ intemittent error can occur otherwise?)   
 	}
