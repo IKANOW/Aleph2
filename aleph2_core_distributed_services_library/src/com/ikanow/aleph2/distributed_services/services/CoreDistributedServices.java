@@ -199,47 +199,60 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 			ZookeeperClusterSeed.get(_akka_system.get()).join();
 			
 			_shutdown_hook.set(Lambdas.wrap_runnable_u(() -> {
-				final CompletableFuture<Unit> wait_for_member_to_leave =  new CompletableFuture<>();
-				Cluster.get(_akka_system.get()).registerOnMemberRemoved(() -> wait_for_member_to_leave.complete(Unit.unit()));
-				
-				_joined_akka_cluster = new CompletableFuture<>(); //(mainly just for testing)
-				Cluster.get(_akka_system.get()).leave(ZookeeperClusterSeed.get(_akka_system.get()).address());
-				
-				// If it's an application, not transient, then handle synchronization
 				try {
-					logger.error("(Not really an error) Shutting down in ~10s");
-				}
-				catch (Throwable e) {} // logging might not still work at this point
-				
-				// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
-				//if (null != application_name) {
-				//	this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
-				//}
-				try {
-					wait_for_member_to_leave.get(10L, TimeUnit.SECONDS);
-				}
-				catch (Throwable e) {
+					final CompletableFuture<Unit> wait_for_member_to_leave =  new CompletableFuture<>();
+					Cluster.get(_akka_system.get()).registerOnMemberRemoved(() -> wait_for_member_to_leave.complete(Unit.unit()));
+					
+					_joined_akka_cluster = new CompletableFuture<>(); //(mainly just for testing)
+					Cluster.get(_akka_system.get()).leave(ZookeeperClusterSeed.get(_akka_system.get()).address());
+					
+					// If it's an application, not transient, then handle synchronization
 					try {
-						logger.error("Akka Cluster departure was not able to complete in time");
+						System.out.println(new java.util.Date() + ": Akka cluster management: Shutting down in ~10s");
+						logger.error("(Not really an error) Shutting down in ~10s");
 					}
-					catch (Throwable ee) {} // logging might not still work at this point					
-				}
-				try {
-					Await.result(_akka_system.get().terminate(), Duration.create(10L, TimeUnit.SECONDS));
-				}
-				catch (Throwable e) {
+					catch (Throwable e) {} // logging might not still work at this point
+					
+					// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
+					//if (null != application_name) {
+					//	this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
+					//}
 					try {
-						logger.error("Akka System termination was not able to complete in time");
+						wait_for_member_to_leave.get(10L, TimeUnit.SECONDS);
 					}
-					catch (Throwable ee) {} // logging might not still work at this point										
+					catch (Throwable e) {
+						try {
+							System.out.println(new java.util.Date() +": Akka cluster management: Akka Cluster departure was not able to complete in time: " + e.getMessage());
+							logger.error("Akka Cluster departure was not able to complete in time");
+						}
+						catch (Throwable ee) {} // logging might not still work at this point					
+					}
+					try {
+						Await.result(_akka_system.get().terminate(), Duration.create(10L, TimeUnit.SECONDS));
+					}
+					catch (Throwable e) {
+						try {
+							System.out.println(new java.util.Date() +": Akka cluster management: Akka System termination was not able to complete in time: " + e.getMessage());
+							logger.error("Akka System termination was not able to complete in time");
+						}
+						catch (Throwable ee) {} // logging might not still work at this point										
+					}
+	
+					// All done
+					
+					try {
+						System.out.println(new java.util.Date() +": Akka cluster management:  Akka shut down complete, now exiting");
+						logger.error("(Not really an error) Akka shut down complete, now exiting");
+					}
+					catch (Throwable e) {} // logging might not still work at this point
 				}
-
-				// All done
-				
-				try {
-					logger.error("(Not really an error) Akka shut down complete, now leave");
+				catch (Throwable t) { // (unknown error, we'll print and log this)
+					try {
+						t.printStackTrace();
+						logger.error(ErrorUtils.getLongForm("{0}", t));
+					}
+					catch (Throwable e) {} // logging might not still work at this point
 				}
-				catch (Throwable e) {} // logging might not still work at this point				
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
 				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");
