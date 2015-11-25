@@ -103,6 +103,14 @@ public class ManagementDbActorContext {
 	private Optional<ActorRef> _poll_freq_singleton = Optional.empty();
 	private Optional<ActorRef> _security_cache_invalidation_singleton = Optional.empty();
 	
+	/** Clears the existing singleton
+	 * DON'T CALL EXCEPT IN TESTS, WHEN USING GUICE, CALL BEFORE GUICE IS INVOKED
+	 */
+	@Deprecated
+	public static void unsetSingleton() {
+		_singleton.forceSet(null);
+	}
+	
 	/** Creates a new actor context (production manual, or guice) 
 	 */
 	@Inject
@@ -111,7 +119,7 @@ public class ManagementDbActorContext {
 	}
 	
 	/** Creates a new actor context (for tests - creates a new instance every time)
-	 *  DON'T CALL EXCEPT IN TESTS
+	 *  DON'T CALL EXCEPT IN TESTS AND ONLY WHEN USING MockServiceContext OTHERWISE USE (static) unsetSingleton
 	 */
 	@Deprecated
 	public ManagementDbActorContext(final IServiceContext service_context, boolean override_singleton)

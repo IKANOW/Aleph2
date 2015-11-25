@@ -131,6 +131,8 @@ public class TestBucketDeletionActor {
 		}
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
+		ManagementDbActorContext.unsetSingleton();
+		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("actor_test.properties")))
 							.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
@@ -149,7 +151,6 @@ public class TestBucketDeletionActor {
 		
 		_mock_index = (MockSearchIndexService) _service_context.getSearchIndexService().get();
 		
-		new ManagementDbActorContext(_service_context, true);		
 		_actor_context = ManagementDbActorContext.get();
 		
 		_logger.info("(Setup complete: " + _core_mgmt_db.getClass() + " / " + _mock_index.getClass() + ")");		
