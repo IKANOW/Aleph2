@@ -200,13 +200,20 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				Cluster.get(_akka_system.get()).leave(ZookeeperClusterSeed.get(_akka_system.get()).address());
 				// If it's an application, not transient, then handle synchronization
 				if (null != application_name) {
-					logger.info("Shutting down in 5s");
+					try {
+						logger.info("Shutting down in 5s");
+					}
+					catch (Exception e) {} // logging might not still work at this point
+					
 					// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
 					//this.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(hostname_application);
 					Thread.sleep(5000L);
 				}
 				else {
-					logger.info("Shutting down now");					
+					try {
+						logger.info("Shutting down now");					
+					}
+					catch (Exception e) {} // logging might not still work at this point
 				}
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
