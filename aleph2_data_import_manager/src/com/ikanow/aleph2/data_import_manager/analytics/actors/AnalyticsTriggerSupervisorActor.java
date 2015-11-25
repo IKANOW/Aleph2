@@ -136,6 +136,9 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		if (_ticker.isSet()) {
 			_ticker.get().cancel();
 		}
-		_logger.info("AnalyticsTriggerSupervisorActor has stopped on this node, processed " + _ping_count.get() + " pings");								
+		try {
+			_logger.info("AnalyticsTriggerSupervisorActor has stopped on this node, processed " + _ping_count.get() + " pings");
+		}
+		catch (Throwable t) {} //(logger might already have shut down)
 	}
 }

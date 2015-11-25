@@ -209,7 +209,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				try {
 					logger.error("(Not really an error) Shutting down in ~10s");
 				}
-				catch (Exception e) {} // logging might not still work at this point
+				catch (Throwable e) {} // logging might not still work at this point
 				
 				// (don't delete the ZK node - appear to still be able to run into race problems if you do, left here to remind me):
 				//if (null != application_name) {
@@ -218,20 +218,20 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				try {
 					wait_for_member_to_leave.get(10L, TimeUnit.SECONDS);
 				}
-				catch (Exception e) {
+				catch (Throwable e) {
 					try {
 						logger.error("Akka Cluster departure was not able to complete in time");
 					}
-					catch (Exception ee) {} // logging might not still work at this point					
+					catch (Throwable ee) {} // logging might not still work at this point					
 				}
 				try {
 					Await.result(_akka_system.get().terminate(), Duration.create(10L, TimeUnit.SECONDS));
 				}
-				catch (Exception e) {
+				catch (Throwable e) {
 					try {
 						logger.error("Akka System termination was not able to complete in time");
 					}
-					catch (Exception ee) {} // logging might not still work at this point										
+					catch (Throwable ee) {} // logging might not still work at this point										
 				}
 
 				// All done
@@ -239,7 +239,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				try {
 					logger.error("(Not really an error) Akka shut down complete, now leave");
 				}
-				catch (Exception e) {} // logging might not still work at this point				
+				catch (Throwable e) {} // logging might not still work at this point				
 			}));
 			Cluster.get(_akka_system.get()).registerOnMemberUp(() -> {
 				logger.info("Joined cluster address=" + ZookeeperClusterSeed.get(_akka_system.get()).address() +", adding shutdown hook");

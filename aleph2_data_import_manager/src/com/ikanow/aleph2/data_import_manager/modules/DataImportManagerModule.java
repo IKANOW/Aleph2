@@ -125,7 +125,7 @@ public class DataImportManagerModule {
 				try {
 					_logger.info("Shutting down IkanowV1SynchronizationModule subservice=v1_sync_service");
 				}
-				catch (Exception e) {} // logging might not still work at this point
+				catch (Throwable e) {} // logging might not still work at this point
 				
 				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
 			})));
@@ -184,7 +184,7 @@ public class DataImportManagerModule {
 				try {
 					_logger.info("Shutting down IkanowV1SynchronizationModule subservice=analytics");
 				}
-				catch (Exception e) {} // logging might not still work at this point
+				catch (Throwable e) {} // logging might not still work at this point
 					
 				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + hostname);
 			})));
