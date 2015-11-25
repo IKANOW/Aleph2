@@ -1,6 +1,8 @@
 {
 				"_id": "batch_convert_test",
                 "aliases": [],
+                "harvest_technology_name_or_id": "check_removed_multi_node_unset",
+                "multi_node_enabled": true,
                 "batch_enrichment_configs": [],
                 "analytic_thread": {
                     "jobs": [
