@@ -163,16 +163,16 @@ public class TestAkkaMessageBuses {
 		
 		_logger.info("Started process, waiting for completion");
 		int waiting = 0;
-		final int MAX_WAIT = 20;
+		final int MAX_WAIT = 30;
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
 			try { Thread.sleep(1000); } catch (Exception e) {}
 		}
 		if (px.isAlive()) {
-			_logger.info("Process still alive, destry and fall through to fail");
+			_logger.info("Process still alive, destroy and fall through to fail");
 			px.destroyForcibly();			
 		}
 		if (waiting >= MAX_WAIT) {
-			fail("Waited for 20s for the child process to finish");
+			fail("Waited for 30s for the child process to finish");
 		}		
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
 			try { Thread.sleep(1000); } catch (Exception e) {}			

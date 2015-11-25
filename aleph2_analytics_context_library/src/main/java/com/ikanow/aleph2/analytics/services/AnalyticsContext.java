@@ -1075,7 +1075,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else if ("search_index_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {			
-			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
+			return _index_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else { // (currently no other  
 			return Optional.empty();
