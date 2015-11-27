@@ -56,8 +56,8 @@ public interface IAnalyticsAccessContext<T> {
 	default String describe() {
 		//(by default return the keys but not the values in case there's a massive number of them)
 		return ErrorUtils.get("service_name={0} options={1}", 
-				this.getAccessService().either(l -> l.getClass().getSimpleName(), r -> r.getSimpleName()),
-				this.getAccessConfig().map(cfg -> cfg.keySet().stream().collect(Collectors.joining(";"))).orElse("")
+				this.getAccessService().<String>either(l -> l.getClass().getSimpleName(), r -> r.getSimpleName()),
+				this.getAccessConfig().<String>map(cfg -> cfg.keySet().stream().collect(Collectors.joining(";"))).orElse("")
 				);
 	}
 }
