@@ -17,9 +17,11 @@ package com.ikanow.aleph2.data_model.interfaces.data_analytics;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 
 import fj.data.Either;
 
@@ -47,4 +49,15 @@ public interface IAnalyticsAccessContext<T> {
 	 */
 	Optional<Map<String, Object>> getAccessConfig();
 	
+	/** Describes the current access context, defaults to some semi-useful description but can be overriden
+	 *  at the point of creation
+	 * @return a string describing the access context
+	 */
+	default String describe() {
+		//(by default return the keys but not the values in case there's a massive number of them)
+		return ErrorUtils.get("service_name={0} options={1}", 
+				this.getAccessService().either(l -> l.getClass().getSimpleName(), r -> r.getSimpleName()),
+				this.getAccessConfig().map(cfg -> cfg.keySet().stream().collect(Collectors.joining(";"))).orElse("")
+				);
+	}
 }
