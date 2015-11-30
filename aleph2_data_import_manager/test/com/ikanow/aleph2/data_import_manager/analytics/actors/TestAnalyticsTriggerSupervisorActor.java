@@ -45,6 +45,7 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 	// This one always accepts, but then refuses when it comes down to it...
 	public static class TestActor extends UntypedActor {
 		public TestActor() {
+			System.out.println("Starting TestActor");
 		}
 		@Override
 		public void onReceive(Object arg0) throws Exception {
@@ -61,6 +62,8 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 	@Before
 	@Override
 	public void test_Setup() throws Exception {
+		System.out.println("Starting test_Setup");
+		
 		if (null != _service_context) {
 			return;
 		}
@@ -71,6 +74,8 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 	
 	@Test
 	public void test_analyticsTriggerSupervisor() throws InterruptedException {
+		System.out.println("Starting test_analyticsTriggerSupervisor");
+		
 		_cds.waitForAkkaJoin(Optional.of(Duration.create(10, TimeUnit.SECONDS)));
 		Thread.sleep(2000L);
 

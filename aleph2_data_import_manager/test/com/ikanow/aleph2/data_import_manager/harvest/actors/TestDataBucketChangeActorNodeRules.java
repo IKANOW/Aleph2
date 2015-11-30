@@ -63,7 +63,6 @@ public class TestDataBucketChangeActorNodeRules {
 	protected IServiceContext _service_context = null;
 	
 	protected DataImportActorContext _actor_context;
-	protected ManagementDbActorContext _db_actor_context;
 	
 	@SuppressWarnings("deprecation")
 	public IHarvestTechnologyModule setupDependencies(final Set<String> node_rules) throws Exception {
@@ -72,6 +71,8 @@ public class TestDataBucketChangeActorNodeRules {
 //		}
 		
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
+		
+		ManagementDbActorContext.unsetSingleton();
 		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_bucket_change.properties")))
@@ -82,8 +83,6 @@ public class TestDataBucketChangeActorNodeRules {
 		
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
-		
-		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
 		
 		final DataImportConfigurationBean dim_config = BeanTemplateUtils.build(DataImportConfigurationBean.class)
 				.with(DataImportConfigurationBean::node_rules, node_rules)

@@ -122,7 +122,11 @@ public class DataImportManagerModule {
 				}
 			}
 			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
-				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=v1_sync_service");
+				try {
+					_logger.info("Shutting down IkanowV1SynchronizationModule subservice=v1_sync_service");
+				}
+				catch (Throwable e) {} // logging might not still work at this point
+				
 				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + hostname);
 			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=v1_sync_service");
@@ -177,7 +181,11 @@ public class DataImportManagerModule {
 				}
 			}
 			Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
-				_logger.info("Shutting down IkanowV1SynchronizationModule subservice=analytics");
+				try {
+					_logger.info("Shutting down IkanowV1SynchronizationModule subservice=analytics");
+				}
+				catch (Throwable e) {} // logging might not still work at this point
+					
 				_core_distributed_services.getCuratorFramework().delete().deletingChildrenIfNeeded().forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" + hostname);
 			})));
 			_logger.info("Starting IkanowV1SynchronizationModule subservice=analytics");

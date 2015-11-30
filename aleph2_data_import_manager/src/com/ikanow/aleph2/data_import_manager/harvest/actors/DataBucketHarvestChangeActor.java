@@ -171,16 +171,24 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    					})
 	    					.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)	    						
 	    						// Some information logging:
-	    	    				if (shouldLog(m))
-		    						Patterns.match(reply).andAct()
-		    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage, 
-		    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
-		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
-		    							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-		    									m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success())))
-		    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-		    									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())))
-		    							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
+	    						Patterns.match(reply).andAct()
+	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage,
+	    									// (always log these)
+	    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
+	    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
+	    							.when(BucketActionHandlerMessage.class, msg -> {
+	    								if (shouldLog(m) || !msg.reply().success()) //(always error on failures)
+	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+	    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
+	    										msg.reply().success() ? "(no error)": msg.reply().message())
+	    									);
+	    							})
+	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> { 
+	    								if (shouldLog(m))
+	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()));
+	    							})
+	    							.otherwise(msg ->  //(always log)
+	    								_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})

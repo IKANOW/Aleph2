@@ -168,6 +168,9 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 		if ( _ticker.isSet()) {
 			_ticker.get().cancel();
 		}
-		_logger.info("BucketDeletionSingletonActor has stopped on this node.");								
+		try {
+			_logger.info("BucketDeletionSingletonActor has stopped on this node.");
+		}
+		catch (Throwable e) {} // (logger might have been closed down)
 	}
 }

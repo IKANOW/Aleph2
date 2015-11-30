@@ -266,7 +266,7 @@ public class TestRemoteRoundRobinMessageBus {
 		// Wait for the process to send its messages
 		
 		int waiting = 0;
-		final int MAX_WAIT = 20;
+		final int MAX_WAIT = 30;
 		while (px.isAlive() && (waiting++ < MAX_WAIT)) {
 			if (_received_post_bus2 >= MESSAGES_TO_SEND) {
 				break;

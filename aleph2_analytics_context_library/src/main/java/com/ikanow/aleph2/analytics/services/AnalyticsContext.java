@@ -64,7 +64,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
@@ -1076,7 +1075,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else if ("search_index_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {			
-			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
+			return _index_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
 		else { // (currently no other  
 			return Optional.empty();
@@ -1211,21 +1210,12 @@ public class AnalyticsContext implements IAnalyticsContext {
 						)
 						.<Optional<DataBucketBean>>thenApply(maybe_bucket -> {
 							return maybe_bucket.<DataBucketBean>map(bucket -> {
-								final ISubject system_user = _service_context.getSecurityService().loginAsSystem();
-								try {
-									_service_context.getSecurityService().runAs(system_user, Arrays.asList(_mutable_state.bucket.get().owner_id())); // (Switch to bucket owner user)
-									
-									//TODO: need to fix this when Joern's code is in place
-									if (_service_context.getSecurityService().isPermitted(system_user, bucket_name)) {
-										return bucket;
-									}
-									else {
-										return null; 
-									}
+								_service_context.getSecurityService().loginAsSystem(); //(still necessary, though is going away)
+								if (_service_context.getSecurityService().isUserPermitted(Optional.of(_mutable_state.bucket.get().owner_id()), bucket, Optional.of(ISecurityService.ACTION_READ_WRITE)))
+								{
+									return bucket;
 								}
-								finally {
-									_service_context.getSecurityService().releaseRunAs(system_user);
-								}
+								else return null; //(returns an Optional.empty())
 							});
 						})
 						.join()

@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 
 import com.google.inject.Inject;
@@ -41,6 +43,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 public class TestAnalyticsTriggerWorkerCommon {
+	private static final Logger _parent_logger = LogManager.getLogger();	
 
 	@Inject 
 	protected IServiceContext _temp_service_context = null;
@@ -53,15 +56,19 @@ public class TestAnalyticsTriggerWorkerCommon {
 	protected static ManagementDbActorContext _actor_context = null;
 	
 	protected static AtomicLong _num_received = new AtomicLong();
+	protected static AtomicLong _num_received_errors = new AtomicLong(); // counts malformed buckets
 	
 	@SuppressWarnings("deprecation")
 	@Before
 	public void test_Setup() throws Exception {
-		
+		_parent_logger.info("runnnig parent test_Setup");
+				
 		if (null != _service_context) {
 			return;
 		}
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
+		
+		ManagementDbActorContext.unsetSingleton();		
 		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_bucket_change.properties")))
@@ -78,12 +85,11 @@ public class TestAnalyticsTriggerWorkerCommon {
 		MockCoreDistributedServices mcds = (MockCoreDistributedServices) _cds;
 		mcds.setApplicationName("DataImportManager");
 		
-		new ManagementDbActorContext(_service_context, true);		
-		_actor_context = ManagementDbActorContext.get();
-		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
 		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 
+		_actor_context = ManagementDbActorContext.get();
+		
 		// need to create data import actor separately:
 		@SuppressWarnings("unused")
 		final DataImportActorContext singleton = new DataImportActorContext(_service_context, new GeneralInformationService(), 

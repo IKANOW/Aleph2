@@ -58,6 +58,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
@@ -1358,7 +1359,7 @@ public class TestAnalyticsContext {
 				
 		// save in the DB:
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(stream_bucket, true).join();
-		mock_security.setGlobalMockRole(stream_bucket.full_name(), true);		
+		mock_security.setUserMockRole("me", stream_bucket.full_name(), ISecurityService.ACTION_READ_WRITE, true);
 		
 		// 2) Batch analytic bucket
 				
@@ -1376,7 +1377,7 @@ public class TestAnalyticsContext {
 							)
 				.done().get();
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_no_self_input, true).join();
-		mock_security.setGlobalMockRole(analytic_bucket_no_self_input.full_name(), true);		
+		mock_security.setUserMockRole("me", analytic_bucket_no_self_input.full_name(), ISecurityService.ACTION_READ_WRITE, true);
 		
 		// 4) Bucket that we don't have write permission for
 		
@@ -1395,7 +1396,7 @@ public class TestAnalyticsContext {
 					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
 				.done().get();		
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(stream_bucket_no_perms, true).join();
-		mock_security.setGlobalMockRole(stream_bucket_not_in_db.full_name(), true);		
+		mock_security.setUserMockRole("me", stream_bucket_not_in_db.full_name(), ISecurityService.ACTION_READ_WRITE, true);
 		
 		// Tests:
 		

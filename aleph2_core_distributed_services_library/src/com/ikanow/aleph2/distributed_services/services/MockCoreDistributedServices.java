@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,10 +45,14 @@ import akka.actor.Props;
 import akka.event.japi.LookupEventBus;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.data_model.IRoundRobinEventBusWrapper;
+import com.ikanow.aleph2.distributed_services.modules.MockCoreDistributedServicesModule;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.ikanow.aleph2.distributed_services.utils.MockKafkaBroker;
 import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
@@ -57,7 +62,7 @@ import com.typesafe.config.ConfigFactory;
  * @author acp
  *
  */
-public class MockCoreDistributedServices implements ICoreDistributedServices {
+public class MockCoreDistributedServices implements ICoreDistributedServices, IExtraDependencyLoader {
 
 	protected final SetOnce<TestingServer> _test_server = new SetOnce<>();
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
@@ -75,12 +80,21 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 		_mock_application_name = application_name;
 	}
 	
+	/** User-invoked constructor (same as guice one but doesn't inject the application name)
+	 * @throws Exception 
+	 */
+	public MockCoreDistributedServices() throws Exception {
+		this(null);
+	}
+	
 	/** Guice-invoked constructor
 	 * @throws Exception 
 	 */
 	@Inject
-	public MockCoreDistributedServices() throws Exception {
+	public MockCoreDistributedServices(DistributedServicesPropertyBean config_bean) throws Exception {
 		setupKafka(); // (also sets up curator) lazy initialization didn't seem to work - maybe MockKafkaBroker takes a few seconds to become available, not worth worrying about for now 
+		
+		_mock_application_name = Optional.ofNullable(config_bean).map(cfg -> cfg.application_name()).orElse(null); //(uses the same config param as full CDS)
 		
 		_akka_system = ActorSystem.create("default");		
 	}	
@@ -294,6 +308,20 @@ public class MockCoreDistributedServices implements ICoreDistributedServices {
 	@Override
 	public Optional<String> getApplicationName() {
 		return Optional.ofNullable(_mock_application_name);
+	}
+
+	/** Pass the local bindings module to the parent
+	 * @return
+	 */
+	public static List<AbstractModule> getExtraDependencyModules() {
+		return Arrays.asList(new MockCoreDistributedServicesModule());
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader#youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules()
+	 */
+	@Override
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
 	}
 
 }

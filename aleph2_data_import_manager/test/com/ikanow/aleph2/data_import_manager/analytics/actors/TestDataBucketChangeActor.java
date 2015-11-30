@@ -126,6 +126,8 @@ public class TestDataBucketChangeActor {
 		
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;
 		
+		ManagementDbActorContext.unsetSingleton();
+		
 		// OK we're going to use guice, it was too painful doing this by hand...				
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("test_data_bucket_change.properties")))
 							.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
@@ -136,13 +138,13 @@ public class TestDataBucketChangeActor {
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 		
-		_db_actor_context = new ManagementDbActorContext(_service_context, true);				
-		
 		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null, null); 
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		
 		_service_context.getCoreManagementDbService();
+		
+		_db_actor_context = ManagementDbActorContext.get();
 	}
 	
 	@Test
@@ -893,6 +895,26 @@ public class TestDataBucketChangeActor {
 			assertEquals("test_message", test1err.reply().command());
 			assertEquals("test_error", test1err.reply().message());
 		}		
+		// Test 1b: check errors 
+		{
+			final DataBucketBean fail_test =
+					BeanTemplateUtils.clone(bucket)
+						.with(DataBucketBean::harvest_technology_name_or_id, null)
+						.with(DataBucketBean::multi_node_enabled, true)
+					.done();
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			
+			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
+					fail_test, offer,
+					"test2", 
+					_actor_context.getNewAnalyticsContext(), null,
+					Collections.emptyMap(), 
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+			
+			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test2.get().getClass());
+			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test2.get();					
+			assertEquals(false, test_reply.reply().success());			
+		}
 		// Test 2: offer
 		{
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);

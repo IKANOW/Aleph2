@@ -75,12 +75,33 @@ import fj.data.Either;
  *
  */
 public class ModuleUtils {		 
+	private static Logger logger = LogManager.getLogger();	
+	
+	/** Loads the normal (non SL4J logger) into the classpath before LOG4J-OVER-SL4J or SL4J-LOG4J12 have a change to load
+	 *  logging to work
+	 * @author Alex
+	 */
+	protected static class Loggable {
+		protected Optional<org.apache.log4j.Logger> _v1_logger = Optional.empty(); // (don't make final in case Loggable c'tor isn't called)
+		public Loggable() {
+			_v1_logger = Lambdas.get(() -> {
+				try {
+					return Optional.<org.apache.log4j.Logger>of(org.apache.log4j.LogManager.getLogger(ModuleUtils.class));
+				}
+				catch (Throwable t) {
+					logger.error(ErrorUtils.getLongForm("Error creating v1 logger: {0}", t));
+					return Optional.<org.apache.log4j.Logger>empty();
+				}
+			});			
+		}
+	}
+	public static Loggable _v1_logger = new Loggable(); // (just to load into the classpath) 	
+	
 	private final static String SERVICES_PROPERTY = "service";
 	private static Set<Class<?>> interfaceHasDefault = null;
 	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService", "ColumnarService", 
 			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", "ManagementDbService",
 			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices"));
-	private static Logger logger = LogManager.getLogger();	
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
 	private static Injector parent_injector = null;
@@ -295,7 +316,7 @@ public class ModuleUtils {
 	private static List<Module> getExtraDepedencyModules(Class<?> serviceClazz) throws Exception {
 		//if serviceClazz implements IExtraDepedency then add those bindings
 		if ( IExtraDependencyLoader.class.isAssignableFrom(serviceClazz) ) {
-			logger.debug("Loading Extra Depedency Modules");
+			logger.debug("Loading Extra Dependency Modules");
 			List<Module> modules = new ArrayList<Module>();
 			Class[] param_types = new Class[0];
 			Object[] params = new Object[0];			

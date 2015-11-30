@@ -77,10 +77,13 @@ public class SecurityCacheInvalidationSingletonActor extends UntypedActor {
     
 	@Override
 	public void postStop() {
-		_logger.debug("postStop");
 		if ( _ticker.isSet()) {
 			_ticker.get().cancel();
 		}
+		try {
+			_logger.info("SecurityCacheInvalidationSingletonActor has stopped on this node.");
+		}
+		catch (Throwable e) {} // (logger might have been closed down)
 	}
 
 	@Override

@@ -264,7 +264,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public AnalyticThreadJobInputConfigBean(final Boolean new_data_only,  
 				final String time_min, final String time_max,
-				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb)
+				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb, final Long record_limit_request)
 		{
 			this.new_data_only = new_data_only;
 			this.time_min = time_min;
@@ -272,6 +272,7 @@ public class AnalyticThreadJobBean implements Serializable {
 			this.timed_batch_ms = timed_batch_ms;
 			this.size_batch_records = size_batch_records;
 			this.size_batch_kb = size_batch_kb;
+			this.record_limit_request = record_limit_request;
 		}
 		
 		/** If true (defaults: false) then only new data is served to the job each time it runs (otherwise all data from the input matching the filter is served)
@@ -304,12 +305,19 @@ public class AnalyticThreadJobBean implements Serializable {
 		 */
 		public Long size_batch_kb() { return size_batch_kb; }
 		
+		/** Sets a requested limit on the number of input records to be received - eg for test purposes
+		 *  The actual number might be different (eg multiplied by the number of distributed splits) 
+		 * @return the requested max number of records (actual number may be higher)
+		 */
+		public Long record_limit_request() { return record_limit_request; }
+		
 		private Boolean new_data_only;
 		private String time_min;
 		private String time_max;
 		private Long timed_batch_ms;
 		private Long size_batch_records;
 		private Long size_batch_kb;
+		private Long record_limit_request;
 	}
 	
 	private AnalyticThreadJobInputConfigBean global_input_config;

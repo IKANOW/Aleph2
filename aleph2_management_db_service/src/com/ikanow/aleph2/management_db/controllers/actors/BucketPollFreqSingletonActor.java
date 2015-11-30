@@ -160,6 +160,9 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		if ( _ticker.isSet()) {
 			_ticker.get().cancel();
 		}
-		_logger.info("BucketPollSingletonActor has stopped on this node.");								
+		try {
+			_logger.info("BucketPollSingletonActor has stopped on this node.");
+		}
+		catch (Throwable e) {} // (logger might have been closed down)
 	}
 }

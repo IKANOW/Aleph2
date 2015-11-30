@@ -319,8 +319,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    									tech.onInit(_stream_analytics_context.get());
 	    									return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
 	    								})
-	    								.orElseGet(() -> {
-	    									_logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
+	    								.orElseGet(() -> { // (shouldn't ever happen because shouldn't register itself on the listen bus unless available to handle requests)
+    				    					_logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
 	    									return false;
 	    								})
 	    						)
@@ -331,8 +331,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    	    							tech.onInit(_batch_analytics_context.get());
 	    	    							return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _batch_analytics_context.get());		    					 
 	    	    						})
-	    	    						.orElseGet(() -> {
-	    	    							_logger.warn(ErrorUtils.get("Actor {0} received batch enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
+	    								.orElseGet(() -> { // (shouldn't ever happen because shouldn't register itself on the listen bus unless available to handle requests)
+    				    					_logger.warn(ErrorUtils.get("Actor {0} received batch enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
 	    	    							return false;
 	    	    						})
 	    	    				)    		
@@ -456,18 +456,31 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			.thenAccept(reply -> { // (reply can contain an error or successful reply, they're the same bean type)
 				
 				if (!(reply instanceof BucketActionReplyMessage.BucketActionNullReplyMessage)) {
+					
 					// Some information logging:
-					if (shouldLog(message))
-						Patterns.match(reply).andAct()
-							.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg ->
-									_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
-											message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
-									))
-							.when(BucketActionHandlerMessage.class, msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2}", 
-									message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success())))
-							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, 
-									msg -> _logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name())))
-							.otherwise(msg -> _logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName())));
+					Patterns.match(reply).andAct()
+						.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg -> {
+							if (shouldLog(message))
+								_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
+										message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
+								);
+						})
+						.when(BucketActionHandlerMessage.class, msg -> {
+							if (shouldLog(message) || !msg.reply().success()) //(always error on failures)
+								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+									message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success(), 
+									msg.reply().success() ? "(no error)": msg.reply().message())
+								);
+						})
+						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> {
+							if (shouldLog(message))
+								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()));	
+						})
+						.otherwise(msg -> {
+							//(always log errors)
+							_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", 
+									message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName()));
+						});
 
 					//DEBUG
 					// Example code to check if a message is serializable - should consider putting this somewhere? 
@@ -938,7 +951,6 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 										tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
-					//TODO (ALEPH-12): add test coverage for this
 					if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
 						if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
 							if (!tech_module.supportsMultiNode(bucket, jobs, context)) {

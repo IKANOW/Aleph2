@@ -1,6 +1,7 @@
 {
 	"_id": "external_triggers_test",
     "aliases": [],
+    "multi_node_enabled": false,
     "analytic_thread": {
     	"trigger_config": {
     		"trigger": {

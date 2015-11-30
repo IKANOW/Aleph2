@@ -50,6 +50,7 @@ public class TestAnalyticsUtils {
 		
 		assertEquals(Either.left("test"), test.getAccessService());
 		assertEquals(Collections.emptyMap(), test.getAccessConfig().get());
+		assertEquals("service_name=String options=", test.describe());
 	}
 	
 	
