@@ -23,25 +23,12 @@ import java.util.Optional;
 import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 
 public class SampleDocumentService implements IDocumentService {
-
-	@Override
-	public <O> ICrudService<O> getCrudService(Class<O> clazz,
-			DataBucketBean bucket) {
-		return null;
-	}
-
-	@Override
-	public <O> ICrudService<O> getCrudService(Class<O> clazz,
-			Collection<DataBucketBean> buckets) {
-		return null;
-	}
 
 	@Override
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class,
