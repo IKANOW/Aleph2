@@ -13,6 +13,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -37,6 +38,7 @@ public class TestProcessUtils {
 	public void tearDown() throws Exception {
 	}
 
+	@Ignore
 	@Test
 	public void test() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -67,6 +69,7 @@ public class TestProcessUtils {
 		new File(tmp_file_path).delete();
 	}
 	
+	@Ignore
 	@Test
 	public void testStopNonExistantProcess() {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -81,6 +84,7 @@ public class TestProcessUtils {
 		assertFalse(stop_result._1, stop_result._2);
 	}
 	
+	@Ignore
 	@Test
 	public void testStopDoneProcess() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
