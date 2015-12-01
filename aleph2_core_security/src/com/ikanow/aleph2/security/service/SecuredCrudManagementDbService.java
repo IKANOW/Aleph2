@@ -381,12 +381,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	
 	protected void checkWritePermissions(T new_object) {
 		
-		//String permission = permissionExtractor.extractPermissionIdentifiers(new_object);
-		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN);
-//		boolean permitted = securityService.isPermitted(subject,permission); 
-		if(!permitted){
-			//test individual write permissions
-		}
+		//boolean permitted = securityService.hasRole(subject,ROLE_ADMIN);
+		boolean permitted = securityService.isUserPermitted(Optional.empty(),new_object,Optional.of(ISecurityService.ACTION_WRITE)); 
 		//still not permitted, we are out of luck
 		if(!permitted){
 			//String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permissions+")for "+new_object.getClass();
