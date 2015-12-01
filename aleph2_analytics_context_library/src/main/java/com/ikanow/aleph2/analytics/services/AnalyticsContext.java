@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,6 +56,7 @@ import com.ikanow.aleph2.analytics.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -129,6 +131,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 		final SetOnce<String> signature_override = new SetOnce<>();
 		final ConcurrentHashMap<String, Either<Either<IDataWriteService.IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>> external_buckets = new ConcurrentHashMap<>();
 		final HashMap<String, AnalyticsContext> sub_buckets = new HashMap<>();
+		final Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> extra_auto_context_libs = new HashSet<>();
 	};	
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -338,6 +341,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 							.add(Tuples._2T(IStorageService.class, Optional.empty()))
 							.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
+							.addAll(_mutable_state.extra_auto_context_libs)
 							.build();
 			
 			if (_mutable_state.service_manifest_override.isSet()) {
@@ -773,15 +777,14 @@ public class AnalyticsContext implements IAnalyticsContext {
 			});
 			
 			// Libraries associated with services:
-			final Set<String> user_service_class_files = services.map(set -> {
-				return set.stream()
+			final Set<String> user_service_class_files = 
+				Stream.concat(services.orElse(Collections.emptySet()).stream(), _mutable_state.extra_auto_context_libs.stream())
 						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
 						.filter(service -> service.isPresent())
 						.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
 						.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
-						.collect(Collectors.toSet());
-			})
-			.orElse(Collections.emptySet());
+						.collect(Collectors.toSet())
+						;
 			
 			//TODO (ALEPH-12): 1) don't understand why i have this _and_ getUnderlying artefacts ... and the 2 are slightly different
 			// 2) really for search index service (document service etc in the future), should be able to figure it out based on the data 
@@ -1056,14 +1059,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		final AuthorizationBean auth_bean = new AuthorizationBean(my_bucket.owner_id());
 		final ICrudService<DataBucketBean> secured_bucket_crud = _core_management_db.readOnlyVersion().getDataBucketStore().secured(_service_context, auth_bean);
 		
-		final boolean found_bucket = Lambdas.wrap_u(() -> secured_bucket_crud
-				.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, job_input.resource_name_or_id()),
-								Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
-								true
-						)
-				.get()
-				.isPresent()).get()
-				;		
+		final String resource_or_name = Optional.ofNullable(job_input.resource_name_or_id()).orElse("/unknown");
+		final String data_service = Optional.ofNullable(job_input.data_service()).orElse("unknown.unknown");
+		
+		final boolean found_bucket = Lambdas.wrap_u(() -> {
+			return resource_or_name.startsWith(BucketUtils.EXTERNAL_BUCKET_PREFIX)
+				? true // (in this case we delegate the checking to the data service)
+				: secured_bucket_crud
+					.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, job_input.resource_name_or_id()),
+									Collections.emptyList(), // (don't want any part of the bucket, just whether it exists or not)
+									true)
+					.get()
+					.isPresent();
+		}).get();
+		
 		if (!found_bucket) {
 			throw new RuntimeException(ErrorUtils.get(ErrorUtils.BUCKET_NOT_FOUND_OR_NOT_READABLE, job_input.resource_name_or_id()));
 		}		
@@ -1071,14 +1080,28 @@ public class AnalyticsContext implements IAnalyticsContext {
 		// Now try to get the technology driver
 		
 		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job_input).toString());
-		if ("storage_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {
+		if ("storage_service".equalsIgnoreCase(data_service)) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
-		else if ("search_index_service".equalsIgnoreCase(Optional.ofNullable(job_input.data_service()).orElse(""))) {			
+		else if ("search_index_service".equalsIgnoreCase(data_service)) {			
 			return _index_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}
-		else { // (currently no other  
-			return Optional.empty();
+		else { // other cases, more complicated:			
+			final String[] other_service = data_service.split("[.]");
+			
+			final Optional<T> ret_val =
+					getDataService(_service_context, other_service[0], Optionals.of(() -> other_service[1]))
+					.flatMap(service -> service.getUnderlyingPlatformDriver(clazz, job_config));
+			
+			// Add to list of extra services to add automatically
+			if (ret_val.isPresent()) { // only if we managed to load the analytics access context
+				getDataService(other_service[0]).ifPresent(ds -> 
+					_mutable_state.extra_auto_context_libs.add(
+							Tuples._2T(ds, Optionals.of(() -> other_service[1]).filter(s->!s.isEmpty()))
+							));
+			}
+			
+			return ret_val;
 		}
 	}
 
@@ -1296,7 +1319,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	
 	// LOTS AND LOTS OF LOGIC TO MANAGE THE OUTPUTS
 	
-	//TODO: need to add sub-bucket support everywhere here
+	//TODO (ALEPH-12): need to add sub-bucket support everywhere here
 	
 	////////////////////////////////////////////////////
 	
@@ -1617,4 +1640,28 @@ public class AnalyticsContext implements IAnalyticsContext {
 				;
 				
 	}	
+
+	/** Utility to grab a generic data service (top level)
+	 * @param context
+	 * @param service_type
+	 * @param service_name
+	 * @return
+	 */
+	protected static Optional<? extends IUnderlyingService> getDataService(final IServiceContext context, final String service_type, final Optional<String> service_name) {
+		return getDataService(service_type).flatMap(ds -> context.getService(ds, service_name.filter(s -> !s.isEmpty())));
+	}
+	
+	/** Utility to grab a generic data service (part 2)
+	 * @param service_name
+	 * @return
+	 */
+	protected static Optional<Class<? extends IUnderlyingService>> getDataService(final String service_type) {
+		return Optional.ofNullable(Patterns.match(service_type).<Class<? extends IUnderlyingService>>andReturn()
+				.when(sn -> "storage_service".equals(sn), __ -> IStorageService.class)
+				.when(sn -> "search_index_service".equals(sn), __ -> ISearchIndexService.class)
+				.when(sn -> "document_service".equals(sn), __ -> IDocumentService.class)
+				.otherwise(__ -> null))
+				;
+	}	
+	
 }

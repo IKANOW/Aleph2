@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.common.collect.ImmutableMap;
@@ -52,6 +53,7 @@ import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -62,6 +64,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockSecurityService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
@@ -71,6 +74,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnr
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
@@ -80,6 +84,7 @@ import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -581,6 +586,8 @@ public class TestAnalyticsContext {
 	}
 	
 	public interface StringAnalyticsAccessContext extends IAnalyticsAccessContext<String> {}
+	@SuppressWarnings("rawtypes")
+	public interface HadoopAnalyticsAccessContext extends IAnalyticsAccessContext<InputFormat> {}
 	
 	@Test
 	public void test_serviceInputsAndOutputs() throws InterruptedException, ExecutionException {
@@ -597,6 +604,11 @@ public class TestAnalyticsContext {
 		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input3 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
 				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "mistake")
 			.done().get();
+
+		final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input4 =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputBean.class)
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::resource_name_or_id, "/aleph2_external/anything_i_want")
+				.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::data_service, "search_index_service.alternate")
+			.done().get();		
 		
 		final AnalyticThreadJobBean.AnalyticThreadJobOutputBean analytic_output =  BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobOutputBean.class).done().get();
 		
@@ -645,6 +657,30 @@ public class TestAnalyticsContext {
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "search_index_service"));
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, "storage_service"));
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "random_string"));
+		
+		// Check some non trivial cases:
+		assertEquals(Optional.of(ISearchIndexService.class), AnalyticsContext.getDataService("search_index_service"));
+		assertEquals(Optional.of(IStorageService.class), AnalyticsContext.getDataService("storage_service"));
+		assertEquals(Optional.of(IDocumentService.class), AnalyticsContext.getDataService("document_service"));
+		assertEquals(Optional.empty(), AnalyticsContext.getDataService("banana"));
+		
+		final MockServiceContext mock_service_context = new MockServiceContext();
+		mock_service_context.addService(IStorageService.class, Optional.of("other_name"), test_context._storage_service);
+		mock_service_context.addService(ISearchIndexService.class, Optional.of("alternate"), test_context._index_service);
+		assertEquals(Optional.of(test_context._storage_service), AnalyticsContext.getDataService(mock_service_context, "storage_service", Optional.of("other_name")));
+		assertEquals(Optional.of(test_context._index_service), AnalyticsContext.getDataService(mock_service_context, "search_index_service", Optional.of("alternate")));
+
+		mock_service_context.addService(ISecurityService.class, Optional.empty(), test_context._security_service);
+		mock_service_context.addService(ISearchIndexService.class, Optional.empty(), test_context._index_service);
+		mock_service_context.addService(IStorageService.class, Optional.empty(), test_context._storage_service);
+		mock_service_context.addService(IManagementDbService.class, Optional.empty(), test_context._core_management_db);
+		mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, test_context._core_management_db);
+		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), test_context._distributed_services);
+		mock_service_context.addGlobals(BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get());
+		final AnalyticsContext mock_to_test = new AnalyticsContext(mock_service_context);
+		assertEquals(0, mock_to_test._mutable_state.extra_auto_context_libs.size());
+		assertTrue(mock_to_test.getServiceInput(HadoopAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, analytic_input4).isPresent());
+		assertEquals(1, mock_to_test._mutable_state.extra_auto_context_libs.size());
 	}
 		
 	@Test
@@ -1488,6 +1524,6 @@ public class TestAnalyticsContext {
 		
 		
 	}
-	
-	//TODO test sub-buckets once implemented
+
+	//TODO (ALEPH-12): test sub-buckets once implemented
 }
