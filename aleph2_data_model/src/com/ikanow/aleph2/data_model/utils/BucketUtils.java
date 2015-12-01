@@ -44,8 +44,10 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
  *
  */
 public class BucketUtils {
-	
+	public static final String RESERVED_BUCKET_PREFIX = "/aleph2_";
 	public static final String TEST_BUCKET_PREFIX = "/aleph2_testing/";
+	public static final String LOG_BUCKET_PREFIX = "/aleph2_logging/";
+	public static final String EXTERNAL_BUCKET_PREFIX = "/aleph2_external/";
 	
 	/**
 	 * Returns a clone of the bean and modifies the full_name field to provide a
