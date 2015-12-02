@@ -33,6 +33,9 @@ public interface IUnderlyingService {
 	
 	/** USE WITH CARE: this returns the driver to the underlying technology
 	 *  shouldn't be used unless absolutely necessary!
+	 *  One standard use is in analytics, where the driver_class is an instance of IAnalyticsAccessContext
+	 *  and the driver options are "owner_id:bucket_full_name:JSON(input_config)" ... this enables analytics engines to request 
+	 *  input drivers from data services without the two really knowing about each other
 	 * @param driver_class the class of the driver
 	 * @param a string containing options in some technology-specific format
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
