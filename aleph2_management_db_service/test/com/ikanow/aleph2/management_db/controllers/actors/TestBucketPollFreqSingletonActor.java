@@ -286,6 +286,7 @@ public class TestBucketPollFreqSingletonActor {
 			Thread.sleep(500L);
 			if (2 == TestActor_Accepter.num_accepted_messages) {
 				System.out.println("Got messages!");
+				Thread.sleep(250L); //(sleep a bit more for sync)
 				break;
 			}
 		}
