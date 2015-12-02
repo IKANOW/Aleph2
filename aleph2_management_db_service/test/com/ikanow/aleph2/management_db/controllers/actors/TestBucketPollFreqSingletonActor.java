@@ -247,7 +247,7 @@ public class TestBucketPollFreqSingletonActor {
 	}
 	
 	@Test
-	public void test_mulitple_poll_trigger() throws Exception {
+	public void test_multiple_poll_trigger() throws Exception {
 		//tests multiple polls hitting to make sure the service works on more than 1 poll at a time
 		// Setup: register an accepting actor to listen:
 		_logger.debug("ABOUT TO ADD A NEW ACTOR");		
@@ -282,7 +282,13 @@ public class TestBucketPollFreqSingletonActor {
 		final DataBucketStatusBean bucket_poll_now_2_status = underlying_crud_status.getObjectById(bucket_poll_now_2._id()).get().get();
 				
 		//actor checks every second, give it long enough to hit a cycle
-		Thread.sleep(5000);
+		for (int ii = 0; ii < 20; ++ii) {
+			Thread.sleep(500L);
+			if (2 == TestActor_Accepter.num_accepted_messages) {
+				System.out.println("Got messages!");
+				break;
+			}
+		}
 		
 		//get the (hopefully) updated bucket		
 		final DataBucketStatusBean bucket_poll_now_1_updated = underlying_crud_status.getObjectById(bucket_poll_now_1._id()).get().get();
