@@ -103,4 +103,10 @@ public class SampleSecurityService implements ISecurityService {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+	@Override
+	public boolean hasUserRole(Optional<String> userID, String role) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

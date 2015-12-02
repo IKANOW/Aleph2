@@ -35,8 +35,8 @@ public interface ISecurityService extends IUnderlyingService {
 	public String IKANOW_SYSTEM_LOGIN = "IKANOW_SECURITY_LOGIN";
 	public String IKANOW_SYSTEM_PASSWORD = "IKANOW_SECURITY_PASSWORD";
 
-	public static String ROOT_PERMISSION_COMMUNITY="community";
-	public static String ROOT_PERMISSION_SOURCE="source";
+	public static String SECURITY_ASSET_COMMUNITY="community";
+	public static String SECURITY_ASSET_SOURCE="source";
 
 	public static String ACTION_READ="read";
 	public static String ACTION_READ_WRITE="read,write";
@@ -133,4 +133,6 @@ public interface ISecurityService extends IUnderlyingService {
 	 * @return true if user has permission, false otherwise
 	 */
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action);
+
+	boolean hasUserRole(Optional<String> userID, String role);
 }

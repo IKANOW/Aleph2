@@ -224,4 +224,9 @@ public class MockSecurityService implements ISecurityService {
 			;
 	}
 
+	@Override
+	public boolean hasUserRole(Optional<String> userID, String role) {
+		return _mock_role_map.get().getOrDefault(role, false);
+	}
+
 }
