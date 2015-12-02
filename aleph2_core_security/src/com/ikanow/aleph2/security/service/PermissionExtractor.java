@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -90,6 +92,7 @@ public class PermissionExtractor {
 	 * If action is not supplied, widlcard is assumed for all actions.
 	 * @return
 	 */
+	@SuppressWarnings("rawtypes")
 	public List<String> extractPermissionIdentifiers(Object object,Optional<String> oAction) {
 		List<String> permIds =  new ArrayList<String>();
 		
@@ -109,6 +112,10 @@ public class PermissionExtractor {
 			} else if (object instanceof String) {
 				// adds the object itself
 				permIds.add(createPermission(object, oAction,((String)object)));
+				return permIds;
+			} else if (object instanceof Tuple2) {				
+				// the tuple contains the asset as _1() and the id as _2()
+				permIds.add(createPermission(((Tuple2)object)._1(), oAction,""+((Tuple2)object)._2()));
 				return permIds;
 			} else {
 				// try using reflection getting id or _id() or getId()
@@ -174,7 +181,7 @@ public class PermissionExtractor {
 		return prefix+":"+action+":"+bucketPermission;
 	}
 
-	public static String createPermission(Object permissionRoot,Optional<String> oAction , String permission) {		
+	public static String createPermission(Object permissionRoot,Optional<String> oAction , String permissionId) {		
 		String prefix = "";
 		String action = oAction.isPresent() ? oAction.get():ISecurityService.ACTION_WILDCARD;
 		if(permissionRoot instanceof String){
@@ -182,7 +189,7 @@ public class PermissionExtractor {
 		}else{
 			prefix = permissionRoot.getClass().getSimpleName();
 		}
-		return prefix+":"+action+":"+permission;
+		return prefix+":"+action+":"+permissionId;
 	}
 
 

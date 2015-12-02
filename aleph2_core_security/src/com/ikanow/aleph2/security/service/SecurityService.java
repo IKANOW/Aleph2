@@ -328,5 +328,21 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		}
 		return permitted;
 	}
+
+	@Override
+	public boolean hasUserRole(Optional<String> userID, String role) {
+		boolean permitted = false;
+		ISubject currentSubject = null;
+		if (userID.isPresent() && tlCurrentSubject.get() != null) {
+			currentSubject = tlCurrentSubject.get();
+			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
+		}
+		permitted = hasRole(tlCurrentSubject.get(),role);
+
+		if (currentSubject != null) {
+			((Subject) currentSubject.getSubject()).releaseRunAs();
+		}
+		return permitted;
+	}
 	
 }

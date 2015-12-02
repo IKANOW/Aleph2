@@ -59,6 +59,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.security.utils.ErrorUtils;
 import com.ikanow.aleph2.security.utils.ProfilingUtility;
 import com.typesafe.config.Config;
@@ -450,6 +451,9 @@ public class SecurityServiceTest {
 		},Optional.empty()));		
 		assertNotNull(extractor.extractPermissionIdentifiers(new TestWithId(),Optional.empty()));
 		
+		assertArrayEquals(new String[]{"community:*:comunityId1"},extractor.extractPermissionIdentifiers(Tuples._2T("community", "comunityId1"),Optional.empty()).toArray());
+		
+		// tesr ownerId extractions
 		assertNotNull(extractor.extractOwnerIdentifier(libraryBean));
 		assertNotNull(extractor.extractOwnerIdentifier(dataBucketBean));
 		assertNotNull(extractor.extractOwnerIdentifier(
@@ -496,7 +500,7 @@ public class SecurityServiceTest {
 	}
 	
 	@Test 
-	public void testBucketAccess() throws Exception{
+	public void testUserAccess() throws Exception{
 		// test read access
      	AuthorizationBean authBean = new AuthorizationBean("user");		
      	MockSecuredCrudServiceBean mockedDelegate = mock(MockSecuredCrudServiceBean.class);
@@ -530,6 +534,8 @@ public class SecurityServiceTest {
 		// test read  by logging in as system but testing with userId permissions
 		securityService.loginAsSystem();
 		permitted = securityService.isUserPermitted(Optional.of("user"), bucket, Optional.of("read"));
+		assertTrue(permitted);
+		permitted = securityService.isUserPermitted(Optional.of("user"), "community:read:communityId1", Optional.empty());
 		assertTrue(permitted);
 
 	}
