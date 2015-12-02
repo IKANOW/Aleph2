@@ -152,10 +152,27 @@ public class TestDataBucketCrudService_Analytics {
 			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
 			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
 			assertEquals(1, res.size());
-		}		
+		}
+		// random
 		{
 			final AnalyticThreadJobInputBean input = BeanTemplateUtils.clone(getBaseInput(null))
 					.with(AnalyticThreadJobInputBean::data_service, "banana")
+					.done();
+
+			final AnalyticThreadJobBean job = BeanTemplateUtils.clone(getBaseJob("name", input, null, null))
+					.done();
+
+			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3b", job, null))
+					.done();
+
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
+			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
+			assertEquals(1, res.size());
+		}		
+		// batch/streaming with alternate
+		{
+			final AnalyticThreadJobInputBean input = BeanTemplateUtils.clone(getBaseInput(null))
+					.with(AnalyticThreadJobInputBean::data_service, "streaming.alternate")
 					.done();
 
 			final AnalyticThreadJobBean job = BeanTemplateUtils.clone(getBaseJob("name", input, null, null))
@@ -172,6 +189,21 @@ public class TestDataBucketCrudService_Analytics {
 		{
 			final AnalyticThreadJobInputBean input = BeanTemplateUtils.clone(getBaseInput(null))
 					.with(AnalyticThreadJobInputBean::data_service, "search_index_service")
+					.done();
+
+			final AnalyticThreadJobBean job = BeanTemplateUtils.clone(getBaseJob("name", input, null, null))
+					.done();
+
+			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb3c", job, null))
+					.done();
+
+			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
+			System.out.println("validation errs = " + res.stream().map(m->m.message()).collect(Collectors.joining(" ; ")));
+			assertEquals(0, res.size());
+		}		
+		{
+			final AnalyticThreadJobInputBean input = BeanTemplateUtils.clone(getBaseInput(null))
+					.with(AnalyticThreadJobInputBean::data_service, "document_service.alternate")
 					.done();
 
 			final AnalyticThreadJobBean job = BeanTemplateUtils.clone(getBaseJob("name", input, null, null))
