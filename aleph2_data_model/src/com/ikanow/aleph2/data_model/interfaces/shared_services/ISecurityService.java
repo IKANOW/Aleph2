@@ -40,7 +40,7 @@ public interface ISecurityService extends IUnderlyingService {
 
 	public static String ACTION_READ="read";
 	public static String ACTION_READ_WRITE="read,write";
-	public static String ACTION_WRITE="read";
+	public static String ACTION_WRITE="write";
 	public static String ACTION_WILDCARD="*";
 
 	public ISubject login(String principalName, Object credentials);
