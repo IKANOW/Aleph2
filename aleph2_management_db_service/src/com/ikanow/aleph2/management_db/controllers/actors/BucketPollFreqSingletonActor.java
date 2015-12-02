@@ -103,6 +103,10 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		getExpiredBuckets().thenAccept(m -> {
 			final List<DataBucketBean> buckets = StreamSupport.stream(m.spliterator(), false).collect(Collectors.toList());			
 			buckets.stream().forEach(bucket -> {
+				//DEBUG (investigating travis issues)
+				if (_logger.isDebugEnabled()) {
+					System.out.println("Poll Expired for bucket: " + bucket.full_name() + ": " + new Date());
+				}
 				_logger.debug("Poll Expired for bucket: " + bucket.full_name());				
 				updateBucketNextPollTime(bucket).thenAccept(x -> {
 					_logger.debug("Sending poll message");
@@ -141,6 +145,10 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 	}
 	
 	private CompletableFuture<Boolean> updateBucketNextPollTime(DataBucketBean bucket)  {
+		//DEBUG (investigating travis issues)
+		if (_logger.isDebugEnabled()) {
+			System.out.println("updateBucketNextPollTime: " + new Date());
+		}
 		//update this buckets with a new next_date		
 		//TODO handle validation failure (shouldn't happen if poll date was already set? (i.e. instead of calling .success())
 		final Date next_poll_date = TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date())).success();

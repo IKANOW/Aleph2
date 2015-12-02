@@ -13,7 +13,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -38,20 +37,16 @@ public class TestProcessUtils {
 	public void tearDown() throws Exception {
 	}
 
-	@Ignore
 	@Test
-	public void test() throws FileNotFoundException, IOException, InterruptedException {
+	public void testStopLongRunningProcess() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
 			System.out.println("ProcessUtils do not work on Windows systems (can't get pids)");
 			return;
 		}
 		
 		//start a process
-		final String root_path = System.getProperty("java.io.tmpdir");
+		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
 		final String tmp_file_path = createTestScript(getLongRunningProcess());	
-		System.out.println(tmp_file_path);
-		//wait a second for script file to get written?
-//		Thread.sleep(1000);
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
@@ -68,8 +63,7 @@ public class TestProcessUtils {
 		//cleanup
 		new File(tmp_file_path).delete();
 	}
-	
-	@Ignore
+		
 	@Test
 	public void testStopNonExistantProcess() {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -84,7 +78,6 @@ public class TestProcessUtils {
 		assertFalse(stop_result._1, stop_result._2);
 	}
 	
-	@Ignore
 	@Test
 	public void testStopDoneProcess() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -94,30 +87,38 @@ public class TestProcessUtils {
 		
 		//start a process
 		final String root_path = System.getProperty("java.io.tmpdir");
-		final String tmp_file_path = createTestScript(getQuickRunningProcess());	
-		System.out.println(tmp_file_path);
-		//wait a second for script file to get written?
-//		Thread.sleep(1000);
+		final String tmp_file_path = createTestScript(getQuickRunningProcess());			
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path);
 		assertNotNull(launch._1, launch._2);
 		
+		//wait for process to finish (max of 1s)
+		for ( int i = 0; i < 10; i++ ) {
+			if ( !ProcessUtils.isProcessRunning(application_name, bucket, root_path) ) {
+				break;
+			} else {
+				Thread.sleep(100);
+			}
+		}
+		
 		//check its still running
 		assertFalse(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
 		
 		//stop the process anyways
 		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path);
+
 		assertTrue(stop._1, stop._2); //stop returns true, but says its already dead
 		
 		//cleanup
 		new File(tmp_file_path).delete();
 	}
 	
-	private static String createTestScript(final String script) throws FileNotFoundException, IOException {
-		final String file_path = System.getProperty("java.io.tmpdir") + UuidUtils.get().getRandomUuid() + ".sh";
-		IOUtils.write(script, new FileOutputStream(new File(file_path)));
+	private static String createTestScript(final String script) throws FileNotFoundException, IOException {		
+		final String file_path = System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator  + UuidUtils.get().getRandomUuid() + ".sh";
+		final File file = new File(file_path);
+		IOUtils.write(script, new FileOutputStream(file));
 		return file_path;
 	}
 	
@@ -130,7 +131,8 @@ public class TestProcessUtils {
 	private static String getLongRunningProcess() {
 		//assume bash scripts work
 		//this script will loop forever, doing nothing, it's utterly useless
-		return new StringBuilder()
+		return new StringBuilder()				
+//				.append("trap \"exit 47\" SIGTERM\n")
 			.append("while [ : ]\n")
 			.append("do\n")
 			.append("   sleep 1\n")
@@ -148,8 +150,10 @@ public class TestProcessUtils {
 	
 	private static ProcessBuilder getEnvProcessBuilder(final String script_file_loc, final String root_path) {		
 		//linux process
-		ProcessBuilder pb = new ProcessBuilder("sh \""+ script_file_loc +"\"");
-		pb.directory(new File(root_path + File.separator + "run")).redirectErrorStream(true);
+		//root path has to exist if it doesn't already
+		new File(root_path + File.separator + "run").mkdir();
+		ProcessBuilder pb = new ProcessBuilder("sh",  script_file_loc );				
+		pb.directory(new File(root_path + File.separator  + "run" )).redirectErrorStream(true);
 		pb.environment().put("JAVA_OPTS", "");
 		return pb;
 	}
