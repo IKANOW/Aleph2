@@ -169,10 +169,11 @@ public class TestBucketPollFreqSingletonActor {
 		final DataBucketBean bucket_no_poll = createBucket(null);
 		
 		//put it in the datastore		
-		storeBucketAndStatus(bucket_poll_now, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		final Date now = new Date();
+		storeBucketAndStatus(bucket_poll_now, true, Optional.of(now), underlying_crud_status, underlying_crud);
 		storeBucketAndStatus(bucket_poll_later, true, Optional.of(new Date(System.currentTimeMillis() + 3600000)), underlying_crud_status, underlying_crud);
 		storeBucketAndStatus(bucket_no_poll, true, Optional.empty(), underlying_crud_status, underlying_crud);
-		final DataBucketStatusBean bucket_poll_now_status = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
+//		final DataBucketStatusBean bucket_poll_now_status = underlying_crud_status.getObjectById(bucket_poll_now._id()).get().get();
 		final DataBucketStatusBean bucket_poll_later_status = underlying_crud_status.getObjectById(bucket_poll_later._id()).get().get();
 		
 		//actor checks every second, give it long enough to hit a cycle
@@ -184,7 +185,7 @@ public class TestBucketPollFreqSingletonActor {
 		final DataBucketStatusBean bucket_no_poll_updated = underlying_crud_status.getObjectById(bucket_no_poll._id()).get().get();
 		//make sure the actor 
 		//1. updates freq (means it received the messaage)
-		assertTrue("Next poll time should have been greater than what we set poll_time to", bucket_poll_now_updated.next_poll_date().getTime() > bucket_poll_now_status.next_poll_date().getTime());
+		assertTrue("Next poll time should have been greater than what we set poll_time to", bucket_poll_now_updated.next_poll_date().getTime() > now.getTime());
 		assertTrue("Poll later time should not have been updated", bucket_poll_later_updated.next_poll_date().getTime() == bucket_poll_later_status.next_poll_date().getTime());
 		assertTrue("Poll never time should not have been set", bucket_no_poll_updated.next_poll_date() == null );
 		
