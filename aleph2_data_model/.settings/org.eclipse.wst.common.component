@@ -2,6 +2,5 @@
     <wb-module deploy-name="aleph2_data_model">
         <wb-resource deploy-path="/" source-path="/resources"/>
         <wb-resource deploy-path="/" source-path="/src"/>
-        <wb-resource deploy-path="/" source-path="/test"/>
     </wb-module>
 </project-modules>

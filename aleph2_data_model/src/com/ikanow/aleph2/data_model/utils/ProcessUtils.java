@@ -118,6 +118,7 @@ public class ProcessUtils {
 	 */
 	private static void storePid(final String application_name, final DataBucketBean bucket, final String aleph_root_path, final String pid, final long date) throws IOException {						
 		final File file = new File(aleph_root_path + PID_MANAGER_DIR_NAME + bucket._id() + File.separator + application_name);
+		System.out.println("TESTFILEPATH: " +file.getCanonicalPath());
 		file.getParentFile().mkdirs();
 		if ( file.exists() )
 			file.delete();	
