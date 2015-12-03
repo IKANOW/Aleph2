@@ -1079,7 +1079,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		// Now try to get the technology driver
 		
-		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job_input).toString());
+		// the job config is in the format owner_id:bucket_name:{input_config}
+		final Optional<String> job_config = Optional.of(my_bucket.owner_id() + ":" + my_bucket.full_name() + ":" + BeanTemplateUtils.toJson(job_input).toString());
 		if ("storage_service".equalsIgnoreCase(data_service)) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
 		}

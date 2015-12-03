@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -212,9 +214,12 @@ public class MockSecurityService implements ISecurityService {
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission,
 			Optional<String> oAction) {
 		
+		loginAsSystem();
+		
 		return Patterns.match(assetOrPermission).<List<String>>andReturn()
 			.when(DataBucketBean.class, b -> Arrays.asList(b._id(), b.full_name()))
 			.when(SharedLibraryBean.class, s -> Arrays.asList(s._id(), s.path_name()))
+			.when(Tuple2.class, t2 -> Arrays.asList(t2._2().toString()))
 			.otherwise(s -> Arrays.asList(s.toString()))
 			.stream()
 			.anyMatch(to_check -> {
@@ -224,8 +229,14 @@ public class MockSecurityService implements ISecurityService {
 			;
 	}
 
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#hasUserRole(java.util.Optional, java.lang.String)
+	 */
 	@Override
 	public boolean hasUserRole(Optional<String> userID, String role) {
+		
+		loginAsSystem();
+		
 		return _mock_role_map.get().getOrDefault(role, false);
 	}
 
