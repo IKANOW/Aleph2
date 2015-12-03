@@ -1302,7 +1302,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	}
 	
 	private static final Pattern VALID_ANALYTIC_JOB_NAME = Pattern.compile("[a-zA-Z0-9_]+");
-	private static final Pattern VALID_DATA_SERVICES = Pattern.compile("(?:batch|stream)|(?:(?:search_index_service|storage_service|document_service)(?:[.][a-zA-Z_-]+)?)");
+	private static final Pattern VALID_DATA_SERVICES = Pattern.compile("(?:batch|stream)|(?:(?:search_index_service|storage_service|document_service)(?:[.][a-zA-Z0-9_-]+)?)");
 	private static final Pattern VALID_RESOURCE_ID = Pattern.compile("(:?[a-zA-Z0-9_$]*|/[^:]+|/[^:]+:[a-zA-Z0-9_$]*)");
 		//(first is internal job, second is external only, third is both) 
 	
