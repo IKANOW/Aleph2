@@ -35,14 +35,15 @@ public interface ISecurityService extends IUnderlyingService {
 	public String IKANOW_SYSTEM_LOGIN = "IKANOW_SECURITY_LOGIN";
 	public String IKANOW_SYSTEM_PASSWORD = "IKANOW_SECURITY_PASSWORD";
 
-	public static String SECURITY_ASSET_COMMUNITY="community";
-	public static String SECURITY_ASSET_SOURCE="source";
 
 	public static String ACTION_READ="read";
 	public static String ACTION_READ_WRITE="read,write";
 	public static String ACTION_WRITE="write";
 	public static String ACTION_WILDCARD="*";
 
+
+	public static String ROLE_ADMIN="admin";
+	
 	public ISubject login(String principalName, Object credentials);
 
 	public ISubject loginAsSystem();

@@ -50,8 +50,6 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected AuthorizationBean authBean = null;
 	protected IServiceContext serviceContext = null;
 	protected ISecurityService securityService;
-
-	public static String ROLE_ADMIN="admin";
 	
 	private ISubject subject; // system user's subject
 	
@@ -394,7 +392,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	}
 	protected void checkDeletePermission() {
 		
-		boolean permitted = securityService.hasRole(subject,ROLE_ADMIN); 
+		boolean permitted = securityService.hasRole(subject,ISecurityService.ROLE_ADMIN); 
 		if(!permitted){
 			String msg = "Subject "+subject.getSubject()+" has no write permissions for deletions";
 			logger.error(msg);
