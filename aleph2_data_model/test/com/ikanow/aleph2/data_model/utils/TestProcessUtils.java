@@ -37,7 +37,6 @@ public class TestProcessUtils {
 	public void tearDown() throws Exception {
 	}
 
-	@org.junit.Ignore
 	@Test
 	public void testStopLongRunningProcess() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -65,7 +64,6 @@ public class TestProcessUtils {
 		new File(tmp_file_path).delete();
 	}
 		
-	@org.junit.Ignore
 	@Test
 	public void testStopNonExistantProcess() {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -80,7 +78,6 @@ public class TestProcessUtils {
 		assertFalse(stop_result._1, stop_result._2);
 	}
 	
-	@org.junit.Ignore
 	@Test
 	public void testStopDoneProcess() throws FileNotFoundException, IOException, InterruptedException {
 		if ( SystemUtils.IS_OS_WINDOWS ) {			
@@ -119,6 +116,7 @@ public class TestProcessUtils {
 	}
 	
 	private static String createTestScript(final String script) throws FileNotFoundException, IOException {		
+		new File(System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator).mkdir();
 		final String file_path = System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator  + UuidUtils.get().getRandomUuid() + ".sh";
 		final File file = new File(file_path);
 		IOUtils.write(script, new FileOutputStream(file));
