@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.security.module;
 
 import java.util.Collection;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,8 +26,12 @@ import org.apache.shiro.config.ConfigurationException;
 import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.realm.Realm;
 
+import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
 import com.google.inject.binder.AnnotatedBindingBuilder;
+import com.google.inject.util.Types;
 import com.ikanow.aleph2.security.service.CoreRealm;
 
 /** Core module for Security Service
@@ -109,6 +114,17 @@ public class CoreSecurityModule extends ShiroModule {
         } catch (NoSuchMethodException e) {
             throw new ConfigurationException("This really shouldn't happen.  Either something has changed in Shiro, or there's a bug in " + ShiroModule.class.getSimpleName(), e);
         }
+    }
+
+    // duplicates from Shiromodule. Why did they have to make them private there?
+    @SuppressWarnings({"unchecked"})
+    protected static Key<Set<Realm>> realmSetKey() {
+        return (Key<Set<Realm>>) Key.get(TypeLiteral.get(Types.setOf(Realm.class)));
+    }
+
+    @SuppressWarnings({"unchecked"})
+    public static Key<Collection<Realm>> realmCollectionKey() {
+        return (Key<Collection<Realm>>) Key.get(Types.newParameterizedType(Collection.class, Realm.class));
     }
 
 }
