@@ -71,7 +71,7 @@ public class TestProcessUtils {
 			return;
 		}
 		
-		final String root_path = System.getProperty("java.io.tmpdir");
+		final String root_path = System.getProperty("java.io.tmpdir")  + File.separator;
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final Tuple2<String, Boolean> stop_result = ProcessUtils.stopProcess(application_name, bucket, root_path);
@@ -86,7 +86,7 @@ public class TestProcessUtils {
 		}
 		
 		//start a process
-		final String root_path = System.getProperty("java.io.tmpdir");
+		final String root_path = System.getProperty("java.io.tmpdir")  + File.separator;
 		final String tmp_file_path = createTestScript(getQuickRunningProcess());			
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
