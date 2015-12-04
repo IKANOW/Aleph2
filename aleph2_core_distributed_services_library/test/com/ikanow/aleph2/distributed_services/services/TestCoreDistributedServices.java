@@ -184,6 +184,7 @@ public class TestCoreDistributedServices {
 		for ( int i = 0; i < num_to_test; i++ ) {
 			_core_distributed_services.produce(TOPIC_NAME, original_message);
 		}
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
 		//grab the consumer
 		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
@@ -224,6 +225,7 @@ public class TestCoreDistributedServices {
 		String original_message = jsonNode.toString();	
 		for ( int i = 0; i < num_to_test; i++ ) 
 			_core_distributed_services.produce(TOPIC_NAME, original_message);	
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
 		//grab the consumer
 		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
