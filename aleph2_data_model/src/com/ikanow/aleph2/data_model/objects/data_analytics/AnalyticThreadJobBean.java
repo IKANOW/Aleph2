@@ -261,10 +261,11 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @param timed_batch_ms - When converting from streaming data to batch data, the max time period over which to collect batches
 		 * @param size_batch_records - When converting from streaming data to batch data, the max number of records in each batch
 		 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
+		 * @param test_record_limit_request - in test mode lets users request a different input limit to the designated output limit 
 		 */
 		public AnalyticThreadJobInputConfigBean(final Boolean new_data_only,  
 				final String time_min, final String time_max,
-				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb, final Long record_limit_request)
+				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb, final Long test_record_limit_request)
 		{
 			this.new_data_only = new_data_only;
 			this.time_min = time_min;
@@ -272,7 +273,7 @@ public class AnalyticThreadJobBean implements Serializable {
 			this.timed_batch_ms = timed_batch_ms;
 			this.size_batch_records = size_batch_records;
 			this.size_batch_kb = size_batch_kb;
-			this.record_limit_request = record_limit_request;
+			this.test_record_limit_request = test_record_limit_request;
 		}
 		
 		/** If true (defaults: false) then only new data is served to the job each time it runs (otherwise all data from the input matching the filter is served)
@@ -309,7 +310,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		 *  The actual number might be different (eg multiplied by the number of distributed splits) 
 		 * @return the requested max number of records (actual number may be higher)
 		 */
-		public Long record_limit_request() { return record_limit_request; }
+		public Long test_record_limit_request() { return test_record_limit_request; }
 		
 		private Boolean new_data_only;
 		private String time_min;
@@ -317,7 +318,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		private Long timed_batch_ms;
 		private Long size_batch_records;
 		private Long size_batch_kb;
-		private Long record_limit_request;
+		private Long test_record_limit_request;
 	}
 	
 	private AnalyticThreadJobInputConfigBean global_input_config;
