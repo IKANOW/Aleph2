@@ -262,7 +262,23 @@ public class DataSchemaBean implements Serializable {
 		protected DocumentSchemaBean() {}
 		
 		public enum DeduplicationTiming { none, start, end, custom };
-		public enum DeduplicationPolicy { leave, update, overwrite, custom };
+		public enum DeduplicationPolicy { 
+			/** the existing data object is left and the new one is discarded
+			 */
+			leave, 
+			/** the existing data object is left unless the new one is newer, in which case it overwrites it (ie replaces but with the same _id)
+			 */
+			update, 
+			/** the new data object replaces the old one (but with the same _id)
+			 */
+			overwrite, 
+			/** the enrichment job specified by "custom_deduplication_configs" is run (as if a grouping had occurred), the result for each group overwrites the existing object (or if nothing is emitted, the object is left alone)
+			 */
+			custom, 
+			/** Like custom except that extra step is only applied if the new object is newer (else nothing occurs) 
+			 */
+			custom_update 
+		};
 		
 		/** User constructor
 		 */

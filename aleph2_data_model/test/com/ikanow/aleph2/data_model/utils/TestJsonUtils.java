@@ -19,6 +19,8 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Optional;
 
@@ -27,6 +29,8 @@ import org.junit.Test;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.POJONode;
 
 public class TestJsonUtils {
 
@@ -96,5 +100,20 @@ public class TestJsonUtils {
 		assertEquals(Optional.empty(), JsonUtils.getProperty("a.z", test));
 		assertEquals(Optional.empty(), JsonUtils.getProperty("z", test));
 		
+	}
+	
+	@Test
+	public void test_jacksonToJava() {
+		
+		assertEquals(Arrays.asList("test"), JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(Arrays.asList("test"), JsonNode.class)));
+		assertEquals(new String(new byte[] { (byte)0xFF, (byte)0xFE }), new String((byte[])JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(new byte[] { (byte)0xFF, (byte)0xFE }, JsonNode.class))));
+		assertEquals(true, JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(true, JsonNode.class)));
+		assertEquals(false, JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(false, JsonNode.class)));
+		assertEquals(1L, JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(1L, JsonNode.class)));
+		assertEquals(2.0, (double)JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue(2.0, JsonNode.class)), 0.00001);
+		assertEquals(Collections.emptyMap(), JsonUtils.jacksonToJava(JsonUtils._mapper.createObjectNode()));
+		assertEquals(TestBean.class, JsonUtils.jacksonToJava(new POJONode(new TestBean())).getClass());
+		assertEquals("test", JsonUtils.jacksonToJava(JsonUtils._mapper.convertValue("test", JsonNode.class)));
+		assertEquals(null, JsonUtils.jacksonToJava(NullNode.instance));
 	}
 }

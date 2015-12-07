@@ -15,21 +15,28 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.POJONode;
 
 /** Utility classes for managing JSON transforms
  * @author Alex
  */
 public class JsonUtils {
-
+	protected static final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+	
+	public static final String _ID = "_id"; // (useful const)
+	
 	/** Takes a tuple expressed as LinkedHashMap<String, Object> (by convention the Objects are primitives, JsonNode, or POJO), and where one of the objects
 	 *  is a JSON representation of the original object and creates an object by folding them all together
 	 *  Note the other fields of the tuple take precedence over the JSON
@@ -93,6 +100,41 @@ public class JsonUtils {
 			else return Optional.empty(); // not at the end of the chain and it's not something you can map through
 		}
 		return Optional.empty();
+	}
+	
+	/** Converts (possibly recursively) a JsonNode to its Java equivalent
+	 * @param to_convert - the JsonNode to convert to...
+	 * @return - ...a Java primitive, or Map<String, Object>, or List<Object> (where Object is a java type) 
+	 */
+	public static Object jacksonToJava(final JsonNode to_convert) {
+		final JsonNodeType type = to_convert.getNodeType(); // (we'll go old school for this...)
+		switch (type) {
+		case ARRAY:
+			return Optionals.streamOf(to_convert.elements(), false).map(j -> jacksonToJava(j)).collect(Collectors.toList());
+		case BINARY:
+			try {
+				return to_convert.binaryValue();
+			} catch (IOException e) {
+				return null;
+			}
+		case BOOLEAN:
+			return to_convert.asBoolean();
+		case NUMBER:
+			if (to_convert.isFloatingPointNumber()) {
+				return to_convert.asDouble();
+			}
+			else {
+				return to_convert.asLong();
+			}
+		case OBJECT:
+			return _mapper.convertValue(to_convert, Map.class);
+		case POJO:
+			return ((POJONode)to_convert).getPojo();
+		case STRING:
+			return to_convert.asText();
+		default: // (MISSING, NULL)
+			return null; 
+		}
 	}
 	
 }
