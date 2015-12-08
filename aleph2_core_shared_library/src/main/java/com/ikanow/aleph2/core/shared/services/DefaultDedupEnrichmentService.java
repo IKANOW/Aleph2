@@ -154,6 +154,7 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 									,
 									cfg);
 						});
+				
 				entry_point.ifPresent(Lambdas.wrap_consumer_u(ep -> 
 					_custom_handler.set((IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance())));
 
