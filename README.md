@@ -11,4 +11,4 @@ Aleph2 provides a single, self-consistent, interface and orchestration framework
 
 The two key takeaways are:
 * The core platform is 100% agnostic to the selection of data stores or analytic or import technologies - anything goes.
-* The SDK and REST APIs and UI components provide a single friendly and logical interface across all of the diverse technologies in use and hides the implementation details away.
+* The SDK and REST APIs and UI components provide one friendly and logical interface across all of the diverse technologies in use and hides the implementation details away (but equally exposes them when needed).
