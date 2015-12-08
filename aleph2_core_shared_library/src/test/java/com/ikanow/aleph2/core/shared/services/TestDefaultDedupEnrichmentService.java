@@ -21,8 +21,10 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -61,6 +63,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
 
 import fj.data.Either;
+import fj.data.Validation;
 
 public class TestDefaultDedupEnrichmentService {
 	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
@@ -346,6 +349,7 @@ public class TestDefaultDedupEnrichmentService {
 			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("s")).get().longValue());
 			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("err")));;
 			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("err")));;
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(_mapper.createObjectNode())); //(code coverage!)
 		}
 		// Compare sets of 2 json objects
 		{
@@ -363,6 +367,294 @@ public class TestDefaultDedupEnrichmentService {
 			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json2));
 			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json1));
 		}
+		
+	}
+	
+	@Test
+	public void test_handleCustomDeduplication() {
+	
+		TestDedupEnrichmentModule test_module = new TestDedupEnrichmentModule();
+		
+		_called_batch.set(0);
+		assertEquals(0L, _called_batch.get());
+
+		final ObjectNode test1 = _mapper.createObjectNode();
+		test1.put("field1", "test1");
+		final ObjectNode test2 = _mapper.createObjectNode();
+		test2.put("field2", "test2");
+		
+		final List<Tuple3<Long, IBatchRecord, ObjectNode>> batch =
+				Arrays.<JsonNode>asList(
+						test1,
+						test2
+						)
+						.stream()
+						.map(j -> Tuples._3T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j), _mapper.createObjectNode()))
+						.collect(Collectors.toList());
+		
+		
+		DefaultDedupEnrichmentService.handleCustomDeduplication(Optional.empty(), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		
+		assertEquals(0L, _called_batch.get());
+
+		DefaultDedupEnrichmentService.handleCustomDeduplication(Optional.of(test_module), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		
+		assertEquals(2L, _called_batch.get());
+	}
+	
+	@Test
+	public void test_getIncludeFields() {
+		
+		final List<String> fields = Arrays.asList("test1", "test2");
+		final String ts_field = "@timestamp";
+		
+		assertEquals(Arrays.asList("_id", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._1());
+		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._2());
+		assertEquals(Arrays.asList("_id", "@timestamp", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._1());
+		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._2());
+		assertEquals(Arrays.asList("_id", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._1());
+		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._2());
+		assertEquals(Arrays.asList(), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._1());
+		assertEquals(false, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._2());
+		assertEquals(Arrays.asList(), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._1());
+		assertEquals(false, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._2());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void test_handleDuplicateRecord() {
+		
+		final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+		
+		Mockito.when(enrich_context.emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class)))
+					.thenReturn(Validation.success(_mapper.createObjectNode()));
+		
+		TestDedupEnrichmentModule test_module = new TestDedupEnrichmentModule();
+		
+		final String ts_field = "@timestamp";
+		
+		final ObjectNode old_json = _mapper.createObjectNode();
+		old_json.put("_id", "old_record");
+		old_json.put("@timestamp", 0L);
+		old_json.put("url", "test");
+		
+		final ObjectNode new_json = _mapper.createObjectNode();
+		new_json.put("@timestamp", 1L);
+		new_json.put("url", "test");
+		
+		final ObjectNode new_json_but_same_time = _mapper.createObjectNode();
+		new_json_but_same_time.put("@timestamp", 0L);
+		new_json_but_same_time.put("url", "test");
+		
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record = Tuples._3T(0L, new DefaultDedupEnrichmentService.MyBatchRecord(new_json), _mapper.createObjectNode());
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record_but_same_time = Tuples._3T(0L, new DefaultDedupEnrichmentService.MyBatchRecord(new_json_but_same_time), _mapper.createObjectNode());
+		
+		new_record._2().getContent(); //(code coverage!)
+		
+		final TextNode key = new TextNode("url");
+		
+		LinkedHashMap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map = new LinkedHashMap<>();
+		mutable_obj_map.put(new TextNode("never_changed"), new_record);
+		
+		// Simple case Leave policy
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.leave,
+					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// No annotations/mutations
+			assertEquals("{}", new_record._3().toString());
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size());
+		}
+		// Simple case update policy - time updates
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.update,
+					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// _id
+			assertEquals("{\"_id\":\"old_record\"}", new_record._3().toString());
+			// Object removed from mutable map
+			assertEquals(2, mutable_obj_map.size());
+		}
+		// Simple case update policy - times the same
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.update,
+					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// No annotations/mutations
+			assertEquals("{}", new_record_but_same_time._3().toString());
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size());
+		}
+		// overwrite
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
+					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// _id
+			assertEquals("{\"_id\":\"old_record\"}", new_record._3().toString());
+			// Object removed from mutable map
+			assertEquals(2, mutable_obj_map.size());			
+		}
+		//(check ignores times)
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
+					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// _id
+			assertEquals("{\"_id\":\"old_record\"}", new_record_but_same_time._3().toString());
+			// Object removed from mutable map
+			assertEquals(2, mutable_obj_map.size());			
+		}
+		// custom
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom,
+					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(2, _called_batch.get()); //(old + new)
+			// _id
+			assertEquals("{}", new_record._3().toString()); // up to the custom code to do this
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size()); //(remove since it's the responsibility of the custom code to emit)
+		}
+		//(check ignores times)
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom,
+					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(2, _called_batch.get()); //(old + new)
+			// _id
+			assertEquals("{}", new_record_but_same_time._3().toString()); // up to the custom code to do this
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size()); //(remove since it's the responsibility of the custom code to emit)
+		}
+		// Simple case *custom* update policy - time updates
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
+					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(2, _called_batch.get()); //(old + new)
+			// _id
+			assertEquals("{}", new_record._3().toString()); // up to the custom code to do this
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size()); //(remove since it's the responsibility of the custom code to emit)
+		}
+		// Simple case *custom* update policy - times the same
+		{
+			//(reset)
+			mutable_obj_map.put(new TextNode("url"), new_record);
+			assertEquals(2, mutable_obj_map.size());
+			new_record._3().removeAll();
+			new_record_but_same_time._3().removeAll();
+			_called_batch.set(0);
+			
+			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
+					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					);
+			
+			// Nothing emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// No custom processing performed
+			assertEquals(0, _called_batch.get());
+			// No annotations/mutations
+			assertEquals("{}", new_record_but_same_time._3().toString());
+			// Object removed from mutable map
+			assertEquals(1, mutable_obj_map.size());
+		}
+
 		
 	}
 	
@@ -399,6 +691,8 @@ public class TestDefaultDedupEnrichmentService {
 	
 	////////////////////////////////////////////////////
 	
+	public static AtomicInteger _called_batch = new AtomicInteger(0);
+	
 	public static class TestDedupEnrichmentModule implements IEnrichmentBatchModule {
 
 		@Override
@@ -411,6 +705,10 @@ public class TestDefaultDedupEnrichmentService {
 		@Override
 		public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
 				Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {
+			
+			long n = batch.count();
+			assertEquals(n, batch_size.get().longValue());
+			_called_batch.addAndGet((int) n);
 		}
 
 		@Override

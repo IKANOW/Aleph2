@@ -206,6 +206,9 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 
 		// Wait for it to finsh
 		
+		//TODO: add timestamps to annotation
+		//TODO: need to ensure that object gets added with overwrite existing: true
+				
 		final Iterator<JsonNode> cursor = dedup_res.join();
 		
 		// Handle the results
@@ -286,7 +289,10 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 				.when(p -> p == DeduplicationPolicy.overwrite, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
 				.otherwise(__ -> Tuples._2T(Arrays.asList(), false))
 			)
-			.map(t2 -> Tuples._2T(Stream.concat(t2._1().stream(), dedup_fields.stream()).collect(Collectors.toList()), t2._2()))
+			.map(t2 -> t2._2() 
+					? Tuples._2T(Stream.concat(t2._1().stream(), dedup_fields.stream()).collect(Collectors.toList()), t2._2())
+					: t2
+				)
 			.get()
 			;
 
