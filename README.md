@@ -10,5 +10,5 @@ Aleph2 provides a single, self-consistent, interface and orchestration framework
 * Overlay a Rules-Based-Access-Control and Single-Sign-On across all operations (generated from a plug-in security provider).
 
 The two key takeaways are:
-# The core platform is 100% agnostic to the selection of data stores or analytic or import technologies - anything goes.
-# The SDK and REST APIs and UI components provide a single friendly and logical interface across all of the diverse technologies in use and hides the implementation details away.
+* The core platform is 100% agnostic to the selection of data stores or analytic or import technologies - anything goes.
+* The SDK and REST APIs and UI components provide a single friendly and logical interface across all of the diverse technologies in use and hides the implementation details away.
