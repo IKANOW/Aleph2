@@ -118,7 +118,7 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 					.filter(l -> !l.isEmpty()) // (if empty or null then fall back to...)				
 					.map(contexts -> 
 						BeanTemplateUtils.build(DataBucketBean.class)
-								.with(DataBucketBean::multi_bucket_children, ImmutableSet.<String>builder().addAll(contexts))
+								.with(DataBucketBean::multi_bucket_children, ImmutableSet.<String>builder().addAll(contexts).build())
 						.done().get()
 					)
 					.orElse(bucket);
