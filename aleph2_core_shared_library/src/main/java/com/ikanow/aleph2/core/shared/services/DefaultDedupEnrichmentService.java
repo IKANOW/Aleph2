@@ -18,6 +18,7 @@ package com.ikanow.aleph2.core.shared.services;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
@@ -199,15 +199,18 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 		
 		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(policy, dedup_fields, _timestamp_field.get());
 		
-		final CompletableFuture<Cursor<JsonNode>> dedup_res = _dedup_context.get().getObjectsBySpec(fieldinfo_dedupquery_keyfields._1(), fields_include._1(), fields_include._2());
+		final CompletableFuture<Iterator<JsonNode>> dedup_res =
+				fieldinfo_dedupquery_keyfields._2().isEmpty() // (don't launch query unless the query is non-trivial)
+				? CompletableFuture.completedFuture(Collections.<JsonNode>emptyList().iterator())
+				: _dedup_context.get().getObjectsBySpec(fieldinfo_dedupquery_keyfields._1(), fields_include._1(), fields_include._2()).thenApply(cursor -> cursor.iterator());
 
 		// Wait for it to finsh
 		
-		final Cursor<JsonNode> cursor = dedup_res.join();
+		final Iterator<JsonNode> cursor = dedup_res.join();
 		
 		// Handle the results
 		
-		Optionals.streamOf(cursor.iterator(), true)
+		Optionals.streamOf(cursor, true)
 					.forEach(ret_obj -> {
 						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
 						final Optional<Tuple3<Long, IBatchRecord, ObjectNode>> matching_record = maybe_key.map(key -> mutable_obj_map.get(key));
@@ -270,6 +273,26 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 				});
 	}
 	
+	/** Returns the minimal set of includes to return from the dedup query
+	 * @param policy
+	 * @param dedup_fields
+	 * @param timestamp_field
+	 * @return
+	 */
+	protected static Tuple2<List<String>, Boolean> getIncludeFields(final DeduplicationPolicy policy, final List<String> dedup_fields, String timestamp_field) {
+		final Tuple2<List<String>, Boolean> fields_include = Optional.of(Patterns.match(policy).<Tuple2<List<String>, Boolean>>andReturn()
+				.when(p -> p == DeduplicationPolicy.leave, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
+				.when(p -> p == DeduplicationPolicy.update, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID, timestamp_field), true))
+				.when(p -> p == DeduplicationPolicy.overwrite, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
+				.otherwise(__ -> Tuples._2T(Arrays.asList(), false))
+			)
+			.map(t2 -> Tuples._2T(Stream.concat(t2._1().stream(), dedup_fields.stream()).collect(Collectors.toList()), t2._2()))
+			.get()
+			;
+
+		return fields_include;
+	}
+	
 	/** Logic to perform the custom deduplication with the current and new versions
 	 * @param custom_handler
 	 * @param new_record
@@ -316,35 +339,18 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 	 * @return
 	 */
 	public static Optional<Long> getTimestampFromJsonNode(final JsonNode in) {
-		if (in.isLong()) {
+		if (null == in) {
+			return Optional.empty();
+		}
+		else if (in.isNumber()) {
 			return Optional.of(in.asLong());
 		}
 		else if (in.isTextual()) {
-			return Optional.ofNullable(TimeUtils.getDateFromSuffix(in.asText()).validation(fail -> null, success -> success.getTime()));
+			return Optional.ofNullable(TimeUtils.parseIsoString(in.asText()).validation(fail -> null, success -> success.getTime()));
 		}
 		else {
 			return Optional.empty();
 		}
-	}
-	
-	/** Returns the minimal set of includes to return from the dedup query
-	 * @param policy
-	 * @param dedup_fields
-	 * @param timestamp_field
-	 * @return
-	 */
-	protected static Tuple2<List<String>, Boolean> getIncludeFields(final DeduplicationPolicy policy, final List<String> dedup_fields, String timestamp_field) {
-		final Tuple2<List<String>, Boolean> fields_include = Optional.of(Patterns.match(policy).<Tuple2<List<String>, Boolean>>andReturn()
-				.when(p -> p == DeduplicationPolicy.leave, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
-				.when(p -> p == DeduplicationPolicy.update, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID, timestamp_field), true))
-				.when(p -> p == DeduplicationPolicy.overwrite, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
-				.otherwise(__ -> Tuples._2T(Arrays.asList(), false))
-			)
-			.map(t2 -> Tuples._2T(Stream.concat(t2._1().stream(), dedup_fields.stream()).collect(Collectors.toList()), t2._2()))
-			.get()
-			;
-
-		return fields_include;
 	}
 	
 	/** Creates the query and some associated metadata

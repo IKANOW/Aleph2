@@ -20,8 +20,10 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.Before;
@@ -29,9 +31,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import scala.Tuple2;
+import scala.Tuple3;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
@@ -50,9 +55,12 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValueFactory;
+
+import fj.data.Either;
 
 public class TestDefaultDedupEnrichmentService {
 	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
@@ -171,6 +179,191 @@ public class TestDefaultDedupEnrichmentService {
 			System.out.println(ErrorUtils.getLongForm("{0}", t));
 			throw t;
 		}		
+	}
+
+	@Test
+	public void test_extractKeyOrKeys() {
+
+		// extractKeyFields / extractKeyField, single element:
+		{
+			final ObjectNode test = _mapper.createObjectNode();
+			final ObjectNode test_nest = _mapper.createObjectNode();
+			test.put("field1", "test1");
+			test.put("field2", "test2");
+			test.put("nested1", test_nest);
+			test_nest.put("nested_field", "nested1");
+			
+			// Empty things:
+			
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "test_notpresent"));
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "nested1.test_notpresent"));
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "nested2.nested1"));
+			
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("test_notpresent", "test_notpresent2")));
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("nested1.test_notpresent")));
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("nested2.nested1")));
+			
+			// values:
+			
+			// single field
+			assertEquals("test1", DefaultDedupEnrichmentService.extractKeyField(test, "field1").get().asText());
+			assertEquals("nested1", DefaultDedupEnrichmentService.extractKeyField(test, "nested1.nested_field").get().asText());
+			
+			// multi-field
+			final String expected = "{\"field1\":\"test1\",\"nested1.nested_field\":\"nested1\"}";
+			assertEquals(expected, DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field")).get().toString());
+			assertEquals(expected, DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field", "field3")).get().toString());
+		}
+		// Similar but with a stream of objects
+		{
+			final ObjectNode test1 = _mapper.createObjectNode();
+			test1.put("field1", "test1");
+			final ObjectNode test2 = _mapper.createObjectNode();
+			test2.put("field2", "test2");
+			
+			final List<Tuple2<Long, IBatchRecord>> batch =
+					Arrays.<JsonNode>asList(
+							test1,
+							test2
+							)
+							.stream()
+							.map(j -> Tuples._2T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j)))
+							.collect(Collectors.toList());
+			
+			assertEquals(Arrays.asList(new TextNode("test1")), DefaultDedupEnrichmentService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
+		}
+		// Another utility function related to these
+		{
+			final ObjectNode test1 = _mapper.createObjectNode();
+			test1.put("field1", "test1");
+			
+			assertEquals(new TextNode("test1"), DefaultDedupEnrichmentService.getKeyFieldsAgain(test1, Either.left("field1")).get());
+			assertEquals("{\"field1\":\"test1\"}", DefaultDedupEnrichmentService.getKeyFieldsAgain(test1, Either.right(Arrays.asList("field1"))).get().toString());
+		}
+		
+	}
+	
+	@Test
+	public void test_getDedupQuery() {
+		final ObjectNode test1 = _mapper.createObjectNode();
+		final ObjectNode test_nest1 = _mapper.createObjectNode();
+		test1.put("field_1", "test1a");
+		test1.put("field_2", "test1b");
+		test_nest1.put("nested_1", "nested1");
+		test1.put("nested", test_nest1);
+		final ObjectNode test2 = _mapper.createObjectNode();
+		final ObjectNode test_nest2 = _mapper.createObjectNode();
+		test2.put("field_1", "test2a");
+		test1.put("field_2", "test2b");
+		test_nest2.put("nested_1", "nested2");
+		test2.put("nested", test_nest2);
+		
+		final List<Tuple2<Long, IBatchRecord>> batch =
+				Arrays.<JsonNode>asList(
+						test1,
+						test2
+						)
+						.stream()
+						.map(j -> Tuples._2T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j)))
+						.collect(Collectors.toList());
+		
+		
+		// single non-nested query
+		{
+			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
+					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_1"));
+			
+			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([\"test1a\", \"test2a\"],null))]})", res._1().toString());
+			//_2 is adequately tested by test_extractKeyOrKeys 
+			assertEquals(2, res._2().size());
+			assertEquals(Either.left("field_1"), res._3());
+		}
+		// single nested query
+		{
+			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
+					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("nested.nested_1"));
+			
+			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([\"nested1\", \"nested2\"],null))]})", res._1().toString());
+			//_2 is adequately tested by test_extractKeyOrKeys 
+			assertEquals(2, res._2().size());
+			assertEquals(Either.left("nested.nested_1"), res._3());
+		}
+		// single query, no matches
+		{
+			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
+					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_3"));
+			
+			assertEquals(0, res._2().size());
+		}
+		// multi-query
+		{
+			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
+					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_1", "nested.nested_1"));
+			
+			assertEquals("(MultiQueryComponent: limit=(none) sort=(none) op=any_of elements=(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test1a,null))], nested.nested_1=[(equals,(nested1,null))]});(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test2a,null))], nested.nested_1=[(equals,(nested2,null))]}))", res._1().toString());
+			//_2 is adequately tested by test_extractKeyOrKeys 
+			assertEquals(2, res._2().size());
+			assertEquals(Either.right(Arrays.asList("field_1", "nested.nested_1")), res._3());
+			
+		}
+		// multi-query, no matches
+		{
+			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
+					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_3", "nested.nested_2"));
+			
+			assertEquals(0, res._2().size());
+		}
+		
+	}
+	
+	public static class TimeTestBean {
+		TimeTestBean(Date d_, Long l_, String s_, String err_) {
+			d = d_; l = l_; s = s_; err = err_;
+		}
+		Date d;
+		Long l;
+		String s;
+		String err;
+	}
+	
+	@Test
+	public void test_timestamps() {
+		
+		final Date d = new Date(0L);
+		final Date d2 = new Date();
+		final TimeTestBean bean1 = new TimeTestBean(d, d.getTime(), null, "banana"); //(old)
+		final JsonNode json1 = BeanTemplateUtils.toJson(bean1);
+		final TimeTestBean bean2 = new TimeTestBean(d2, null, d.toInstant().toString(), null); //(new)
+		final JsonNode json2 = BeanTemplateUtils.toJson(bean2);
+		
+		// Check some very basic time utils
+		{
+			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("d")).get().longValue());
+			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("l")).get().longValue());
+			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("s")).get().longValue());
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("err")));;
+			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("err")));;
+		}
+		// Compare sets of 2 json objects
+		{
+			assertTrue(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json2, json1));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json1, json2));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json1, json1));
+			
+			// (new doesn't have field so always false)
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json2, json1));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json1, json2));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json1, json1));
+			
+			// (old doesn't have field so always false)
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json2, json1));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json2));
+			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json1));
+		}
+		
 	}
 	
 	//TODO: test all the static utils
