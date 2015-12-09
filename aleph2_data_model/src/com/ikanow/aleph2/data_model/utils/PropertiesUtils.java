@@ -15,18 +15,22 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.ikanow.aleph2.data_model.objects.shared.ConfigDataServiceEntry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
 
 /**
@@ -130,5 +134,41 @@ public class PropertiesUtils {
 		} else {
 			return Collections.emptyList();
 		}
+	}
+	
+	/** Gets a merged set of configs
+	 * @param config_dir
+	 * @param default_config
+	 * @return
+	 */
+	public static Config getMergedConfig(final Optional<File> config_dir, final File default_config) {
+		final Config fallback_config = ConfigFactory.parseFile(default_config);
+		final List<Config> extra_confs = config_dir.map(dir -> 
+						FileUtils
+							.listFiles(dir, Arrays.asList("conf", "properties", "json").toArray(new String[0]), false)
+							.stream()
+							.sorted()
+							.<Config>map(f -> ConfigFactory.parseFile(f))
+							.collect(Collectors.toList())
+					)
+					.orElse(Collections.emptyList());
+
+		return getMergedConfig(extra_confs, fallback_config);
+	}
+	
+	/** Gets a merged set of configs
+	 * @param config_dir
+	 * @param default_config
+	 * @return
+	 */
+	public static Config getMergedConfig(final List<Config> config_files, final Config default_config) {
+		final Config config = 
+				config_files.stream()
+						.reduce((cfg1, cfg2) -> cfg2.withFallback(cfg1))
+						.map(cfg -> cfg.withFallback(default_config))
+						.orElseGet(() -> default_config)
+						;
+	
+		return config;
 	}
 }

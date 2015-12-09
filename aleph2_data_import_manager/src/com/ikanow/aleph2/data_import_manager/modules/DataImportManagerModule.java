@@ -49,7 +49,6 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 import fj.data.Either;
 
@@ -214,11 +213,15 @@ public class DataImportManagerModule {
 	public static void main(final String[] args) {
 		try {
 			if (args.length < 1) {
-				System.out.println("CLI: config_file");
+				System.out.println("CLI: config_file [config_dir]");
 				System.exit(-1);
 			}
 			System.out.println("Running with command line: " + Arrays.toString(args));
-			final Config config = ConfigFactory.parseFile(new File(args[0]));
+						
+			final Config config = 
+					PropertiesUtils.getMergedConfig(
+							Optional.of(args).filter(a -> a.length > 1).map(a -> new File(a[1])),
+							new File(args[0]));
 			
 			final DataImportManagerModule app = ModuleUtils.initializeApplication(Arrays.asList(new Module()), Optional.of(config), Either.left(DataImportManagerModule.class));
 			app.start();
