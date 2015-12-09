@@ -31,7 +31,6 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 
 /** A useful mock object for unit testing. Allows everything
- *  TODO (ALEPH-31): provide an interface to add overrides for testing
  * @author acp
  *
  */
@@ -64,7 +63,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Arrays.asList(this);
+		return Collections.emptyList();
 	}
 
 	/* (non-Javadoc)

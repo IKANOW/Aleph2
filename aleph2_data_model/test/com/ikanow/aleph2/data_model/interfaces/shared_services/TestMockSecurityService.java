@@ -16,7 +16,7 @@
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.junit.Assert;
@@ -51,7 +51,7 @@ public class TestMockSecurityService {
 		service.enableJvmSecurity(false);
 		service.enableJvmSecurityManager(true);
 		service.enableJvmSecurityManager(false);
-		Assert.assertEquals((Collection<Object>)Arrays.<Object>asList(service), service.getUnderlyingArtefacts());
+		Assert.assertEquals(Collections.emptyList(), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		Assert.assertEquals(false, service.hasRole(subject, "role"));
 		Assert.assertEquals(false, service.hasUserRole(Optional.empty(), "role"));
