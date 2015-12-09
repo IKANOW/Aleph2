@@ -64,7 +64,7 @@ import fj.data.Either;
 /** An enrichment module that will perform deduplication using the provided document_schema
  * @author Alex
  */
-public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
+public class DeduplicationService implements IEnrichmentBatchModule {
 	protected final static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected final static MethodNamingHelper<AnnotationBean> _annot = BeanTemplateUtils.from(AnnotationBean.class);
 	
@@ -133,7 +133,7 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 		
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
-			//TODO (ALEPH-20): for now only support one dedup enrichment config
+			//TODO (ALEPH-20): for now only support one dedup enrichment config (really the "multi-enrichment" pipeline code should be in core shared vs the technology I think?)
 			
 			Optional<EnrichmentControlMetadataBean> custom_config =  doc_schema.custom_deduplication_configs().stream().findFirst();
 			custom_config.ifPresent(cfg -> {
@@ -206,8 +206,9 @@ public class DefaultDedupEnrichmentService implements IEnrichmentBatchModule {
 
 		// Wait for it to finsh
 		
-		//TODO: add timestamps to annotation
-		//TODO: need to ensure that object gets added with overwrite existing: true
+		//TODO (ALEPH-20): add timestamps to annotation
+		//TODO (ALEPH-20): need to ensure that object gets added with overwrite existing: true (in the contexts)
+		//TODO (ALEPH-20): support different timestamp fields for the different buckets
 				
 		final Iterator<JsonNode> cursor = dedup_res.join();
 		

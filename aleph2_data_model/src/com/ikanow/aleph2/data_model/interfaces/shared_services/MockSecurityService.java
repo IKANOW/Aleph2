@@ -64,7 +64,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Collections.emptyList();
+		return Arrays.asList(this);
 	}
 
 	/* (non-Javadoc)

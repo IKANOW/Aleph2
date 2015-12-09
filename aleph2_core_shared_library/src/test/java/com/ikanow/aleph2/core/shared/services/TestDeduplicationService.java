@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.Before;
@@ -45,7 +46,9 @@ import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule.ProcessingStage;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -65,7 +68,7 @@ import com.typesafe.config.ConfigValueFactory;
 import fj.data.Either;
 import fj.data.Validation;
 
-public class TestDefaultDedupEnrichmentService {
+public class TestDeduplicationService {
 	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
 	@Inject 
@@ -103,7 +106,7 @@ public class TestDefaultDedupEnrichmentService {
 						.done().get()
 						);
 				
-				final DefaultDedupEnrichmentService test_module = new DefaultDedupEnrichmentService();
+				final DeduplicationService test_module = new DeduplicationService();
 				
 				test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
 				
@@ -130,7 +133,7 @@ public class TestDefaultDedupEnrichmentService {
 						.done().get()
 						));
 				
-				final DefaultDedupEnrichmentService test_module = new DefaultDedupEnrichmentService();
+				final DeduplicationService test_module = new DeduplicationService();
 				
 				test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.batch, ProcessingStage.output), Optional.empty());
 				
@@ -168,7 +171,7 @@ public class TestDefaultDedupEnrichmentService {
 					.join()
 					;			
 				
-				final DefaultDedupEnrichmentService test_module = new DefaultDedupEnrichmentService();
+				final DeduplicationService test_module = new DeduplicationService();
 				
 				test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.batch), Optional.empty());
 	
@@ -198,24 +201,24 @@ public class TestDefaultDedupEnrichmentService {
 			
 			// Empty things:
 			
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "test_notpresent"));
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "nested1.test_notpresent"));
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyField(test, "nested2.nested1"));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyField(test, "test_notpresent"));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyField(test, "nested1.test_notpresent"));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyField(test, "nested2.nested1"));
 			
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("test_notpresent", "test_notpresent2")));
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("nested1.test_notpresent")));
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("nested2.nested1")));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyFields(test, Arrays.asList("test_notpresent", "test_notpresent2")));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyFields(test, Arrays.asList("nested1.test_notpresent")));
+			assertEquals(Optional.empty(), DeduplicationService.extractKeyFields(test, Arrays.asList("nested2.nested1")));
 			
 			// values:
 			
 			// single field
-			assertEquals("test1", DefaultDedupEnrichmentService.extractKeyField(test, "field1").get().asText());
-			assertEquals("nested1", DefaultDedupEnrichmentService.extractKeyField(test, "nested1.nested_field").get().asText());
+			assertEquals("test1", DeduplicationService.extractKeyField(test, "field1").get().asText());
+			assertEquals("nested1", DeduplicationService.extractKeyField(test, "nested1.nested_field").get().asText());
 			
 			// multi-field
 			final String expected = "{\"field1\":\"test1\",\"nested1.nested_field\":\"nested1\"}";
-			assertEquals(expected, DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field")).get().toString());
-			assertEquals(expected, DefaultDedupEnrichmentService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field", "field3")).get().toString());
+			assertEquals(expected, DeduplicationService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field")).get().toString());
+			assertEquals(expected, DeduplicationService.extractKeyFields(test, Arrays.asList("field1", "nested1.nested_field", "field3")).get().toString());
 		}
 		// Similar but with a stream of objects
 		{
@@ -230,21 +233,21 @@ public class TestDefaultDedupEnrichmentService {
 							test2
 							)
 							.stream()
-							.map(j -> Tuples._2T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j)))
+							.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
 							.collect(Collectors.toList());
 			
-			assertEquals(Arrays.asList(new TextNode("test1")), DefaultDedupEnrichmentService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DefaultDedupEnrichmentService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
+			assertEquals(Arrays.asList(new TextNode("test1")), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
 		}
 		// Another utility function related to these
 		{
 			final ObjectNode test1 = _mapper.createObjectNode();
 			test1.put("field1", "test1");
 			
-			assertEquals(new TextNode("test1"), DefaultDedupEnrichmentService.getKeyFieldsAgain(test1, Either.left("field1")).get());
-			assertEquals("{\"field1\":\"test1\"}", DefaultDedupEnrichmentService.getKeyFieldsAgain(test1, Either.right(Arrays.asList("field1"))).get().toString());
+			assertEquals(new TextNode("test1"), DeduplicationService.getKeyFieldsAgain(test1, Either.left("field1")).get());
+			assertEquals("{\"field1\":\"test1\"}", DeduplicationService.getKeyFieldsAgain(test1, Either.right(Arrays.asList("field1"))).get().toString());
 		}
 		
 	}
@@ -270,14 +273,14 @@ public class TestDefaultDedupEnrichmentService {
 						test2
 						)
 						.stream()
-						.map(j -> Tuples._2T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j)))
+						.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
 						.collect(Collectors.toList());
 		
 		
 		// single non-nested query
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
-					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_1"));
+					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_1"));
 			
 			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([\"test1a\", \"test2a\"],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
@@ -287,7 +290,7 @@ public class TestDefaultDedupEnrichmentService {
 		// single nested query
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
-					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("nested.nested_1"));
+					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("nested.nested_1"));
 			
 			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([\"nested1\", \"nested2\"],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
@@ -297,14 +300,14 @@ public class TestDefaultDedupEnrichmentService {
 		// single query, no matches
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
-					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_3"));
+					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3"));
 			
 			assertEquals(0, res._2().size());
 		}
 		// multi-query
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
-					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_1", "nested.nested_1"));
+					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_1", "nested.nested_1"));
 			
 			assertEquals("(MultiQueryComponent: limit=(none) sort=(none) op=any_of elements=(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test1a,null))], nested.nested_1=[(equals,(nested1,null))]});(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test2a,null))], nested.nested_1=[(equals,(nested2,null))]}))", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
@@ -315,7 +318,7 @@ public class TestDefaultDedupEnrichmentService {
 		// multi-query, no matches
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
-					DefaultDedupEnrichmentService.getDedupQuery(batch.stream(), Arrays.asList("field_3", "nested.nested_2"));
+					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3", "nested.nested_2"));
 			
 			assertEquals(0, res._2().size());
 		}
@@ -344,28 +347,28 @@ public class TestDefaultDedupEnrichmentService {
 		
 		// Check some very basic time utils
 		{
-			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("d")).get().longValue());
-			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("l")).get().longValue());
-			assertEquals(0L, DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("s")).get().longValue());
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json1.get("err")));;
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(json2.get("err")));;
-			assertEquals(Optional.empty(), DefaultDedupEnrichmentService.getTimestampFromJsonNode(_mapper.createObjectNode())); //(code coverage!)
+			assertEquals(0L, DeduplicationService.getTimestampFromJsonNode(json1.get("d")).get().longValue());
+			assertEquals(0L, DeduplicationService.getTimestampFromJsonNode(json1.get("l")).get().longValue());
+			assertEquals(0L, DeduplicationService.getTimestampFromJsonNode(json2.get("s")).get().longValue());
+			assertEquals(Optional.empty(), DeduplicationService.getTimestampFromJsonNode(json1.get("err")));;
+			assertEquals(Optional.empty(), DeduplicationService.getTimestampFromJsonNode(json2.get("err")));;
+			assertEquals(Optional.empty(), DeduplicationService.getTimestampFromJsonNode(_mapper.createObjectNode())); //(code coverage!)
 		}
 		// Compare sets of 2 json objects
 		{
-			assertTrue(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json2, json1));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json1, json2));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("d", json1, json1));
+			assertTrue(DeduplicationService.newRecordUpdatesOld("d", json2, json1));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("d", json1, json2));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("d", json1, json1));
 			
 			// (new doesn't have field so always false)
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json2, json1));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json1, json2));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("l", json1, json1));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("l", json2, json1));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("l", json1, json2));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("l", json1, json1));
 			
 			// (old doesn't have field so always false)
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json2, json1));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json2));
-			assertFalse(DefaultDedupEnrichmentService.newRecordUpdatesOld("s", json1, json1));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("s", json2, json1));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("s", json1, json2));
+			assertFalse(DeduplicationService.newRecordUpdatesOld("s", json1, json1));
 		}
 		
 	}
@@ -389,15 +392,15 @@ public class TestDefaultDedupEnrichmentService {
 						test2
 						)
 						.stream()
-						.map(j -> Tuples._3T(0L, (IBatchRecord)new DefaultDedupEnrichmentService.MyBatchRecord(j), _mapper.createObjectNode()))
+						.map(j -> Tuples._3T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j), _mapper.createObjectNode()))
 						.collect(Collectors.toList());
 		
 		
-		DefaultDedupEnrichmentService.handleCustomDeduplication(Optional.empty(), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
 		
 		assertEquals(0L, _called_batch.get());
 
-		DefaultDedupEnrichmentService.handleCustomDeduplication(Optional.of(test_module), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
 		
 		assertEquals(2L, _called_batch.get());
 	}
@@ -408,16 +411,16 @@ public class TestDefaultDedupEnrichmentService {
 		final List<String> fields = Arrays.asList("test1", "test2");
 		final String ts_field = "@timestamp";
 		
-		assertEquals(Arrays.asList("_id", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._1());
-		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._2());
-		assertEquals(Arrays.asList("_id", "@timestamp", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._1());
-		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._2());
-		assertEquals(Arrays.asList("_id", "test1", "test2"), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._1());
-		assertEquals(true, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._2());
-		assertEquals(Arrays.asList(), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._1());
-		assertEquals(false, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._2());
-		assertEquals(Arrays.asList(), DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._1());
-		assertEquals(false, DefaultDedupEnrichmentService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._2());
+		assertEquals(Arrays.asList("_id", "test1", "test2"), DeduplicationService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._1());
+		assertEquals(true, DeduplicationService.getIncludeFields(DeduplicationPolicy.leave, fields, ts_field)._2());
+		assertEquals(Arrays.asList("_id", "@timestamp", "test1", "test2"), DeduplicationService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._1());
+		assertEquals(true, DeduplicationService.getIncludeFields(DeduplicationPolicy.update, fields, ts_field)._2());
+		assertEquals(Arrays.asList("_id", "test1", "test2"), DeduplicationService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._1());
+		assertEquals(true, DeduplicationService.getIncludeFields(DeduplicationPolicy.overwrite, fields, ts_field)._2());
+		assertEquals(Arrays.asList(), DeduplicationService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._1());
+		assertEquals(false, DeduplicationService.getIncludeFields(DeduplicationPolicy.custom, fields, ts_field)._2());
+		assertEquals(Arrays.asList(), DeduplicationService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._1());
+		assertEquals(false, DeduplicationService.getIncludeFields(DeduplicationPolicy.custom_update, fields, ts_field)._2());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -446,8 +449,8 @@ public class TestDefaultDedupEnrichmentService {
 		new_json_but_same_time.put("@timestamp", 0L);
 		new_json_but_same_time.put("url", "test");
 		
-		Tuple3<Long, IBatchRecord, ObjectNode> new_record = Tuples._3T(0L, new DefaultDedupEnrichmentService.MyBatchRecord(new_json), _mapper.createObjectNode());
-		Tuple3<Long, IBatchRecord, ObjectNode> new_record_but_same_time = Tuples._3T(0L, new DefaultDedupEnrichmentService.MyBatchRecord(new_json_but_same_time), _mapper.createObjectNode());
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record = Tuples._3T(0L, new DeduplicationService.MyBatchRecord(new_json), _mapper.createObjectNode());
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record_but_same_time = Tuples._3T(0L, new DeduplicationService.MyBatchRecord(new_json_but_same_time), _mapper.createObjectNode());
 		
 		new_record._2().getContent(); //(code coverage!)
 		
@@ -465,7 +468,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.leave,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.leave,
 					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
 					);
 			
@@ -487,7 +490,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.update,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
 					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
 					);
 			
@@ -509,7 +512,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.update,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
 					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
 					);
 			
@@ -531,7 +534,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
 					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
 					);
 			
@@ -553,7 +556,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
 					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
 					);
 			
@@ -575,7 +578,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
 					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
 					);
 			
@@ -597,7 +600,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
 					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
 					);
 			
@@ -619,7 +622,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
 					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
 					);
 			
@@ -641,7 +644,7 @@ public class TestDefaultDedupEnrichmentService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DefaultDedupEnrichmentService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
+			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
 					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
 					);
 			
@@ -657,10 +660,77 @@ public class TestDefaultDedupEnrichmentService {
 
 		
 	}
+
+	////////////////////////////////////////////////////
 	
-	//TODO: test all the static utils
+	@Test
+	public void test_puttingItAllTogether() throws InterruptedException {
+		
+		// 1) Create 2 "context" buckets
+		
+		final DataBucketBean context_bucket1 = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/dedup/context1")
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+										.done().get()
+								)
+							.done().get()
+							)
+				.done().get();
+									
+		final DataBucketBean context_bucket2 =
+				BeanTemplateUtils.clone(context_bucket1)
+					.with(DataBucketBean::full_name, "/dedup/context2")
+				.done();
+		
+		IDocumentService doc_service = _service_context.getDocumentService().get();
+		
+		IDataWriteService<JsonNode> write_context1 = doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket1, Optional.empty(), Optional.empty()).get();
+		IDataWriteService<JsonNode> write_context2 = doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket2, Optional.empty(), Optional.empty()).get();
+		
+		// 2) Fill with 50% duplicates, 50% random records
+		
+		int num_write_records = 500;
+		List<JsonNode> objs_for_context1 = IntStream.range(0, num_write_records).boxed().map(i -> {
+			final ObjectNode obj = _mapper.createObjectNode();
+			obj.put("_id", "id" + i);
+			obj.put("dup", true);
+			obj.put("dup_field", i);
+			obj.put("@timestamp", 0L);
+			return (JsonNode) obj;
+		}).collect(Collectors.toList());
+		
+		List<JsonNode> objs_for_context2 = IntStream.range(0, num_write_records).boxed().map(i -> {
+			final ObjectNode obj = _mapper.createObjectNode();
+			obj.put("_id", "id" + i);
+			obj.put("dup", false);
+			obj.put("dup_field", i);
+			obj.put("@timestamp", 0L);
+			return (JsonNode) obj;
+		}).collect(Collectors.toList());
+		
+		write_context1.storeObjects(objs_for_context1).join();
+		write_context2.storeObjects(objs_for_context2).join();
+		
+		for (;;) {
+			Thread.sleep(250L);
+			if ((write_context1.countObjects().join() >= num_write_records)
+					&&
+					(write_context2.countObjects().join() >= num_write_records))
+			{
+				break;
+			}
+		}
+		assertEquals(500, write_context1.countObjects().join().intValue());
+		assertEquals(500, write_context2.countObjects().join().intValue());
+		
+		// OK wait for these writes to be complete
+	}
 	
-	//TODO: putting it all together
+	//TODO: putting it all together (single + multi, one for each dedup type)
 	
 	////////////////////////////////////////////////////
 	
