@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +39,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
@@ -236,10 +236,10 @@ public class TestDeduplicationService {
 							.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
 							.collect(Collectors.toList());
 			
-			assertEquals(Arrays.asList(new TextNode("test1")), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
+			assertEquals(Arrays.asList(new TextNode("test1"), _mapper.createObjectNode()), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
 		}
 		// Another utility function related to these
 		{
@@ -282,7 +282,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_1"));
 			
-			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([\"test1a\", \"test2a\"],null))]})", res._1().toString());
+			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([\"test1a\", \"test2a\"],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
 			assertEquals(2, res._2().size());
 			assertEquals(Either.left("field_1"), res._3());
@@ -292,7 +292,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("nested.nested_1"));
 			
-			assertEquals("(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([\"nested1\", \"nested2\"],null))]})", res._1().toString());
+			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([\"nested1\", \"nested2\"],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
 			assertEquals(2, res._2().size());
 			assertEquals(Either.left("nested.nested_1"), res._3());
@@ -302,14 +302,14 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3"));
 			
-			assertEquals(0, res._2().size());
+			assertEquals(2, res._2().size());
 		}
 		// multi-query
 		{
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_1", "nested.nested_1"));
 			
-			assertEquals("(MultiQueryComponent: limit=(none) sort=(none) op=any_of elements=(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test1a,null))], nested.nested_1=[(equals,(nested1,null))]});(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test2a,null))], nested.nested_1=[(equals,(nested2,null))]}))", res._1().toString());
+			assertEquals("(MultiQueryComponent: limit=2147483647 sort=(none) op=any_of elements=(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test1a,null))], nested.nested_1=[(equals,(nested1,null))]});(SingleQueryComponent: limit=(none) sort=(none) op=all_of element=(none) extra={field_1=[(equals,(test2a,null))], nested.nested_1=[(equals,(nested2,null))]}))", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
 			assertEquals(2, res._2().size());
 			assertEquals(Either.right(Arrays.asList("field_1", "nested.nested_1")), res._3());
@@ -320,7 +320,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3", "nested.nested_2"));
 			
-			assertEquals(0, res._2().size());
+			assertEquals(2, res._2().size());
 		}
 		
 	}
@@ -456,12 +456,13 @@ public class TestDeduplicationService {
 		
 		final TextNode key = new TextNode("url");
 		
-		LinkedHashMap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map = new LinkedHashMap<>();
-		mutable_obj_map.put(new TextNode("never_changed"), new_record);
+		LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map = LinkedHashMultimap.create();
 		
 		// Simple case Leave policy
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -484,6 +485,8 @@ public class TestDeduplicationService {
 		// Simple case update policy - time updates
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -506,8 +509,9 @@ public class TestDeduplicationService {
 		// Simple case update policy - times the same
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
-			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
@@ -528,6 +532,8 @@ public class TestDeduplicationService {
 		// overwrite
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -550,6 +556,8 @@ public class TestDeduplicationService {
 		//(check ignores times)
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -572,6 +580,8 @@ public class TestDeduplicationService {
 		// custom
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -594,6 +604,8 @@ public class TestDeduplicationService {
 		//(check ignores times)
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -616,6 +628,8 @@ public class TestDeduplicationService {
 		// Simple case *custom* update policy - time updates
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -638,6 +652,8 @@ public class TestDeduplicationService {
 		// Simple case *custom* update policy - times the same
 		{
 			//(reset)
+			mutable_obj_map.clear();
+			mutable_obj_map.put(new TextNode("never_changed"), new_record);
 			mutable_obj_map.put(new TextNode("url"), new_record);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
@@ -657,14 +673,145 @@ public class TestDeduplicationService {
 			// Object removed from mutable map
 			assertEquals(1, mutable_obj_map.size());
 		}
-
-		
 	}
 
 	////////////////////////////////////////////////////
 	
+	protected final int num_write_records = 500;
+	
+	//TODO: putting it all together (single + multi, one for each dedup type)
+	//TODO: also want my bucket vs separate bucket
+	
+	@SuppressWarnings("unchecked")
 	@Test
 	public void test_puttingItAllTogether() throws InterruptedException {
+		
+		test_puttingItAllTogether_genericPhase();
+		
+		// Generic intialization:
+		
+		final String ts_field = "@timestamp";
+		
+		System.out.println("STARTING DEDUP TEST NOW: " + new Date());
+
+		// Test 1* LEAVE
+		
+		// TEST 1a: LEAVE, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit "num_write_records" times (50% of them are duplicates)
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST 1b: LEAVE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit "num_write_records" times (50% of them are duplicates)
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		// TEST 1c: LEAVE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit "num_write_records" times (50% of them are duplicates)
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		
+		//TODO 1c/1d - single field
+
+		//TODO: same 4 tests for update/overwrite/custom/custom_update
+		
+		// Final error case:
+		
+		// TEST Xa: LEAVE, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("missing_dup_field", "missing_dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Writes everything twice
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST Xc: LEAVE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("missing_alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit "num_write_records" times (50% of them are duplicates)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		
+		System.out.println("COMPLETING DEDUP TEST NOW: " + new Date());
+	}
+	
+	public void test_puttingItAllTogether_genericPhase() throws InterruptedException {
 		
 		// 1) Create 2 "context" buckets
 		
@@ -686,6 +833,10 @@ public class TestDeduplicationService {
 					.with(DataBucketBean::full_name, "/dedup/context2")
 				.done();
 		
+		_service_context.getCoreManagementDbService().getDataBucketStore().storeObject(context_bucket1, true).join();
+		_service_context.getCoreManagementDbService().getDataBucketStore().storeObject(context_bucket2, true).join();
+		assertEquals(2, _service_context.getCoreManagementDbService().getDataBucketStore().countObjects().join().intValue());
+		
 		IDocumentService doc_service = _service_context.getDocumentService().get();
 		
 		IDataWriteService<JsonNode> write_context1 = doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket1, Optional.empty(), Optional.empty()).get();
@@ -693,12 +844,12 @@ public class TestDeduplicationService {
 		
 		// 2) Fill with 50% duplicates, 50% random records
 		
-		int num_write_records = 500;
 		List<JsonNode> objs_for_context1 = IntStream.range(0, num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
 			obj.put("_id", "id" + i);
 			obj.put("dup", true);
 			obj.put("dup_field", i);
+			obj.put("alt_dup_field", i);
 			obj.put("@timestamp", 0L);
 			return (JsonNode) obj;
 		}).collect(Collectors.toList());
@@ -708,12 +859,15 @@ public class TestDeduplicationService {
 			obj.put("_id", "id" + i);
 			obj.put("dup", false);
 			obj.put("dup_field", i);
+			obj.put("alt_dup_field", -i);
 			obj.put("@timestamp", 0L);
 			return (JsonNode) obj;
 		}).collect(Collectors.toList());
 		
 		write_context1.storeObjects(objs_for_context1).join();
 		write_context2.storeObjects(objs_for_context2).join();
+		
+		// OK wait for these writes to be complete
 		
 		for (;;) {
 			Thread.sleep(250L);
@@ -726,13 +880,52 @@ public class TestDeduplicationService {
 		}
 		assertEquals(500, write_context1.countObjects().join().intValue());
 		assertEquals(500, write_context2.countObjects().join().intValue());
-		
-		// OK wait for these writes to be complete
 	}
 	
-	//TODO: putting it all together (single + multi, one for each dedup type)
+	public void test_puttingItAllTogether_runTest(final DataBucketBean write_bucket, final IEnrichmentModuleContext enrich_context) {
+		// OK now create a new batch of objects
+		
+		List<Tuple2<Long, IBatchRecord>> imcoming_objects = IntStream.range(0, 2*num_write_records).boxed().map(i -> {
+			final ObjectNode obj = _mapper.createObjectNode();
+			obj.put("_id", "id" + i);
+			obj.put("dup", true);
+			obj.put("dup_field", i);
+			obj.put("alt_dup_field", i);
+			obj.put("@timestamp", (0 == (i % 2)) ? 0L : 1L); // (ie alternate new with old - in some cases the old won't update)
+			return (JsonNode) obj;
+		})		
+		.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
+		.collect(Collectors.toList());
+		
+		// Other things we need:
+		
+		IEnrichmentBatchModule test_module = new DeduplicationService();
+		
+		final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get();		
+		
+		// Initialize
+		
+		test_module.onStageInitialize(enrich_context, write_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+		
+		// Run
+		
+		test_module.onObjectBatch(imcoming_objects.stream(), Optional.empty(), Optional.empty());
+	}
 	
 	////////////////////////////////////////////////////
+	
+	@SuppressWarnings("unchecked")
+	public IEnrichmentModuleContext getMockEnrichmentContext() {
+		
+		final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+		
+		Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+		
+		Mockito.when(enrich_context.emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class)))
+					.thenReturn(Validation.success(_mapper.createObjectNode()));
+		
+		return enrich_context;
+	}
 	
 	public static DataBucketBean getDocBucket(final String name, final DataSchemaBean.DocumentSchemaBean doc_schema) {
 		return BeanTemplateUtils.build(DataBucketBean.class)

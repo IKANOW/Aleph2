@@ -19,11 +19,11 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -187,28 +188,33 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
 				getDedupQuery(batch, dedup_fields);
 		
-		final LinkedHashMap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map = 
-				fieldinfo_dedupquery_keyfields._2().stream().collect(Collectors.toMap(
-						t2 -> t2._1(), 
-						t2 -> Tuples._3T(t2._2()._1(), t2._2()._2(), _mapper.createObjectNode()), 
-						(acc1, acc2) -> acc1, 
-						() -> new LinkedHashMap<>())
-				);				
+		final LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map =				
+				fieldinfo_dedupquery_keyfields._2().stream().collect(						
+						Collector.of(
+							LinkedHashMultimap::create, 
+							(acc, t2) -> acc.put(t2._1(), Tuples._3T(t2._2()._1(), t2._2()._2(), _mapper.createObjectNode())), 
+							(map1, map2) -> {
+								map1.putAll(map2);
+								return map1;
+							}));						
 
 		// Get duplicate results
 		
 		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(policy, dedup_fields, _timestamp_field.get());
-		
+
 		final CompletableFuture<Iterator<JsonNode>> dedup_res =
-				fieldinfo_dedupquery_keyfields._2().isEmpty() // (don't launch query unless the query is non-trivial)
-				? CompletableFuture.completedFuture(Collections.<JsonNode>emptyList().iterator())
-				: _dedup_context.get().getObjectsBySpec(fieldinfo_dedupquery_keyfields._1(), fields_include._1(), fields_include._2()).thenApply(cursor -> cursor.iterator());
+				(fieldinfo_dedupquery_keyfields._2().size() == mutable_obj_map.get(_mapper.createObjectNode()).size())
+				? 
+				CompletableFuture.completedFuture(Collections.<JsonNode>emptyList().iterator())
+				: 
+				_dedup_context.get().getObjectsBySpec(fieldinfo_dedupquery_keyfields._1(), fields_include._1(), fields_include._2()).thenApply(cursor -> cursor.iterator());
 
 		// Wait for it to finsh
 		
 		//TODO (ALEPH-20): add timestamps to annotation
 		//TODO (ALEPH-20): need to ensure that object gets added with overwrite existing: true (in the contexts)
 		//TODO (ALEPH-20): support different timestamp fields for the different buckets
+		//TODO (ALEPH-20): really need to support >1 current job (Really really longer term you should be able to decide what objects you want and what you don't)
 				
 		final Iterator<JsonNode> cursor = dedup_res.join();
 		
@@ -217,7 +223,12 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		Optionals.streamOf(cursor, true)
 					.forEach(ret_obj -> {
 						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
-						final Optional<Tuple3<Long, IBatchRecord, ObjectNode>> matching_record = maybe_key.map(key -> mutable_obj_map.get(key));
+						final Optional<Tuple3<Long, IBatchRecord, ObjectNode>> matching_record = 
+								maybe_key.flatMap(key -> mutable_obj_map.get(key).stream().findFirst()); //TODO (ALEPH-20): better support here
+
+						//DEBUG
+						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
+						
 						matching_record.ifPresent(record -> 
 							handleDuplicateRecord(policy, _context.get(), _custom_handler.optional(), _timestamp_field.get(), record, ret_obj, maybe_key.get(), mutable_obj_map));
 					});
@@ -243,19 +254,19 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final String timestamp_field,
 			final Tuple3<Long, IBatchRecord, ObjectNode> new_record, final JsonNode old_record,
 			final JsonNode key,
-			final LinkedHashMap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map
+			final LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map
 			)
 	{
 		Patterns.match(policy).andAct()
 				.when(p -> p == DeduplicationPolicy.leave, __ -> {
-					mutable_obj_map.remove(key); //(drop new record)
+					mutable_obj_map.removeAll(key); //(drop new record)
 				})
 				.when(p -> p == DeduplicationPolicy.update, __ -> {
 					if (newRecordUpdatesOld(timestamp_field, new_record._2().getJson(), old_record)) {
 						new_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
 					}
 					else {
-						mutable_obj_map.remove(key); //(drop new record)				
+						mutable_obj_map.removeAll(key); //(drop new record)				
 					}
 				})
 				.when(p -> p == DeduplicationPolicy.overwrite, __ -> {
@@ -264,15 +275,15 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
 					if (newRecordUpdatesOld(timestamp_field, new_record._2().getJson(), old_record)) {
-						mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)
+						mutable_obj_map.removeAll(key); // (since the "final step" logic is responsible for calling the update code)
 						handleCustomDeduplication(custom_handler, new_record, old_record, key);
 					}
 					else {
-						mutable_obj_map.remove(key); //(drop new record)
+						mutable_obj_map.removeAll(key); //(drop new record)
 					}
 				})
 				.otherwise(__ -> {
-					mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)		
+					mutable_obj_map.removeAll(key); // (since the "final step" logic is responsible for calling the update code)		
 					handleCustomDeduplication(custom_handler, new_record, old_record, key);
 				});
 	}
@@ -366,11 +377,12 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 * @return a 3-tuple containing: the query to apply, the list of records indexed by the key, the field-or-fields that form the key
 	 */
 	protected static Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> getDedupQuery(final Stream<Tuple2<Long, IBatchRecord>> batch, final List<String> dedup_fields) {
+		
 		if (1 == dedup_fields.size()) { // this is a simpler case
 			final String key_field = dedup_fields.stream().findFirst().get();
 			final List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> field_info = extractKeyField(batch, key_field);
 			return Tuples._3T(
-					CrudUtils.allOf().withAny(key_field, field_info.stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()))
+					CrudUtils.allOf().withAny(key_field, field_info.stream().map(t2 -> t2._1().toString()).collect(Collectors.toList())).limit(Integer.MAX_VALUE)
 					,
 					field_info
 					,
@@ -392,7 +404,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					})
 					;
 			
-			final QueryComponent<JsonNode> query_dedup = CrudUtils.anyOf(elements);
+			final QueryComponent<JsonNode> query_dedup = CrudUtils.anyOf(elements).limit(Integer.MAX_VALUE);
 			
 			return Tuples._3T(query_dedup, field_info, Either.right(dedup_fields));
 		}		
@@ -419,7 +431,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> extractKeyField(final Stream<Tuple2<Long, IBatchRecord>> in, final String key_field) {
 		return in
-				.flatMap(x -> extractKeyField(x._2().getJson(), key_field).map(j -> Tuples._2T(j, x)).map(Stream::of).orElse(Stream.empty()))
+				.map(x -> Tuples._2T(extractKeyField(x._2().getJson(), key_field).orElseGet(() -> _mapper.createObjectNode()), x))
 				.collect(Collectors.toList())
 				;
 	}
@@ -429,8 +441,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 * @param key_field
 	 * @return
 	 */
-	protected static  Optional<JsonNode> extractKeyField(final JsonNode in, final String key_field) {
-		return JsonUtils.getProperty(key_field, in).filter(j -> j.isTextual());
+	protected static Optional<JsonNode> extractKeyField(final JsonNode in, final String key_field) {
+		return JsonUtils.getProperty(key_field, in).filter(j -> j.isValueNode());
 	}
 
 	
@@ -441,7 +453,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> extractKeyFields(final Stream<Tuple2<Long, IBatchRecord>> in, final List<String> key_fields) {
 		return in
-				.flatMap(x -> extractKeyFields(x._2().getJson(), key_fields).map(j -> Tuples._2T(j, x)).map(Stream::of).orElse(Stream.empty()))
+				.map(x -> Tuples._2T(extractKeyFields(x._2().getJson(), key_fields).orElseGet(() -> _mapper.createObjectNode()), x))
 				.collect(Collectors.toList())
 				;
 	}
