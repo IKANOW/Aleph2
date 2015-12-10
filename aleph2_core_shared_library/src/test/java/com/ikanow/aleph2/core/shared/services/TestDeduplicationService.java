@@ -679,9 +679,6 @@ public class TestDeduplicationService {
 	
 	protected final int num_write_records = 500;
 	
-	//TODO: putting it all together (single + multi, one for each dedup type)
-	//TODO: also want my bucket vs separate bucket
-	
 	@SuppressWarnings("unchecked")
 	@Test
 	public void test_puttingItAllTogether() throws InterruptedException {
@@ -694,7 +691,7 @@ public class TestDeduplicationService {
 		
 		System.out.println("STARTING DEDUP TEST NOW: " + new Date());
 
-		// Test 1* LEAVE
+		// Test 1: LEAVE
 		
 		// TEST 1a: LEAVE, MULTI-FIELD, MULTI-BUCKET CONTEXT
 		{
@@ -758,10 +755,454 @@ public class TestDeduplicationService {
 			// Should have called emit "num_write_records" times (50% of them are duplicates)
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}		
+		// TEST 1d: LEAVE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit "num_write_records" times (50% of them are duplicates)
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
 		
-		//TODO 1c/1d - single field
-
-		//TODO: same 4 tests for update/overwrite/custom/custom_update
+		// Test 2: OVERWRITE
+		
+		// TEST 2a: OVERWRITE, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (50% of them are duplicates but they get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST 2b: OVERWRITE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (50% of them are duplicates but they get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		// TEST 2c: OVERWRITE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (50% of them are duplicates but they get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST 2d: OVERWRITE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (50% of them are duplicates but they get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		
+		// Test 3: UPDATE
+		
+		// TEST 3a: UPDATE, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 1.5*"num_write_records" times (50% of them are duplicates but they 50% of those get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(3*num_write_records/2)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST 3b: UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 1.5*"num_write_records" times (50% of them are duplicates but they 50% of those get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(3*num_write_records/2)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		// TEST 3c: UPDATE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 1.5*"num_write_records" times (50% of them are duplicates but they 50% of those get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(3*num_write_records/2)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}		
+		// TEST 3d: UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 1.5*"num_write_records" times (50% of them are duplicates but they 50% of those get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(3*num_write_records/2)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		
+		// Test 4: CUSTOM
+		
+		// TEST 4a: CUSTOM, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(2*num_write_records, _called_batch.get());
+		}		
+		// TEST 4b: CUSTOM, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(2*num_write_records, _called_batch.get());
+		}
+		// TEST 4c: CUSTOM, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(2*num_write_records, _called_batch.get());
+		}		
+		// TEST 4d: CUSTOM, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(2*num_write_records, _called_batch.get());
+		}
+		
+		// Test 5: CUSTOM
+		
+		// TEST 5a: CUSTOM UPDATE, MULTI-FIELD, MULTI-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(num_write_records, _called_batch.get());
+		}		
+		// TEST 5b: CUSTOM UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field", "dup"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(num_write_records, _called_batch.get());
+		}
+		// TEST 5c: CUSTOM UPDATE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/c",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(num_write_records, _called_batch.get());
+		}		
+		// TEST 5d: CUSTOM UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			assertEquals(num_write_records, _called_batch.get());
+		}
 		
 		// Final error case:
 		
@@ -880,6 +1321,19 @@ public class TestDeduplicationService {
 		}
 		assertEquals(500, write_context1.countObjects().join().intValue());
 		assertEquals(500, write_context2.countObjects().join().intValue());
+		
+		// OK now need to create a shared library bean and insert it
+		
+		final SharedLibraryBean bean = 
+				BeanTemplateUtils.build(SharedLibraryBean.class)
+					.with(SharedLibraryBean::path_name, "/app/aleph2/library/test.jar")
+					.with(SharedLibraryBean::batch_enrichment_entry_point, TestDedupEnrichmentModule.class.getName())
+				.done().get();
+		
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get()
+			.getSharedLibraryStore().storeObject(bean, true)
+			.join()
+			;					
 	}
 	
 	public void test_puttingItAllTogether_runTest(final DataBucketBean write_bucket, final IEnrichmentModuleContext enrich_context) {

@@ -62,6 +62,8 @@ import com.ikanow.aleph2.data_model.utils.SetOnce;
 
 import fj.data.Either;
 
+//TODO (ALEPH-20): need to ensure that object gets added with overwrite existing: true (in the contexts)
+
 /** An enrichment module that will perform deduplication using the provided document_schema
  * @author Alex
  */
@@ -211,10 +213,10 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 
 		// Wait for it to finsh
 		
+		//TODO (ALEPH-20): various options for inserting _ids
 		//TODO (ALEPH-20): add timestamps to annotation
-		//TODO (ALEPH-20): need to ensure that object gets added with overwrite existing: true (in the contexts)
 		//TODO (ALEPH-20): support different timestamp fields for the different buckets
-		//TODO (ALEPH-20): really need to support >1 current job (Really really longer term you should be able to decide what objects you want and what you don't)
+		//TODO (ALEPH-20): really need to support >1 current job (Really really longer term you should be able to decide what objects you want and what you don't) <- don't remember what i meant here
 				
 		final Iterator<JsonNode> cursor = dedup_res.join();
 		
