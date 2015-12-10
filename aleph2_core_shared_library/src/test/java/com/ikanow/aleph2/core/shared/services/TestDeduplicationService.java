@@ -691,6 +691,25 @@ public class TestDeduplicationService {
 		
 		System.out.println("STARTING DEDUP TEST NOW: " + new Date());
 
+		// Test 0: NO DEDUP
+		{
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/write/a",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (no dedup)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+		}
+		
 		// Test 1: LEAVE
 		
 		// TEST 1a: LEAVE, MULTI-FIELD, MULTI-BUCKET CONTEXT

@@ -43,12 +43,26 @@ public interface IDataWriteService<O> {
 	 */
 	CompletableFuture<Supplier<Object>> storeObject(final O new_object);
 	
+	/** Stores the specified object in the database, failing if it is already present
+	 *  If the "_id" field of the object is not set then it is assigned
+	 * @param new_object
+	 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent). Some technologies may not support replacing, in which case it is ignored.
+	 * @return A future containing the _id (filled in if not present in the object) - accessing the future will also report on errors via ExecutionException 
+	 */
+	CompletableFuture<Supplier<Object>> storeObject(final O new_object, final boolean replace_if_present);
+	
 	/**
 	 * @param objects - a list of objects to insert, not handling duplicates
 	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
 	 */
 	CompletableFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<O> new_objects);
 	
+	/**
+	 * @param objects - a list of objects to insert, not handling duplicates
+	* @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent). Some technologies may not support replacing, in which case it is ignored.
+	 * @return A future containing the list of _ids (filled in if not present in the object), and the number of docs retrieved - accessing the future will also report on errors via ExecutionException 
+	 */
+	CompletableFuture<Tuple2<Supplier<List<Object>>, Supplier<Long>>> storeObjects(final List<O> new_objects, final boolean replace_if_present);
 	
 	//////////////////////////////////////////////////////
 	
@@ -94,13 +108,23 @@ public interface IDataWriteService<O> {
 		
 		/** Efficiently store the list of objects with the subservice's batching parameters
 		 * @param new_objects - the list of objects to store
-		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent)
+		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent). Some technologies may not support replacing, in which case it is ignored.
 		 */
-		void storeObjects(final List<O> new_objects);
+		void storeObjects(final List<O> new_objects, final boolean replace_if_present);
 		
 		/** Efficiently store the single object with the subservice's batching parameters
 		 * @param new_object - the single object to store efficiently
-		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent)
+		 * @param replace_if_present - if true, will overwrite existing elements; if false may error in which case the behavior of other objects is undefined (but this is safe to use if using UUIDs for _id or ommitting _id, which is equivalent). Some technologies may not support replacing, in which case it is ignored.
+		 */
+		void storeObject(final O new_object, final boolean replace_if_present);
+		
+		/** Efficiently store the list of objects with the subservice's batching parameters (may silently error if objects exist)
+		 * @param new_objects - the list of objects to store
+		 */
+		void storeObjects(final List<O> new_objects);
+		
+		/** Efficiently store the single object with the subservice's batching parameters (may silently error if objects exist)
+		 * @param new_object - the single object to store efficiently
 		 */
 		void storeObject(final O new_object);
 		

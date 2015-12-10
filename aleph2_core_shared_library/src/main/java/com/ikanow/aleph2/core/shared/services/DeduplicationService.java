@@ -175,7 +175,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final Optional<JsonNode> grouping_key)
 	{
 		if ((null == _doc_schema.get().deduplication_policy())
-				&& Optionals.ofNullable(_doc_schema.get().deduplication_fields()).isEmpty())
+				&& Optionals.ofNullable(_doc_schema.get().deduplication_fields()).isEmpty()
+				&& Optionals.ofNullable(_doc_schema.get().deduplication_contexts()).isEmpty()
+				)
 		{ 
 			// no deduplication, generally shouldn't be here...
 			//.. but if we are, make do the best we can

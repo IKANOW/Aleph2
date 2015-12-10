@@ -89,8 +89,6 @@ import com.typesafe.config.ConfigValueFactory;
 import fj.Unit;
 import fj.data.Either;
 
-//TODO: ALEPH-12 wire up module config via signature
-
 @SuppressWarnings("unused")
 public class HarvestContext implements IHarvestContext {
 	protected static final Logger _logger = LogManager.getLogger();	
@@ -104,8 +102,9 @@ public class HarvestContext implements IHarvestContext {
 	
 	protected static class MutableState {
 		final SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		final SetOnce<Boolean> doc_write_mode = new SetOnce<>();
 		final SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
-		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
+		final SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<Boolean> initialized_direct_output = new SetOnce<>();		
 	};
@@ -160,6 +159,19 @@ public class HarvestContext implements IHarvestContext {
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
 	public boolean setBucket(DataBucketBean this_bucket) {
+		// (also check if we're in "document mode" (ie can overwrite existing docs))
+		
+		_mutable_state.doc_write_mode.set(
+				Optionals.of(() -> this_bucket.data_schema().document_schema())
+					.filter(ds -> Optional.ofNullable(ds.enabled()).orElse(true))
+					.filter(ds -> (null != ds.deduplication_policy()) 
+									|| !Optionals.ofNullable(ds.deduplication_fields()).isEmpty()
+									|| !Optionals.ofNullable(ds.deduplication_contexts()).isEmpty()
+							) // (ie dedup fields set)
+					.isPresent()
+				)
+				;
+		
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
@@ -222,7 +234,7 @@ public class HarvestContext implements IHarvestContext {
 			// Get bucket 
 			
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
-			_mutable_state.bucket.set(retrieve_bucket.get());
+			this.setBucket(retrieve_bucket.get()); //(also checks on dedup setting)
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
 			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
@@ -807,16 +819,16 @@ public class HarvestContext implements IHarvestContext {
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
 		
 		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(obj_json);
+			_batch_index_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		else if (_crud_index_service.isPresent()){ // (super slow)
-			_crud_index_service.get().storeObject(obj_json);
+			_crud_index_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		if (_batch_storage_service.isPresent()) {
-			_batch_storage_service.get().storeObject(obj_json);
+			_batch_storage_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_crud_storage_service.get().storeObject(obj_json);
+			_crud_storage_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 	}
 

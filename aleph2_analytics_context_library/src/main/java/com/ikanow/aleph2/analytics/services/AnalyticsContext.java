@@ -124,6 +124,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 	
 	protected static class MutableState {
 		SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		SetOnce<Boolean> doc_write_mode = new SetOnce<>();
 		SetOnce<AnalyticThreadJobBean> job = new SetOnce<>();
 		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
@@ -186,6 +187,19 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
 	public boolean setBucket(final DataBucketBean this_bucket) {
+		// (also check if we're in "document mode" (ie can overwrite existing docs))
+		
+		_mutable_state.doc_write_mode.set(
+				Optionals.of(() -> this_bucket.data_schema().document_schema())
+					.filter(ds -> Optional.ofNullable(ds.enabled()).orElse(true))
+					.filter(ds -> (null != ds.deduplication_policy()) 
+									|| !Optionals.ofNullable(ds.deduplication_fields()).isEmpty()
+									|| !Optionals.ofNullable(ds.deduplication_contexts()).isEmpty()
+							) // (ie dedup fields set)
+					.isPresent()
+				)
+				;
+		
 		return _mutable_state.bucket.set(this_bucket);
 	}
 	
@@ -268,7 +282,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			// Get bucket 
 
 			final BeanTemplate<DataBucketBean> retrieve_bucket = BeanTemplateUtils.from(parsed_config.getString(__MY_BUCKET_ID), DataBucketBean.class);
-			_mutable_state.bucket.set(retrieve_bucket.get());
+			this.setBucket(retrieve_bucket.get()); //(also checks on dedup setting)
 			final BeanTemplate<SharedLibraryBean> retrieve_library = BeanTemplateUtils.from(parsed_config.getString(__MY_TECH_LIBRARY_ID), SharedLibraryBean.class);
 			_mutable_state.technology_config.set(retrieve_library.get());
 			if (parsed_config.hasPath(__MY_MODULE_LIBRARY_ID)) {
@@ -1149,16 +1163,16 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 		
 		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(obj_json);
+			_batch_index_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		else if (_crud_index_service.isPresent()){ // (super slow)
-			_crud_index_service.get().storeObject(obj_json);
+			_crud_index_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		if (_batch_storage_service.isPresent()) {
-			_batch_storage_service.get().storeObject(obj_json);
+			_batch_storage_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_crud_storage_service.get().storeObject(obj_json);
+			_crud_storage_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		
 		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
