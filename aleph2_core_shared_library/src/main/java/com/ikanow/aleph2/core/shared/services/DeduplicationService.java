@@ -104,7 +104,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	@Override
 	public void onStageInitialize(final IEnrichmentModuleContext context,
 			final DataBucketBean bucket, 
-			final EnrichmentControlMetadataBean control,
+			final EnrichmentControlMetadataBean dedup_control,
 			final Tuple2<ProcessingStage, ProcessingStage> previous_next,
 			final Optional<List<String>> next_grouping_fields)
 	{
@@ -162,7 +162,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				entry_point.ifPresent(Lambdas.wrap_consumer_u(ep -> 
 					_custom_handler.set((IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance())));
 
-				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(context, bucket, control, previous_next, next_grouping_fields));
+				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(context, bucket, cfg, previous_next, next_grouping_fields));
 			});
 		}
 	}

@@ -95,7 +95,9 @@ public class TestDeduplicationService {
 
 		try {
 			// Some globals
-			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get();
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+					.done().get();
 			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
 			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
 			
@@ -127,6 +129,7 @@ public class TestDeduplicationService {
 							.with(DocumentSchemaBean::custom_deduplication_configs,
 									Arrays.asList(
 											BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+												.with(EnrichmentControlMetadataBean::name, "custom_test")
 												.with(EnrichmentControlMetadataBean::entry_point, TestDedupEnrichmentModule.class.getName())
 											.done().get()										
 											)
@@ -153,6 +156,7 @@ public class TestDeduplicationService {
 							.with(DocumentSchemaBean::custom_deduplication_configs,
 									Arrays.asList(
 											BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+												.with(EnrichmentControlMetadataBean::name, "custom_test")
 												.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 											.done().get()										
 											)
@@ -991,6 +995,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1022,6 +1027,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1054,6 +1060,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1085,6 +1092,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1120,6 +1128,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1151,6 +1160,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1183,6 +1193,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1214,6 +1225,7 @@ public class TestDeduplicationService {
 						.with(DocumentSchemaBean::custom_deduplication_configs,
 								Arrays.asList(
 										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
 											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
 										.done().get()										
 										)
@@ -1389,7 +1401,9 @@ public class TestDeduplicationService {
 		
 		IEnrichmentBatchModule test_module = new DeduplicationService();
 		
-		final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get();		
+		final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "custom_test")
+				.done().get();		
 		
 		// Initialize
 		
@@ -1450,7 +1464,8 @@ public class TestDeduplicationService {
 		public void onStageInitialize(IEnrichmentModuleContext context,
 				DataBucketBean bucket, EnrichmentControlMetadataBean control,
 				Tuple2<ProcessingStage, ProcessingStage> previous_next,
-				Optional<List<String>> next_grouping_fields) {
+				Optional<List<String>> next_grouping_fields) {			
+			assertEquals("custom_test", control.name());			
 		}
 
 		@Override
