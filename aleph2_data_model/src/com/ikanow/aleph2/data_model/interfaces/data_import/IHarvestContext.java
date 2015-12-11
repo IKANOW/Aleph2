@@ -95,14 +95,18 @@ public interface IHarvestContext extends IUnderlyingService {
 	// HARVESTER TECHNOLOGY ONLY 
 	
 	/** (HarvesterTechnology only) A list of JARs that can be copied to an external process (eg Hadoop job) to provide the result client access to this context (and other services)
-	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
+	 * Can't call getHarvestContextSignature/getHarvestContextLibraries with different 'services' parameter
+	 * Can't call getUnderlyingArtefacts without having called getHarvestContextSignature/getHarvestContextLibraries
+	 * @param services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
 	List<String> getHarvestContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 	
 	/** (HarvesterTechnology only) This string should be passed into ContextUtils.getHarvestContext to retrieve this class from within external clients
+	 * Can't call getHarvestContextSignature/getHarvestContextLibraries with different 'services' parameter
+	 * Can't call getUnderlyingArtefacts without having called getHarvestContextSignature/getHarvestContextLibraries
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
+	 * @param services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getHarvestContext
 	 */
 	String getHarvestContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);

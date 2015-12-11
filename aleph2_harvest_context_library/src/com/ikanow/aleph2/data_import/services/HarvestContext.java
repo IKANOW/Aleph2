@@ -452,59 +452,21 @@ public class HarvestContext implements IHarvestContext {
 		// 3) Any libraries associated with the services		
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
-			// This very JAR			
-			final String this_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(this.getClass(), "");	
-			});
 			
-			// Data model			
-			final String data_model_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(_service_context.getClass(), "");	
-			});
+			if (!_mutable_state.service_manifest_override.isSet()) {
+				getHarvestContextSignature(_mutable_state.bucket.optional(), services);
+			}
 			
-			// Libraries associated with services:
-			final Set<String> user_service_class_files = services.map(set -> {
-				return set.stream()
-						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
-						.filter(service -> service.isPresent())
-						.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
-						.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
-						.collect(Collectors.toSet());
-			})
-			.orElse(Collections.emptySet());
-			
-			// Mandatory services
-			final Set<String> mandatory_service_class_files =
-						Arrays.asList(
-								_distributed_services.getUnderlyingArtefacts(),
-								_service_context.getStorageService().getUnderlyingArtefacts(),
-								_service_context.getSecurityService().getUnderlyingArtefacts(),
-								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
-								)
+			// Already registered 
+			final Set<String> all_service_class_files =
+					this.getUnderlyingArtefacts()
 							.stream()
-							.flatMap(x -> x.stream())
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 							.collect(Collectors.toSet());
 			
-			if (_mutable_state.bucket.isSet()) {
-				if (hasSearchIndexOutput(_mutable_state.bucket.get())) {
-					_service_context.getSearchIndexService().ifPresent(search_index_service -> {
-						mandatory_service_class_files.add(LiveInjector.findPathJar(search_index_service.getClass(), ""));
-					});
-				}
-				if (hasDocumentOutput(_mutable_state.bucket.get())) {
-					_service_context.getDocumentService().ifPresent(doc_service -> {
-						mandatory_service_class_files.add(LiveInjector.findPathJar(doc_service.getClass(), ""));
-					});
-				}
-			}
-			
 			// Combine them together
 			final List<String> ret_val = ImmutableSet.<String>builder()
-							.add(this_jar)
-							.add(data_model_jar)
-							.addAll(user_service_class_files)
-							.addAll(mandatory_service_class_files)
+							.addAll(all_service_class_files)
 							.build()
 							.stream()
 							.filter(f -> (null != f) && !f.equals(""))
@@ -575,6 +537,13 @@ public class HarvestContext implements IHarvestContext {
 									.add(Tuples._2T(IColumnarService.class, Optional.empty()))
 								: 
 								sb)
+					.map(sb -> 
+						(hasDocumentOutput(bucket.orElseGet(() -> _mutable_state.bucket.get())))
+								?
+								sb.add(Tuples._2T(IDocumentService.class, Optional.empty()))
+								:
+								sb
+					)
 					.map(sb -> sb.build()).get();
 			
 			final Config config_no_services = full_config.withoutPath("service");

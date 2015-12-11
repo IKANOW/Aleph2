@@ -23,7 +23,7 @@ public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 	final public static String NOT_YET_IMPLEMENTED = "Functionality is not yet implemented";
 	final public static String NOT_SUPPORTED_IN_STREAM_ANALYICS = "Functionality does not apply to streaming context - this is for batch";
 	final public static String NOT_SUPPORTED_IN_BATCH_ANALYICS = "Functionality does not apply to batch context - this is for streaming";
-	final public static String SERVICE_RESTRICTIONS = "Can't call getAnalyticsContextSignature with different 'services' parameter; can't call getUnderlyingArtefacts without having called getEnrichmentContextSignature.";
+	final public static String SERVICE_RESTRICTIONS = "Can't call getAnalyticsContextSignature/getAnalyticsContextLibraries with different 'services' parameter; can't call getUnderlyingArtefacts without having called getAnalyticsContextSignature/getAnalyticsContextLibraries; can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries.";
 	final public static String TECHNOLOGY_NOT_MODULE = "Can only be called from technology, not module";
 	final public static String MODULE_NOT_TECHNOLOGY = "Can only be called from module, not technology";
 	final public static String BUCKET_NOT_FOUND_OR_NOT_READABLE = "Bucket {0} does not exist or is not readable";

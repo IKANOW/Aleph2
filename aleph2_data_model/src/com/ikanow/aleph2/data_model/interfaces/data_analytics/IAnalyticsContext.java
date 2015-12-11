@@ -126,6 +126,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	List<String> getInputTopics(final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
 
 	/** For data services, you can either request an underlying technology (eg InputFormat for Hadoop/RichSpout for Storm/etc), or an ICrudService (of JsonNode) as a backup 
+	 * Can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries
 	 * @param clazz - the requested class, note all CRUD services will always return an ICrudService<JsonNode>, but more useful technology-specific higher-level constructs may also be possible
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
@@ -135,6 +136,7 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	<T extends IAnalyticsAccessContext<?>> Optional<T> getServiceInput(final Class<T> clazz, final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job, final AnalyticThreadJobBean.AnalyticThreadJobInputBean job_input);
 
 	/** Requests a technology-specific output for the given data service (eg OutputFormat for Hadoop/Bolt for Storm/etc), or an IDataWriteService (of JsonNode) as a backup
+	 * Can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries
 	 * @param clazz - the requested class, note all CRUD services will always return an ICrudService<JsonNode>, but more useful technology-specific higher-level constructs may also be possible
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined)
 	 * @param job - the job being run
@@ -155,14 +157,20 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	// ANALYTICS TECHNOLOGY ONLY 
 	
 	/** (AnalyticsTechnology only) A list of JARs that can be copied to an external process (eg Hadoop job) to provide the result client access to this context (and other services)
-	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
+	 * Can't call getAnalyticsContextSignature/getAnalyticsContextLibraries with different 'services' parameter
+	 * Can't call getUnderlyingArtefacts without having called getAnalyticsContextSignature/getAnalyticsContextLibraries
+	 * Can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries
+	 * @param services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return the path (in a format that makes sense to IStorageService)
 	 */
 	List<String> getAnalyticsContextLibraries(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);
 	
 	/** (AnalyticsTechnology only) This string should be passed into ContextUtils.getAnalyticsContext to retrieve this class from within external clients
+	 * Can't call getAnalyticsContextSignature/getAnalyticsContextLibraries with different 'services' parameter
+	 * Can't call getUnderlyingArtefacts without having called getAnalyticsContextSignature/getAnalyticsContextLibraries
+	 * Can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
+	 * @param services an optional set of service classes (with optionally service name - not needed unless a non-default service is needed) that are needed (only the libraries needed for the context is provided otherwise)
 	 * @return an opaque string that can be passed into ContextUtils.getAnalyticsContext
 	 */
 	String getAnalyticsContextSignature(final Optional<DataBucketBean> bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services);

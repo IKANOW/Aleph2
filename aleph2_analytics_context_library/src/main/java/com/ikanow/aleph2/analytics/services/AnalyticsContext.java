@@ -358,6 +358,49 @@ public class AnalyticsContext implements IAnalyticsContext {
 		}
 	}
 	
+	/** Returns a config object containing:
+	 *  - set up for any of the services described
+	 *  - all the rest of the configuration
+	 *  - the bucket bean ID
+	 *  SIDE EFFECT - SETS UP THE SERVICES SET 
+	 * @param services
+	 * @return
+	 */
+	protected Config setupServices(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+		// 
+		// - set up for any of the services described
+		// - all the rest of the configuration
+		// - the bucket bean ID
+		
+		final Config full_config = ModuleUtils.getStaticConfig()
+									.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME)
+									.withoutPath("MongoDbManagementDbService.v1_enabled") // (special workaround for V1 sync service)
+									;
+
+		final ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> complete_services_set = 
+				ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
+						.addAll(services.orElse(Collections.emptySet()))
+						.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
+						.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
+						.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
+						.add(Tuples._2T(IDocumentService.class, Optional.empty()))
+						.add(Tuples._2T(IStorageService.class, Optional.empty()))
+						.add(Tuples._2T(ISecurityService.class, Optional.empty()))
+						.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
+						.addAll(_mutable_state.extra_auto_context_libs)
+						.build();
+		
+		if (_mutable_state.service_manifest_override.isSet()) {
+			if (!complete_services_set.equals(_mutable_state.service_manifest_override.get())) {
+				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
+			}
+		}
+		else {
+			_mutable_state.service_manifest_override.set(complete_services_set);
+		}
+		return full_config;
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getEnrichmentContextSignature(java.util.Optional)
 	 */
@@ -366,45 +409,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			
-			// Returns a config object containing:
-			// - set up for any of the services described
-			// - all the rest of the configuration
-			// - the bucket bean ID
+			final Config full_config = setupServices(services);
 			
-			final Config full_config = ModuleUtils.getStaticConfig()
-										.withoutPath(DistributedServicesPropertyBean.APPLICATION_NAME)
-										.withoutPath("MongoDbManagementDbService.v1_enabled") // (special workaround for V1 sync service)
-										;
-	
+			if (_mutable_state.signature_override.isSet()) { // only run once... (this is important because can do ping/pong buffer type stuff below)
+				//(note only doing this here so I can quickly check that I'm not being called multiple times with different services - ie in this case I error...)
+				return this.getClass().getName() + ":" + _mutable_state.signature_override.get();
+			}
+			
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
-			
-			final ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> complete_services_set = 
-					ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
-							.addAll(services.orElse(Collections.emptySet()))
-							.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
-							.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
-							.add(Tuples._2T(IDocumentService.class, Optional.empty()))
-							.add(Tuples._2T(IStorageService.class, Optional.empty()))
-							.add(Tuples._2T(ISecurityService.class, Optional.empty()))
-							.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
-							.addAll(_mutable_state.extra_auto_context_libs)
-							.build();
-			
-			if (_mutable_state.service_manifest_override.isSet()) {
-				if (!complete_services_set.equals(_mutable_state.service_manifest_override.get())) {
-					throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);
-				}
-			}
-			else {
-				_mutable_state.service_manifest_override.set(complete_services_set);
-			}
-			
+						
 			final Config config_no_services = full_config.withoutPath("service");
 			
 			// Ugh need to add: core deps, core + underlying management db to this list
 			
-			final Config service_subset = complete_services_set.stream() // DON'T MAKE PARALLEL SEE BELOW
+			final Config service_subset = _mutable_state.service_manifest_override.get().stream() // DON'T MAKE PARALLEL SEE BELOW
 				.map(clazz_name -> {
 					final String config_path = clazz_name._2().orElse(clazz_name._1().getSimpleName().substring(1));
 					return service_config.get().hasPath(config_path) 
@@ -813,50 +831,20 @@ public class AnalyticsContext implements IAnalyticsContext {
 		// 3) Any libraries associated with the services		
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
-			// This very JAR			
-			final String this_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(this.getClass(), "");	
-			});
+			if (!_mutable_state.service_manifest_override.isSet()) {
+				setupServices(services);
+			}
 			
-			// Data model			
-			final String data_model_jar = Lambdas.get(() -> {
-				return LiveInjector.findPathJar(_service_context.getClass(), "");	
-			});
-			
-			// Libraries associated with services:
-			final Set<String> user_service_class_files = 
-				Stream.concat(services.orElse(Collections.emptySet()).stream(), _mutable_state.extra_auto_context_libs.stream())
-						.map(clazz_name -> _service_context.getService(clazz_name._1(), clazz_name._2()))
-						.filter(service -> service.isPresent())
-						.flatMap(service -> service.get().getUnderlyingArtefacts().stream())
-						.map(artefact -> LiveInjector.findPathJar(artefact.getClass(), ""))
-						.collect(Collectors.toSet())
-						;
-			
-			//TODO (ALEPH-12): 1) don't understand why i have this _and_ getUnderlying artefacts ... and the 2 are slightly different
-			// 2) really for search index service (document service etc in the future), should be able to figure it out based on the data 
-			// schema and job.input (can delegate that job to the analytic services)
-			
-			// Mandatory services
-			final Set<String> mandatory_service_class_files =
-						Arrays.asList(
-								_distributed_services.getUnderlyingArtefacts(),
-								_service_context.getSearchIndexService().map(s -> s.getUnderlyingArtefacts()).orElse(Collections.emptyList()),
-								_service_context.getStorageService().getUnderlyingArtefacts(),
-								_service_context.getSecurityService().getUnderlyingArtefacts(),
-								_service_context.getCoreManagementDbService().getUnderlyingArtefacts() 
-								)
+			// Already registered 
+			final Set<String> all_service_class_files =
+					this.getUnderlyingArtefacts()
 							.stream()
-							.flatMap(x -> x.stream())
 							.map(service -> LiveInjector.findPathJar(service.getClass(), ""))
 							.collect(Collectors.toSet());
 			
 			// Combine them together
 			final List<String> ret_val = ImmutableSet.<String>builder()
-							.add(this_jar)
-							.add(data_model_jar)
-							.addAll(user_service_class_files)
-							.addAll(mandatory_service_class_files)
+							.addAll(all_service_class_files)
 							.build()
 							.stream()
 							.filter(f -> (null != f) && !f.equals(""))
@@ -1100,6 +1088,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job, 
 			final AnalyticThreadJobInputBean job_input)
 	{	
+		if (_mutable_state.service_manifest_override.isSet()) { // Can't call getServiceInput after getContextSignature/getContextLibraries
+			throw new RuntimeException(ErrorUtils.get(ErrorUtils.SERVICE_RESTRICTIONS));
+		}
+		
 		// First off, check we have permissions:
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		
@@ -1166,6 +1158,10 @@ public class AnalyticsContext implements IAnalyticsContext {
 			final AnalyticThreadJobBean job, 
 			final String data_service)
 	{
+		if (_mutable_state.service_manifest_override.isSet()) { // Can't call getServiceInput after getContextSignature/getContextLibraries
+			throw new RuntimeException(ErrorUtils.get(ErrorUtils.SERVICE_RESTRICTIONS));
+		}
+		
 		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job).toString());
 		if ("storage_service".equalsIgnoreCase(data_service)) {
 			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);

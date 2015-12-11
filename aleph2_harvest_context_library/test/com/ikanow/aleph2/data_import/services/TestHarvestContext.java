@@ -386,7 +386,19 @@ public class TestHarvestContext {
 				FileUtils.touch(f);
 			}
 			catch (Exception e) {} // probably already exists:
+
+			final DataBucketBean test_empty_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::harvest_technology_name_or_id, "test_harvest_tech_id")
+					.done().get();
+
+			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
+												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
+												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
+												.done().get();
 			
+			test_context.setBucket(test_empty_bucket);
+			test_context.setTechnologyConfig(htlib1);
 
 			final List<String> lib_paths = test_context.getHarvestContextLibraries(Optional.empty());
 
@@ -411,18 +423,12 @@ public class TestHarvestContext {
 					.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
 															.done().get();
 												
-			
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
 					.with(DataBucketBean::_id, "test")
 					.with(DataBucketBean::harvest_technology_name_or_id, "test_harvest_tech_id")
 					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module1, harvest_module2))
 					.done().get();
-
-			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
-												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
-												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
-												.done().get();
-			
+						
 			final SharedLibraryBean htmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id1")
 					.with(SharedLibraryBean::path_name, "name1")
