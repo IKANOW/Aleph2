@@ -141,9 +141,12 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final Stream<AnalyticTriggerStateBean> state_beans = 
 			AnalyticTriggerBeanUtils.generateTriggerStateStream(message.bucket(), 
 					is_suspended,
-					Optional.ofNullable(message.bucket().multi_node_enabled())
-										.filter(enabled -> enabled)
-										.map(__ -> _local_actor_context.getInformationService().getHostname()));
+					Optional.empty());
+
+		//TODO (ALEPH-12): don't support locked_to_host currently .. when do then need to interpret this this since for harvest+analytic threads, multi_node_enabled -> applies to harvest not analytics..
+//					Optional.ofNullable(message.bucket().multi_node_enabled())
+//										.filter(enabled -> enabled)
+//										.map(__ -> _local_actor_context.getInformationService().getHostname()));
 
 		// Handle bucket collisions
 		final Consumer<String> on_collision = path -> {			
@@ -203,27 +206,28 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	// TRIGGERING
 	
 	
+	/** This is a temporary service until the distributed mutex is in place - at least prevents ticks from colliding against one another
+	 * @author Alex
+	 */
 	protected static class TickSpacingService {
-		@SuppressWarnings("deprecation")
-		protected static void overrideSpacing(final Long new_spacing) {
-			_spacing.forceSet(new_spacing);
-		}
-		
-		protected AtomicLong _last_trigger_time = new AtomicLong(new Date().getTime());
+		public static long TIMEOUT_MS = 300L*1000L;
+		protected AtomicLong _last_trigger_time = new AtomicLong(0);
 	
 		protected static SetOnce<Long> _spacing = new SetOnce<>();
 		
-		protected boolean checkSpacing() {
+		protected boolean grabMutex() {
 			synchronized (this) {
 				final long now = new Date().getTime();
-				final long spacing = _spacing.optional().orElse((AnalyticsTriggerSupervisorActor.TICK_TIME.toMillis()/2L));
-				if (now - _last_trigger_time.get() < spacing) {
+				if (now <=_last_trigger_time.get()) {
 					_logger.warn("Ticks too close to one another, ignoring");
 					return false;
 				}
-				_last_trigger_time.set(now);
+				_last_trigger_time.set(now + TIMEOUT_MS);
 			}
 			return true;			
+		}
+		protected void releaseMutex() {
+			_last_trigger_time.set(new Date().getTime() - 1L);			
 		}
 	}
 	protected TickSpacingService _spacing_service = new TickSpacingService();
@@ -232,177 +236,181 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 * @param message
 	 */
 	protected void onAnalyticTrigger(final AnalyticsTriggerActionMessage message) {
-		// Quick block to ensure that ticks are reasonably spaced out
-		if (!_spacing_service.checkSpacing()) {
+		// Quick block to ensure that ticks don't collide on a give machine
+		if (!_spacing_service.grabMutex()) {
 			return;
 		}
-		
-		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
-				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
-		
-		// 1) Get all state beans that need to be checked, update their "next time"
-		
-		final CompletableFuture<Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>>> triggers_in = 
-				AnalyticTriggerCrudUtils.getTriggersToCheck(trigger_crud);		
-		
-		triggers_in.thenAccept(triggers_to_check -> {
-
-			//DEBUG
-//			System.out.println("??? " + triggers_to_check.values().stream().flatMap(s->s.stream())
-//					.map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
+		try {
+			final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
+					_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 			
-			final Consumer<String> on_collision = path -> {			
-				_logger.warn("Failed to grab trigger on {0}", path);
-			};
-			final Duration max_time_to_decollide = Duration.ofSeconds(1L); 
+			// 1) Get all state beans that need to be checked, update their "next time"
 			
-			final SetOnce<Collection<Tuple2<String, String>>> path_names = new SetOnce<>();
-			try {
-				// Grab the mutex
-				final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers = 
-						AnalyticTriggerCoreUtils.registerOwnershipOfTriggers(triggers_to_check, 
-								_local_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
-								Tuples._2T(max_time_to_decollide, on_collision));
+			final CompletableFuture<Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>>> triggers_in = 
+					AnalyticTriggerCrudUtils.getTriggersToCheck(trigger_crud);		
+			
+			triggers_in.thenAccept(triggers_to_check -> {
+	
+				//DEBUG
+//				System.out.println("??? " + triggers_to_check.values().stream().flatMap(s->s.stream())
+//						.map(t -> BeanTemplateUtils.toJson(t).toString()).collect(Collectors.joining("\n")));
 				
-				path_names.trySet(triggers.keySet());
+				final Consumer<String> on_collision = path -> {			
+					_logger.warn("Failed to grab trigger on {0}", path);
+				};
+				final Duration max_time_to_decollide = Duration.ofSeconds(1L); 
 				
-				// 2) Issue checks to each bean
-				
-				triggers.entrySet().stream().parallel()
-					.forEach(kv -> {
-						//(discard bucket active records)
-						kv.getValue().stream().findFirst().ifPresent(trigger -> {
-
-							final Optional<DataBucketBean> bucket_to_check_reply = Lambdas.wrap_u(__ -> {
-									return BucketUtils.isTestBucket(
-											BeanTemplateUtils.build(DataBucketBean.class)
-												.with(DataBucketBean::full_name, trigger.bucket_name())
-											.done().get())
-									?
-									// Test bucket - get from test
-									_service_context.getCoreManagementDbService().readOnlyVersion().getBucketTestQueue(BucketTimeoutMessage.class)
-										.getObjectById(trigger.bucket_name()) //(test bucket use transformed full name as _id)
-										.<Optional<DataBucketBean>>thenApply(bucket_msg -> 
-											bucket_msg
-												.map(msg -> msg.bucket()))
-										.join()
-									:
-									// Normal bucket get from bucket store
-									_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id())
+				final SetOnce<Collection<Tuple2<String, String>>> path_names = new SetOnce<>();
+				try {
+					// Grab the mutex
+					final Map<Tuple2<String, String>, List<AnalyticTriggerStateBean>> triggers = 
+							AnalyticTriggerCoreUtils.registerOwnershipOfTriggers(triggers_to_check, 
+									_local_actor_context.getInformationService().getProcessUuid(), _distributed_services.getCuratorFramework(),  
+									Tuples._2T(max_time_to_decollide, on_collision));
+					
+					path_names.trySet(triggers.keySet());
+					
+					// 2) Issue checks to each bean
+					
+					triggers.entrySet().stream().parallel()
+						.forEach(kv -> {
+							//(discard bucket active records)
+							kv.getValue().stream().findFirst().ifPresent(trigger -> {
+	
+								final Optional<DataBucketBean> bucket_to_check_reply = Lambdas.wrap_u(__ -> {
+										return BucketUtils.isTestBucket(
+												BeanTemplateUtils.build(DataBucketBean.class)
+													.with(DataBucketBean::full_name, trigger.bucket_name())
+												.done().get())
+										?
+										// Test bucket - get from test
+										_service_context.getCoreManagementDbService().readOnlyVersion().getBucketTestQueue(BucketTimeoutMessage.class)
+											.getObjectById(trigger.bucket_name()) //(test bucket use transformed full name as _id)
+											.<Optional<DataBucketBean>>thenApply(bucket_msg -> 
+												bucket_msg
+													.map(msg -> msg.bucket()))
 											.join()
-									;
-									// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
-								})
-								.<Optional<DataBucketBean>>andThen(maybe_bucket -> {
-									return maybe_bucket
-											.map(bucket -> (null == bucket.analytic_thread()) 
-													? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
-													: bucket)
-											.map(bucket ->
-													BeanTemplateUtils.clone(bucket)
-														.with(DataBucketBean::harvest_technology_name_or_id, null) // remove this so that only gets sent to analytics/enrichment engine
-														.with(DataBucketBean::multi_node_enabled, 
-																(null != bucket.harvest_technology_name_or_id()) // if harvest_tech is non-null then multi-node applies to that so ignore here
-																? false
-																: Optional.ofNullable(bucket.multi_node_enabled()).orElse(false) // if harvest_tech is null then multi-node did apply to leave alone
-																)
-														.done()
-													)
-											.map(bucket -> {
-													return !BucketUtils.isTestBucket(bucket) // for test buckets, override the scheduler to something short
-													? 
-													bucket
-													:
-													BeanTemplateUtils.clone(bucket)
-														.with(DataBucketBean::analytic_thread,
-															BeanTemplateUtils.clone(bucket.analytic_thread()) //(must exist by this point)
-																.with(AnalyticThreadBean::trigger_config,
-																		BeanTemplateUtils.clone(
-																				Optional.ofNullable(bucket.analytic_thread().trigger_config())
-																						.orElse(BeanTemplateUtils.build(AnalyticThreadTriggerBean.class).done().get())
-																		)
-																			.with(AnalyticThreadTriggerBean::schedule, "10 seconds")
-																		.done()
-																)
-															.done()		
+										:
+										// Normal bucket get from bucket store
+										_service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().getObjectById(trigger.bucket_id())
+												.join()
+										;
+										// (annoyingly can't chain CFs because need to block this thread until i'm ready to release the mutex)
+									})
+									.<Optional<DataBucketBean>>andThen(maybe_bucket -> {
+										return maybe_bucket
+												.map(bucket -> (null == bucket.analytic_thread()) 
+														? DataBucketAnalyticsChangeActor.convertEnrichmentToAnalyticBucket(bucket)
+														: bucket)
+												.map(bucket ->
+														BeanTemplateUtils.clone(bucket)
+															.with(DataBucketBean::harvest_technology_name_or_id, null) // remove this so that only gets sent to analytics/enrichment engine
+															.with(DataBucketBean::multi_node_enabled, 
+																	(null != bucket.harvest_technology_name_or_id()) // if harvest_tech is non-null then multi-node applies to that so ignore here
+																	? false
+																	: Optional.ofNullable(bucket.multi_node_enabled()).orElse(false) // if harvest_tech is null then multi-node did apply to leave alone
+																	)
+															.done()
 														)
-													.done();
+												.map(bucket -> {
+														return !BucketUtils.isTestBucket(bucket) // for test buckets, override the scheduler to something short
+														? 
+														bucket
+														:
+														BeanTemplateUtils.clone(bucket)
+															.with(DataBucketBean::analytic_thread,
+																BeanTemplateUtils.clone(bucket.analytic_thread()) //(must exist by this point)
+																	.with(AnalyticThreadBean::trigger_config,
+																			BeanTemplateUtils.clone(
+																					Optional.ofNullable(bucket.analytic_thread().trigger_config())
+																							.orElse(BeanTemplateUtils.build(AnalyticThreadTriggerBean.class).done().get())
+																			)
+																				.with(AnalyticThreadTriggerBean::schedule, "10 seconds")
+																			.done()
+																	)
+																.done()		
+															)
+														.done();
+												})
+												;
+									})
+									.apply(Unit.unit());
+															
+								//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
+									
+								final SetOnce<AnalyticTriggerStateBean> active_bucket_record = new SetOnce<>();
+								final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs = new LinkedList<>();
+								final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_active = new LinkedList<>();
+								final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_active = new LinkedList<>();
+								final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_dormant = new LinkedList<>();
+								final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_dormant = new LinkedList<>();
+								
+								bucket_to_check_reply.ifPresent(bucket_to_check -> {
+									kv.getValue().stream().forEach(trigger_in -> {
+										
+										Patterns.match().andAct()
+											.when(__ -> AnalyticTriggerBeanUtils.isActiveBucketOrJobRecord(trigger_in), __ -> {
+												
+												// 1) This is an active job, want to know if the job is complete
+												
+												final Optional<AnalyticThreadJobBean> analytic_job_opt = 
+														AnalyticTriggerBeanUtils.isActiveBucketRecord(trigger_in)
+														? Optional.empty()
+														: Optionals.of(() -> bucket_to_check.analytic_thread().jobs()
+																							.stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
+												
+												analytic_job_opt.ifPresent(analytic_job -> onAnalyticTrigger_checkActiveJob(bucket_to_check, analytic_job, trigger_in));
+												
+												//(don't care about a reply, will come asynchronously)
+												if (AnalyticTriggerBeanUtils.isActiveJobRecord(trigger_in)) {
+													mutable_active_jobs.add(trigger_in);
+												}
+												else { // bucket must be active since the bucket record exists
+													active_bucket_record.set(trigger_in); // (can call multiple times, will ignore all but the first)
+												}
+											})
+											.when(__ -> !trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isExternalTrigger(trigger_in), __ -> {
+												
+												// 2) Inactive bucket, check external dependency											
+												onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
+											})
+											.when(__ -> trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isInternalTrigger(trigger_in), __ -> {
+	
+												// 3) Inactive job, active bucket
+												
+												final Optional<AnalyticThreadJobBean> analytic_job_opt = 
+														Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
+												
+												analytic_job_opt
+													.ifPresent(analytic_job -> 
+														onAnalyticTrigger_checkInactiveJobs(bucket_to_check, analytic_job, trigger_in, 
+																							mutable_internal_triggers_active, mutable_internal_triggers_dormant));											
 											})
 											;
-								})
-								.apply(Unit.unit());
-														
-							//(I've excluded the harvest component so any core management db messages only go to the analytics engine, not the harvest engine)  
-								
-							final SetOnce<AnalyticTriggerStateBean> active_bucket_record = new SetOnce<>();
-							final LinkedList<AnalyticTriggerStateBean> mutable_active_jobs = new LinkedList<>();
-							final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_active = new LinkedList<>();
-							final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_active = new LinkedList<>();
-							final LinkedList<AnalyticTriggerStateBean> mutable_external_triggers_dormant = new LinkedList<>();
-							final LinkedList<AnalyticTriggerStateBean> mutable_internal_triggers_dormant = new LinkedList<>();
-							
-							bucket_to_check_reply.ifPresent(bucket_to_check -> {
-								kv.getValue().stream().forEach(trigger_in -> {
-									
-									Patterns.match().andAct()
-										.when(__ -> AnalyticTriggerBeanUtils.isActiveBucketOrJobRecord(trigger_in), __ -> {
-											
-											// 1) This is an active job, want to know if the job is complete
-											
-											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
-													AnalyticTriggerBeanUtils.isActiveBucketRecord(trigger_in)
-													? Optional.empty()
-													: Optionals.of(() -> bucket_to_check.analytic_thread().jobs()
-																						.stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
-											
-											analytic_job_opt.ifPresent(analytic_job -> onAnalyticTrigger_checkActiveJob(bucket_to_check, analytic_job, trigger_in));
-											
-											//(don't care about a reply, will come asynchronously)
-											if (AnalyticTriggerBeanUtils.isActiveJobRecord(trigger_in)) {
-												mutable_active_jobs.add(trigger_in);
-											}
-											else { // bucket must be active since the bucket record exists
-												active_bucket_record.set(trigger_in); // (can call multiple times, will ignore all but the first)
-											}
-										})
-										.when(__ -> !trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isExternalTrigger(trigger_in), __ -> {
-											
-											// 2) Inactive bucket, check external dependency											
-											onAnalyticTrigger_checkExternalTriggers(bucket_to_check, trigger_in, mutable_external_triggers_active, mutable_external_triggers_dormant);
-										})
-										.when(__ -> trigger_in.is_bucket_active() && AnalyticTriggerBeanUtils.isInternalTrigger(trigger_in), __ -> {
-
-											// 3) Inactive job, active bucket
-											
-											final Optional<AnalyticThreadJobBean> analytic_job_opt = 
-													Optionals.of(() -> bucket_to_check.analytic_thread().jobs().stream().filter(j -> j.name().equals(trigger_in.job_name())).findFirst().get());
-											
-											analytic_job_opt
-												.ifPresent(analytic_job -> 
-													onAnalyticTrigger_checkInactiveJobs(bucket_to_check, analytic_job, trigger_in, 
-																						mutable_internal_triggers_active, mutable_internal_triggers_dormant));											
-										})
-										;
-										//(don't care about any other cases)
+											//(don't care about any other cases)
+									});
+	
+									triggerChecks_processResults(bucket_to_check, Optional.ofNullable(kv.getKey()._2()),
+											active_bucket_record.optional(), mutable_active_jobs, 
+											mutable_external_triggers_active, mutable_internal_triggers_active,
+											mutable_external_triggers_dormant, mutable_internal_triggers_dormant);
 								});
-
-								triggerChecks_processResults(bucket_to_check, Optional.ofNullable(kv.getKey()._2()),
-										active_bucket_record.optional(), mutable_active_jobs, 
-										mutable_external_triggers_active, mutable_internal_triggers_active,
-										mutable_external_triggers_dormant, mutable_internal_triggers_dormant);
+								
 							});
-							
-						});
-					});			
-			}			
-			finally { // ie always run this:
-				// Unset the mutexes
-				if (path_names.isSet()) AnalyticTriggerCoreUtils.deregisterOwnershipOfTriggers(path_names.get(), _distributed_services.getCuratorFramework());
-			}			
-		})
-		.join();
-		
-		// (don't wait for replies, these will come in asynchronously)
+						});			
+				}			
+				finally { // ie always run this:
+					// Unset the mutexes
+					if (path_names.isSet()) AnalyticTriggerCoreUtils.deregisterOwnershipOfTriggers(path_names.get(), _distributed_services.getCuratorFramework());
+				}			
+			})
+			.join();
+			
+			// (don't wait for replies, these will come in asynchronously)
+		}
+		finally {
+			_spacing_service.releaseMutex();
+		}
 	}
 
 	/** If a job is active, want to know whether to clear it
