@@ -1265,7 +1265,6 @@ public class TestDeduplicationService {
 			
 			// Things to check:
 			
-			//TODO
 			// Should not emit anything
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}		
@@ -1287,7 +1286,6 @@ public class TestDeduplicationService {
 			
 			// Things to check:
 			
-			//TODO
 			// Should not emit anything
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}		
