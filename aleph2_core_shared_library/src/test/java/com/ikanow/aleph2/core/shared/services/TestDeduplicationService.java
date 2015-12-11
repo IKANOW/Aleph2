@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,7 +41,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.collect.LinkedHashMultimap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
@@ -235,11 +236,17 @@ public class TestDeduplicationService {
 							.stream()
 							.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
 							.collect(Collectors.toList());
+
+			assertEquals(Arrays.asList(new TextNode("test1")), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
+			assertEquals(Arrays.asList("{\"field1\":\"test1\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
 			
-			assertEquals(Arrays.asList(new TextNode("test1"), _mapper.createObjectNode()), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
-			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
+			//(keep the old results since i keep changing my mind!)
+//			assertEquals(Arrays.asList(new TextNode("test1"), _mapper.createObjectNode()), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
+//			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));
+//			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._1().toString()).collect(Collectors.toList()));
+//			assertEquals(Arrays.asList("{\"field1\":\"test1\"}", "{\"field2\":\"test2\"}"), DeduplicationService.extractKeyFields(batch.stream(), Arrays.asList("field1")).stream().map(t2 -> t2._2()._2().getJson().toString()).collect(Collectors.toList()));			
 		}
 		// Another utility function related to these
 		{
@@ -302,7 +309,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3"));
 			
-			assertEquals(2, res._2().size());
+			assertEquals(0, res._2().size());
 		}
 		// multi-query
 		{
@@ -320,7 +327,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_3", "nested.nested_2"));
 			
-			assertEquals(2, res._2().size());
+			assertEquals(0, res._2().size());
 		}
 		
 	}
@@ -396,13 +403,13 @@ public class TestDeduplicationService {
 						.collect(Collectors.toList());
 		
 		
-		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().collect(Collectors.toList()), test2, _mapper.createObjectNode());
 		
 		assertEquals(0L, _called_batch.get());
 
-		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().findFirst().get(), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().collect(Collectors.toList()), test2, _mapper.createObjectNode());
 		
-		assertEquals(2L, _called_batch.get());
+		assertEquals(3L, _called_batch.get());
 	}
 	
 	@Test
@@ -456,21 +463,24 @@ public class TestDeduplicationService {
 		
 		final TextNode key = new TextNode("url");
 		
-		LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map = LinkedHashMultimap.create();
+		LinkedHashMap<JsonNode, LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> mutable_obj_map = new LinkedHashMap<>();
+		
+		final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_records = Stream.of(new_record).collect(Collectors.toCollection(LinkedList::new));
+		final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_records_but_same_time = Stream.of(new_record_but_same_time).collect(Collectors.toCollection(LinkedList::new));
 		
 		// Simple case Leave policy
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.leave,
-					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -486,15 +496,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
-					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -510,14 +520,14 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
-					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -533,15 +543,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
-					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -557,15 +567,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
-					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -581,15 +591,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
-					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -605,15 +615,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
-					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -629,15 +639,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
-					enrich_context, Optional.of(test_module), ts_field, new_record, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -653,15 +663,15 @@ public class TestDeduplicationService {
 		{
 			//(reset)
 			mutable_obj_map.clear();
-			mutable_obj_map.put(new TextNode("never_changed"), new_record);
-			mutable_obj_map.put(new TextNode("url"), new_record);
+			mutable_obj_map.put(new TextNode("never_changed"), new_records);
+			mutable_obj_map.put(new TextNode("url"), new_records);
 			assertEquals(2, mutable_obj_map.size());
 			new_record._3().removeAll();
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
 			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
-					enrich_context, Optional.of(test_module), ts_field, new_record_but_same_time, old_json, key, mutable_obj_map
+					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -706,8 +716,8 @@ public class TestDeduplicationService {
 			
 			// Things to check:
 			
-			// Should have called emit 2*"num_write_records" times (no dedup)
-			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// Should have called emit 2*"num_write_records" times (no dedup), + 10% dups
+			Mockito.verify(enrich_context, Mockito.times(22*num_write_records/10)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}
 		
 		// Test 1: LEAVE
@@ -996,8 +1006,8 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
-			assertEquals(2*num_write_records, _called_batch.get());
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old) + 10% dups
+			assertEquals(num_write_records + 11*num_write_records/10, _called_batch.get());
 		}		
 		// TEST 4b: CUSTOM, MULTI-FIELD, SINGLE-BUCKET CONTEXT
 		{
@@ -1027,8 +1037,8 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
-			assertEquals(2*num_write_records, _called_batch.get());
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old) + 10% dups
+			assertEquals(num_write_records + 11*num_write_records/10, _called_batch.get());
 		}
 		// TEST 4c: CUSTOM, SINGLE-FIELD, MULTI-BUCKET CONTEXT
 		{
@@ -1059,8 +1069,8 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
-			assertEquals(2*num_write_records, _called_batch.get());
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old) + 10% dups
+			assertEquals(num_write_records + 11*num_write_records/10, _called_batch.get());
 		}		
 		// TEST 4d: CUSTOM, MULTI-FIELD, SINGLE-BUCKET CONTEXT
 		{
@@ -1090,8 +1100,8 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// The other 50% get passed to the batch (*2, 1 for new + 1 for old)
-			assertEquals(2*num_write_records, _called_batch.get());
+			// The other 50% get passed to the batch (*2, 1 for new + 1 for old) + 10% dups
+			assertEquals(num_write_records + 11*num_write_records/10, _called_batch.get());
 		}
 		
 		// Test 5: CUSTOM
@@ -1125,7 +1135,7 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old) - but no dups because they are always timestamp==0
 			assertEquals(num_write_records, _called_batch.get());
 		}		
 		// TEST 5b: CUSTOM UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
@@ -1156,7 +1166,7 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old) - but no dups because they are always timestamp==0
 			assertEquals(num_write_records, _called_batch.get());
 		}
 		// TEST 5c: CUSTOM UPDATE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
@@ -1188,7 +1198,7 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old) - but no dups because they are always timestamp==0
 			assertEquals(num_write_records, _called_batch.get());
 		}		
 		// TEST 5d: CUSTOM UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
@@ -1219,7 +1229,7 @@ public class TestDeduplicationService {
 			
 			// The 50% of non-matching data objects are emitted
 			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
-			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old)
+			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old) - but no dups because they are always timestamp==0
 			assertEquals(num_write_records, _called_batch.get());
 		}
 		
@@ -1243,8 +1253,9 @@ public class TestDeduplicationService {
 			
 			// Things to check:
 			
-			// Writes everything twice
-			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			//TODO
+			// Should not emit anything
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}		
 		// TEST Xc: LEAVE, SINGLE-FIELD, MULTI-BUCKET CONTEXT
 		{
@@ -1264,8 +1275,9 @@ public class TestDeduplicationService {
 			
 			// Things to check:
 			
-			// Should have called emit "num_write_records" times (50% of them are duplicates)
-			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			//TODO
+			// Should not emit anything
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 		}		
 		
 		System.out.println("COMPLETING DEDUP TEST NOW: " + new Date());
@@ -1365,8 +1377,11 @@ public class TestDeduplicationService {
 			obj.put("dup_field", i);
 			obj.put("alt_dup_field", i);
 			obj.put("@timestamp", (0 == (i % 2)) ? 0L : 1L); // (ie alternate new with old - in some cases the old won't update)
-			return (JsonNode) obj;
+			return (0 == (i % 10))
+					? Stream.of((JsonNode) obj, (JsonNode) obj) // (every 10th emit a duplicate)
+					: Stream.of((JsonNode) obj);
 		})		
+		.flatMap(s -> s)
 		.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
 		.collect(Collectors.toList());
 		

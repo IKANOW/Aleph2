@@ -19,6 +19,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +37,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -192,22 +193,13 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
 				getDedupQuery(batch, dedup_fields);
 		
-		final LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map =				
-				fieldinfo_dedupquery_keyfields._2().stream().collect(						
-						Collector.of(
-							LinkedHashMultimap::create, 
-							(acc, t2) -> acc.put(t2._1(), Tuples._3T(t2._2()._1(), t2._2()._2(), _mapper.createObjectNode())), 
-							(map1, map2) -> {
-								map1.putAll(map2);
-								return map1;
-							}));						
-
 		// Get duplicate results
 		
 		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(policy, dedup_fields, _timestamp_field.get());
 
+		//TODO: go back to removing fields
 		final CompletableFuture<Iterator<JsonNode>> dedup_res =
-				(fieldinfo_dedupquery_keyfields._2().size() == mutable_obj_map.get(_mapper.createObjectNode()).size())
+				fieldinfo_dedupquery_keyfields._2().isEmpty()
 				? 
 				CompletableFuture.completedFuture(Collections.<JsonNode>emptyList().iterator())
 				: 
@@ -215,6 +207,28 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 
 		// Wait for it to finsh
 		
+			//(create handy results structure if so)
+			final LinkedHashMap<JsonNode, LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> mutable_obj_map =				
+					fieldinfo_dedupquery_keyfields._2().stream().collect(						
+							Collector.of(
+								() -> new LinkedHashMap<JsonNode, LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>>(), 
+								(acc, t2) -> {
+									// (ie only the first element is added, duplicate elements are removed)
+									final Tuple3<Long, IBatchRecord, ObjectNode> t3 = Tuples._3T(t2._2()._1(), t2._2()._2(), _mapper.createObjectNode());
+									acc.compute(t2._1(), (k, v) -> {
+										final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_list = 
+												(null == v)
+												? new LinkedList<>()
+												: v;
+										new_list.add(t3);
+										return new_list;
+									});
+								},
+								(map1, map2) -> {
+									map1.putAll(map2);
+									return map1;
+								}));						
+				
 		//TODO (ALEPH-20): various options for inserting _ids
 		//TODO (ALEPH-20): add timestamps to annotation
 		//TODO (ALEPH-20): support different timestamp fields for the different buckets
@@ -227,17 +241,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		Optionals.streamOf(cursor, true)
 					.forEach(ret_obj -> {
 						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
-						final Optional<Tuple3<Long, IBatchRecord, ObjectNode>> matching_record = 
-								maybe_key.flatMap(key -> mutable_obj_map.get(key).stream().findFirst()); //TODO (ALEPH-20): better support here
+						final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
 
 						//DEBUG
 						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
 						
-						matching_record.ifPresent(record -> 
-							handleDuplicateRecord(policy, _context.get(), _custom_handler.optional(), _timestamp_field.get(), record, ret_obj, maybe_key.get(), mutable_obj_map));
+						matching_records.ifPresent(records -> 
+							handleDuplicateRecord(policy, _context.get(), _custom_handler.optional(), _timestamp_field.get(), records, ret_obj, maybe_key.get(), mutable_obj_map));
 					});
 		
 		mutable_obj_map.values().stream()
+			.map(t -> t.peekLast())
 			.forEach(t -> _context.get().emitImmutableObject(t._1(), t._2().getJson(), Optional.of(t._3()), Optional.empty(), Optional.empty()))
 			;
 	}
@@ -256,39 +270,42 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected static void handleDuplicateRecord(final DeduplicationPolicy policy,
 			final IEnrichmentModuleContext context, Optional<IEnrichmentBatchModule> custom_handler,
 			final String timestamp_field,
-			final Tuple3<Long, IBatchRecord, ObjectNode> new_record, final JsonNode old_record,
+			final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final JsonNode old_record,
 			final JsonNode key,
-			final LinkedHashMultimap<JsonNode, Tuple3<Long, IBatchRecord, ObjectNode>> mutable_obj_map
+			final Map<JsonNode, LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> mutable_obj_map
 			)
 	{
 		Patterns.match(policy).andAct()
 				.when(p -> p == DeduplicationPolicy.leave, __ -> {
-					mutable_obj_map.removeAll(key); //(drop new record)
+					mutable_obj_map.remove(key); //(drop new record)
 				})
 				.when(p -> p == DeduplicationPolicy.update, __ -> {
-					if (newRecordUpdatesOld(timestamp_field, new_record._2().getJson(), old_record)) {
-						new_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
+					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
+						last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
 					}
 					else {
-						mutable_obj_map.removeAll(key); //(drop new record)				
+						mutable_obj_map.remove(key); //(drop new record)				
 					}
 				})
 				.when(p -> p == DeduplicationPolicy.overwrite, __ -> {
+					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					// Just update the new record's "_id" field
-					new_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+					last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
-					if (newRecordUpdatesOld(timestamp_field, new_record._2().getJson(), old_record)) {
-						mutable_obj_map.removeAll(key); // (since the "final step" logic is responsible for calling the update code)
-						handleCustomDeduplication(custom_handler, new_record, old_record, key);
+					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
+					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
+						mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)
+						handleCustomDeduplication(custom_handler, new_records, old_record, key);
 					}
 					else {
-						mutable_obj_map.removeAll(key); //(drop new record)
+						mutable_obj_map.remove(key); //(drop new record)
 					}
 				})
 				.otherwise(__ -> {
-					mutable_obj_map.removeAll(key); // (since the "final step" logic is responsible for calling the update code)		
-					handleCustomDeduplication(custom_handler, new_record, old_record, key);
+					mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)		
+					handleCustomDeduplication(custom_handler, new_records, old_record, key);
 				});
 	}
 	
@@ -322,16 +339,18 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static void handleCustomDeduplication(
 			final Optional<IEnrichmentBatchModule> custom_handler,
-			final Tuple3<Long, IBatchRecord, ObjectNode> new_record, final JsonNode old_record, final JsonNode key)
+			final List<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final JsonNode old_record, final JsonNode key)
 	{
 		custom_handler
 			.map(base_module -> base_module.cloneForNewGrouping())
 			.ifPresent(new_module -> {
-				final Stream<Tuple2<Long, IBatchRecord>> dedup_stream = 
-						Stream.of(Tuples._2T(new_record._1(), new_record._2()),
-								Tuples._2T(new_record._1(), new MyBatchRecord(old_record))
+				final Stream<Tuple2<Long, IBatchRecord>> dedup_stream =
+						Stream.concat(
+								new_records.stream().map(t3 -> Tuples._2T(t3._1(), t3._2())),
+								Stream.of(Tuples._2T(-1L, new MyBatchRecord(old_record)))
 								);
-				new_module.onObjectBatch(dedup_stream, Optional.of(2), Optional.of(key));
+				
+				new_module.onObjectBatch(dedup_stream, Optional.of(1 + new_records.size()), Optional.of(key));
 				new_module.onStageComplete(false);
 			});		
 	}
@@ -435,7 +454,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> extractKeyField(final Stream<Tuple2<Long, IBatchRecord>> in, final String key_field) {
 		return in
-				.map(x -> Tuples._2T(extractKeyField(x._2().getJson(), key_field).orElseGet(() -> _mapper.createObjectNode()), x))
+				.map(x -> extractKeyField(x._2().getJson(), key_field).map(y -> Tuples._2T(y, x)).orElse(null))
+				.filter(x -> null != x)
 				.collect(Collectors.toList())
 				;
 	}
@@ -457,7 +477,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> extractKeyFields(final Stream<Tuple2<Long, IBatchRecord>> in, final List<String> key_fields) {
 		return in
-				.map(x -> Tuples._2T(extractKeyFields(x._2().getJson(), key_fields).orElseGet(() -> _mapper.createObjectNode()), x))
+				.map(x -> extractKeyFields(x._2().getJson(), key_fields).map(y -> Tuples._2T(y, x)).orElse(null))
+				.filter(x -> null != x)
 				.collect(Collectors.toList())
 				;
 	}
