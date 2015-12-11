@@ -42,6 +42,7 @@ import akka.actor.UntypedActor;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.TickSpacingService;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.TestAnalyticTriggerCrudUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -135,6 +136,20 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			.forPath(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER + "/" +  "dummy_data_bucket_change_actor");				
 	}
 	
+	///////////////////////////////////////////////////////////////////////////////////////
+
+	// MISC TESTING
+	
+	@Test
+	public void test_workerTickSeparation() throws InterruptedException {
+		TickSpacingService test = new TickSpacingService();
+		
+		assertEquals(false, test.checkSpacing());
+		assertEquals(false, test.checkSpacing());
+		Thread.sleep(1000L + (AnalyticsTriggerSupervisorActor.TICK_TIME.toMillis()/2L));
+		assertEquals(true, test.checkSpacing());
+		assertEquals(false, test.checkSpacing());
+	}
 	
 	///////////////////////////////////////////////////////////////////////////////////////
 	
@@ -143,6 +158,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Test
 	public void test_bucketLifecycle() throws InterruptedException {
 		System.out.println("Starting test_bucketLifecycle");
+		
+		// Revert spacing so we can quickly check rejection code coverage
+		TickSpacingService.overrideSpacing(null); 
 		
 		// Going to create a bucket, update it, and then suspend it
 		// Note not much validation here, since the actual triggers etc are created by the utils functions, which are tested separately
@@ -162,6 +180,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			_trigger_worker.tell(msg, _trigger_worker);
 			
+			//(code coverage! this will be ignored due to spacing)
+			_trigger_worker.tell(msg, _trigger_worker);
+			
 			// Give it a couple of secs to finish
 			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
 			
@@ -174,6 +195,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
 					).join().intValue());
 		}
+		
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);
 		
 		// 2) Update in suspended mode
 		{
@@ -219,6 +243,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Test
 	public void test_bucketTestLifecycle() throws InterruptedException {
 		System.out.println("Starting test_bucketTestLifecycle");
+		
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);		
 		
 		// Going to create a bucket, update it, and then suspend it
 		// Note not much validation here, since the actual triggers etc are created by the utils functions, which are tested separately
@@ -279,6 +306,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	public void test_jobTriggerScenario() throws InterruptedException, IOException {
 		System.out.println("Starting test_jobTriggerScenario");
 
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);		
+		
 		// Tests a manual bucket that has inter-job dependencies
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
@@ -583,6 +613,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	public void test_enrichment_analyticForm() throws IOException, InterruptedException {
 		System.out.println("Starting test_enrichment_analyticForm");
 		
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);		
+		
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
 		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
@@ -595,6 +628,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Test
 	public void test_enrichment_enrichmentForm() throws IOException, InterruptedException {
 		System.out.println("Starting test_enrichment_enrichmentForm");
+		
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);		
 		
 		final String json_bucket_in_db = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_in.json"), Charsets.UTF_8);		
 		final String json_bucket_in_mem = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/batch_enrichment_test_out.json"), Charsets.UTF_8);
@@ -868,6 +904,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	public void test_externalTriggers() throws IOException, InterruptedException {
 		System.out.println("Starting test_externalTriggers");
 
+		// OK now override the spacing so we don't have to worry about it ever again:
+		TickSpacingService.overrideSpacing(0L);		
+		
 		//setup		
 		final String json = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/trigger_bucket.json"), Charsets.UTF_8);
 

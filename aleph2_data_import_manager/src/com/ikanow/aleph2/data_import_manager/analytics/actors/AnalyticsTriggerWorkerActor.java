@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -201,10 +202,40 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	
 	// TRIGGERING
 	
+	
+	protected static class TickSpacingService {
+		@SuppressWarnings("deprecation")
+		protected static void overrideSpacing(final Long new_spacing) {
+			_spacing.forceSet(new_spacing);
+		}
+		
+		protected AtomicLong _last_trigger_time = new AtomicLong(new Date().getTime());
+	
+		protected static SetOnce<Long> _spacing = new SetOnce<>();
+		
+		protected boolean checkSpacing() {
+			synchronized (this) {
+				final long now = new Date().getTime();
+				final long spacing = _spacing.optional().orElse((AnalyticsTriggerSupervisorActor.TICK_TIME.toMillis()/2L));
+				if (now - _last_trigger_time.get() < spacing) {
+					_logger.warn("Ticks too close to one another, ignoring");
+					return false;
+				}
+				_last_trigger_time.set(now);
+			}
+			return true;			
+		}
+	}
+	protected TickSpacingService _spacing_service = new TickSpacingService();
+	
 	/** Regular trigger event messages, check for things we're supposed to check
 	 * @param message
 	 */
 	protected void onAnalyticTrigger(final AnalyticsTriggerActionMessage message) {
+		// Quick block to ensure that ticks are reasonably spaced out
+		if (!_spacing_service.checkSpacing()) {
+			return;
+		}
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);

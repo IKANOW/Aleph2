@@ -25,6 +25,8 @@ import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerCrudUtils;
+import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.utils.ActorNameUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -37,6 +39,7 @@ import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 import akka.event.japi.LookupEventBus;
@@ -55,11 +58,18 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 	protected final LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String> _analytics_trigger_bus;
 	
 	// These aren't currently used, but might want to make the logic more sophisticated in the future 
-	protected final IServiceContext _context;
+	protected final IServiceContext _service_context;
 	protected final IManagementDbService _core_management_db;
 	protected final SetOnce<ICrudService<AnalyticTriggerStateBean>> _analytics_trigger_state = new SetOnce<>();
 	
 	protected final AtomicLong _ping_count = new AtomicLong(0);
+	
+	//TODO (ALEPH-12): Need the trigger sibling temporarily so we can lock down the trigger worker sync for a bit until we
+	// get the distributed mutex tested
+	protected final DataImportActorContext _local_context;
+	protected final ActorSelection _trigger_sibling; 
+	
+	public final static FiniteDuration TICK_TIME = Duration.create(10, TimeUnit.SECONDS);
 	
 	/** Akka c'tor
 	 */
@@ -67,10 +77,10 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 		_actor_context = ManagementDbActorContext.get();
 		_analytics_trigger_bus = _actor_context.getAnalyticsTriggerBus();
 		
-		_context = _actor_context.getServiceContext();
+		_service_context = _actor_context.getServiceContext();
 		_core_management_db = Lambdas.get(() -> { 
 			try { 
-				return _context.getCoreManagementDbService(); 
+				return _service_context.getCoreManagementDbService(); 
 			} 
 			catch (Throwable e) { 
 				_logger.warn(ErrorUtils.getLongForm("Failed to load core management db service: {0}", e));
@@ -78,9 +88,14 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 			} 
 		});
 
+		// My local analytics trigger engine:
+		
+		_local_context = DataImportActorContext.get(); 
+		_trigger_sibling = _actor_context.getActorSystem().actorSelection("/user/" + _local_context.getInformationService().getHostname() + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX);
+		
 		if (null != _core_management_db) {
 			final FiniteDuration poll_delay = Duration.create(1, TimeUnit.SECONDS);
-			final FiniteDuration poll_frequency = Duration.create(10, TimeUnit.SECONDS);
+			final FiniteDuration poll_frequency = TICK_TIME;
 			_ticker.set(this.context().system().scheduler()
 						.schedule(poll_delay, poll_frequency, this.self(), "Tick", this.context().system().dispatcher(), null));
 			
@@ -124,7 +139,9 @@ public class AnalyticsTriggerSupervisorActor extends UntypedActor {
 			//TODO (ALEPH-12): at some point add a slower-time "resync" in case lost messages result in a gradual loss of state consistency 
 			
 			// Send a message to a worker:
-			_analytics_trigger_bus.publish(new AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
+			//TODO (ALEPH-12): send to my local sibling for now until distributed mutex is in place
+			//_analytics_trigger_bus.publish(new AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper(self, msg));
+			_trigger_sibling.tell(msg, self);
 		}
 	}
 	

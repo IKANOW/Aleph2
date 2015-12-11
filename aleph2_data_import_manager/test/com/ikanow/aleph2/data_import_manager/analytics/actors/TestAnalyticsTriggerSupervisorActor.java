@@ -33,6 +33,8 @@ import akka.actor.UntypedActor;
 import akka.event.japi.LookupEventBus;
 
 import com.google.common.collect.ImmutableSet;
+import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
+import com.ikanow.aleph2.data_import_manager.utils.ActorNameUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerEventBusWrapper;
@@ -81,7 +83,11 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 
 		//(trigger bus)
 		final LookupEventBus<AnalyticsTriggerEventBusWrapper, ActorRef, String> trigger_bus = _actor_context.getAnalyticsTriggerBus();
-		final ActorRef test_deleter = _cds.getAkkaSystem().actorOf(Props.create(TestActor.class), "test_triggerer");
+		final String hostname = DataImportActorContext.get().getInformationService().getHostname();
+		final ActorRef test_deleter = _cds.getAkkaSystem().actorOf(
+				Props.create(TestActor.class),
+				hostname + ActorNameUtils.ANALYTICS_TRIGGER_WORKER_SUFFIX
+				);
 		trigger_bus.subscribe(test_deleter, ActorUtils.ANALYTICS_TRIGGER_BUS);
 
 		// wake up the supervisor
