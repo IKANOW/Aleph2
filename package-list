@@ -3,7 +3,6 @@ com.ikanow.aleph2.data_model.interfaces.data_analytics
 com.ikanow.aleph2.data_model.interfaces.data_import
 com.ikanow.aleph2.data_model.interfaces.data_services
 com.ikanow.aleph2.data_model.interfaces.shared_services
-com.ikanow.aleph2.data_model.module
 com.ikanow.aleph2.data_model.objects.data_analytics
 com.ikanow.aleph2.data_model.objects.data_import
 com.ikanow.aleph2.data_model.objects.data_layers
