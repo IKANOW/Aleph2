@@ -34,7 +34,6 @@ import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.cache.Cache;
-import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
@@ -69,8 +68,8 @@ public class CoreRealm extends AuthorizingRealm implements IClearableRealmCache 
 	protected IAuthProvider authProvider;
 	
 	@Inject
-	public CoreRealm(final IServiceContext service_context,CacheManager cacheManager, CredentialsMatcher matcher, IAuthProvider authProvider,Set<IRoleProvider> roleProviders) {		
-		super(cacheManager,matcher);
+	public CoreRealm(final IServiceContext service_context, CredentialsMatcher matcher, IAuthProvider authProvider,Set<IRoleProvider> roleProviders) {		
+		super(CoreEhCacheManager.getInstance().getCacheManager(),matcher);
 		_context = service_context;
 		this.authProvider = authProvider;
 		this.roleProviders = roleProviders;

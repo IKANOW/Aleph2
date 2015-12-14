@@ -68,10 +68,10 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	protected PermissionExtractor permissionExtractor = new PermissionExtractor();
 	
 	@Inject
-	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager, CacheManager cacheManager) {
+	public SecurityService(IServiceContext serviceContext, SecurityManager securityManager) {
 		this.serviceContext = serviceContext;
 		SecurityUtils.setSecurityManager(securityManager);
-		this.cacheManager = cacheManager;
+		this.cacheManager = CoreEhCacheManager.getInstance().getCacheManager();
 		if(securityManager instanceof DefaultSecurityManager){
 			SessionManager sessionManager = ((DefaultSecurityManager)securityManager).getSessionManager();
 			this.realms = ((DefaultSecurityManager)securityManager).getRealms();

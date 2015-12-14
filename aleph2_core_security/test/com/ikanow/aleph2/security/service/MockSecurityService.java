@@ -15,10 +15,14 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.shiro.authc.credential.CredentialsMatcher;
-import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.mgt.SecurityManager;
 
 import com.google.inject.Guice;
@@ -67,8 +71,8 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	}
 
 	@Inject
-	public MockSecurityService(IServiceContext serviceContext, SecurityManager securityManager, CacheManager cacheManager) {
-		super(serviceContext, securityManager, cacheManager);		
+	public MockSecurityService(IServiceContext serviceContext, SecurityManager securityManager) {
+		super(serviceContext, securityManager);		
 	}
 	
 	public static List<Module> getExtraDependencyModules() {

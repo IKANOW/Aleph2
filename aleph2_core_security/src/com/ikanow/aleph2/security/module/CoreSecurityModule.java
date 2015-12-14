@@ -20,8 +20,6 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.shiro.cache.CacheManager;
-import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.config.ConfigurationException;
 import org.apache.shiro.guice.ShiroModule;
 import org.apache.shiro.mgt.DefaultSecurityManager;
@@ -39,7 +37,7 @@ import com.ikanow.aleph2.security.service.CoreRealm;
  */
 public class CoreSecurityModule extends ShiroModule {
 	private static final Logger logger = LogManager.getLogger(CoreSecurityModule.class);
-
+	
 	static{
 		// prevent ehcache from making calls
 		System.setProperty("net.sf.ehcache.skipUpdateCheck","true");
@@ -52,16 +50,10 @@ public class CoreSecurityModule extends ShiroModule {
         	bindCacheManager();
         	bindMisc();
     }
-
+    
     protected void bindCacheManager() {
-    	
-    	System.setProperty("ehcache.disk.store.dir", System.getProperty("java.io.tmpdir") +"/shiro-cache-" + System.getProperty("user.name"));
-    	bind(CacheManager.class).toInstance(new EhCacheManager(){
-    	    public String getCacheManagerConfigFile() {
-    	        return "classpath:ehcache.xml";
-    	    }
-    	});		
-    	expose(CacheManager.class);
+//    	bind(CacheManager.class).toInstance(CoreEhCacheManager.getCacheManager());		
+//    	expose(CacheManager.class);
 	}
 
 	/** 
