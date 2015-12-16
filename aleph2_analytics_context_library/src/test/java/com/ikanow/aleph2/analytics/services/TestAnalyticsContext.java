@@ -17,8 +17,11 @@ package com.ikanow.aleph2.analytics.services;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -48,6 +51,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.analytics.services.AnalyticsContext.State;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
@@ -178,134 +182,6 @@ public class TestAnalyticsContext {
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
 			throw e;
-		}
-	}
-	
-	@Test
-	public void test_docWriteMode() {
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-			assertFalse(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		// (also check if search index is present, it's still removed)
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
-									.done().get())
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
 		}
 	}
 	
@@ -459,6 +335,25 @@ public class TestAnalyticsContext {
 			catch (Exception e) {
 				assertEquals(ErrorUtils.TECHNOLOGY_NOT_MODULE, e.getMessage());
 			}
+			
+			// Finally, test serialization
+			{
+				java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+				ObjectOutputStream out = new ObjectOutputStream(baos);
+				out.writeObject(test_external2a);
+				
+			    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+			    ObjectInputStream ois = new ObjectInputStream(bais);
+			    Object o = ois.readObject();
+			    
+			    assertEquals(AnalyticsContext.class, o.getClass());
+			    final AnalyticsContext test_external_serialized = (AnalyticsContext) test_external2a;
+			    
+			    assertTrue(null != test_external_serialized._mapper);
+			    assertTrue(null != test_external_serialized._mutable_serializable_signature);
+			    assertTrue(null != test_external_serialized._service_context);
+			    assertEquals(State.IN_MODULE, test_external_serialized._state_name);
+			}
 		}
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
@@ -466,6 +361,134 @@ public class TestAnalyticsContext {
 		}
 	}
 
+	@Test
+	public void test_docWriteMode() {
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
+			assertFalse(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
+			assertTrue(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
+			assertTrue(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
+			assertTrue(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
+			assertTrue(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+		// (also check if search index is present, it's still removed)
+		{
+			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+									.done().get())
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			test_context.setBucket(test_bucket);
+			
+			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
+			assertTrue(test_context._doc_service.isPresent());
+			assertFalse(test_context._index_service.isPresent());
+		}
+	}
+	
 	@Test
 	public void test_getUnderlyingArtefacts() {
 		_logger.info("run test_getUnderlyingArtefacts");

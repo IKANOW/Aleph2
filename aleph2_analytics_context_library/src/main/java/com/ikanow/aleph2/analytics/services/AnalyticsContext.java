@@ -16,6 +16,10 @@
 package com.ikanow.aleph2.analytics.services;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -108,12 +112,16 @@ import fj.data.Validation;
 /** The implementation of the analytics context interface
  * @author Alex
  */
-public class AnalyticsContext implements IAnalyticsContext {
+public class AnalyticsContext implements IAnalyticsContext, Serializable {
+	private static final long serialVersionUID = 6320951383741954045L;
+
 	protected static final Logger _logger = LogManager.getLogger();	
 
 	////////////////////////////////////////////////////////////////
 	
 	// CONSTRUCTION
+	
+	public String _mutable_serializable_signature; // (for serialization)
 	
 	public static final String __MY_BUCKET_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7e";	
 	public static final String __MY_TECH_LIBRARY_ID = "3fdb4bfa-2024-11e5-b5f7-727283247c7f";
@@ -124,44 +132,44 @@ public class AnalyticsContext implements IAnalyticsContext {
 	private static final EnumSet<MasterEnrichmentType> _batch_types = EnumSet.of(MasterEnrichmentType.batch, MasterEnrichmentType.streaming_and_batch);	
 	
 	protected static class MutableState {
-		SetOnce<DataBucketBean> bucket = new SetOnce<>();
-		SetOnce<Boolean> doc_write_mode = new SetOnce<>();
-		SetOnce<AnalyticThreadJobBean> job = new SetOnce<>();
-		SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
-		SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
+		final SetOnce<DataBucketBean> bucket = new SetOnce<>();
+		final SetOnce<Boolean> doc_write_mode = new SetOnce<>();
+		final SetOnce<AnalyticThreadJobBean> job = new SetOnce<>();
+		final SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
+		final SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<String> signature_override = new SetOnce<>();
 		final ConcurrentHashMap<String, Either<Either<IDataWriteService.IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>> external_buckets = new ConcurrentHashMap<>();
 		final HashMap<String, AnalyticsContext> sub_buckets = new HashMap<>();
 		final Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> extra_auto_context_libs = new HashSet<>();
 	};	
-	protected final MutableState _mutable_state = new MutableState(); 
+	protected transient final MutableState _mutable_state = new MutableState(); 
 	
 	public enum State { IN_TECHNOLOGY, IN_MODULE };
-	protected final State _state_name;	
+	protected transient final State _state_name;	
 	
 	// (stick this injection in and then call injectMembers in IN_MODULE case)
-	@Inject protected IServiceContext _service_context;	
-	protected IManagementDbService _core_management_db;
-	protected ICoreDistributedServices _distributed_services; 	
-	protected Optional<ISearchIndexService> _index_service;
-	protected Optional<IDocumentService> _doc_service;
-	protected IStorageService _storage_service;
-	protected ISecurityService _security_service;
-	protected GlobalPropertiesBean _globals;
+	@Inject protected transient IServiceContext _service_context;	
+	protected transient IManagementDbService _core_management_db;
+	protected transient ICoreDistributedServices _distributed_services; 	
+	protected transient Optional<ISearchIndexService> _index_service;
+	protected transient Optional<IDocumentService> _doc_service;
+	protected transient IStorageService _storage_service;
+	protected transient ISecurityService _security_service;
+	protected transient GlobalPropertiesBean _globals;
 
-	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());	
+	protected transient final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());	
 	
 	//TODO (ALEPH-12): need to only load services requested from the schema (eg currently always loading search index/doc) - and apply the service_name
 	
 	// For writing objects out
 	// TODO (ALEPH-12): this needs to get moved into the object output library
-	protected Optional<IDataWriteService<JsonNode>> _crud_index_service;
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
-	protected Optional<IDataWriteService<JsonNode>> _crud_doc_service;
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service;
-	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service;
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
+	protected transient Optional<IDataWriteService<JsonNode>> _crud_index_service;
+	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
+	protected transient Optional<IDataWriteService<JsonNode>> _crud_doc_service;
+	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service;
+	protected transient Optional<IDataWriteService<JsonNode>> _crud_storage_service;
+	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
 	
 	private static ConcurrentHashMap<String, AnalyticsContext> static_instances = new ConcurrentHashMap<>();
 	
@@ -191,6 +199,43 @@ public class AnalyticsContext implements IAnalyticsContext {
 		
 		// Can't do anything until initializeNewContext is called
 	}	
+	
+	/** Serialization constructor
+	 * @param ois
+	 * @throws ClassNotFoundException
+	 * @throws IOException
+	 * @throws SecurityException 
+	 * @throws NoSuchFieldException 
+	 * @throws IllegalAccessException 
+	 * @throws IllegalArgumentException 
+	 */
+	private void readObject(ObjectInputStream ois)
+			throws ClassNotFoundException, IOException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException
+	{
+	    // default deserialization
+	    ois.defaultReadObject();
+	    
+	    // fill in the final fields
+	    {
+		    final Field f = this.getClass().getDeclaredField("_mutable_state");
+		    f.setAccessible(true);
+		    f.set(this,  new MutableState());
+	    }	    
+	    {
+		    final Field f = this.getClass().getDeclaredField("_mapper");
+		    f.setAccessible(true);
+		    f.set(this,  BeanTemplateUtils.configureMapper(Optional.empty()));
+	    }	    
+	    {
+		    final Field f = this.getClass().getDeclaredField("_state_name");
+		    f.setAccessible(true);
+		    f.set(this,  State.IN_MODULE);
+	    }	    
+	    
+	    // fill in the object fields
+	    initializeNewContext(_mutable_serializable_signature);
+	}
+	
 	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the bucket for this context instance
 	 * @param this_bucket - the bucket to associate
@@ -284,6 +329,8 @@ public class AnalyticsContext implements IAnalyticsContext {
 	 */
 	@Override
 	public void initializeNewContext(final String signature) {
+		_mutable_serializable_signature = signature;
+		
 		try {
 			// Inject dependencies
 			final Config parsed_config = ConfigFactory.parseString(signature);
@@ -480,6 +527,7 @@ public class AnalyticsContext implements IAnalyticsContext {
 			
 			final String ret1 = last_call.root().render(ConfigRenderOptions.concise());
 			_mutable_state.signature_override.set(ret1);
+			_mutable_serializable_signature = ret1;
 			final String ret = this.getClass().getName() + ":" + ret1;
 
 			// Finally this is a good central (central per-job, NOT per-bucket or per-bucket-and-tech (*)) place to sort out deleting ping pong buffers
