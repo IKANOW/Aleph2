@@ -56,7 +56,7 @@ public class TestDataBucketCrudService_Analytics {
 										.done();
 
 			List<BasicMessageBean> res = DataBucketCrudService.staticValidation(tb, false);
-			assertEquals(1, res.size());
+			assertEquals("Wrong number of errors: " + res.stream().map(b->b.message()).collect(Collectors.joining(";")), 2, res.size());
 		}		
 		{
 			final DataBucketBean tb = BeanTemplateUtils.clone(getBaseBucket("/tb1b", null, null))

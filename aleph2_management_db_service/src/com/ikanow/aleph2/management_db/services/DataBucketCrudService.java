@@ -773,37 +773,35 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		//(- for now ... don't support streaming_and_batch, the current enrichment logic doesn't support it (X1))
 
 		//(1, 3, 4, 5)
-		if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
-				|| ((null != bucket.streaming_enrichment_configs()) && !bucket.streaming_enrichment_configs().isEmpty())
-				|| (null != bucket.batch_enrichment_topology())
-				|| (null != bucket.streaming_enrichment_topology()))
-		{
-			if (null == bucket.master_enrichment_type()) { // (3)
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));				
+		if (null == bucket.master_enrichment_type()) { // (3)
+			if (((null != bucket.batch_enrichment_configs()) && !bucket.batch_enrichment_configs().isEmpty())
+					|| ((null != bucket.streaming_enrichment_configs()) && !bucket.streaming_enrichment_configs().isEmpty())
+					|| (null != bucket.batch_enrichment_topology())
+					|| (null != bucket.streaming_enrichment_topology()))
+			{
+				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.ENRICHMENT_BUT_NO_MASTER_ENRICHMENT_TYPE, bucket.full_name())));
 			}
-			else if (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()) { //(X1)
-				errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_AND_BATCH_NOT_SUPPORTED, bucket.full_name())));
-			}
-			else {
-				// (4)
-				if ((DataBucketBean.MasterEnrichmentType.batch == bucket.master_enrichment_type())
-					 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+		}
+		else if (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()) { //(X1)
+			errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_AND_BATCH_NOT_SUPPORTED, bucket.full_name())));
+		}
+		else {
+			// (4)
+			if ((DataBucketBean.MasterEnrichmentType.batch == bucket.master_enrichment_type())
+				 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+			{
+				if ((null == bucket.batch_enrichment_topology()) && (null == bucket.batch_enrichment_configs()))
 				{
-					if ((null == bucket.batch_enrichment_topology()) && 
-							((null == bucket.batch_enrichment_configs()) || bucket.batch_enrichment_configs().isEmpty()))
-					{
-						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
-					}
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.BATCH_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
 				}
-				// (5)
-				if ((DataBucketBean.MasterEnrichmentType.streaming == bucket.master_enrichment_type())
-						 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+			}
+			// (5)
+			if ((DataBucketBean.MasterEnrichmentType.streaming == bucket.master_enrichment_type())
+					 || (DataBucketBean.MasterEnrichmentType.streaming_and_batch == bucket.master_enrichment_type()))
+			{
+				if ((null == bucket.streaming_enrichment_topology()) && (null == bucket.streaming_enrichment_configs()))
 				{
-					if ((null == bucket.streaming_enrichment_topology()) && 
-							((null == bucket.streaming_enrichment_configs()) || bucket.streaming_enrichment_configs().isEmpty()))
-					{
-						errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
-					}
+					errors.add(MgmtCrudUtils.createValidationError(ErrorUtils.get(ManagementDbErrorUtils.STREAMING_ENRICHMENT_NO_CONFIGS, bucket.full_name())));
 				}
 			}
 		}
