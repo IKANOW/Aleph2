@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
@@ -57,7 +58,7 @@ public class TestProcessUtils {
 		assertTrue(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
 		
 		//stop the process
-		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path);
+		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.empty());
 		assertTrue(stop._1, stop._2);
 		
 		//cleanup
@@ -74,7 +75,7 @@ public class TestProcessUtils {
 		final String root_path = System.getProperty("java.io.tmpdir")  + File.separator;
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
-		final Tuple2<String, Boolean> stop_result = ProcessUtils.stopProcess(application_name, bucket, root_path);
+		final Tuple2<String, Boolean> stop_result = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.empty());
 		assertFalse(stop_result._1, stop_result._2);
 	}
 	
@@ -107,7 +108,7 @@ public class TestProcessUtils {
 		assertFalse(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
 		
 		//stop the process anyways
-		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path);
+		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.empty());
 
 		assertTrue(stop._1, stop._2); //stop returns true, but says its already dead
 		
