@@ -1615,6 +1615,7 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::owner_id, "owner1")
 				.with(DataBucketBean::multi_node_enabled, true) 
 				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.streaming)
+				.with(DataBucketBean::streaming_enrichment_topology, BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get())
 				.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 				.with(DataBucketBean::harvest_configs, 
 						Arrays.asList(BeanTemplateUtils.build(HarvestControlMetadataBean.class)
@@ -1644,7 +1645,9 @@ public class TestDataBucketCrudService_Create {
 		// Try again, assert - works this time
 		assertEquals(0L, (long)_bucket_crud.countObjects().get());
 		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
-		assertEquals(3, insert_future.getManagementResults().get().size());
+		assertEquals("Wrong number of replies: " +
+					insert_future.getManagementResults().join().stream().map(b->b.message()).collect(Collectors.joining(";")), 
+						3, insert_future.getManagementResults().get().size());
 		final java.util.Iterator<BasicMessageBean> it = insert_future.getManagementResults().get().iterator();
 		final BasicMessageBean streaming_msg = it.next();
 		assertEquals(true, streaming_msg.success());
@@ -1717,6 +1720,7 @@ public class TestDataBucketCrudService_Create {
 		// Third attempt, succeed with different update
 		final DataBucketBean mod_bucket3 = BeanTemplateUtils.clone(bucket)
 				.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+				.with(DataBucketBean::batch_enrichment_configs, Arrays.asList())
 				.with(DataBucketBean::display_name, "Something else")
 				.done();
 
@@ -1731,8 +1735,10 @@ public class TestDataBucketCrudService_Create {
 				fail("Should have thrown exception");
 			}
 			catch (Exception e) {
-				assertTrue("Validation error", e.getCause() instanceof RuntimeException);
-				assertTrue("compains about master_enrichment_type: " + e.getMessage(), 
+				assertTrue("Validation error: " + e + " / " + e.getCause(), e.getCause() instanceof RuntimeException);
+				assertTrue("compains about master_enrichment_type: " + e.getMessage() + ": " + 
+						update_future2.getManagementResults().get().stream().map(b->b.message()).collect(Collectors.joining(";"))
+						, 
 						update_future2.getManagementResults().get().iterator().next().message().contains("master_enrichment_type"));
 			}			
 		}
@@ -1802,6 +1808,7 @@ public class TestDataBucketCrudService_Create {
 			final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
 					.with(DataBucketBean::display_name, "Something else")
 					.with(DataBucketBean::master_enrichment_type, MasterEnrichmentType.batch)
+					.with(DataBucketBean::batch_enrichment_configs, Arrays.asList())
 					.with(DataBucketBean::multi_node_enabled, false)
 					.done();
 			
