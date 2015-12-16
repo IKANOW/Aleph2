@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
@@ -58,10 +59,12 @@ public class ProcessUtils {
 	
 	/**
 	 * Attempts to stop the given process if it is still currently running
+	 * Will send a 15 if no kill_signal is given.  If the original kill_signal fails to
+	 * stop the job w/in 5 seconds, sends a kill -9 to force the kill.
 	 * Throw an exception if we fail to stop?
 	 * @return Tuple2 _1 for message, _2 for success
 	 */
-	public static Tuple2<String,Boolean> stopProcess(final String application_name, final DataBucketBean bucket, final String aleph_root_path) {				
+	public static Tuple2<String,Boolean> stopProcess(final String application_name, final DataBucketBean bucket, final String aleph_root_path, final Optional<Integer> kill_signal) {				
 		try {
 			//gets process pid/date
 			final Tuple2<String, Long> pid_date = getStoredPid(application_name, bucket, aleph_root_path);
@@ -71,8 +74,8 @@ public class ProcessUtils {
 					return Tuples._2T("(process " + pid_date._1 + " already deleted)", true);
 				}
 				//kill -15 the process, wait a few cycles to let it die
-				logger.debug("trying to kill -15 pid: " + pid_date._1);
-				final Process px = new ProcessBuilder(Arrays.asList("kill", "-15", pid_date._1)).start();
+				logger.debug("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid_date._1);
+				final Process px = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid_date._1)).start();
 				for (int i = 0; i < 5; ++i) {
 					try { Thread.sleep(1000L); } catch (Exception e) {}
 					if (!px.isAlive()) {
@@ -82,7 +85,15 @@ public class ProcessUtils {
 				if (!px.isAlive()) {
 					return Tuples._2T("Tried to kill " + pid_date._1 + ": success = " + px.exitValue(), 0 == px.exitValue());
 				} else {
-					return Tuples._2T("Timed out trying to kill: " + pid_date._1, true);				
+					//we are still alive, so send a harder kill signal if we haven't already sent a 9
+					if ( kill_signal.isPresent() && kill_signal.get() == 9 ) {
+						return Tuples._2T("Timed out trying to kill: " + pid_date._1, true);
+					} else {
+						logger.debug("Timed out trying to kill: " + pid_date._1 + " sending kill -9 to force kill");
+						return stopProcess(application_name, bucket, aleph_root_path, Optional.of(9));
+					}
+					
+									
 				}
 			} else {
 				return Tuples._2T("Couldn't find a stored entry for the given application/bucket", false);
