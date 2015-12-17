@@ -1887,8 +1887,43 @@ public class TestDataBucketCrudService_Create {
 		// Convert to lock_to_nodes: false and check that the node affinity is not updated
 		{
 			CompletableFuture<Boolean> updated = _underlying_bucket_status_crud.updateObjectById("id1", 
-					CrudUtils.update(DataBucketStatusBean.class).unset(DataBucketStatusBean::node_affinity));
+				CrudUtils.update(DataBucketStatusBean.class)
+					.set(DataBucketStatusBean::suspended, false)
+					.set(DataBucketStatusBean::confirmed_suspended, false)
+				);
 			assertTrue(updated.join());
+			final DataBucketStatusBean status_after4a = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(false, status_after4a.suspended());
+			assertEquals(false, status_after4a.confirmed_suspended());
+			
+			final DataBucketBean mod_bucket5 = BeanTemplateUtils.clone(mod_bucket4)
+					.with(DataBucketBean::lock_to_nodes, false)
+					.done();
+			
+			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket5, true);
+			
+			assertEquals("id1", update_future5.get().get());
+	
+			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket5.display_name());
+			
+			//(Check that node affinity was not set)
+			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(2, status_after4.node_affinity().size());
+		}
+		// Now suspend the bucket and then rerun, check removes the node affinity
+		// (note there is logic in the DIM that prevents you from doing this unless the harvest tech allows you to)
+		{
+			CompletableFuture<Boolean> updated = _underlying_bucket_status_crud.updateObjectById("id1", 
+				CrudUtils.update(DataBucketStatusBean.class)
+					.set(DataBucketStatusBean::suspended, true)
+					.set(DataBucketStatusBean::confirmed_suspended, true)
+					);
+			assertTrue(updated.join());
+			final DataBucketStatusBean status_after4a = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(true, status_after4a.suspended());
+			assertEquals(true, status_after4a.confirmed_suspended());
 			
 			final DataBucketBean mod_bucket5 = BeanTemplateUtils.clone(mod_bucket4)
 					.with(DataBucketBean::lock_to_nodes, false)
@@ -1905,6 +1940,24 @@ public class TestDataBucketCrudService_Create {
 			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
 			assertEquals(null, status_after4.node_affinity());
+		}
+		// Check again (code coverage)
+		{
+			final DataBucketBean mod_bucket5 = BeanTemplateUtils.clone(mod_bucket4)
+					.with(DataBucketBean::lock_to_nodes, false)
+					.done();
+			
+			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket5, true);
+			
+			assertEquals("id1", update_future5.get().get());
+	
+			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket5.display_name());
+			
+			//(Check that node affinity was not set)
+			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(null, status_after4.node_affinity());			
 		}
 	}
 }

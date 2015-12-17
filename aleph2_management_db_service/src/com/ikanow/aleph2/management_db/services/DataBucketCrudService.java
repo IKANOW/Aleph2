@@ -1190,15 +1190,21 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 							(new_object, !status.suspended(), old_version, new HashSet<String>(Arrays.asList(source))));
 		
 		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
+		final boolean lock_to_nodes = Optional.ofNullable(new_object.lock_to_nodes()).orElse(true);
 		if (node_affinity.isEmpty()) {
 			final CompletableFuture<Boolean> update_future = 
-					Optional.ofNullable(new_object.lock_to_nodes()).orElse(true)
+					lock_to_nodes
 					? 					
 					MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only))
 					:
 					CompletableFuture.completedFuture(true)
 					;
 					
+			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
+		}
+		else if (!lock_to_nodes && Optional.ofNullable(status.confirmed_suspended()).orElse(false)) { // previously had a node affinity, remove now that we're definitely suspended
+			final CompletableFuture<Boolean> update_future = status_store.updateObjectById(new_object._id(), 
+					CrudUtils.update(DataBucketStatusBean.class).unset(DataBucketStatusBean::node_affinity));			
 			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 		}
 		else {
