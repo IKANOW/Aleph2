@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.HashMap;
 import java.util.Optional;
 
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
@@ -36,6 +37,26 @@ public class MockServiceContext implements IServiceContext {
 
 	protected final HashMap<String, HashMap<String, IUnderlyingService>> _mocks;
 	protected GlobalPropertiesBean _globals = null;
+	
+	/** Provider implementation
+	 * @author Alex
+	 *
+	 * @param <I>
+	 */
+	public static class MockProvider<I> implements Provider<I> {
+
+		public MockProvider(final I i) {
+			_i = i;
+		}
+		
+		protected final I _i;
+		
+		@Override
+		public I get() {
+			return null;
+		}
+		
+	}
 	
 	/** User constructor 
 	 */
@@ -69,6 +90,18 @@ public class MockServiceContext implements IServiceContext {
 								.get(serviceName.orElse("")));
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz,
+			Optional<String> serviceName) {
+		return (Optional<Provider<I>>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
+								.orElse(new HashMap<String, IUnderlyingService>())
+								.get(serviceName.orElse("")))
+								.map(i -> (Provider<I>)new MockProvider<I>((I)i))
+								;
+	}
+	
+	
 	@Override
 	public Optional<IColumnarService> getColumnarService() {
 		return getService(IColumnarService.class, Optional.empty());

@@ -26,4 +26,5 @@ public class HarvestErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorU
 	public static final String HARVEST_TECH_ERROR = "Harvest technology from bucket {1} (harvest tech {2}) manually called exception: {0}";
 	public static final String HARVEST_UNKNOWN_ERROR = "Unknown error from bucket {1} called exception: {0}";	 
 	public static final String TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH = "Tried to create a multi-node bucket {0} but technology {1} does not support multi-node: set 'multi_node_enabled' field to 'false'";
+	public static final String MISMATCH_BETWEEN_TECH_AND_BUCKET_NODE_AFFINITY = "The bucket.lock_to_nodes for bucket {0} must match 'applyNodeAffinity' setting for harvest technology {1}";
 }

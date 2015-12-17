@@ -54,6 +54,7 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -64,6 +65,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchServi
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
@@ -116,7 +118,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	private static final Logger _logger = LogManager.getLogger();	
 	
 	protected final IStorageService _storage_service;	
-	protected final IManagementDbService _underlying_management_db;
+	protected final Provider<IManagementDbService> _underlying_management_db;
 	
 	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
 	protected final SetOnce<ICrudService<DataBucketStatusBean>> _underlying_data_bucket_status_db = new SetOnce<>();
@@ -131,7 +133,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	@Inject
 	public DataBucketCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
+		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
 				
 		_storage_service = service_context.getStorageService();
 		
@@ -144,10 +146,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/** Work around for Guice circular development issues
 	 */
 	protected void initialize() {
-		_underlying_data_bucket_db.set(_underlying_management_db.getDataBucketStore());
-		_underlying_data_bucket_status_db.set(_underlying_management_db.getDataBucketStatusStore());
-		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
-		_bucket_deletion_queue.set(_underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class));
+		_underlying_data_bucket_db.set(_underlying_management_db.get().getDataBucketStore());
+		_underlying_data_bucket_status_db.set(_underlying_management_db.get().getDataBucketStatusStore());
+		_bucket_action_retry_store.set(_underlying_management_db.get().getRetryStore(BucketActionRetryMessage.class));
+		_bucket_deletion_queue.set(_underlying_management_db.get().getBucketDeletionQueue(BucketDeletionMessage.class));
 		
 		// Handle some simple optimization of the data bucket CRUD repo:
 		Executors.newSingleThreadExecutor().submit(() -> {
@@ -160,7 +162,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	/** User constructor, for wrapping
 	 */
 	public DataBucketCrudService(final IServiceContext service_context,
-			final IManagementDbService underlying_management_db, 
+			final Provider<IManagementDbService> underlying_management_db, 
 			final IStorageService storage_service,
 			final ICrudService<DataBucketBean> underlying_data_bucket_db,
 			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
@@ -170,8 +172,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db.set(underlying_data_bucket_db);
 		_underlying_data_bucket_status_db.set(underlying_data_bucket_status_db);
-		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
-		_bucket_deletion_queue.set(_underlying_management_db.getBucketDeletionQueue(BucketDeletionMessage.class));		
+		_bucket_action_retry_store.set(_underlying_management_db.get().getRetryStore(BucketActionRetryMessage.class));
+		_bucket_deletion_queue.set(_underlying_management_db.get().getBucketDeletionQueue(BucketDeletionMessage.class));		
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -184,7 +186,8 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final Optional<AuthorizationBean> client_auth,
 			final Optional<ProjectBean> project_auth) 
 	{
-		return new DataBucketCrudService(_service_context, _underlying_management_db.getFilteredDb(client_auth, project_auth), 
+		return new DataBucketCrudService(_service_context, 
+				new MockServiceContext.MockProvider<IManagementDbService>(_underlying_management_db.get().getFilteredDb(client_auth, project_auth)), 
 				_storage_service,
 				_underlying_data_bucket_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth),
 				_underlying_data_bucket_status_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth)
@@ -1130,7 +1133,13 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Apply the affinity to the bucket status (which must exist, by construction):
 		// (node any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
-		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only));
+		final CompletableFuture<Boolean> update_future = 
+				Optional.ofNullable(new_object.lock_to_nodes()).orElse(true)
+				? 
+				MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only))
+				:
+				CompletableFuture.completedFuture(true)
+				;
 
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
@@ -1182,7 +1191,14 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
 		if (node_affinity.isEmpty()) {
-			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only));
+			final CompletableFuture<Boolean> update_future = 
+					Optional.ofNullable(new_object.lock_to_nodes()).orElse(true)
+					? 					
+					MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only))
+					:
+					CompletableFuture.completedFuture(true)
+					;
+					
 			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 		}
 		else {

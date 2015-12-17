@@ -38,6 +38,7 @@ import scala.concurrent.duration.FiniteDuration;
 
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
@@ -79,7 +80,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IServiceContext _service_context;
-	protected final IManagementDbService _underlying_management_db;	
+	protected final Provider<IManagementDbService> _underlying_management_db;	
 	protected final DataBucketCrudService _data_bucket_service;
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
 	protected final SharedLibraryCrudService _shared_library_service;
@@ -109,7 +110,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	{
 		//(just return null here if underlying management not present, things will fail catastrophically unless this is a test)
 		_service_context = service_context;
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).orElse(null);
+		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).orElse(null);
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;
@@ -134,7 +135,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 * @param project
 	 */
 	public CoreManagementDbService(final IServiceContext service_context,
-			final IManagementDbService underlying_management_db,
+			final Provider<IManagementDbService> underlying_management_db,
 			final DataBucketCrudService data_bucket_service, final DataBucketStatusCrudService data_bucket_status_service,
 			final SharedLibraryCrudService shared_library_service, final ManagementDbActorContext actor_context,		
 			final Optional<AuthorizationBean> auth, final Optional<ProjectBean> project, boolean read_only) {
@@ -168,7 +169,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public IManagementDbService getSecuredDb(AuthorizationBean client_auth)
 	{
-		return new SecuredCoreManagementDbService(_service_context, _underlying_management_db, 
+		return new SecuredCoreManagementDbService(_service_context, _underlying_management_db.get(), 
 				_data_bucket_service, _data_bucket_status_service, _shared_library_service, _actor_context ,client_auth);
 		
 	}
@@ -187,7 +188,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	public <T> ICrudService<T> getPerLibraryState(Class<T> clazz,
 			SharedLibraryBean library, Optional<String> sub_collection) {		
-		return _underlying_management_db.getPerLibraryState(clazz, library, sub_collection).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getPerLibraryState(clazz, library, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -214,7 +215,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketHarvestState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getBucketHarvestState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -223,7 +224,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketEnrichmentState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getBucketEnrichmentState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -232,7 +233,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public <T> ICrudService<T> getBucketAnalyticThreadState(Class<T> clazz,
 			DataBucketBean bucket, Optional<String> sub_collection) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getBucketAnalyticThreadState(clazz, bucket, sub_collection).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -266,7 +267,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 			Class<T> retry_message_clazz) {
 		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());		
-		return _underlying_management_db.getRetryStore(retry_message_clazz).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getRetryStore(retry_message_clazz).readOnlyVersion(_read_only.get());
 	}
 	
 	/* (non-Javadoc)
@@ -278,7 +279,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		if (!_read_only.get())
 			ManagementDbActorContext.get().getDistributedServices().waitForAkkaJoin(Optional.empty());
 		
-		return _underlying_management_db.getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getBucketDeletionQueue(deletion_queue_clazz).readOnlyVersion(_read_only.get());
 	}
 
 	/* (non-Javadoc)
@@ -288,7 +289,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public ICrudService<AssetStateDirectoryBean> getStateDirectory(
 			Optional<DataBucketBean> bucket_filter, Optional<StateDirectoryType> type_filter) {
 		// (note: don't need to join the akka cluster in order to use the state objects)
-		return _underlying_management_db.getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only.get());
+		return _underlying_management_db.get().getStateDirectory(bucket_filter, type_filter).readOnlyVersion(_read_only.get());
 	}
 	
 
@@ -299,7 +300,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	public Collection<Object> getUnderlyingArtefacts() {
 		final LinkedList<Object> ll = new LinkedList<Object>();
 		ll.add(this);
-		ll.addAll(_underlying_management_db.getUnderlyingArtefacts());
+		ll.addAll(_underlying_management_db.get().getUnderlyingArtefacts());
 		return ll;
 	}
 
@@ -434,7 +435,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	 */
 	@Override
 	public <T> ICrudService<T> getBucketTestQueue(Class<T> test_queue_clazz) {
-		return _underlying_management_db.getBucketTestQueue(test_queue_clazz);
+		return _underlying_management_db.get().getBucketTestQueue(test_queue_clazz);
 	}
 
 	/* (non-Javadoc)
@@ -443,6 +444,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	@Override
 	public <T> ICrudService<T> getAnalyticBucketTriggerState(
 			Class<T> trigger_state_clazz) {
-		return _underlying_management_db.getAnalyticBucketTriggerState(trigger_state_clazz);
+		return _underlying_management_db.get().getAnalyticBucketTriggerState(trigger_state_clazz);
 	}
 }

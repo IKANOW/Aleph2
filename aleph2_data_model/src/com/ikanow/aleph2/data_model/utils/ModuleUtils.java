@@ -42,6 +42,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
@@ -351,8 +352,21 @@ public class ModuleUtils {
 	 * @param serviceName
 	 * @return
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static <I> I getService(Class<I> serviceClazz, Optional<String> serviceName) {
+		return Optional.ofNullable(getServiceProvider(serviceClazz, serviceName)).map(i -> i.get()).orElse(null);
+	}
+	
+	/** FOR CIRCULAR DEPENDENCY CASES
+	 * Returns back an instance of the requested serviceClazz/annotation
+	 * if an injector exists for it.  If the injectors have not yet been
+	 * created will try to load them from the default config.
+	 * 
+	 * @param serviceClazz
+	 * @param serviceName
+	 * @return
+	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static <I> Provider<I> getServiceProvider(Class<I> serviceClazz, Optional<String> serviceName) {
 		if ( serviceInjectors == null ) {
 			try {
 				loadModulesFromConfig(ConfigFactory.load());
@@ -364,7 +378,7 @@ public class ModuleUtils {
 		Injector injector = serviceInjectors.get(key);		
 		if ( injector != null ) {			
 			//return (I) getInstance_onceOnly(injector, key);
-			return (I) getInstance.apply(injector, key);
+			return (Provider<I>) getInstance.apply(injector, key);
 			//return (I) injector.getInstance(key);
 		}
 		else 
@@ -426,7 +440,7 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private static Object getInstance_onceOnly(Injector injector, Key key) {		
-		return injector.getInstance(key);
+		return new CachingProvider(injector.getProvider(key));
 	}
 	
 	/**
@@ -612,6 +626,31 @@ public class ModuleUtils {
 				: _app_injector.thenCombine(_called_ctor, (i, b) -> i);
 	}
 	
+	/** Caching wrapper for Provider
+	 * @author Alex
+	 *
+	 * @param <I>
+	 */
+	public static class CachingProvider<I> implements Provider<I> {
+		final SetOnce<I> _cache = new SetOnce<>();
+		final Provider<I> _parent;
+
+		/** User c'tor
+		 * @param provider
+		 */
+		public CachingProvider(Provider<I> provider) {
+			_parent = provider;
+		}
+		
+		@Override
+		public synchronized I get() {
+			return _cache.optional().orElseGet(() -> {
+				_cache.set(_parent.get());
+				return _cache.get();
+			});
+		}
+	}
+	
 	/**
 	 * Implementation of the IServiceContext class for easy usage
 	 * from the other contexts.
@@ -632,6 +671,12 @@ public class ModuleUtils {
 			return Optional.ofNullable(ModuleUtils.getService(serviceClazz, serviceName));
 		}
 
+		@Override
+		public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz,
+				Optional<String> serviceName) {
+			return Optional.ofNullable(ModuleUtils.getServiceProvider(serviceClazz, serviceName));
+		}
+		
 		/**
 		 * Utility function that just calls {@link #getService(Class, Optional)}
 		 * 
@@ -757,6 +802,7 @@ public class ModuleUtils {
 		@SuppressWarnings("unchecked")
 		@Override
 		protected void configure() {
+			binder().disableCircularProxies();
 			if ( interfaceClazz.isPresent() ) {
 				if ( annotationName.isPresent() ) {
 					bind(interfaceClazz.get()).annotatedWith(Names.named(annotationName.get())).to(serviceClass).in(Scopes.SINGLETON); 
@@ -779,6 +825,7 @@ public class ModuleUtils {
 
 		@Override
 		protected void configure() {
+			binder().disableCircularProxies();
 			bind(IServiceContext.class).to(ServiceContext.class).in(Scopes.SINGLETON);
 			bind(IUuidService.class).toInstance(UuidUtils.get());
 			bind(GlobalPropertiesBean.class).toInstance(globals);

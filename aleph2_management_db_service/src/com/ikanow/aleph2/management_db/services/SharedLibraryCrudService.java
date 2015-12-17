@@ -31,12 +31,14 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -55,18 +57,18 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IStorageService _storage_service;	
-	protected final IManagementDbService _underlying_management_db;
+	protected final Provider<IManagementDbService> _underlying_management_db;
 	protected final SetOnce<ICrudService<SharedLibraryBean>> _underlying_library_db = new SetOnce<>();
 	
 	/** Guice invoked constructor
 	 */
 	@Inject
 	public SharedLibraryCrudService(final IServiceContext service_context) {
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
+		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
 		ModuleUtils.getAppInjector().thenRun(() -> {
 			// (work around for guice initialization)
-			_underlying_library_db.set(_underlying_management_db.getSharedLibraryStore());
+			_underlying_library_db.set(_underlying_management_db.get().getSharedLibraryStore());
 			
 			// Handle some simple optimization of the data bucket CRUD repo:
 			Executors.newSingleThreadExecutor().submit(() -> {
@@ -78,7 +80,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	
 	/** User constructor, for wrapping
 	 */
-	public SharedLibraryCrudService(final IManagementDbService underlying_management_db, 
+	public SharedLibraryCrudService(final Provider<IManagementDbService> underlying_management_db, 
 			final IStorageService storage_service,
 			final ICrudService<SharedLibraryBean> underlying_library_db
 			)
@@ -129,7 +131,8 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			String authorization_fieldname,
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) {
-		return new SharedLibraryCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
+		return new SharedLibraryCrudService(
+				new MockServiceContext.MockProvider<IManagementDbService>(_underlying_management_db.get().getFilteredDb(client_auth, project_auth)), 
 				_storage_service,
 				_underlying_library_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth));
 	}

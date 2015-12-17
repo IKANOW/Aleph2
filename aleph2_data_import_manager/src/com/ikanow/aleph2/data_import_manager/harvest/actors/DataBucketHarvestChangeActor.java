@@ -147,7 +147,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 								final HarvestContext h_context = _context.getNewHarvestContext();
 								
 								final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
-										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map);
+										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map)
+										.bind(h_tech -> checkNodeAffinityMatches(m.bucket(), h_tech, h_context));
 
 								// set the library bean - note if here then must have been set, else IHarvestTechnologyModule wouldn't exist 
 								err_or_map.forEach(map -> {								
@@ -265,7 +266,29 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		}
 	}
 	
-	//
+	/** Quickly check if the node affinity vs lock_to_nodes match up
+	 * @param bucket
+	 * @param technology
+	 * @param context
+	 * @return
+	 */
+	protected static Validation<BasicMessageBean, IHarvestTechnologyModule> checkNodeAffinityMatches(
+			final DataBucketBean bucket,
+			final IHarvestTechnologyModule technology,
+			final IHarvestContext context
+			) 
+	{
+		Validation<BasicMessageBean, IHarvestTechnologyModule> x = 
+			Optional.ofNullable(bucket.lock_to_nodes())
+				.filter(lock -> lock != technology.applyNodeAffinity(bucket, context))
+				.map(still_here -> Validation.<BasicMessageBean, IHarvestTechnologyModule>fail(
+						ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class.getSimpleName(), "applyNodeAffinity", 
+														HarvestErrorUtils.MISMATCH_BETWEEN_TECH_AND_BUCKET_NODE_AFFINITY, 
+														bucket.full_name(), technology.getClass().getSimpleName())))
+				.orElse(Validation.<BasicMessageBean, IHarvestTechnologyModule>success(technology))
+				;
+		return x;
+	}	
 	
 	/** Make various requests of the harvester based on the message type
 	 * @param bucket

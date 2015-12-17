@@ -52,6 +52,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
+import com.ikanow.aleph2.data_import.services.HarvestContext;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
@@ -315,6 +316,30 @@ public class TestDataBucketChangeActor {
 		assertTrue("getHarvestTechnology call succeeded", test3b.isSuccess());
 		assertTrue("harvest tech created: ", test3b.success() != null);
 		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success().getClass().getName());		
+	}
+	
+	@Test
+	public void test_checkNodeAffinityMatches() {
+		final DataBucketBean bucket = createBucket("test_tech_id_harvest_node_affinity");		
+		
+		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleHarvestTechnology", 
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-harvest-example.jar").getAbsoluteFile().toURI().toString()),
+						Collections.emptyList(), "test1", "test");
+	
+		assertTrue(ret_val.isSuccess());
+		
+		final HarvestContext h_context = _actor_context.getNewHarvestContext();
+		
+		final DataBucketBean bucket_lock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, true).done();
+
+		final DataBucketBean bucket_nolock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, false).done();
+		
+		
+		assertEquals(Validation.success(ret_val.success()), DataBucketHarvestChangeActor.checkNodeAffinityMatches(bucket, ret_val.success(), h_context));
+		assertEquals(Validation.success(ret_val.success()), DataBucketHarvestChangeActor.checkNodeAffinityMatches(bucket_lock, ret_val.success(), h_context));
+		assertTrue(DataBucketHarvestChangeActor.checkNodeAffinityMatches(bucket_nolock, ret_val.success(), h_context).isFail());
 	}
 	
 	@Test

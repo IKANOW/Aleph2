@@ -36,12 +36,14 @@ import scala.Tuple2;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
@@ -74,7 +76,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	private static final Logger _logger = LogManager.getLogger();	
 
 	protected final IStorageService _storage_service;
-	protected final IManagementDbService _underlying_management_db;
+	protected final Provider<IManagementDbService> _underlying_management_db;
 	
 	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
 	protected final SetOnce<ICrudService<DataBucketStatusBean>> _underlying_data_bucket_status_db = new SetOnce<>();
@@ -88,7 +90,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@Inject
 	public DataBucketStatusCrudService(final IServiceContext service_context, ManagementDbActorContext actor_context)
 	{
-		_underlying_management_db = service_context.getService(IManagementDbService.class, Optional.empty()).get();
+		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
 		
 		_storage_service = service_context.getStorageService();
 		
@@ -100,16 +102,16 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	/** Work around for Guice circular development issues
 	 */
 	protected void initialize() {
-		_underlying_data_bucket_db.set(_underlying_management_db.getDataBucketStore());
-		_underlying_data_bucket_status_db.set(_underlying_management_db.getDataBucketStatusStore());
-		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));		
+		_underlying_data_bucket_db.set(_underlying_management_db.get().getDataBucketStore());
+		_underlying_data_bucket_status_db.set(_underlying_management_db.get().getDataBucketStatusStore());
+		_bucket_action_retry_store.set(_underlying_management_db.get().getRetryStore(BucketActionRetryMessage.class));		
 	}
 
 	/** User constructor, for wrapping
 	 * @param underlying_management_db
 	 * @param underlying_data_bucket_db
 	 */
-	public DataBucketStatusCrudService(final IManagementDbService underlying_management_db, 
+	public DataBucketStatusCrudService(final Provider<IManagementDbService> underlying_management_db, 
 			final IStorageService storage_service,
 			final ICrudService<DataBucketBean> underlying_data_bucket_db,
 			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
@@ -118,7 +120,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 		_underlying_management_db = underlying_management_db;
 		_underlying_data_bucket_db.set(underlying_data_bucket_db);
 		_underlying_data_bucket_status_db.set(underlying_data_bucket_status_db);
-		_bucket_action_retry_store.set(_underlying_management_db.getRetryStore(BucketActionRetryMessage.class));
+		_bucket_action_retry_store.set(_underlying_management_db.get().getRetryStore(BucketActionRetryMessage.class));
 		_actor_context = ManagementDbActorContext.get();		
 		_storage_service = storage_service;
 	}
@@ -161,7 +163,8 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			String authorization_fieldname,
 			Optional<AuthorizationBean> client_auth,
 			Optional<ProjectBean> project_auth) {
-		return new DataBucketStatusCrudService(_underlying_management_db.getFilteredDb(client_auth, project_auth), 
+		return new DataBucketStatusCrudService(
+				new MockServiceContext.MockProvider<IManagementDbService>(_underlying_management_db.get().getFilteredDb(client_auth, project_auth)), 
 				_storage_service,
 				_underlying_data_bucket_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth),
 				_underlying_data_bucket_status_db.get().getFilteredRepo(authorization_fieldname, client_auth, project_auth)

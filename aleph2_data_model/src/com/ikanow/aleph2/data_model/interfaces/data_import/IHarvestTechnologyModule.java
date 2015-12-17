@@ -143,10 +143,12 @@ public interface IHarvestTechnologyModule {
 	 */
 	CompletableFuture<BasicMessageBean> onTestSource(final DataBucketBean test_bucket, final ProcessingTestSpecBean test_spec, final IHarvestContext context);
 	
-	/* Determines whether the job should be sent to (a) random node(s) every time (cardinality depending on multi_node_enabled/node_rules), or will "stick" with whatever nodes
+	/** 
+	 * Determines whether the job should be sent to (a) random node(s) every time (cardinality depending on multi_node_enabled/node_rules), or will "stick" with whatever nodes
 	 * first process it. Setting to "false" will improve the robustness when the underlying technology is fundamentally distributed (ie all you're doing is making an
 	 * API call to an external service, vs launching a process on box)
-	 * Defaults to true for harvest technologies and false for analytic technologies.
+	 * Defaults to true for harvest technologies (and false for analytic technologies).
+	 * IMPORTANT: If the completed_bucket does not have lock_to_nodes set then should return the default 
 	 * Very odd and not necessaritly easily recoverable results will occur if this is wrong, so beware of changing from the default unless you know 
 	 * what you're doing!
 	 * @param completed_bucket

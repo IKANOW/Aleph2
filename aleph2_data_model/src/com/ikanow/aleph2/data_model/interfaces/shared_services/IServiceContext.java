@@ -17,7 +17,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Optional;
 
-
+import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IGeospatialService;
@@ -49,6 +49,8 @@ public interface IServiceContext {
 	* @return the data service requested or null if it does not exist
 	*/
 	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
+
+	public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz, Optional<String> serviceName);	
 	
 	/////////////////////////////////////////////////////////////////////
 	
