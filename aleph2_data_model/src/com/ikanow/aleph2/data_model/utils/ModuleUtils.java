@@ -802,7 +802,10 @@ public class ModuleUtils {
 		@SuppressWarnings("unchecked")
 		@Override
 		protected void configure() {
-			binder().disableCircularProxies();
+			// I want to do this, but had to back out because too much of the test code generates (harmless) circular dependencies currently
+			// Will consider reintroducing once the code gets a bit more tidied up 
+			//binder().disableCircularProxies();
+			
 			if ( interfaceClazz.isPresent() ) {
 				if ( annotationName.isPresent() ) {
 					bind(interfaceClazz.get()).annotatedWith(Names.named(annotationName.get())).to(serviceClass).in(Scopes.SINGLETON); 
@@ -825,7 +828,10 @@ public class ModuleUtils {
 
 		@Override
 		protected void configure() {
-			binder().disableCircularProxies();
+			// I want to do this, but had to back out because too much of the test code generates (harmless) circular dependencies currently
+			// Will consider reintroducing once the code gets a bit more tidied up 			
+			//binder().disableCircularProxies();
+			
 			bind(IServiceContext.class).to(ServiceContext.class).in(Scopes.SINGLETON);
 			bind(IUuidService.class).toInstance(UuidUtils.get());
 			bind(GlobalPropertiesBean.class).toInstance(globals);

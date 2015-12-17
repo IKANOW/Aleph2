@@ -50,6 +50,13 @@ public interface IServiceContext {
 	*/
 	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
 
+	/** THIS VERSION IS PREFERRED SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	* Enables access to the data services available in the system.  The currently
+	* configured instance of the class passed in will be returned if it exists, null otherwise.
+	* 
+	* @param serviceClazz The class of the resource you want to access e.g. ISecurityService.class
+	* @return the data service requested or null if it does not exist
+	*/
 	public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz, Optional<String> serviceName);	
 	
 	/////////////////////////////////////////////////////////////////////
