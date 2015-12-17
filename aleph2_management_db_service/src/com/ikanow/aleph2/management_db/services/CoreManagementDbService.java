@@ -111,6 +111,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		//(just return null here if underlying management not present, things will fail catastrophically unless this is a test)
 		_service_context = service_context;
 		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).orElse(null);
+		
 		_data_bucket_service = data_bucket_service;
 		_data_bucket_status_service = data_bucket_status_service;
 		_shared_library_service = shared_library_service;
@@ -125,7 +126,6 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
-
 	}
 	
 	/** User constructor for building a cloned version with different auth settings

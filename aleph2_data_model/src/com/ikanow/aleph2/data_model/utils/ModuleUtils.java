@@ -643,11 +643,13 @@ public class ModuleUtils {
 		}
 		
 		@Override
-		public synchronized I get() {
-			return _cache.optional().orElseGet(() -> {
-				_cache.set(_parent.get());
+		public I get() {
+			synchronized (CachingProvider.class) {
+				if (!_cache.isSet()) {
+					_cache.set(_parent.get());				
+				}
 				return _cache.get();
-			});
+			}
 		}
 	}
 	

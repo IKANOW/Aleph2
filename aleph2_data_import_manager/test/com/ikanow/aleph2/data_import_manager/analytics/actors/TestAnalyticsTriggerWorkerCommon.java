@@ -52,7 +52,6 @@ public class TestAnalyticsTriggerWorkerCommon {
 	
 	protected static ICoreDistributedServices _cds = null;
 	protected static IManagementDbService _core_mgmt_db = null;
-	protected static IManagementDbService _under_mgmt_db = null;
 	protected static ManagementDbActorContext _actor_context = null;
 	
 	protected static AtomicLong _num_received = new AtomicLong();
@@ -86,7 +85,6 @@ public class TestAnalyticsTriggerWorkerCommon {
 		mcds.setApplicationName("DataImportManager");
 		
 		_core_mgmt_db = _service_context.getCoreManagementDbService();		
-		_under_mgmt_db = _service_context.getService(IManagementDbService.class, Optional.empty()).get();
 
 		_actor_context = ManagementDbActorContext.get();
 		
@@ -94,6 +92,6 @@ public class TestAnalyticsTriggerWorkerCommon {
 		@SuppressWarnings("unused")
 		final DataImportActorContext singleton = new DataImportActorContext(_service_context, new GeneralInformationService(), 
 				BeanTemplateUtils.build(DataImportConfigurationBean.class).done().get(),
-				new AnalyticStateTriggerCheckFactory(_service_context));		
+				new AnalyticStateTriggerCheckFactory(_service_context));
 	}
 }
