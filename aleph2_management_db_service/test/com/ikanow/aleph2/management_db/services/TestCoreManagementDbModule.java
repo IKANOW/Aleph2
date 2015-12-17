@@ -111,6 +111,9 @@ public class TestCoreManagementDbModule {
 		_core_db_service = new CoreManagementDbService(_mock_service_context, 
 				_bucket_crud, _bucket_status_crud, _shared_library_crud, _actor_context);
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);
+		
+		_bucket_crud.initialize();
+		_bucket_status_crud.initialize();		
 	}
 	
 protected static String _check_actor_called = null;

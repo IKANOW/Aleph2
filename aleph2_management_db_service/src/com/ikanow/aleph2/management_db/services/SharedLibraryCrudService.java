@@ -56,7 +56,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 
-	protected final IStorageService _storage_service;	
+	protected final Provider<IStorageService> _storage_service;	
 	protected final Provider<IManagementDbService> _underlying_management_db;
 	protected final SetOnce<ICrudService<SharedLibraryBean>> _underlying_library_db = new SetOnce<>();
 	
@@ -65,7 +65,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	@Inject
 	public SharedLibraryCrudService(final IServiceContext service_context) {
 		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
-		_storage_service = service_context.getStorageService();
+		_storage_service = service_context.getServiceProvider(IStorageService.class, Optional.empty()).get();
 		ModuleUtils.getAppInjector().thenRun(() -> {
 			// (work around for guice initialization)
 			_underlying_library_db.set(_underlying_management_db.get().getSharedLibraryStore());
@@ -81,7 +81,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 	/** User constructor, for wrapping
 	 */
 	public SharedLibraryCrudService(final Provider<IManagementDbService> underlying_management_db, 
-			final IStorageService storage_service,
+			final Provider<IStorageService> storage_service,
 			final ICrudService<SharedLibraryBean> underlying_library_db
 			)
 	{
@@ -330,7 +330,7 @@ public class SharedLibraryCrudService implements IManagementCrudService<SharedLi
 			_underlying_library_db.get().getObjectBySpec(unique_spec).thenCompose(lib -> {
 				if (lib.isPresent()) {
 					try {
-						final FileContext fs = _storage_service.getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+						final FileContext fs = _storage_service.get().getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
 						fs.delete(fs.makeQualified(new Path(lib.get().path_name())), false);
 					}
 					catch (Exception e) { // i suppose we don't really care if it fails..

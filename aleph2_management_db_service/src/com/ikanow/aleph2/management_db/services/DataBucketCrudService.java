@@ -117,7 +117,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 	
-	protected final IStorageService _storage_service;	
+	protected final Provider<IStorageService> _storage_service;	
 	protected final Provider<IManagementDbService> _underlying_management_db;
 	
 	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
@@ -135,7 +135,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	{
 		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
 				
-		_storage_service = service_context.getStorageService();
+		_storage_service = service_context.getServiceProvider(IStorageService.class, Optional.empty()).get();
 		
 		_actor_context = actor_context;
 		_service_context = service_context;
@@ -163,7 +163,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	 */
 	public DataBucketCrudService(final IServiceContext service_context,
 			final Provider<IManagementDbService> underlying_management_db, 
-			final IStorageService storage_service,
+			final Provider<IStorageService> storage_service,
 			final ICrudService<DataBucketBean> underlying_data_bucket_db,
 			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
 			)
@@ -294,7 +294,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Create the directories
 		
 		try {
-			createFilePaths(new_object, _storage_service);
+			createFilePaths(new_object, _storage_service.get());
 		}
 		catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
 			return FutureUtils.createManagementFuture(
@@ -484,7 +484,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 	private ManagementFuture<Boolean> deleteBucket(final DataBucketBean to_delete) {
 		try {
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
-			deleteFilePath(to_delete, _storage_service);
+			deleteFilePath(to_delete, _storage_service.get());
 			
 			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
 			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));

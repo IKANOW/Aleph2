@@ -45,15 +45,21 @@ public class MockServiceContext implements IServiceContext {
 	 */
 	public static class MockProvider<I> implements Provider<I> {
 
+		/** User c'tor
+		 * @param i
+		 */
 		public MockProvider(final I i) {
 			_i = i;
 		}
 		
 		protected final I _i;
 		
+		/* (non-Javadoc)
+		 * @see com.google.inject.Provider#get()
+		 */
 		@Override
 		public I get() {
-			return null;
+			return _i;
 		}
 		
 	}

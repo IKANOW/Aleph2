@@ -75,7 +75,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	@SuppressWarnings("unused")
 	private static final Logger _logger = LogManager.getLogger();	
 
-	protected final IStorageService _storage_service;
+	protected final Provider<IStorageService> _storage_service;
 	protected final Provider<IManagementDbService> _underlying_management_db;
 	
 	protected final SetOnce<ICrudService<DataBucketBean>> _underlying_data_bucket_db = new SetOnce<>();
@@ -92,7 +92,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	{
 		_underlying_management_db = service_context.getServiceProvider(IManagementDbService.class, Optional.empty()).get();
 		
-		_storage_service = service_context.getStorageService();
+		_storage_service = service_context.getServiceProvider(IStorageService.class, Optional.empty()).get();
 		
 		_actor_context = actor_context;
 		
@@ -112,7 +112,7 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 	 * @param underlying_data_bucket_db
 	 */
 	public DataBucketStatusCrudService(final Provider<IManagementDbService> underlying_management_db, 
-			final IStorageService storage_service,
+			final Provider<IStorageService> storage_service,
 			final ICrudService<DataBucketBean> underlying_data_bucket_db,
 			final ICrudService<DataBucketStatusBean> underlying_data_bucket_status_db			
 			)

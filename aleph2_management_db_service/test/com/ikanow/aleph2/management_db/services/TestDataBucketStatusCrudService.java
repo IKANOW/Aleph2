@@ -93,7 +93,9 @@ public class TestDataBucketStatusCrudService {
 		_shared_library_crud = new SharedLibraryCrudService(_mock_service_context);
 		_core_db_service = new CoreManagementDbService(_mock_service_context, _bucket_crud, _bucket_status_crud, _shared_library_crud, _db_actor_context);
 		_mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, _core_db_service);		
-		
+
+		_bucket_crud.initialize();
+		_bucket_status_crud.initialize();
 		_underlying_bucket_crud = _bucket_crud._underlying_data_bucket_db.get();
 		_underlying_bucket_status_crud = _bucket_crud._underlying_data_bucket_status_db.get();
 		_bucket_action_retry_store = _bucket_crud._bucket_action_retry_store.get();

@@ -85,7 +85,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	protected final DataBucketStatusCrudService _data_bucket_status_service;
 	protected final SharedLibraryCrudService _shared_library_service;
 	protected final ManagementDbActorContext _actor_context;
-	protected final ISecurityService _security_service;
+	protected final Provider<ISecurityService> _security_service;
 	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
@@ -121,7 +121,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 
 		// (leave _read_only alone, unless manually set will default to read-write for applications and read-only otherwise) 
 		
-		_security_service = service_context.getSecurityService();
+		_security_service = service_context.getServiceProvider(ISecurityService.class, Optional.empty()).get();
 		//DEBUG
 		//System.out.println("Hello world from: " + this.getClass() + ": bucket=" + _data_bucket_service);
 		//System.out.println("Hello world from: " + this.getClass() + ": underlying=" + _underlying_management_db);
@@ -150,7 +150,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		_project = project;		
 		
 		_read_only.set(read_only);
-		_security_service = service_context.getSecurityService();
+		_security_service = service_context.getServiceProvider(ISecurityService.class, Optional.empty()).get();
 	}
 	
 	
