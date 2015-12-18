@@ -87,7 +87,6 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeleti
 import com.ikanow.aleph2.management_db.utils.BucketValidationUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
-import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils.SuccessfulNodeType;
 
 import java.util.stream.Stream;
 
@@ -878,13 +877,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		// Apply the affinity to the bucket status (which must exist, by construction):
 		// (node any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
-		final CompletableFuture<Boolean> update_future = 
-				Optional.ofNullable(new_object.lock_to_nodes()).orElse(true)
-				? 
-				MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only))
-				:
-				CompletableFuture.completedFuture(true)
-				;
+		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinityWrapper(new_object, status_store, management_results);
 
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
@@ -937,14 +930,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Special case: if the bucket has no node affinity (something went wrong earlier) but now it does, then update:
 		final boolean lock_to_nodes = Optional.ofNullable(new_object.lock_to_nodes()).orElse(true);
 		if (node_affinity.isEmpty()) {
-			final CompletableFuture<Boolean> update_future = 
-					lock_to_nodes
-					? 					
-					MgmtCrudUtils.applyNodeAffinity(new_object._id(), status_store, MgmtCrudUtils.getSuccessfulNodes(management_results, SuccessfulNodeType.harvest_only))
-					:
-					CompletableFuture.completedFuture(true)
-					;
-					
+			final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinityWrapper(new_object, status_store, management_results);
 			return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
 		}
 		else if (!lock_to_nodes && Optional.ofNullable(status.confirmed_suspended()).orElse(false)) { // previously had a node affinity, remove now that we're definitely suspended

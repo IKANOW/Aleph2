@@ -186,6 +186,35 @@ public class MgmtCrudUtils {
 		});
 	}
 	
+	/** Decides what the node affinity application strategy is based on lock_to_node, bucket type
+	 * @param bucket
+	 * @param status_store
+	 * @param management_results
+	 * @return
+	 */
+	public static CompletableFuture<Boolean> applyNodeAffinityWrapper(
+			final DataBucketBean bucket, 
+			final ICrudService<DataBucketStatusBean> status_store, 
+			final CompletableFuture<Collection<BasicMessageBean>> management_results)
+	{
+		final boolean lock_to_nodes = Optional.ofNullable(bucket.lock_to_nodes()).orElse(true);		
+		final CompletableFuture<Boolean> update_future = 
+				lock_to_nodes
+				? 					
+				MgmtCrudUtils.applyNodeAffinity(bucket._id(), status_store, 
+						MgmtCrudUtils.getSuccessfulNodes(management_results, 
+								(null == bucket.harvest_technology_name_or_id()) 
+								?
+								SuccessfulNodeType.all_technologies // pure analytic_thead
+								:
+								SuccessfulNodeType.harvest_only // harvest thread - don't lock analytic technologies
+								))
+				:
+				CompletableFuture.completedFuture(true)
+				;
+		return update_future;
+	}
+	
 	/** Applies the node affinity obtained from "applyCrudPredicate" to the designated bucket
 	 * @param bucket_id
 	 * @param nodes_future
