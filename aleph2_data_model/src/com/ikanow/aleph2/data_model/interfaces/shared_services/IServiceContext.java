@@ -41,7 +41,7 @@ public interface IServiceContext {
 	/////////////////////////////////////////////////////////////////////
 		
 	//generic get service interface
-	/**
+	/** (safe for use when called from a context)
 	* Enables access to the data services available in the system.  The currently
 	* configured instance of the class passed in will be returned if it exists, null otherwise.
 	* 
@@ -50,7 +50,8 @@ public interface IServiceContext {
 	*/
 	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz, Optional<String> serviceName);
 
-	/** THIS VERSION IS PREFERRED SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
 	* Enables access to the data services available in the system.  The currently
 	* configured instance of the class passed in will be returned if it exists, null otherwise.
 	* 
@@ -62,7 +63,8 @@ public interface IServiceContext {
 	/////////////////////////////////////////////////////////////////////
 	
 	//utility getters for common services
-	/**
+	
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured columnar service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -70,8 +72,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<IColumnarService> getColumnarService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured columnar service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<IColumnarService>> getColumnarServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured document service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -79,8 +90,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<IDocumentService> getDocumentService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured document service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<IDocumentService>> getDocumentServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured geospatial service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -88,8 +108,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<IGeospatialService> getGeospatialService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured geospatial service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<IGeospatialService>> getGeospatialServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured graph service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -97,8 +126,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<IGraphService> getGraphService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured graph service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<IGraphService>> getGraphServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured _core_ mangement db service (which sits above the actual technology configured for the management db service via service.ManagementDbService.*).
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -106,8 +144,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public IManagementDbService getCoreManagementDbService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured _core_ mangement db service (which sits above the actual technology configured for the management db service via service.ManagementDbService.*).
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Provider<IManagementDbService> getCoreManagementDbServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured search index service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -115,8 +162,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<ISearchIndexService> getSearchIndexService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured search index service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<ISearchIndexService>> getSearchIndexServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured storage index service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -124,8 +180,17 @@ public interface IServiceContext {
 	* @return
 	*/
 	public IStorageService getStorageService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured storage index service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Provider<IStorageService> getStorageServiceProvider();
 	
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured temporal service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -133,11 +198,20 @@ public interface IServiceContext {
 	* @return
 	*/
 	public Optional<ITemporalService> getTemporalService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured temporal service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Optional<Provider<ITemporalService>> getTemporalServiceProvider();
 	
 	/////////////////////////////////////////////////////////////////////
 	
 	//security service is related to data services
-	/**
+	/** (safe for use when called from a context)
 	* Returns an instance of the currently configured security service.
 	* 
 	* This is a helper function that just calls {@link getDataService(Class<I>)}
@@ -145,6 +219,15 @@ public interface IServiceContext {
 	* @return
 	*/
 	public ISecurityService getSecurityService();
+	/** THIS VERSION IS PREFERRED IN GUICE-MANAGED CODE SINCE IT HANDLES CIRCULAR DEPENDENCIES
+	 * (in contexts the non-provider version is fine though)
+	* Returns an instance of the currently configured security service.
+	* 
+	* This is a helper function that just calls {@link getDataService(Class<I>)}
+	* 
+	* @return
+	*/
+	public Provider<ISecurityService> getSecurityServiceProvider();
 
 	/////////////////////////////////////////////////////////////////////
 	

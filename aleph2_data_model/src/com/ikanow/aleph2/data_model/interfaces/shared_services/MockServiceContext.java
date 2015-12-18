@@ -87,13 +87,10 @@ public class MockServiceContext implements IServiceContext {
 		_globals = globals;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz,
 			Optional<String> serviceName) {
-		return (Optional<I>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
-								.orElse(new HashMap<String, IUnderlyingService>())
-								.get(serviceName.orElse("")));
+		return getServiceProvider(serviceClazz, serviceName).map(s -> s.get());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -110,52 +107,94 @@ public class MockServiceContext implements IServiceContext {
 	
 	@Override
 	public Optional<IColumnarService> getColumnarService() {
-		return getService(IColumnarService.class, Optional.empty());
+		return getColumnarServiceProvider().map(s -> s.get());
 	}
+	@Override
+	public Optional<Provider<IColumnarService>> getColumnarServiceProvider() {
+		return getServiceProvider(IColumnarService.class, Optional.empty());
+	}
+
 
 	@Override
 	public Optional<IDocumentService> getDocumentService() {
-		return getService(IDocumentService.class, Optional.empty());
+		return getDocumentServiceProvider().map(s -> s.get());
+	}
+	@Override
+	public Optional<Provider<IDocumentService>> getDocumentServiceProvider() {
+		return getServiceProvider(IDocumentService.class, Optional.empty());
 	}
 
 	@Override
 	public Optional<IGeospatialService> getGeospatialService() {
-		return getService(IGeospatialService.class, Optional.empty());
+		return getGeospatialServiceProvider().map(s -> s.get());
 	}
+	@Override
+	public Optional<Provider<IGeospatialService>> getGeospatialServiceProvider() {
+		return getServiceProvider(IGeospatialService.class, Optional.empty());
+	}
+
 
 	@Override
 	public Optional<IGraphService> getGraphService() {
-		return getService(IGraphService.class, Optional.empty());
+		return getGraphServiceProvider().map(s -> s.get());
 	}
+	@Override
+	public Optional<Provider<IGraphService>> getGraphServiceProvider() {
+		return getServiceProvider(IGraphService.class, Optional.empty());
+	}
+
 
 	@Override
 	public IManagementDbService getCoreManagementDbService() {
-		return getService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
+		return getCoreManagementDbServiceProvider().get();
+	}
+	@Override
+	public Provider<IManagementDbService> getCoreManagementDbServiceProvider() {
+		return getServiceProvider(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
 	}
 
 	@Override
 	public Optional<ISearchIndexService> getSearchIndexService() {
-		return getService(ISearchIndexService.class, Optional.empty());
+		return getSearchIndexServiceProvider().map(s -> s.get());
+	}
+	@Override
+	public Optional<Provider<ISearchIndexService>> getSearchIndexServiceProvider() {
+		return getServiceProvider(ISearchIndexService.class, Optional.empty());
 	}
 
 	@Override
 	public IStorageService getStorageService() {
-		return getService(IStorageService.class, Optional.empty()).get();
+		return getStorageServiceProvider().get();
 	}
+	@Override
+	public Provider<IStorageService> getStorageServiceProvider() {
+		return getServiceProvider(IStorageService.class, Optional.empty()).get();
+	}
+
 
 	@Override
 	public Optional<ITemporalService> getTemporalService() {
-		return getService(ITemporalService.class, Optional.empty());
+		return getTemporalServiceProvider().map(s -> s.get());
+	}
+	@Override
+	public Optional<Provider<ITemporalService>> getTemporalServiceProvider() {
+		return getServiceProvider(ITemporalService.class, Optional.empty());
 	}
 
 	@Override
 	public ISecurityService getSecurityService() {
-		return getService(ISecurityService.class, Optional.empty()).get();
+		return getSecurityServiceProvider().get();
+	}
+	@Override
+	public Provider<ISecurityService> getSecurityServiceProvider() {
+		return getServiceProvider(ISecurityService.class, Optional.empty()).get();
 	}
 
 	@Override
 	public GlobalPropertiesBean getGlobalProperties() {
 		return _globals;
 	}
+
+
 
 }

@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -670,7 +669,7 @@ public class ModuleUtils {
 		@Override
 		public <I extends IUnderlyingService> Optional<I> getService(Class<I> serviceClazz,
 				Optional<String> serviceName) {
-			return Optional.ofNullable(ModuleUtils.getService(serviceClazz, serviceName));
+			return getServiceProvider(serviceClazz, serviceName).map(s -> s.get());
 		}
 
 		@Override
@@ -679,93 +678,91 @@ public class ModuleUtils {
 			return Optional.ofNullable(ModuleUtils.getServiceProvider(serviceClazz, serviceName));
 		}
 		
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
 		@Override
 		public Optional<IColumnarService> getColumnarService() {
-			return getService(IColumnarService.class, Optional.empty());
+			return getColumnarServiceProvider().map(s -> s.get());
+		}
+		@Override
+		public Optional<Provider<IColumnarService>> getColumnarServiceProvider() {
+			return getServiceProvider(IColumnarService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
+
 		@Override
 		public Optional<IDocumentService> getDocumentService() {
-			return getService(IDocumentService.class, Optional.empty());
+			return getDocumentServiceProvider().map(s -> s.get());
+		}
+		@Override
+		public Optional<Provider<IDocumentService>> getDocumentServiceProvider() {
+			return getServiceProvider(IDocumentService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
 		@Override
 		public Optional<IGeospatialService> getGeospatialService() {
-			return getService(IGeospatialService.class, Optional.empty());
+			return getGeospatialServiceProvider().map(s -> s.get());
+		}
+		@Override
+		public Optional<Provider<IGeospatialService>> getGeospatialServiceProvider() {
+			return getServiceProvider(IGeospatialService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
+
 		@Override
 		public Optional<IGraphService> getGraphService() {
-			return getService(IGraphService.class, Optional.empty());
+			return getGraphServiceProvider().map(s -> s.get());
+		}
+		@Override
+		public Optional<Provider<IGraphService>> getGraphServiceProvider() {
+			return getServiceProvider(IGraphService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
+
 		@Override
 		public IManagementDbService getCoreManagementDbService() {
-			try {
-				return getService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
-			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: CoreManagementDbService", e); }					
+			return getCoreManagementDbServiceProvider().get();
+		}
+		@Override
+		public Provider<IManagementDbService> getCoreManagementDbServiceProvider() {
+			return getServiceProvider(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB).get();
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
 		@Override
 		public Optional<ISearchIndexService> getSearchIndexService() {
-			return getService(ISearchIndexService.class, Optional.empty());
+			return getSearchIndexServiceProvider().map(s -> s.get());
 		}
-
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
 		@Override
-		public IStorageService getStorageService() {			
-			try {
-				return getService(IStorageService.class, Optional.empty()).get();
-			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: IStorageService", e); }					
+		public Optional<Provider<ISearchIndexService>> getSearchIndexServiceProvider() {
+			return getServiceProvider(ISearchIndexService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
+		@Override
+		public IStorageService getStorageService() {
+			return getStorageServiceProvider().get();
+		}
+		@Override
+		public Provider<IStorageService> getStorageServiceProvider() {
+			return getServiceProvider(IStorageService.class, Optional.empty()).get();
+		}
+
+
 		@Override
 		public Optional<ITemporalService> getTemporalService() {
-			return getService(ITemporalService.class, Optional.empty());
+			return getTemporalServiceProvider().map(s -> s.get());
+		}
+		@Override
+		public Optional<Provider<ITemporalService>> getTemporalServiceProvider() {
+			return getServiceProvider(ITemporalService.class, Optional.empty());
 		}
 
-		/**
-		 * Utility function that just calls {@link #getService(Class, Optional)}
-		 * 
-		 */
 		@Override
 		public ISecurityService getSecurityService() {
-			try {
-				return getService(ISecurityService.class, Optional.empty()).get();
-			} catch (NoSuchElementException e) { throw new RuntimeException("Missing mandatory service: ISecurityService", e); }					
+			return getSecurityServiceProvider().get();
 		}
-
+		@Override
+		public Provider<ISecurityService> getSecurityServiceProvider() {
+			return getServiceProvider(ISecurityService.class, Optional.empty()).get();
+		}
+		
 		@Override
 		public GlobalPropertiesBean getGlobalProperties() {
 			return globals;
