@@ -9,12 +9,15 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import scala.Tuple2;
+//import scala.collection.immutable.Stream;
+
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
@@ -31,8 +34,13 @@ public class ProcessUtils {
 	 * @throws IOException 
 	 * @return returns any error in _1(), the pid in _2()
 	 */
-	public static Tuple2<String, String> launchProcess(final ProcessBuilder process_builder, final String application_name, final DataBucketBean bucket, final String aleph_root_path) {
+	public static Tuple2<String, String> launchProcess(final ProcessBuilder process_builder, final String application_name, final DataBucketBean bucket, final String aleph_root_path, final Optional<Tuple2<Long, Integer>> timeout_kill) {
 		try {
+			if ( timeout_kill.isPresent() ) {
+				final Stream<String> timeout_stream = Stream.of("timeout","-s",timeout_kill.get()._2.toString(), timeout_kill.get()._1.toString());
+				process_builder.command(Stream.concat(timeout_stream, process_builder.command().stream()).collect(Collectors.toList()));
+			}
+			
 			//starts the process, get pid back
 			logger.debug("Starting process: " + process_builder.command().toString());
 			final Process px = process_builder.start();

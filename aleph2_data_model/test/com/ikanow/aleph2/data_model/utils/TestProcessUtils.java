@@ -51,7 +51,7 @@ public class TestProcessUtils {
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
-		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path);
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
 		assertNotNull(launch._1, launch._2);
 		
 		//check its still running
@@ -92,7 +92,7 @@ public class TestProcessUtils {
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
-		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path);
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
 		assertNotNull(launch._1, launch._2);
 		
 		//wait for process to finish (max of 1s)
@@ -111,6 +111,35 @@ public class TestProcessUtils {
 		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.empty());
 
 		assertTrue(stop._1, stop._2); //stop returns true, but says its already dead
+		
+		//cleanup
+		new File(tmp_file_path).delete();
+	}
+	
+	@Test
+	public void testTimeoutLongRunningProcess() throws FileNotFoundException, IOException, InterruptedException {
+		if ( SystemUtils.IS_OS_WINDOWS ) {			
+			System.out.println("ProcessUtils do not work on Windows systems (can't get pids)");
+			return;
+		}
+		
+		//start a process with a timeout of 5s
+		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
+		final String tmp_file_path = createTestScript(getLongRunningProcess());	
+		final DataBucketBean bucket = getTestBucket();
+		final String application_name = "testing";
+		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.of(new Tuple2<Long, Integer>(5L, 9)));
+		assertNotNull(launch._1, launch._2);
+		
+		//check its still running
+		assertTrue(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
+		
+		//wait 5s for process to timeout
+		Thread.sleep(5000);
+		
+		//check the process stopped
+		assertFalse("Process should have timed out and died", ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
 		
 		//cleanup
 		new File(tmp_file_path).delete();
