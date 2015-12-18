@@ -71,6 +71,7 @@ import com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketAnalytic
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
@@ -598,6 +599,9 @@ public class TestDataBucketChangeActor {
 		assertEquals(lib_elements.get(0).misc_entry_point(), test3b.success()._1().getClass().getName());		
 	}
 	
+	
+	
+	
 	@Test
 	public void test_cacheJars_streamEnrichment() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
 		try {
@@ -852,6 +856,37 @@ public class TestDataBucketChangeActor {
 			assertTrue("wrong message types: " + TestActor_Counter.message_types.toString(), TestActor_Counter.message_types.keySet().contains(JobMessageType.starting));
 		}
 	}	
+	
+	@Test
+	public void test_checkNodeAffinityMatches() {
+		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
+		
+		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> ret_val = 
+				ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+						"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
+						Collections.emptyList(), "test1", "test")
+						.map(a -> Tuples._2T(a, Thread.currentThread().getContextClassLoader()))
+						;						
+	
+		assertTrue(ret_val.isSuccess());
+		
+		final IAnalyticsContext a_context = _actor_context.getNewAnalyticsContext();
+		
+		final DataBucketBean bucket_lock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, true).done();
+
+		final DataBucketBean bucket_nolock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, false).done();
+		
+		
+		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket, ret_val.success(), a_context));
+		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_nolock, ret_val.success(), a_context));
+		assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock, ret_val.success(), a_context).isFail());
+		
+		// Check no lock case ignored when impure
+		final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
+		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, ret_val.success(), a_context));
+	}
+	
 	
 	@Test
 	public void test_talkToAnalytics() throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
