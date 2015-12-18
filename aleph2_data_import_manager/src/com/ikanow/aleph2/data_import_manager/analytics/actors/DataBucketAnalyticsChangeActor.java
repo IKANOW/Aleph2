@@ -80,8 +80,12 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 
 
@@ -176,6 +180,8 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
 import com.codepoetics.protonpack.StreamUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -183,15 +189,20 @@ import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticsErrorUtils;
+import com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketHarvestChangeActor;
+import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.ActorNameUtils;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyService;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentStreamingTopology;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -431,7 +442,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						getAnalyticsTechnology(message.bucket(), technology_name_or_id, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
 								_batch_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
-								message, hostname, err_or_map);
+								message, hostname, err_or_map)
+								.bind(t2 -> checkNodeAffinityMatches(message.bucket(), t2, a_context))
+								;
 				
 				err_or_map.forEach(map ->									
 					Optional.ofNullable(map.get(technology_name_or_id))
@@ -864,6 +877,35 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		}
 	}
 
+	/** Quickly check if the node affinity vs lock_to_nodes match up
+	 * @param bucket
+	 * @param technology_classloader
+	 * @param context
+	 * @return
+	 */
+	protected static Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> checkNodeAffinityMatches(
+			final DataBucketBean bucket,
+			final Tuple2<IAnalyticsTechnologyModule, ClassLoader> technology_classloader,
+			final IAnalyticsContext context
+			) 
+	{
+		// Simplest case: not a pure analytic technology so we're good
+		if (null != bucket.harvest_technology_name_or_id()) {
+			return Validation.<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>success(technology_classloader);
+		}
+		
+		Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> x = 
+			Optional.ofNullable(bucket.lock_to_nodes())
+				.filter(lock -> lock != technology_classloader._1().applyNodeAffinity(bucket, context))
+				.map(still_here -> Validation.<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>fail(
+						ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class.getSimpleName(), "applyNodeAffinity", 
+														HarvestErrorUtils.MISMATCH_BETWEEN_TECH_AND_BUCKET_NODE_AFFINITY, 
+														bucket.full_name(), technology_classloader._1().getClass().getSimpleName())))
+				.orElse(Validation.<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>success(technology_classloader))
+				;
+		return x;
+	}	
+	
 	/** We'll only start batch jobs if they have no associated dependencies
 	 *  Here's a more detailed overview of the logic
 	 *  1) For new and test messages - don't do anything unless there's a bucket-wide _manual_ trigger

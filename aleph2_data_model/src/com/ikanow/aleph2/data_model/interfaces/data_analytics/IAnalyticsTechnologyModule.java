@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_import.BucketDiffBean;
@@ -259,7 +258,7 @@ public interface IAnalyticsTechnologyModule {
 	 * @param context
 	 * @return
 	 */
-	default boolean applyNodeAffinity(final DataBucketBean completed_bucket, final IHarvestContext context) {
+	default boolean applyNodeAffinity(final DataBucketBean completed_bucket, final IAnalyticsContext context) {
 		return false;
 	}
 }
