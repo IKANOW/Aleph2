@@ -129,7 +129,7 @@ public class TestProcessUtils {
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
-		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.of(new Tuple2<Long, Integer>(5L, 9)));
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.of(new Tuple2<Long, Integer>(3L, 9)));
 		assertNotNull(launch._1, launch._2);
 		
 		//check its still running
