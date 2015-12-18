@@ -77,6 +77,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionRetryMessage;
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.management_db.utils.BucketValidationUtils;
 import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
@@ -312,7 +313,7 @@ public class TestDataBucketCrudService_Create {
 		Mockito.when(service5.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t5", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(ITemporalService.class, Optional.empty(), service5);
 
-		final Tuple2<Map<String, String>, List<BasicMessageBean>> results1 = DataBucketCrudService.validateSchema(bucket_with_schema, test_context);
+		final Tuple2<Map<String, String>, List<BasicMessageBean>> results1 = BucketValidationUtils.validateSchema(bucket_with_schema, test_context);
 		assertEquals(5, results1._2().size());
 		assertTrue("All returned success==true", results1._2().stream().allMatch(m -> m.success()));
 		assertEquals(5, results1._1().size());
@@ -348,7 +349,7 @@ public class TestDataBucketCrudService_Create {
 		
 		MockServiceContext test_context2 = new MockServiceContext();
 		
-		final List<BasicMessageBean> results2 = DataBucketCrudService.validateSchema(bucket_with_other_schema, test_context2)._2();
+		final List<BasicMessageBean> results2 = BucketValidationUtils.validateSchema(bucket_with_other_schema, test_context2)._2();
 		assertEquals(8, results2.size());
 		
 		assertTrue("All returned success==false", results2.stream().allMatch(m -> !m.success()));		
@@ -371,7 +372,7 @@ public class TestDataBucketCrudService_Create {
 		final DataBucketBean bucket_with_disabled_schema = BeanTemplateUtils.clone(valid_bucket)
 				.with(DataBucketBean::data_schema, not_enabled_schema).done();		
 		
-		final List<BasicMessageBean> results3 = DataBucketCrudService.validateSchema(bucket_with_disabled_schema, test_context2)._2();
+		final List<BasicMessageBean> results3 = BucketValidationUtils.validateSchema(bucket_with_disabled_schema, test_context2)._2();
 		assertEquals(0, results3.size());
 	}
 	
@@ -820,8 +821,8 @@ public class TestDataBucketCrudService_Create {
 								.done().get()))
 					.done();
 			
-			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_9a, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
-					DataBucketCrudService.staticValidation(bucket_9a, false).isEmpty());
+			assertTrue("Bucket validation failed: " + BucketValidationUtils.staticValidation(bucket_9a, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					BucketValidationUtils.staticValidation(bucket_9a, false).isEmpty());
 		}
 		//9b: ditto but module_name_or_id
 		{
@@ -836,8 +837,8 @@ public class TestDataBucketCrudService_Create {
 								.done().get()))
 					.done();
 			
-			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_9b, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
-					DataBucketCrudService.staticValidation(bucket_9b, false).isEmpty());			
+			assertTrue("Bucket validation failed: " + BucketValidationUtils.staticValidation(bucket_9b, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					BucketValidationUtils.staticValidation(bucket_9b, false).isEmpty());			
 		}		
 		
 		// 10) Missing batch config enabled:
@@ -877,8 +878,8 @@ public class TestDataBucketCrudService_Create {
 									.done().get()))
 							.done();
 			
-			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_10a, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
-					DataBucketCrudService.staticValidation(bucket_10a, false).isEmpty());
+			assertTrue("Bucket validation failed: " + BucketValidationUtils.staticValidation(bucket_10a, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					BucketValidationUtils.staticValidation(bucket_10a, false).isEmpty());
 		}
 		//10b: ditto but module_name_or_id
 		{
@@ -893,8 +894,8 @@ public class TestDataBucketCrudService_Create {
 									.done().get()))
 							.done();
 			
-			assertTrue("Bucket validation failed: " + DataBucketCrudService.staticValidation(bucket_10b, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
-					DataBucketCrudService.staticValidation(bucket_10b, false).isEmpty());			
+			assertTrue("Bucket validation failed: " + BucketValidationUtils.staticValidation(bucket_10b, false).stream().map(m -> m.message()).collect(Collectors.toList()), 
+					BucketValidationUtils.staticValidation(bucket_10b, false).isEmpty());			
 		}
 		
 		// 11) Missing streaming config enabled:
@@ -968,7 +969,7 @@ public class TestDataBucketCrudService_Create {
 		// 1) Check needs status object to be present
 		
 		{
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(valid_bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(valid_bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(0, errs.size());
 		}
@@ -991,7 +992,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::full_name, "/aleph2_something/blah")
 					.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());			
 		}
@@ -1001,7 +1002,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::full_name, "/aleph2_something/blah")
 					.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, true);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, true);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(0, errs.size());			
 		}
@@ -1023,7 +1024,7 @@ public class TestDataBucketCrudService_Create {
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get())
 					.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());			
 		}
@@ -1037,7 +1038,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(0, errs.size());
 		}
@@ -1052,7 +1053,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1068,7 +1069,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::batch_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1084,7 +1085,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::streaming_enrichment_topology, 
 							BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()).done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1097,7 +1098,7 @@ public class TestDataBucketCrudService_Create {
 					.with(DataBucketBean::harvest_technology_name_or_id, "harvest_tech")
 					.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1115,7 +1116,7 @@ public class TestDataBucketCrudService_Create {
 								.done().get()))
 					.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1132,7 +1133,7 @@ public class TestDataBucketCrudService_Create {
 							Arrays.asList(BeanTemplateUtils.build(EnrichmentControlMetadataBean.class).done().get()))
 							.done();
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1153,7 +1154,7 @@ public class TestDataBucketCrudService_Create {
 			assertTrue("Got errors", !result.getManagementResults().get().isEmpty() && !result.getManagementResults().get().iterator().next().success());
 			
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}
@@ -1169,7 +1170,7 @@ public class TestDataBucketCrudService_Create {
 					.done();
 			
 			
-			final List<BasicMessageBean> errs = DataBucketCrudService.staticValidation(bucket, false);
+			final List<BasicMessageBean> errs = BucketValidationUtils.staticValidation(bucket, false);
 			System.out.println("validation errs = " + errs.stream().map(m->m.message()).collect(Collectors.joining(";")));
 			assertEquals(1, errs.size());
 		}

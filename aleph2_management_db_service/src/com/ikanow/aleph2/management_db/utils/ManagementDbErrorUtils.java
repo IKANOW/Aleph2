@@ -125,6 +125,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String ANALYTIC_TRIGGER_MALFORMED_DATE = "Bucket {0} has a malformed trigger schedule: {1}, error = {2}";
 	public static final String ANALYTIC_TRIGGER_ILLEGAL_COMBO = "Bucket {0} has illegal trigger formation: must have _either_ 'op' _or_ 'resource_name_or_id'; if 'op' then 'dependency_list' must be non-empty; if 'resource_name_or_id' then type must be specified";
 	public static final String ANALYTIC_CUSTOM_TRIGGER_NOT_COMPLETE = "Bucket {0} has custom trigger specified but not custom analytic technology to execute it";
+	public static final String ANALYTIC_INVALID_LOCK_TO_NODES = "Bucket {0}: pure analytic threads can only have 'lock_to_nodes': true if they contain a single analytic technology: {1}";
 	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
