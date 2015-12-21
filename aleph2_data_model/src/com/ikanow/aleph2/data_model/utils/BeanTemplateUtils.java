@@ -442,7 +442,14 @@ public class BeanTemplateUtils {
 		 */
 		public String field(final Function<T, ?> getter) {
 			getter.apply(_recorder);
-			return _parent_path.map(s -> s + _name).orElse(_name);
+			return field(_name);
+		}
+		/** Returns the field (in its nested format if obtained from a nested method helper)
+		 * @param field_name - the String version of the field name (eg needed for maps)
+		 * @return
+		 */
+		public String field(final String field_name) {
+			return _parent_path.map(s -> s + field_name).orElse(field_name);
 		}
 		/** Returns the field (in its nested format if obtained from a nested method helper)
 		 * @param getter - the method reference (T::<function>)
@@ -450,7 +457,14 @@ public class BeanTemplateUtils {
 		 */
 		public String non_nested_field(final Function<T, ?> getter) {
 			getter.apply(_recorder);
-			return _name;
+			return non_nested_field(_name);
+		}
+		/** Returns the field (in its nested format if obtained from a nested method helper)
+		 * @param field_name - the String version of the field name (eg needed for maps)
+		 * @return
+		 */
+		public String non_nested_field(final String field_name) {
+			return field_name;
 		}
 		/** Returns a nested fieldname in an object hierarchy (given a non-null object of nested type)
 		 * @param getter - the getter utility defining the fieldname of the nested object 
@@ -467,7 +481,15 @@ public class BeanTemplateUtils {
 		 * @return a MethodNamingHelper for the nested class
 		 */
 		public <U> MethodNamingHelper<U> nested(final Function<T, ?> getter, final Class<U> nested_clazz) {
-			String new_parent_path =  _parent_path.orElse("") + non_nested_field(getter) + ".";
+			return nested(non_nested_field(getter), nested_clazz);
+		}
+		/** Returns a nested fieldname in an object hierarchy (given a non-null object of nested type)
+		 * @param field_name - the String version of the field name (eg needed for maps)
+		 * @param from - an object of the nested type 
+		 * @return a MethodNamingHelper for the nested class
+		 */
+		public <U> MethodNamingHelper<U> nested(final String field_name, final Class<U> nested_clazz) {
+			String new_parent_path =  _parent_path.orElse("") + non_nested_field(field_name) + ".";
 			return new MethodNamingHelper<U>(nested_clazz, Optional.of(new_parent_path));
 		}
 	}

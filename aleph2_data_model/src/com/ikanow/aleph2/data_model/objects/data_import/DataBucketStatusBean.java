@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStateBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /** Represents generic harvest status
@@ -164,6 +165,25 @@ public class DataBucketStatusBean implements Serializable {
 	private Map<String, BasicMessageBean> last_enrichment_status_messages;
 	private Map<String, BasicMessageBean> last_storage_status_messages;
 
+	
+	////////////////////////////////////////
+	
+	// Analytic State
+
+	/** The state of the bucket as a whole (decomposed into the different jobs under analytic_state)
+	 * @return
+	 */
+	public AnalyticThreadStateBean global_analytic_state() { return global_analytic_state; }
+	
+	/** The analytic state of each job, indexed by job name
+	 * @return
+	 */
+	public Map<String, AnalyticThreadStateBean> analytic_state() {
+		return analytic_state == null ? null : Collections.unmodifiableMap(analytic_state);		
+	}
+	
+	private AnalyticThreadStateBean global_analytic_state;
+	private Map<String, AnalyticThreadStateBean> analytic_state;	
 	
 	////////////////////////////////////////
 	

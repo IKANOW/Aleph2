@@ -15,9 +15,42 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.objects.data_analytics;
 
+import java.util.Date;
+
 /** Contains internal state relating to a bucket's analytic thread
  * @author Alex
  */
 public class AnalyticThreadStateBean {
-	//TODO (ALEPH-12)
+	
+	/** User c'tor
+	 * @param last_run - The last time this job was run
+	 * @param curr_run - The time the current job was started, if actively running
+	 * @param last_run_success - Whether the last completed job was successful (not populated if the job was never run)
+	 */
+	public AnalyticThreadStateBean(Date last_run, Date curr_run,
+			Boolean last_run_success) {
+		super();
+		this.last_run = last_run;
+		this.curr_run = curr_run;
+		this.last_run_success = last_run_success;
+	}
+
+	/** The last time this job was run
+	 * @return The last time this job was run
+	 */
+	public Date last_run() { return last_run; }
+	
+	/** The time the current job was started, if actively running
+	 * @return The time the current job was started, if actively running
+	 */
+	public Date curr_run() { return curr_run; }
+		
+	/** Whether the last completed job was successful (not populated if the job was never run)
+	 * @return Whether the last completed job was successful (not populated if the job was never run)
+	 */
+	public Boolean last_run_success() { return last_run_success; }	
+	
+	private Date last_run;
+	private Date curr_run;
+	private Boolean last_run_success;
 }
