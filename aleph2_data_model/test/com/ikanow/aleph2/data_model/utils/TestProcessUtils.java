@@ -145,6 +145,37 @@ public class TestProcessUtils {
 		new File(tmp_file_path).delete();
 	}
 	
+	@Test
+	public void testProcessIgnoreKillSignal() throws FileNotFoundException, IOException {
+		if ( SystemUtils.IS_OS_WINDOWS ) {			
+			System.out.println("ProcessUtils do not work on Windows systems (can't get pids)");
+			return;
+		}
+		
+		//start a process with a timeout of 5s
+		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
+		final String tmp_file_path = createTestScript(getIgnoreKillTestScript());	
+		final DataBucketBean bucket = getTestBucket();
+		final String application_name = "testing";
+		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
+		assertNotNull(launch._1, launch._2);
+		
+		//check its still running
+		assertTrue(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
+		
+		//try to stop process with kill -2, it should have to force kill it with kill -9
+		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.of(2));
+
+		assertTrue(stop._1, stop._2); //stop returns true		
+		
+		//check the process stopped
+		assertFalse("Process should have timed out and died", ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
+		
+		//cleanup
+		new File(tmp_file_path).delete();
+	}	
+
 	private static String createTestScript(final String script) throws FileNotFoundException, IOException {		
 		new File(System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator).mkdir();
 		final String file_path = System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator  + UuidUtils.get().getRandomUuid() + ".sh";
@@ -169,6 +200,13 @@ public class TestProcessUtils {
 			.append("   sleep 1\n")
 			.append("done\n")
 		.toString();
+	}
+	
+	private String getIgnoreKillTestScript() {
+		return new StringBuilder()
+				.append("trap \"echo caught 2, not dieing\" 2\n\n" )
+				.append(getLongRunningProcess())
+				.toString();
 	}
 	
 	private static String getQuickRunningProcess() {
