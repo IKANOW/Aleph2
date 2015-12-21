@@ -86,11 +86,11 @@ public class ProcessUtils {
 				final Process px = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid_date._1)).start();
 				for (int i = 0; i < 5; ++i) {
 					try { Thread.sleep(1000L); } catch (Exception e) {}
-					if (!px.isAlive()) {
+					if (!isProcessRunning(application_name, bucket, aleph_root_path)){
 						break;					
 					}
 				}
-				if (!px.isAlive()) {
+				if (!isProcessRunning(application_name, bucket, aleph_root_path)) {
 					return Tuples._2T("Tried to kill " + pid_date._1 + ": success = " + px.exitValue(), 0 == px.exitValue());
 				} else {
 					//we are still alive, so send a harder kill signal if we haven't already sent a 9
