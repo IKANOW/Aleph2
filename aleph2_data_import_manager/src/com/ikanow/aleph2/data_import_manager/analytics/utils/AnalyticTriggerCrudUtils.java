@@ -18,11 +18,13 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,16 +34,24 @@ import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStateBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.CommonUpdateComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 
 /** A set of utilities for retrieving and updating the trigger state
  * @author Alex
@@ -526,6 +536,191 @@ public class AnalyticTriggerCrudUtils {
 						;												
 		
 		return trigger_crud.updateObjectsBySpec(update_query, Optional.of(false), update);		
+	}
+	
+	/** Updates the bucket analytic_thread statuses for the different state transitions 
+	 * @param new_message
+	 * @param bucket
+	 * @param status_crud
+	 * @return
+	 */
+	public static CompletableFuture<Boolean> updateAnalyticThreadState(
+			final BucketActionMessage new_message,
+			final DataBucketBean bucket,
+			final ICrudService<DataBucketStatusBean> status_crud,
+			final Optional<Date> maybe_now
+			)
+	{
+		return Patterns.match(new_message).<CompletableFuture<Boolean>>andReturn()
+			.when(__ -> BucketUtils.isTestBucket(bucket), __ -> CompletableFuture.completedFuture(true))
+			.when(BucketActionAnalyticJobMessage.class, 
+					msg -> (JobMessageType.starting == msg.type()) && Optionals.ofNullable(msg.jobs()).isEmpty(), // Bucket start (can be internal or external)
+					msg -> {						
+						// Handle internal and external trigger scenarios
+						return maybe_now
+								.map(__ -> CompletableFuture.completedFuture(Optional.<DataBucketStatusBean>empty()))
+								.orElseGet(() -> getCurrentStatusBean(bucket, status_crud)) //(externally triggered job, will only update if we have to...)
+								.thenCompose(maybe_status_bean -> {
+									return 
+										maybe_status_bean.map(status_bean -> status_bean.global_analytic_state()).filter(gas -> null != gas.curr_run()).isPresent()
+										?
+										CompletableFuture.completedFuture(true) // (if already running then nothing to do)
+										:
+										status_crud
+											.updateObjectBySpec(
+													CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, bucket.full_name()), 
+													Optional.of(false), 
+													CrudUtils.update(DataBucketStatusBean.class)
+														.set(BeanTemplateUtils.from(DataBucketStatusBean.class)
+																.nested(DataBucketStatusBean::global_analytic_state, AnalyticThreadStateBean.class)
+																.field(AnalyticThreadStateBean::curr_run)
+																, 
+																maybe_now.orElseGet(Date::new))
+												);
+								});
+					})
+			.when(BucketActionAnalyticJobMessage.class, 
+					msg -> (JobMessageType.stopping == msg.type()) && Optionals.ofNullable(msg.jobs()).isEmpty(), // Bucket stop (always external)
+					__ -> {
+						return getCurrentStatusBean(bucket, status_crud)
+									.thenCompose(maybe_status_bean -> {
+										return maybe_status_bean.map(status_bean -> 
+											status_crud.updateObjectById(
+												status_bean._id(), 
+												CrudUtils.update(DataBucketStatusBean.class)
+													.unset(BeanTemplateUtils.from(DataBucketStatusBean.class)
+															.nested(DataBucketStatusBean::global_analytic_state, AnalyticThreadStateBean.class)
+															.field(AnalyticThreadStateBean::curr_run))
+													.set(BeanTemplateUtils.from(DataBucketStatusBean.class)
+															.nested(DataBucketStatusBean::global_analytic_state, AnalyticThreadStateBean.class)
+															.field(AnalyticThreadStateBean::last_run)
+															, 
+															Optional.ofNullable(status_bean.global_analytic_state()).map(gas -> gas.curr_run()).orElse(null))
+											)
+										)
+										.orElseGet(() -> CompletableFuture.completedFuture(false))
+										;						
+									});
+					})
+			.when(BucketActionAnalyticJobMessage.class, 
+					msg -> (JobMessageType.starting == msg.type()) && !Optionals.ofNullable(msg.jobs()).isEmpty(), // Jobs starting
+					msg -> {
+						// (If received from an external source, then check that the bucket is updated also)
+						final CompletableFuture<Boolean> cf2 =
+								maybe_now.map(__ -> CompletableFuture.completedFuture(true))
+									.orElseGet(() ->
+									updateAnalyticThreadState(
+											BeanTemplateUtils.clone(msg)
+												.with(BucketActionAnalyticJobMessage::jobs, null)
+											.done()
+											,
+											bucket, status_crud, Optional.empty() 
+											)									
+									);
+						
+						// Handle internal and external trigger scenarios
+						return maybe_now
+							.map(__ -> CompletableFuture.completedFuture(Optional.<DataBucketStatusBean>empty()))
+							.orElseGet(() -> getCurrentStatusBean(bucket, status_crud)) //(externally triggered job, will only update if we have to...)
+							.thenCompose(maybe_status_bean -> {
+								// Set of currently existing jobs
+								final Set<String> existing_jobs = 
+										maybe_status_bean.map(status_bean -> status_bean.analytic_state())
+											.map(as -> 
+												as.entrySet().stream()
+													.filter(kv -> null != kv.getValue().curr_run()) // ie make a set of jobs that have already been activated
+													.map(kv -> kv.getKey())
+													.collect(Collectors.toSet()))
+											.orElseGet(() -> Collections.emptySet());
+
+								final UpdateComponent<DataBucketStatusBean> update = 
+										msg.jobs().stream()
+											.filter(j -> !existing_jobs.contains(j.name())) // ie remove any jobs that have already been activated
+											.reduce(
+												(CommonUpdateComponent<DataBucketStatusBean>)CrudUtils.update(DataBucketStatusBean.class),
+												(acc, v) -> acc.set(
+														BeanTemplateUtils.from(DataBucketStatusBean.class)
+															.nested(DataBucketStatusBean::analytic_state, AnalyticThreadStateBean.class)
+															.field(v.name())
+															+ "." + BeanTemplateUtils.from(AnalyticThreadStateBean.class).field(AnalyticThreadStateBean::curr_run)
+															, 
+															maybe_now.orElseGet(Date::new))
+												,
+												(acc1, acc2) -> acc1 // (never called										
+												);
+								
+								return update.getAll().isEmpty()
+									?
+									CompletableFuture.completedFuture(true) //(nothing to do)
+									:
+									status_crud
+									.updateObjectBySpec(
+											CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, bucket.full_name()), 
+											Optional.of(false), 
+											update);						
+								
+							})
+							.thenCombine(cf2, (res1, res2) -> res1 && res2)
+							;
+					})
+			.when(BucketActionAnalyticJobMessage.class, 
+					msg -> (JobMessageType.stopping == msg.type()) && !Optionals.ofNullable(msg.jobs()).isEmpty(), // Jobs stopping (always internal)
+					msg -> {
+						return getCurrentStatusBean(bucket, status_crud)
+								.thenCompose(maybe_status_bean -> {
+									return maybe_status_bean.map(status_bean -> { 
+										final UpdateComponent<DataBucketStatusBean> update = 
+												msg.jobs().stream().reduce(
+														(CommonUpdateComponent<DataBucketStatusBean>)CrudUtils.update(DataBucketStatusBean.class),
+														(acc, v) -> {
+															final String root_field = 
+																	BeanTemplateUtils.from(DataBucketStatusBean.class)
+																	.nested(DataBucketStatusBean::analytic_state, AnalyticThreadStateBean.class)
+																	.field(v.name())
+																	+ "."
+																	;
+															
+															final MethodNamingHelper<AnalyticThreadStateBean> fields = BeanTemplateUtils.from(AnalyticThreadStateBean.class);
+															
+															return acc
+																.unset(root_field + fields.field(AnalyticThreadStateBean::curr_run))
+																.set(root_field + fields.field(AnalyticThreadStateBean::last_run)
+																		, 
+																		Optional.ofNullable(status_bean.global_analytic_state()).map(gas -> gas.curr_run()).orElse(null)
+																)
+																;
+														}
+														,
+														(acc1, acc2) -> acc1 // (never called										
+														);
+										
+										return status_crud.updateObjectById(status_bean._id(), update);
+									})
+									.orElseGet(() -> CompletableFuture.completedFuture(false))
+									;
+								});
+					})
+			.otherwise(__ -> CompletableFuture.completedFuture(false))
+			;
+	}
+	
+	/** Retrieve the status for the bucket being updated
+	 * @param bucket
+	 * @param status_crud
+	 * @return
+	 */
+	private static CompletableFuture<Optional<DataBucketStatusBean>> getCurrentStatusBean(
+			final DataBucketBean bucket,
+			final ICrudService<DataBucketStatusBean> status_crud)
+	{
+		final MethodNamingHelper<DataBucketStatusBean> fields = BeanTemplateUtils.from(DataBucketStatusBean.class);
+		
+		return status_crud.getObjectBySpec(
+				CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, bucket.full_name()), 
+				Arrays.asList(fields.field(DataBucketStatusBean::_id), 
+						fields.field(DataBucketStatusBean::global_analytic_state), 
+						fields.field(DataBucketStatusBean::analytic_state)), 
+				true);
 	}
 	
 	///////////////////////////////////////////////////////////////////////

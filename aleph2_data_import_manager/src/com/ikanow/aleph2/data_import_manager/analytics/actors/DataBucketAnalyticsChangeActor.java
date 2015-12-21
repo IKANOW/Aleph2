@@ -1486,6 +1486,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		return return_value;
 	}
 	
+	//TODO (ALEPH-12): Some other things to include here
+	// - all the custom trigger module names and ids
+	// - document deduplication names and ids (TODO: also need to port this over in the harvest technology logic)
+	
 	/** Creates a query component to get all the shared library beans i need
 	 * @param bucket
 	 * @param cache_tech_jar_only

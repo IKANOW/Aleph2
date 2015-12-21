@@ -705,5 +705,6 @@ public class TestAnalyticTriggerCrudUtils {
 		
 		return complex_trigger;
 	}
-	
+
+	//TODO (ALEPH-12): test edge cases for updateAnalyticThreadState
 }

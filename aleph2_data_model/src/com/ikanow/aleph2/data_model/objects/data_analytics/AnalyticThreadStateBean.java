@@ -22,6 +22,10 @@ import java.util.Date;
  */
 public class AnalyticThreadStateBean {
 	
+	/** Jackson c'tor
+	 */
+	protected AnalyticThreadStateBean() {}
+	
 	/** User c'tor
 	 * @param last_run - The last time this job was run
 	 * @param curr_run - The time the current job was started, if actively running

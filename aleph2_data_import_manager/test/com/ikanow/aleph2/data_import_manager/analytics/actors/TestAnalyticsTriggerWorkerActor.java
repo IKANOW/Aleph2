@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProcessingTestSpecBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
@@ -108,6 +109,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	protected static ActorRef _trigger_worker = null;
 	protected static ActorRef _dummy_data_bucket_change_actor = null;	
 	protected static ICrudService<AnalyticTriggerStateBean> _test_crud;
+	protected static ICrudService<DataBucketStatusBean> _status_crud;
 
 	@Before
 	@Override
@@ -127,6 +129,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 
 		_test_crud = _service_context.getService(IManagementDbService.class, Optional.empty()).get().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		_test_crud.deleteDatastore().get();
+		
+		_status_crud = _service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStatusStore();
+		_status_crud.deleteDatastore().get();
 		
 		final String dummy_data_bucket_change_actor = UuidUtils.get().getRandomUuid();
 		_dummy_data_bucket_change_actor = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor.class), dummy_data_bucket_change_actor);
@@ -166,6 +171,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		// Create the usual "manual trigger" bucket
 		
 		final DataBucketBean manual_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", true);
+
+		insertStatusForBucket(manual_trigger_bucket);
 		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);		
@@ -183,6 +190,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish
 			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
+			//(status)
+			waitForData(() -> getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true), -1L, true);
+			waitForData(() -> getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false), -1L, true);
 			
 			// Check the DB
 		
@@ -192,6 +202,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
 					).join().intValue());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false).longValue());
 		}
 		
 		// 2) Update in suspended mode
@@ -214,7 +228,11 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(7L, trigger_crud.countObjectsBySpec(
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, true)
-					).join().intValue());			
+					).join().intValue());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false).longValue());
 		}
 		
 		// 3) Delete
@@ -230,6 +248,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the DB
 		
 			assertEquals(0L, trigger_crud.countObjects().join().intValue());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false).longValue());
 		}
 		// Check no malformed buckets
 		assertEquals(0L, _num_received_errors.get());
@@ -248,6 +270,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		
 		final DataBucketBean manual_trigger_bucket = BucketUtils.convertDataBucketBeanToTest(manual_trigger_bucket_original, "alex"); 
 		
+		insertStatusForBucket(manual_trigger_bucket);
+		
 		final ICrudService<AnalyticTriggerStateBean> trigger_crud = 
 				_service_context.getCoreManagementDbService().readOnlyVersion().getAnalyticBucketTriggerState(AnalyticTriggerStateBean.class);
 		trigger_crud.deleteDatastore().join();
@@ -261,6 +285,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
+			//(status)
+			waitForData(() -> getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true), -1L, true);
+			waitForData(() -> getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false), -1L, true);
 			
 			// Check the DB
 		
@@ -270,6 +297,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 					CrudUtils.allOf(AnalyticTriggerStateBean.class)
 						.when(AnalyticTriggerStateBean::is_bucket_suspended, false)
 					).join().intValue());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false).longValue());
 		}
 		
 		// 2) Update in suspended mode (will delete because it's a test)
@@ -285,6 +316,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the DB
 		
 			assertEquals(0L, trigger_crud.countObjects().join().intValue());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(manual_trigger_bucket.full_name(), Optional.empty(), false).longValue());
 		}
 		// Check no malformed buckets
 		assertEquals(0L, _num_received_errors.get());
@@ -314,6 +349,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/simple_job_deps_bucket.json"), Charsets.UTF_8);		
 		final DataBucketBean bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
+		insertStatusForBucket(bucket);		
+		
 		// This can run inside another job so need to be a bit		
 		long prev = _num_received.get();
 		_num_received.set(0L);		
@@ -332,6 +369,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 3, true);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.empty(), true), -1L, true);
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.empty(), false), -1L, true);
 			
 			// Check the DB
 		
@@ -346,10 +386,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - nothing yet!
 			
 			assertEquals(0, _num_received.get());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());			
 		}
 		
 		// 2) Perform a trigger check, make sure that nothing has activated
 		{
+			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
 			_trigger_worker.tell(msg, _trigger_worker);
@@ -364,10 +409,15 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Check the message bus - nothing yet!
 			
-			assertEquals(0, _num_received.get());			
+			assertEquals(0, _num_received.get());
+			
+			// underlying status
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());			
 		}		
 		
-		// 3a) Let the worker now that job1 has started (which should also launch the bucket)
+		// 3a) Let the worker know that job1 has started (which should also launch the bucket)
+		final Date now_stage3a = new Date();
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
@@ -403,9 +453,19 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - nothing yet!
 			
 			assertEquals(0, _num_received.get());
+			
+			// underlying status: 1st job started, bucket started
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue());						
 		}
 		
 		// 3b) Send a job completion message
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage3b = new Date();
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
@@ -418,6 +478,7 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 4, false);
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false), -1L, false);
 			
 			// Check the DB
 			
@@ -435,8 +496,19 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - nothing yet!
 			
 			assertEquals(0, _num_received.get());
-		}
+			
+			// underlying status: 1st job stopped, bucket unchanged
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+			assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+					(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+		}		
 		
+		//TODO (ALEPH-12): continue with the status checks...
 		
 		// 4) Perform a trigger check, make sure that only the right job ("next_phase") has started
 		{
@@ -636,6 +708,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		trigger_crud.deleteDatastore().join();
 		
 		_num_received.set(0L);
+		
+		insertStatusForBucket(bucket);				
 		
 		final AnalyticThreadJobBean job_to_run = bucket.analytic_thread().jobs().get(0);
 		
@@ -892,6 +966,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 
 		final DataBucketBean bucket = BeanTemplateUtils.from(json, DataBucketBean.class).get();
 
+		insertStatusForBucket(bucket);				
+		
 		// (have to save the bucket to make trigger checks work correctly)
 		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(bucket, true).join();		
 
@@ -1250,6 +1326,46 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 		}
 	}
 
+	protected static void insertStatusForBucket(final DataBucketBean bucket) {
+		final DataBucketStatusBean status_bean =
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+					.with(DataBucketStatusBean::_id, bucket._id())
+					.with(DataBucketStatusBean::bucket_path, bucket.full_name())
+				.done().get()
+				;
+		
+		_status_crud.storeObject(status_bean, true).join();		
+	}
+	
+	/**
+	 * @param bucket_name
+	 * @param job_name
+	 * @param curr_not_last - true to get curr_run, false to get last_run
+	 * @return
+	 */
+	protected static Long getLastRunTime(final String bucket_name, final Optional<String> job_name, final boolean curr_not_last) {
+		return _status_crud.getObjectBySpec(CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, bucket_name))
+						.join()
+						.<Long>map(status_bean -> {
+							return job_name.map(jn -> 
+								Optional.ofNullable(status_bean.analytic_state())
+										.map(as -> as.get(jn))
+										.map(d -> curr_not_last ? d.curr_run() : d.last_run())
+										.map(d -> d.getTime()) 
+										.orElse(-1L)
+									)
+									.orElseGet(() ->
+										Optional.ofNullable(status_bean.global_analytic_state())
+											.map(d -> curr_not_last ? d.curr_run() : d.last_run())
+											.map(d -> d.getTime()) 
+											.orElse(-1L)
+									)
+									;
+						})
+						.orElse(-1L)
+						;
+	}
+	
 	protected void waitForData(Supplier<Long> getCount, long exit_value, boolean ascending) {
 		int ii = 0;
 		long curr_val = -1;

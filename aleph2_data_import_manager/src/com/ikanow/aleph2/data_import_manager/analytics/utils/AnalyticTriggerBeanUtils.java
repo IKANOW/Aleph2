@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,9 +41,11 @@ import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
+import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 /** Utilities for converting analytic jobs into trigger state beans
  * @author Alex
@@ -391,5 +394,15 @@ public class AnalyticTriggerBeanUtils {
 		return message_with_node_affinity;
 	}
 	
+	/** Sends a message (eg one build from buildInternalEventMessage)
+	 * @param new_message
+	 * @return the reply future (currently unused)
+	 */
+	public static CompletableFuture<?> sendInternalEventMessage(final BucketActionMessage new_message) {
+		return BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
+				ManagementDbActorContext.get().getBucketActionSupervisor(), 
+				ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
+		
+	}
 
 }

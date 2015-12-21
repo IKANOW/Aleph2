@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.analytics.services;
 
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -46,6 +47,7 @@ public class AnalyticStateTriggerCheckFactory {
 	
 	public final static Optional<String> storage_service = Optional.of("storage_service");
 	public final static Optional<String> search_index_service = Optional.of("search_index_service");
+	public final static Optional<String> document_service = Optional.of("document_service");
 	
 	protected IServiceContext _service_context;
 	protected FileContext _file_context;
@@ -65,7 +67,14 @@ public class AnalyticStateTriggerCheckFactory {
 	 * @author Alex
 	 */
 	public static interface AnalyticStateChecker {
-		CompletableFuture<Tuple2<Boolean, Long>> check(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final AnalyticTriggerStateBean trigger);
+		/** Interface for checking if a given trigger is satisfied
+		 * @param bucket - the bucket to check
+		 * @param job - if applicable, the job being checked
+		 * @param trigger - the trigger metadata
+		 * @param at - the time to check against (ie now - this is passed in to ensure that a single global "now" is used across all operations)
+		 * @return - tuple: _1 is whether this trigger is now active, _2 is the triggering resource
+		 */
+		CompletableFuture<Tuple2<Boolean, Long>> check(final DataBucketBean bucket, final Optional<AnalyticThreadJobBean> job, final AnalyticTriggerStateBean trigger, final Date at);
 	}
 	
 	/** Gets the checker for the trigger/data service pair
@@ -79,7 +88,8 @@ public class AnalyticStateTriggerCheckFactory {
 				.when(__ -> TriggerType.time == trigger_type, __ -> new AlwaysChecker())
 				.when(__ -> (TriggerType.bucket == trigger_type) && !data_service.isPresent(), __ -> new NeverChecker())
 				.when(__ -> (TriggerType.bucket == trigger_type) && storage_service.equals(data_service), __ -> new BucketStorageChecker())
-				.when(__ -> (TriggerType.bucket == trigger_type) && search_index_service.equals(data_service), __ -> new SearchIndexChecker())
+				.when(__ -> (TriggerType.bucket == trigger_type) && search_index_service.equals(data_service), __ -> new CrudChecker())
+				.when(__ -> (TriggerType.bucket == trigger_type) && document_service.equals(data_service), __ -> new CrudChecker())
 				.otherwise(__ -> new NeverChecker()) // (not currently supported, eg custom)
 				;
 	}
@@ -91,10 +101,13 @@ public class AnalyticStateTriggerCheckFactory {
 	 */
 	protected class InputFileChecker implements AnalyticStateChecker {
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker#check(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional, com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean, java.util.Date)
+		 */
 		@Override
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
-				AnalyticTriggerStateBean trigger)
+				AnalyticTriggerStateBean trigger, final Date at)
 		{
 			try {
 				if (null == _file_context) {
@@ -142,15 +155,18 @@ public class AnalyticStateTriggerCheckFactory {
 		}		
 	}
 	
-	/** Checks the size of the search index service
+	/** Checks the size of CRUD-accessible services, like the search index service and document service
 	 * @author alex
 	 */
-	protected class SearchIndexChecker implements AnalyticStateChecker {
+	protected class CrudChecker implements AnalyticStateChecker {
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker#check(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional, com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean, java.util.Date)
+		 */
 		@Override
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
-				AnalyticTriggerStateBean trigger) {
+				AnalyticTriggerStateBean trigger, final Date at) {
 			//TODO (ALEPH-12): implement this:
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}
@@ -166,10 +182,13 @@ public class AnalyticStateTriggerCheckFactory {
 	 */
 	protected class BucketStorageChecker implements AnalyticStateChecker {
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker#check(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional, com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean, java.util.Date)
+		 */
 		@Override
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
-				AnalyticTriggerStateBean trigger) {
+				AnalyticTriggerStateBean trigger, final Date at) {
 			// TODO Auto-generated method stub
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}
@@ -183,10 +202,13 @@ public class AnalyticStateTriggerCheckFactory {
 	 */
 	protected class AlwaysChecker implements AnalyticStateChecker {
 		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker#check(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional, com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean, java.util.Date)
+		 */
 		@Override
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
-				AnalyticTriggerStateBean trigger)
+				AnalyticTriggerStateBean trigger, final Date at)
 		{
 			return CompletableFuture.completedFuture(Tuples._2T(true, trigger.curr_resource_size()));
 		}		
@@ -200,10 +222,13 @@ public class AnalyticStateTriggerCheckFactory {
 	 */
 	protected class NeverChecker implements AnalyticStateChecker {
 		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_import_manager.analytics.services.AnalyticStateTriggerCheckFactory.AnalyticStateChecker#check(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, java.util.Optional, com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean, java.util.Date)
+		 */
 		@Override
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
-				AnalyticTriggerStateBean trigger)
+				AnalyticTriggerStateBean trigger, final Date at)
 		{
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}		
