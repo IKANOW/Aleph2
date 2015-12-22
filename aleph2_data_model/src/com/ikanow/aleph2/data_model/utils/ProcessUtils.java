@@ -46,6 +46,7 @@ public class ProcessUtils {
 			}
 			
 			//starts the process, get pid back
+			System.out.println("Starting process: " + process_builder.command().toString());
 			logger.debug("Starting process: " + process_builder.command().toString());
 			final Process px = process_builder.start();
 			String err = null;
@@ -213,8 +214,9 @@ public class ProcessUtils {
 	 * @throws IOException 
 	 * @throws FileNotFoundException 
 	 */
-	private static Tuple2<String, Long> getStoredPid(final String application_name, final DataBucketBean bucket, final String aleph_root_path) throws FileNotFoundException, IOException {
+	private static Tuple2<String, Long> getStoredPid(final String application_name, final DataBucketBean bucket, final String aleph_root_path) throws FileNotFoundException, IOException {		
 		final File file = new File(aleph_root_path + PID_MANAGER_DIR_NAME + bucket._id() + File.separator + application_name);
+		System.out.println("Looking if pid: " + file.getAbsolutePath() + " exists: " + file.exists());
 		if ( file.exists() ) {
 			final String pid_str = IOUtils.toString(new FileInputStream(file), "UTF-8");
 			final String[] splits = pid_str.split("=");

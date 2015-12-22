@@ -3,11 +3,13 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.junit.After;
@@ -191,10 +193,17 @@ public class TestProcessUtils {
 		final String tmp_file_path = createTestScript(test_script);	
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
-		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
-		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
-		assertNotNull(launch._1, launch._2);
 		
+		final File debug_output_file = new File(root_path + "debug");
+		
+		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path)
+				.redirectErrorStream(true)
+				.redirectOutput(debug_output_file);				
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
+		System.out.println("launch1: " + launch._1);
+		System.out.println("launch2: " + launch._2);
+		assertNotNull(launch._1, launch._2);
+		System.out.println("pb_output: " +IOUtils.toString(new FileInputStream(debug_output_file)));
 		//wait a second for child process to start
 		Thread.sleep(1000);
 		
