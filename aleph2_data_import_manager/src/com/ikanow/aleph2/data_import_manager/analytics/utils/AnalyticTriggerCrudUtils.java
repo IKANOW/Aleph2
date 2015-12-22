@@ -595,7 +595,9 @@ public class AnalyticTriggerCrudUtils {
 															.nested(DataBucketStatusBean::global_analytic_state, AnalyticThreadStateBean.class)
 															.field(AnalyticThreadStateBean::last_run)
 															, 
-															Optional.ofNullable(status_bean.global_analytic_state()).map(gas -> gas.curr_run()).orElse(null))
+															Optional.ofNullable(status_bean.global_analytic_state()).map(gas -> gas.curr_run())
+																.orElseGet(() -> new Date()) //(this is just emergency backup)
+													)
 											)
 										)
 										.orElseGet(() -> CompletableFuture.completedFuture(false))
@@ -686,7 +688,8 @@ public class AnalyticTriggerCrudUtils {
 																.unset(root_field + fields.field(AnalyticThreadStateBean::curr_run))
 																.set(root_field + fields.field(AnalyticThreadStateBean::last_run)
 																		, 
-																		Optional.ofNullable(status_bean.global_analytic_state()).map(gas -> gas.curr_run()).orElse(null)
+																		Optional.ofNullable(status_bean.analytic_state()).map(as -> as.get(v.name())).map(gas -> gas.curr_run())
+																					.orElseGet(() -> new Date()) //(this is just emergency backup)
 																)
 																;
 														}

@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,24 +33,30 @@ import org.junit.Test;
 
 import scala.Tuple2;
 
+import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadStateBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 
 public class TestAnalyticTriggerCrudUtils {
 
 	ICrudService<AnalyticTriggerStateBean> _test_crud;
+	ICrudService<DataBucketStatusBean> _test_status;
 	
 	@Before
 	public void setup() throws InterruptedException, ExecutionException {
@@ -57,6 +64,9 @@ public class TestAnalyticTriggerCrudUtils {
 		MockMongoDbCrudServiceFactory factory = new MockMongoDbCrudServiceFactory();
 		_test_crud = factory.getMongoDbCrudService(AnalyticTriggerStateBean.class, String.class, factory.getMongoDbCollection("test.trigger_crud"), Optional.empty(), Optional.empty(), Optional.empty());
 		_test_crud.deleteDatastore().get();
+
+		_test_status = factory.getMongoDbCrudService(DataBucketStatusBean.class, String.class, factory.getMongoDbCollection("test.bucket_status"), Optional.empty(), Optional.empty(), Optional.empty());
+		_test_status.deleteDatastore().get();
 	}	
 
 	@Test
@@ -706,5 +716,142 @@ public class TestAnalyticTriggerCrudUtils {
 		return complex_trigger;
 	}
 
-	//TODO (ALEPH-12): test edge cases for updateAnalyticThreadState
+	@Test
+	public void test_updateAnalyticThreadState() {
+		
+		// Most of the functionality testing for this is provided by TestAnalyticsTriggerWorkerActor.test_jobTriggerScenario
+		// (including the internal/external job trigger case, which is the most complex one)
+		// Here we're just going to cover a few edge cases
+		
+		// 1) If we're running a test bucket then it just always immediately returns
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+						.with(DataBucketBean::full_name, "/aleph2_testing/alex/random/test")
+					.done().get();
+			
+			// (all the params just get bypassed)
+			assertEquals(true, AnalyticTriggerCrudUtils.updateAnalyticThreadState(null, test_bucket, null, null).join());
+		}
+		
+		final DataBucketBean normal_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "_random_test")
+				.with(DataBucketBean::full_name, "/random/test")
+			.done().get();
+		
+		final AnalyticThreadJobBean test_job = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_job")
+			.done().get();
+				
+		final AnalyticThreadJobBean test_job_2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::name, "test_job_2")
+			.done().get();
+		
+		// 2) Next up... if the status beans aren't present then should return false in all different cases
+		{
+			// 2a) Bucket starting
+			{
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, null, JobMessageType.starting, Optional.empty());		
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.of(new Date())).join());
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+			}
+			// 2b) Bucket stopping
+			{
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, null, JobMessageType.stopping, Optional.empty());		
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.of(new Date())).join());
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.of(new Date())).join());
+			}
+			// 2c) Jobs starting
+			{
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, Arrays.asList(test_job), JobMessageType.starting, Optional.empty());		
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.of(new Date())).join());
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+			}
+			// 2d) Jobs stopping
+			{
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, Arrays.asList(test_job), JobMessageType.stopping, Optional.empty());		
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.of(new Date())).join());
+				
+				assertEquals(false, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+			}
+		}
+		
+		// 3) Finally (this is the most complex _edge_ case), handle the case where some of the jobs have already been started buth others haven't
+		//    This one requires a decent amount of set up
+		{
+			final DataBucketStatusBean normal_bucket_status = BeanTemplateUtils.build(DataBucketStatusBean.class)
+					.with(DataBucketStatusBean::_id, "_random_test")
+					.with(DataBucketStatusBean::bucket_path, "/random/test")
+					.with(DataBucketStatusBean::global_analytic_state,
+							BeanTemplateUtils.build(AnalyticThreadStateBean.class)
+								.with(AnalyticThreadStateBean::curr_run, new Date(0L))
+							.done().get()
+							)
+					.with(DataBucketStatusBean::analytic_state,
+							new LinkedHashMap<String, AnalyticThreadStateBean>(
+									ImmutableMap.of(
+											"test_job", 
+											BeanTemplateUtils.build(AnalyticThreadStateBean.class)
+												.with(AnalyticThreadStateBean::curr_run, new Date(0L))
+											.done().get(),
+											"test_job_2", 
+											BeanTemplateUtils.build(AnalyticThreadStateBean.class)
+											.done().get()
+											)
+									)
+							)
+				.done().get();
+			
+			// Jobs where 1 gets changed, the other doesn't
+			{
+				_test_status.storeObject(normal_bucket_status, true).join();
+				
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, Arrays.asList(test_job, test_job_2), JobMessageType.starting, Optional.empty());		
+				
+				assertEquals(true, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+				
+				final DataBucketStatusBean normal_bucket_status_res = _test_status.getObjectById("_random_test").join().get();
+				
+				assertEquals(0L, normal_bucket_status_res.analytic_state().get("test_job").curr_run().getTime());
+				assertTrue(normal_bucket_status_res.analytic_state().get("test_job_2").curr_run().getTime() > 1L); // (ie now!)
+			}
+			// Jobs where the only one specified is changed, won't update anything
+			{
+				_test_status.storeObject(normal_bucket_status, true).join();
+				
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, Arrays.asList(test_job), JobMessageType.starting, Optional.empty());		
+				
+				assertEquals(true, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+				
+				final DataBucketStatusBean normal_bucket_status_res = _test_status.getObjectById("_random_test").join().get();
+				
+				assertEquals(0L, normal_bucket_status_res.analytic_state().get("test_job").curr_run().getTime());				
+			}
+			// Bucket
+			{
+				_test_status.storeObject(normal_bucket_status, true).join();
+				
+				final BucketActionMessage new_message = 
+						AnalyticTriggerBeanUtils.buildInternalEventMessage(normal_bucket, null, JobMessageType.starting, Optional.empty());		
+				
+				assertEquals(true, AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, normal_bucket, _test_status, Optional.empty()).join());
+				
+				final DataBucketStatusBean normal_bucket_status_res = _test_status.getObjectById("_random_test").join().get();
+				
+				assertEquals(0L, normal_bucket_status_res.global_analytic_state().curr_run().getTime());				
+			}
+		}
+	}
 }

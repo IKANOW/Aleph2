@@ -430,6 +430,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 5, true);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.empty(), true), now_stage3a.getTime(), true);
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.empty(), false), -1L, true);
 			
 			// Check the DB
 		
@@ -508,9 +511,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
 		}		
 		
-		//TODO (ALEPH-12): continue with the status checks...
-		
 		// 4) Perform a trigger check, make sure that only the right job ("next_phase") has started
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage4 = new Date();
 		{
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
@@ -519,7 +522,10 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 5, true);
 			waitForData(() -> _num_received.get(), 1, true);
-
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true), now_stage4.getTime(), true);
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false), -1L, true);
+			
 			// Check the DB
 		
 			// (bucket active still present, now "next_phase" has started)
@@ -541,9 +547,24 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - should have received a start message for the triggered job
 			
 			assertEquals(1, _num_received.get());
+
+			// underlying status: 1st job stopped, 2nd job started, bucket unchanged
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+			assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+					(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+			//job #2: next phase
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true).longValue() >= now_stage4.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false).longValue());						
 		}		
 		
 		// 5) Send a job completion message
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage5 = new Date();
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
@@ -556,6 +577,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 4, false);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false), -1L, false);
 			
 			// Check the DB
 			
@@ -573,9 +596,30 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - no change
 			
 			assertEquals(1, _num_received.get());
+			
+			// underlying status: 1st job stopped, 2nd job stopped, bucket unchanged
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+						(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+			}
+			//job #2: next phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage4 + " < " + now_stage5, 
+						(last_time >= now_stage4.getTime()) && (last_time < now_stage5.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true).longValue());
+			}
 		}
 		
 		// 6) Perform a trigger check, make sure that only the right job ("final_phase") has started 
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage6 = new Date();
 		{
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
@@ -584,6 +628,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 5, true);
 			waitForData(() -> _num_received.get(), 2, true);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("final_phase"), true), now_stage6.getTime(), true);
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("final_phase"), false), -1L, true);
 
 			// Check the DB
 		
@@ -607,9 +654,35 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - should have received a start message for the triggered job
 			
 			assertEquals(2, _num_received.get()); //+1
+			
+			// underlying status: 1st job stopped, 2nd job stopped, 3rd job started bucket unchanged
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+						(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+			}
+			//job #2: next phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage4 + " < " + now_stage5, 
+						(last_time >= now_stage4.getTime()) && (last_time < now_stage5.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true).longValue());
+			}
+			//job #3: final phase
+			{
+				assertTrue(getLastRunTime(bucket.full_name(), Optional.of("final_phase"), true).longValue() >= now_stage6.getTime());
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("final_phase"), false).longValue());										
+			}
 		}		
 		
 		// 7) Stop the final job
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage7 = new Date();
 		{
 			final BucketActionMessage.BucketActionAnalyticJobMessage inner_msg = 
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, 
@@ -622,6 +695,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 4, false);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.of("final_phase"), false), -1L, false);
 			
 			// Check the DB
 			
@@ -639,9 +714,37 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - no change
 			
 			assertEquals(2, _num_received.get());
+			
+			// underlying status: 1st job stopped, 2nd job stopped, 3rd job stopped, bucket unchanged
+			//global
+			assertTrue(getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue() >= now_stage3a.getTime());
+			assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue());
+			//job #1 "initial phase"
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+						(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+			}
+			//job #2: next phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage4 + " < " + now_stage5, 
+						(last_time >= now_stage4.getTime()) && (last_time < now_stage5.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true).longValue());
+			}
+			//job #3: final phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("final_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage6 + " < " + now_stage7, 
+						(last_time >= now_stage6.getTime()) && (last_time < now_stage7.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("final_phase"), true).longValue());
+			}
 		}
 		
 		// 8) Trigger - should complete the bucket (since has had bucket activated, 60s timeout doesn't apply) 
+		Thread.sleep(100L); // (just make sure this is != now_stage3a)
+		final Date now_stage8 = new Date();
 		{
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
@@ -650,6 +753,8 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Give it a couple of secs to finish			
 			waitForData(getCount, 3, false);
 			waitForData(() -> _num_received.get(), 3, true);
+			//(status)
+			waitForData(() -> getLastRunTime(bucket.full_name(), Optional.empty(), false), -1L, false);
 			
 			// Check the DB
 		
@@ -659,6 +764,36 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			// Check the message bus - should have received a stop message for the bucket
 			
 			assertEquals(3, _num_received.get()); 
+			
+			// underlying status: 1st job stopped, 2nd job stopped, 3rd job stopped, bucket stopped
+			//global
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.empty(), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage8, 
+						(last_time >= now_stage3a.getTime()) && (last_time < now_stage8.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.empty(), true).longValue());
+			}
+			//job #1 "initial phase"
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage3a + " < " + now_stage3b, 
+						(last_time >= now_stage3a.getTime()) && (last_time < now_stage3b.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("initial_phase"), true).longValue());
+			}
+			//job #2: next phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("next_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage4 + " < " + now_stage5, 
+						(last_time >= now_stage4.getTime()) && (last_time < now_stage5.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("next_phase"), true).longValue());
+			}
+			//job #3: final phase
+			{
+				final long last_time = getLastRunTime(bucket.full_name(), Optional.of("final_phase"), false).longValue();
+				assertTrue("Time errors: " + new Date(last_time) + " >= " + now_stage6 + " < " + now_stage7, 
+						(last_time >= now_stage6.getTime()) && (last_time < now_stage7.getTime()));
+				assertEquals(-1L, getLastRunTime(bucket.full_name(), Optional.of("final_phase"), true).longValue());
+			}
 		}
 		_num_received.set(prev);
 		
