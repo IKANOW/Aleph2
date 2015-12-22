@@ -196,7 +196,7 @@ public class TestProcessUtils {
 		assertNotNull(launch._1, launch._2);
 		
 		//wait a second for child process to start
-		Thread.sleep(10000);
+		Thread.sleep(1000);
 		
 		//check its still running
 		assertTrue(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
