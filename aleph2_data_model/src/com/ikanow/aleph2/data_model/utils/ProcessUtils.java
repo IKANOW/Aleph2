@@ -1,13 +1,17 @@
 package com.ikanow.aleph2.data_model.utils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -66,49 +70,99 @@ public class ProcessUtils {
 	}
 	
 	/**
+	 * Switched this to be a 2 step process:
+	 * 1. kill any children whose parent is this process (do they need to kill their children?)
+	 * 
 	 * Attempts to stop the given process if it is still currently running
 	 * Will send a 15 if no kill_signal is given.  If the original kill_signal fails to
 	 * stop the job w/in 5 seconds, sends a kill -9 to force the kill.
 	 * Throw an exception if we fail to stop?
 	 * @return Tuple2 _1 for message, _2 for success
 	 */
-	public static Tuple2<String,Boolean> stopProcess(final String application_name, final DataBucketBean bucket, final String aleph_root_path, final Optional<Integer> kill_signal) {				
+	public static Tuple2<String,Boolean> stopProcess(final String application_name, final DataBucketBean bucket, final String aleph_root_path, final Optional<Integer> kill_signal) {						
 		try {
 			//gets process pid/date
 			final Tuple2<String, Long> pid_date = getStoredPid(application_name, bucket, aleph_root_path);
 			if ( pid_date._1 != null ) {
-				//checks if that pid still exists and has the same date
+//				checks if that pid still exists and has the same date
 				if (!isRunning(pid_date._1, pid_date._2)) {
 					return Tuples._2T("(process " + pid_date._1 + " already deleted)", true);
 				}
-				//kill -15 the process, wait a few cycles to let it die
-				logger.debug("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid_date._1);
-				final Process px = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid_date._1)).start();
-				for (int i = 0; i < 5; ++i) {
-					try { Thread.sleep(1000L); } catch (Exception e) {}
-					if (!isProcessRunning(application_name, bucket, aleph_root_path)){
-						break;					
-					}
-				}
-				if (!isProcessRunning(application_name, bucket, aleph_root_path)) {
-					return Tuples._2T("Tried to kill " + pid_date._1 + ": success = " + px.exitValue(), 0 == px.exitValue());
-				} else {
-					//we are still alive, so send a harder kill signal if we haven't already sent a 9
-					if ( kill_signal.isPresent() && kill_signal.get() == 9 ) {
-						return Tuples._2T("Timed out trying to kill: " + pid_date._1, true);
-					} else {
-						logger.debug("Timed out trying to kill: " + pid_date._1 + " sending kill -9 to force kill");
-						return stopProcess(application_name, bucket, aleph_root_path, Optional.of(9));
-					}
-					
-									
-				}
-			} else {
+				return Tuples._2T("tried to  kill pid and children", killProcessAndChildren(pid_date._1, kill_signal));
+		} else {
 				return Tuples._2T("Couldn't find a stored entry for the given application/bucket", false);
 			}
 		} catch (Throwable t) {//(do nothing)
 			return Tuples._2T("Kill failed: " + ErrorUtils.getLongForm("{0}", t), false);
-		}				
+		}
+	}
+
+	/**
+	 * Finds all a processes children, kills the process then recursively calls this on the children.
+	 * 
+	 * @param pid
+	 * @param kill_signal
+	 * @return
+	 * @throws IOException 
+	 */
+	private static boolean killProcessAndChildren(final String pid, final Optional<Integer> kill_signal) throws IOException {
+		//first find any children via pgrep -P pid
+		final ProcessBuilder pb_children = new ProcessBuilder("pgrep","-P", pid.toString());
+		final BufferedReader br = new BufferedReader(new InputStreamReader( pb_children.start().getInputStream()));
+		final Set<String> child_pids = new HashSet<String>();
+		String line;
+		while ( (line=br.readLine()) != null) {
+			child_pids.add(line);
+		}
+		logger.debug("children of pid: " + pid + " are: " + child_pids.toString());
+		//kill pid w/ signal
+		killProcess(pid, kill_signal);
+		
+		//if still alive kill with -9, give it 5s to try and die the old way
+		for ( int i = 0; i < 5; i++ ) {
+			try { Thread.sleep(1000L); } catch (Exception e) {}
+			if ( !isProcessRunning(pid) ) {			
+				break;
+			}
+		}
+		if ( isProcessRunning(pid) ) {			
+			killProcess(pid, Optional.of(9));
+		}
+		
+		//call this on all children
+		return !child_pids.stream().filter(child_pid -> {
+			try {
+				return killProcessAndChildren(child_pid, kill_signal);
+			}catch (Exception ex) {
+				return false;
+			}
+			}).anyMatch(result->false);		
+	}
+	
+	private static boolean killProcess(final String pid, final Optional<Integer> kill_signal) throws IOException {
+//		kill -15 the process, wait a few cycles to let it die				
+		final ProcessBuilder pb = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid));
+		logger.debug("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid);
+		final Process px = pb.start();
+		for (int i = 0; i < 5; ++i) {
+			try { Thread.sleep(1000L); } catch (Exception e) {}
+			if ( !isProcessRunning(pid)) {		
+				break;					
+			}
+		}
+		if (!isProcessRunning(pid)) {
+			return 0 == px.exitValue();
+		} else {
+			//we are still alive, so send a harder kill signal if we haven't already sent a 9
+			if ( kill_signal.isPresent() && kill_signal.get() == 9 ) {
+				return false;
+			} else {
+				logger.debug("Timed out trying to kill: " + pid + " sending kill -9 to force kill");
+				return killProcess(pid, Optional.of(9));				
+			}
+			
+							
+		}
 	}
 
 	/**
@@ -122,6 +176,11 @@ public class ProcessUtils {
 		} catch (Throwable t) {			
 			return false;
 		}
+	}
+	
+	private static boolean isProcessRunning(final String pid) {
+		final File pid_file = new File("/proc/" + pid);
+		return pid_file.exists();		
 	}
 	
 	

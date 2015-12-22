@@ -175,6 +175,48 @@ public class TestProcessUtils {
 		//cleanup
 		new File(tmp_file_path).delete();
 	}	
+	
+	@Test
+	public void testKillProcessAndChildrenAndGrandchildren() throws FileNotFoundException, IOException, InterruptedException {
+		if ( SystemUtils.IS_OS_WINDOWS ) {			
+			System.out.println("ProcessUtils do not work on Windows systems (can't get pids)");
+			return;
+		}
+		
+		//start a process with a timeout of 5s
+		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
+		final String tmp_file_child = root_path + "a";
+		final String tmp_file_grandchild = root_path + "b";
+		final String test_script = getCreateChildrenAndGrandchildrenTestScript(tmp_file_child, tmp_file_grandchild);
+		final String tmp_file_path = createTestScript(test_script);	
+		final DataBucketBean bucket = getTestBucket();
+		final String application_name = "testing";
+		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
+		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
+		assertNotNull(launch._1, launch._2);
+		
+		//wait a second for child process to start
+		Thread.sleep(10000);
+		
+		//check its still running
+		assertTrue(ProcessUtils.isProcessRunning(application_name, bucket, root_path));		
+		//check child process is running
+		assertTrue(new File(tmp_file_child).exists());
+		assertTrue(new File(tmp_file_grandchild).exists());
+		
+		//try to stop process with kill -15, it should have to force kill it with kill -9
+		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.of(15));
+		assertTrue(stop._1, stop._2); //stop returns true		
+		
+		//check the process stopped
+		assertFalse("Process should have timed out and died", ProcessUtils.isProcessRunning(application_name, bucket, root_path));
+		//check the child process stopped
+		assertFalse(new File(tmp_file_child).exists());
+		assertFalse(new File(tmp_file_grandchild).exists());
+		
+		//cleanup
+		new File(tmp_file_path).delete();
+	}
 
 	private static String createTestScript(final String script) throws FileNotFoundException, IOException {		
 		new File(System.getProperty("java.io.tmpdir")  + File.separator  + "test_pid_scripts" + File.separator).mkdir();
@@ -205,6 +247,39 @@ public class TestProcessUtils {
 	private String getIgnoreKillTestScript() {
 		return new StringBuilder()
 				.append("trap \"echo caught 2, not dieing\" 2\n\n" )
+				.append(getLongRunningProcess())
+				.toString();
+	}
+	
+	private String getCreateChildrenAndGrandchildrenTestScript(final String tmp_file_child, final String tmp_file_grandchild) {
+		final String grandchild_func = getScripChildFunction(getScriptCreateFileSleepDeleteOnTerm(tmp_file_grandchild, Optional.empty()), "grandchild_function");
+		final String child_func = getScripChildFunction(getScriptCreateFileSleepDeleteOnTerm(tmp_file_child, Optional.of(grandchild_func)), "child_function");
+		return new StringBuilder()							
+				.append(child_func)
+				.append(getLongRunningProcess())
+				.toString();
+	}
+	
+	/**
+	 * Returns a script block that creates a child function and calls it
+	 * 
+	 * @param child_script
+	 * @return
+	 */
+	private static String getScripChildFunction(final String child_script, final String function_name) {
+		return new StringBuilder()
+				.append("function " + function_name + "() {\n")
+				.append(child_script)
+				.append("}\n")
+				.append(function_name + " &\n")
+				.toString();
+	}
+	
+	private static String getScriptCreateFileSleepDeleteOnTerm(final String filename, final Optional<String> extra_script) {
+		return new StringBuilder()				
+				.append("trap \"rm "+filename+"\" EXIT\n")
+				.append(extra_script.orElse(""))
+				.append("touch " + filename + "\n")
 				.append(getLongRunningProcess())
 				.toString();
 	}
