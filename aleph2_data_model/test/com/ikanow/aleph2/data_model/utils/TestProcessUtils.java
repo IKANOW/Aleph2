@@ -217,6 +217,9 @@ public class TestProcessUtils {
 		final Tuple2<String, Boolean> stop = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.of(15));
 		assertTrue(stop._1, stop._2); //stop returns true		
 		
+		//wait a second for child process to stop
+		Thread.sleep(1000);
+		
 		//check the process stopped
 		assertFalse("Process should have timed out and died", ProcessUtils.isProcessRunning(application_name, bucket, root_path));
 		//check the child process stopped

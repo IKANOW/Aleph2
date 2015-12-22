@@ -143,6 +143,7 @@ public class ProcessUtils {
 	private static boolean killProcess(final String pid, final Optional<Integer> kill_signal) throws IOException {
 //		kill -15 the process, wait a few cycles to let it die				
 		final ProcessBuilder pb = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid));
+		System.out.println("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid);
 		logger.debug("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid);
 		final Process px = pb.start();
 		for (int i = 0; i < 5; ++i) {
