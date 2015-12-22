@@ -9,7 +9,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.junit.After;
@@ -190,6 +189,7 @@ public class TestProcessUtils {
 		final String tmp_file_child = root_path + "a";
 		final String tmp_file_grandchild = root_path + "b";
 		final String test_script = getCreateChildrenAndGrandchildrenTestScript(tmp_file_child, tmp_file_grandchild);
+		System.out.println(test_script);
 		final String tmp_file_path = createTestScript(test_script);	
 		final DataBucketBean bucket = getTestBucket();
 		final String application_name = "testing";
@@ -245,7 +245,6 @@ public class TestProcessUtils {
 		//assume bash scripts work
 		//this script will loop forever, doing nothing, it's utterly useless
 		return new StringBuilder()				
-//				.append("trap \"exit 47\" SIGTERM\n")
 			.append("while [ : ]\n")
 			.append("do\n")
 			.append("   sleep 1\n")
@@ -262,9 +261,11 @@ public class TestProcessUtils {
 	
 	private String getCreateChildrenAndGrandchildrenTestScript(final String tmp_file_child, final String tmp_file_grandchild) {
 		final String grandchild_func = getScripChildFunction(getScriptCreateFileSleepDeleteOnTerm(tmp_file_grandchild, Optional.empty()), "grandchild_function");
-		final String child_func = getScripChildFunction(getScriptCreateFileSleepDeleteOnTerm(tmp_file_child, Optional.of(grandchild_func)), "child_function");
+		final String child_func = getScripChildFunction(getScriptCreateFileSleepDeleteOnTerm(tmp_file_child, Optional.of("grandchild_function &\n")), "child_function");
 		return new StringBuilder()							
 				.append(child_func)
+				.append(grandchild_func)
+				.append("child_function &\n")
 				.append(getLongRunningProcess())
 				.toString();
 	}
@@ -280,7 +281,6 @@ public class TestProcessUtils {
 				.append( function_name + "() {\n")
 				.append(child_script)
 				.append("}\n")
-				.append(function_name + " &\n")
 				.toString();
 	}
 	
