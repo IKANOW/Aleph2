@@ -277,7 +277,7 @@ public class TestProcessUtils {
 	 */
 	private static String getScripChildFunction(final String child_script, final String function_name) {
 		return new StringBuilder()
-				.append("function " + function_name + "() {\n")
+				.append( function_name + "() {\n")
 				.append(child_script)
 				.append("}\n")
 				.append(function_name + " &\n")
