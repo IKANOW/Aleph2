@@ -16,8 +16,12 @@
 package com.ikanow.aleph2.data_import_manager.analytics.services;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+
+
 
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -25,17 +29,24 @@ import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+
+
 import com.google.inject.Inject;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Patterns;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+
+
 
 import scala.Tuple2;
 
@@ -49,18 +60,55 @@ public class AnalyticStateTriggerCheckFactory {
 	public final static Optional<String> search_index_service = Optional.of("search_index_service");
 	public final static Optional<String> document_service = Optional.of("document_service");
 	
-	protected IServiceContext _service_context;
-	protected FileContext _file_context;
+	protected final IServiceContext _service_context;
+	protected final SetOnce<FileContext> _file_context = new SetOnce<>();
+	
+	protected final Map<String, DataBucketBean> _bucket_cache = new ConcurrentHashMap<>();
+	protected final Map<String, DataBucketStatusBean> _bucket_status_cache = new ConcurrentHashMap<>();
 	
 	/** User c'tor
 	 */
-	public AnalyticStateTriggerCheckFactory() {}
+	public AnalyticStateTriggerCheckFactory() {
+		_service_context = null;
+	}
 	
 	/** Guice c'tor
 	 */
 	@Inject
 	public AnalyticStateTriggerCheckFactory(IServiceContext service_context) {
 		_service_context = service_context;
+	}
+	
+	/** Clears the bucket and bucket status cache available across all the checkers
+	 */
+	public void resetCache() {
+		_bucket_cache.clear();
+		_bucket_status_cache.clear();
+	}
+	
+	/** Retrieves/caches bucket
+	 * @param name (bucket full_name)
+	 * @return
+	 */
+	public DataBucketBean getBucket(final String name) {
+		return _bucket_cache.computeIfAbsent(name, n -> {
+			return _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore()
+						.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, n))
+						.join().orElse(null)
+			;
+		});
+	}
+	/** Retrieves/caches bucket status
+	 * @param name (bucket full_name)
+	 * @return
+	 */
+	public DataBucketStatusBean getBucketStatus(final String name) {
+		return _bucket_status_cache.computeIfAbsent(name, n -> {
+			return _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStatusStore()
+						.getObjectBySpec(CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::bucket_path, n))
+						.join().orElse(null)
+			;
+		});
 	}
 	
 	/** Interface for performing the trigger check
@@ -110,8 +158,8 @@ public class AnalyticStateTriggerCheckFactory {
 				AnalyticTriggerStateBean trigger, final Date at)
 		{
 			try {
-				if (null == _file_context) {
-					_file_context = _service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
+				if (!_file_context.isSet()) {
+					_file_context.set(_service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get());
 				}
 				
 				// Count the files
@@ -128,8 +176,8 @@ public class AnalyticStateTriggerCheckFactory {
 					
 					final Path path = new Path(path_name);
 					
-					if (_file_context.util().exists(path)) {						
-						FileStatus[] status = _file_context.util().listStatus(path);				
+					if (_file_context.get().util().exists(path)) {						
+						FileStatus[] status = _file_context.get().util().listStatus(path);				
 						
 						if (status.length > 0) {
 							_logger.info(ErrorUtils.get("For bucket:job {0}:{1}, found {2} files in bucket {3}", bucket.full_name(), 

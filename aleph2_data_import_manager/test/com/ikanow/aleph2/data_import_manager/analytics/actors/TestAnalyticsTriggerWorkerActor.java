@@ -185,9 +185,6 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			_trigger_worker.tell(msg, _trigger_worker);
 			
-			//(code coverage! this will be ignored due to spacing)
-			_trigger_worker.tell(msg, _trigger_worker);
-			
 			// Give it a couple of secs to finish
 			waitForData(() -> trigger_crud.countObjects().join(), 7, true);
 			//(status)
@@ -397,6 +394,9 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 			
 			final AnalyticTriggerMessage msg = new AnalyticTriggerMessage(new AnalyticTriggerMessage.AnalyticsTriggerActionMessage());
 			
+			_trigger_worker.tell(msg, _trigger_worker);
+			
+			//(code coverage! this will be ignored due to spacing)
 			_trigger_worker.tell(msg, _trigger_worker);
 			
 			// Give it a couple of secs to finish			
