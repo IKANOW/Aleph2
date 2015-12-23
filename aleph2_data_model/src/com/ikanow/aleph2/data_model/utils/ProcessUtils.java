@@ -89,6 +89,7 @@ public class ProcessUtils {
 				if (!isRunning(pid_date._1, pid_date._2)) {
 					return Tuples._2T("(process " + pid_date._1 + " already deleted)", true);
 				}
+				System.out.println("killing pid and children of " + bucket.full_name());
 				return Tuples._2T("tried to  kill pid and children", killProcessAndChildren(pid_date._1, kill_signal));
 		} else {
 				return Tuples._2T("Couldn't find a stored entry for the given application/bucket", false);
@@ -115,6 +116,7 @@ public class ProcessUtils {
 		while ( (line=br.readLine()) != null) {
 			child_pids.add(line);
 		}
+		System.out.println("children of pid: " + pid + " are: " + child_pids.toString());
 		logger.debug("children of pid: " + pid + " are: " + child_pids.toString());
 		//kill pid w/ signal
 		killProcess(pid, kill_signal);

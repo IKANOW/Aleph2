@@ -9,6 +9,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 
+import javax.xml.crypto.Data;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.junit.After;
@@ -49,7 +51,7 @@ public class TestProcessUtils {
 		//start a process
 		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
 		final String tmp_file_path = createTestScript(getLongRunningProcess());	
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.empty());
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
@@ -74,7 +76,7 @@ public class TestProcessUtils {
 		}
 		
 		final String root_path = System.getProperty("java.io.tmpdir")  + File.separator;
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.empty());
 		final String application_name = "testing";
 		final Tuple2<String, Boolean> stop_result = ProcessUtils.stopProcess(application_name, bucket, root_path, Optional.empty());
 		assertFalse(stop_result._1, stop_result._2);
@@ -90,7 +92,7 @@ public class TestProcessUtils {
 		//start a process
 		final String root_path = System.getProperty("java.io.tmpdir")  + File.separator;
 		final String tmp_file_path = createTestScript(getQuickRunningProcess());			
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.empty());
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
@@ -127,7 +129,7 @@ public class TestProcessUtils {
 		//start a process with a timeout of 5s
 		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
 		final String tmp_file_path = createTestScript(getLongRunningProcess());	
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.empty());
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.of(new Tuple2<Long, Integer>(3L, 9)));
@@ -156,7 +158,7 @@ public class TestProcessUtils {
 		//start a process with a timeout of 5s
 		final String root_path = System.getProperty("java.io.tmpdir") + File.separator;
 		final String tmp_file_path = createTestScript(getIgnoreKillTestScript());	
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.empty());
 		final String application_name = "testing";
 		final ProcessBuilder pb = getEnvProcessBuilder(tmp_file_path, root_path);		
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
@@ -191,7 +193,7 @@ public class TestProcessUtils {
 		final String test_script = getCreateChildrenAndGrandchildrenTestScript(tmp_file_child, tmp_file_grandchild);
 		System.out.println(test_script);
 		final String tmp_file_path = createTestScript(test_script);	
-		final DataBucketBean bucket = getTestBucket();
+		final DataBucketBean bucket = getTestBucket(Optional.of("/grandchild_test"));
 		final String application_name = "testing";
 		
 		final File debug_output_file = new File(root_path + "debug");
@@ -238,9 +240,10 @@ public class TestProcessUtils {
 		return file_path;
 	}
 	
-	private static DataBucketBean getTestBucket() {
+	private static DataBucketBean getTestBucket(final Optional<String> name) {
 		return BeanTemplateUtils.build(DataBucketBean.class)
 			.with(DataBucketBean::_id, UuidUtils.get().getRandomUuid())
+			.with(DataBucketBean::full_name, name.orElse("/bucket/test"))
 			.done().get();
 	}
 	
