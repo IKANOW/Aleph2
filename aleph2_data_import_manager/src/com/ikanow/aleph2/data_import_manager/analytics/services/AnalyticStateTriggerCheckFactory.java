@@ -215,6 +215,7 @@ public class AnalyticStateTriggerCheckFactory {
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
 				AnalyticTriggerStateBean trigger, final Date at) {
+			
 			//TODO (ALEPH-12): implement this:
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}
@@ -237,6 +238,16 @@ public class AnalyticStateTriggerCheckFactory {
 		public CompletableFuture<Tuple2<Boolean, Long>> check(
 				DataBucketBean bucket, Optional<AnalyticThreadJobBean> job,
 				AnalyticTriggerStateBean trigger, final Date at) {
+			
+			
+			// OK there's a few things going on here
+			// 1) need to distinguish between raw/json/processed
+			// 2) search the first level of directories for time > now
+			// 3) within each matching dir, search for files with time > now
+			// 4) sum size of files
+			
+			//TODO: what about multi-buckets? could in theory support
+			
 			// TODO Auto-generated method stub
 			return CompletableFuture.completedFuture(Tuples._2T(false, trigger.curr_resource_size()));
 		}
