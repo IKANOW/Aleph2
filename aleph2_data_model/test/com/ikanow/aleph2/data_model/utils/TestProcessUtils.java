@@ -3,13 +3,10 @@ package com.ikanow.aleph2.data_model.utils;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Optional;
-
-import javax.xml.crypto.Data;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
@@ -191,7 +188,6 @@ public class TestProcessUtils {
 		final String tmp_file_child = root_path + "a";
 		final String tmp_file_grandchild = root_path + "b";
 		final String test_script = getCreateChildrenAndGrandchildrenTestScript(tmp_file_child, tmp_file_grandchild);
-		System.out.println(test_script);
 		final String tmp_file_path = createTestScript(test_script);	
 		final DataBucketBean bucket = getTestBucket(Optional.of("/grandchild_test"));
 		final String application_name = "testing";
@@ -202,10 +198,7 @@ public class TestProcessUtils {
 				.redirectErrorStream(true)
 				.redirectOutput(debug_output_file);				
 		final Tuple2<String, String> launch = ProcessUtils.launchProcess(pb, application_name, bucket, root_path, Optional.empty());
-		System.out.println("launch1: " + launch._1);
-		System.out.println("launch2: " + launch._2);
 		assertNotNull(launch._1, launch._2);
-		System.out.println("pb_output: " +IOUtils.toString(new FileInputStream(debug_output_file)));
 		//wait a second for child process to start
 		Thread.sleep(1000);
 		

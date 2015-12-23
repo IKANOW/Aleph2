@@ -46,7 +46,6 @@ public class ProcessUtils {
 			}
 			
 			//starts the process, get pid back
-			System.out.println("Starting process: " + process_builder.command().toString());
 			logger.debug("Starting process: " + process_builder.command().toString());
 			final Process px = process_builder.start();
 			String err = null;
@@ -89,7 +88,6 @@ public class ProcessUtils {
 				if (!isRunning(pid_date._1, pid_date._2)) {
 					return Tuples._2T("(process " + pid_date._1 + " already deleted)", true);
 				}
-				System.out.println("killing pid and children of " + bucket.full_name());
 				return Tuples._2T("tried to  kill pid and children", killProcessAndChildren(pid_date._1, kill_signal));
 		} else {
 				return Tuples._2T("Couldn't find a stored entry for the given application/bucket", false);
@@ -116,7 +114,6 @@ public class ProcessUtils {
 		while ( (line=br.readLine()) != null) {
 			child_pids.add(line);
 		}
-		System.out.println("children of pid: " + pid + " are: " + child_pids.toString());
 		logger.debug("children of pid: " + pid + " are: " + child_pids.toString());
 		//kill pid w/ signal
 		killProcess(pid, kill_signal);
@@ -145,7 +142,6 @@ public class ProcessUtils {
 	private static boolean killProcess(final String pid, final Optional<Integer> kill_signal) throws IOException {
 //		kill -15 the process, wait a few cycles to let it die				
 		final ProcessBuilder pb = new ProcessBuilder(Arrays.asList("kill", "-" + kill_signal.orElse(15), pid));
-		System.out.println("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid);
 		logger.debug("trying to kill -"+kill_signal.orElse(15)+" pid: " + pid);
 		final Process px = pb.start();
 		for (int i = 0; i < 5; ++i) {
@@ -219,7 +215,6 @@ public class ProcessUtils {
 	 */
 	private static Tuple2<String, Long> getStoredPid(final String application_name, final DataBucketBean bucket, final String aleph_root_path) throws FileNotFoundException, IOException {		
 		final File file = new File(aleph_root_path + PID_MANAGER_DIR_NAME + bucket._id() + File.separator + application_name);
-		System.out.println("Looking if pid: " + file.getAbsolutePath() + " exists: " + file.exists());
 		if ( file.exists() ) {
 			final String pid_str = IOUtils.toString(new FileInputStream(file), "UTF-8");
 			final String[] splits = pid_str.split("=");
