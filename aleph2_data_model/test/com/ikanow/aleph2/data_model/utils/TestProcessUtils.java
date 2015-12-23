@@ -292,7 +292,7 @@ public class TestProcessUtils {
 	
 	private static String getScriptCreateFileSleepDeleteOnTerm(final String filename, final Optional<String> extra_script) {
 		return new StringBuilder()				
-				.append("trap \"rm "+filename+"\" EXIT\n")
+				.append("trap \"rm "+filename+"; exit\" 15\n")
 				.append(extra_script.orElse(""))
 				.append("touch " + filename + "\n")
 				.append(getLongRunningProcess())
