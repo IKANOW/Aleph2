@@ -145,6 +145,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    					.thenCompose(err_or_map -> {
 	    						
 								final HarvestContext h_context = _context.getNewHarvestContext();
+								h_context.setBucket(m.bucket());
 								
 								final Validation<BasicMessageBean, IHarvestTechnologyModule> err_or_tech_module = 
 										getHarvestTechnology(m.bucket(), harvest_tech_only, m, hostname, err_or_map)
