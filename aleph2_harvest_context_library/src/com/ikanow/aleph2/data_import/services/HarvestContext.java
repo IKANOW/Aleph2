@@ -518,6 +518,8 @@ public class HarvestContext implements IHarvestContext {
 	
 			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
 			
+			final Optional<DataBucketBean> maybe_bucket = bucket.map(Optional::of).orElseGet(() -> _mutable_state.bucket.optional());
+			
 			final ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> complete_services_set = 
 					Optional.of(
 						ImmutableSet.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>builder()
@@ -530,7 +532,7 @@ public class HarvestContext implements IHarvestContext {
 					)
 					// Optional services:
 					.map(sb -> 
-						(hasSearchIndexOutput(bucket.orElseGet(() -> _mutable_state.bucket.get())))
+						(maybe_bucket.map(b -> hasSearchIndexOutput(b)).orElse(false))
 								? 
 								sb.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
 									.add(Tuples._2T(ITemporalService.class, Optional.empty()))
@@ -538,7 +540,7 @@ public class HarvestContext implements IHarvestContext {
 								: 
 								sb)
 					.map(sb -> 
-						(hasDocumentOutput(bucket.orElseGet(() -> _mutable_state.bucket.get())))
+						(maybe_bucket.map(b -> hasDocumentOutput(b)).orElse(false))
 								?
 								sb.add(Tuples._2T(IDocumentService.class, Optional.empty()))
 								:
@@ -596,11 +598,11 @@ public class HarvestContext implements IHarvestContext {
 					)
 					.withValue(__MY_BUCKET_ID, 
 								ConfigValueFactory
-									.fromAnyRef(BeanTemplateUtils.toJson(bucket.orElseGet(() -> _mutable_state.bucket.get())).toString())
+									.fromAnyRef(maybe_bucket.map(b -> BeanTemplateUtils.toJson(b).toString()).orElse("{}"))
 									)
 					.withValue(__MY_TECH_LIBRARY_ID, 
 								ConfigValueFactory
-									.fromAnyRef(BeanTemplateUtils.toJson(_mutable_state.technology_config.get()).toString())
+									.fromAnyRef(_mutable_state.technology_config.optional().map(l -> BeanTemplateUtils.toJson(l).toString()).orElse("{}"))
 									)
 									;
 			

@@ -109,6 +109,10 @@ public class TestHarvestContext {
 			// Check if started in "technology" (internal mode)
 			assertEquals(test_context._state_name, HarvestContext.State.IN_TECHNOLOGY);
 			
+			// Check can request the harvest context libs without a bucket being set
+			// (without exceptioning)
+			test_context.getHarvestContextLibraries(Optional.empty());
+			
 			// Check that multiple calls to create harvester result in different contexts but with the same injection:
 			final HarvestContext test_context2 = _app_injector.getInstance(HarvestContext.class);
 			assertTrue("HarvestContext created", test_context2 != null);
