@@ -414,7 +414,11 @@ protected static String _check_actor_called = null;
 		final ProcessingTestSpecBean test_spec = new ProcessingTestSpecBean(10L, 1L, 1L, 86400L, true);
 		final ManagementFuture<Boolean> future = _core_db_service.testBucket(to_test, test_spec);
 		assertFalse("Test should have failed via timeout, said something the lines of 'Error, hostnames was empty, possibly did not finish setting job up...'", future.get());
-		assertTrue(future.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(";")).startsWith("Error, hostnames was empty"));		
+		assertTrue("Odd test message" + 
+				future.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(";"))
+				, 
+				future.getManagementResults().get().stream().map(m->m.message()).collect(Collectors.joining(";")).startsWith("Error, no successful actions performed"));
+		
 		future.getManagementResults().get();
 		
 		//3. Actor received test message
