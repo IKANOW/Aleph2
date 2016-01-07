@@ -57,6 +57,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeleti
 import com.ikanow.aleph2.management_db.mongodb.data_model.MongoDbManagementDbConfigBean;
 import com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService;
 import com.ikanow.aleph2.management_db.utils.ActorUtils;
+import com.ikanow.aleph2.management_db.utils.MgmtCrudUtils;
 import com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory;
 import com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService;
 
@@ -272,11 +273,9 @@ public class TestDataBucketCrudService_Delete {
 		final Date approx_now = new Date();
 		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
-		assertEquals(1L, ret_val.getManagementResults().get().size());		
-		ret_val.getManagementResults().get().stream().
-			forEach(b -> {
-				assertFalse("Failed", b.success());
-			});
+		// should get 1 error + 1 timeout notification
+		assertEquals(2L, ret_val.getManagementResults().get().size());		
+		assertEquals(1L, ret_val.getManagementResults().get().stream().filter(b -> b.success()).count());
 		
 		//DEBUG
 		//ret_val.getManagementResults().get().stream().map(b -> BeanTemplateUtils.toJson(b)).forEach(bj -> System.out.println("REPLY MESSAGE: " + bj.toString()));
@@ -319,7 +318,8 @@ public class TestDataBucketCrudService_Delete {
 		
 		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
-		assertEquals(2L, ret_val.getManagementResults().get().size());		
+		//(including timeout info message)
+		assertEquals(3L, ret_val.getManagementResults().get().size());		
 		ret_val.getManagementResults().get().stream()
 			.forEach(b -> {
 				if ( b.source().equals(host2) ) {
@@ -327,6 +327,9 @@ public class TestDataBucketCrudService_Delete {
 				}
 				else if (b.source().equals("host1")) {
 					assertFalse("Failed", b.success());
+				}
+				else if (b.source().equals(MgmtCrudUtils.class.getSimpleName())){
+					assertTrue("Succeeded", b.success());									
 				}
 				else {
 					fail("Unrecognized host: " + b.source());
@@ -422,11 +425,15 @@ public class TestDataBucketCrudService_Delete {
 		
 		final ManagementFuture<Boolean> ret_val = _bucket_crud.deleteObjectById("id1");
 		
-		assertEquals(1L, ret_val.getManagementResults().get().size());		
+		// includes rejection info
+		assertEquals(2L, ret_val.getManagementResults().get().size());		
 		ret_val.getManagementResults().get().stream()
 			.forEach(b -> {
 				if ( b.source().equals(host2) ) {
 					assertTrue("Succeeded", b.success());				
+				}
+				else if (b.source().equals(MgmtCrudUtils.class.getSimpleName())){
+					assertTrue("Succeeded", b.success());									
 				}
 				else {
 					fail("Unrecognized host: " + b.source());
@@ -631,7 +638,8 @@ public class TestDataBucketCrudService_Delete {
 		
 		assertEquals(2L, (long)ret_val.get());
 		
-		assertEquals(6L, ret_val.getManagementResults().get().size());		
+		// includes timeout + rejection
+		assertEquals(8L, ret_val.getManagementResults().get().size());		
 		ret_val.getManagementResults().get().stream()
 			.forEach(b -> {
 				if ( b.source().equals(host2) ) {
@@ -645,6 +653,9 @@ public class TestDataBucketCrudService_Delete {
 				}
 				else if (b.source().equals("host4")) {
 					assertFalse("Failed", b.success());				
+				}
+				else if (b.source().equals(MgmtCrudUtils.class.getSimpleName())){
+					assertTrue("Succeeded", b.success());									
 				}
 				else {
 					fail("Unrecognized host: " + b.source());
