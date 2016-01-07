@@ -77,8 +77,8 @@ import fj.Unit;
  * @author acp
  */
 public class CoreManagementDbService implements IManagementDbService, IExtraDependencyLoader {
-	private static final Logger _logger = LogManager.getLogger();	
-
+	private static final Logger _logger = LogManager.getLogger();
+	
 	protected final IServiceContext _service_context;
 	protected final Provider<IManagementDbService> _underlying_management_db;	
 	protected final DataBucketCrudService _data_bucket_service;
@@ -89,6 +89,8 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 	
 	protected final Optional<AuthorizationBean> _auth;
 	protected final Optional<ProjectBean> _project;	
+	
+	private static final Long DEFAULT_MAX_STARTUP_TIME_SECS = 120L;
 	
 	protected class ReadOnly extends SetOnce<Boolean> {
 		@Override
@@ -381,7 +383,7 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				return CompletableFuture.completedFuture(Unit.unit());
 			}
 		}).thenCompose(__ -> {
-			final long max_startup_time_secs = Optional.ofNullable(test_spec.max_startup_time_secs()).orElse(120L);
+			final long max_startup_time_secs = Optional.ofNullable(test_spec.max_startup_time_secs()).orElse(DEFAULT_MAX_STARTUP_TIME_SECS);
 			final CompletableFuture<Collection<BasicMessageBean>> future_replies = 
 					BucketActionSupervisor.askBucketActionActor(Optional.empty(),
 								_actor_context.getBucketActionSupervisor(), 
