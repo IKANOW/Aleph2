@@ -99,18 +99,18 @@ public class TimeSliceDirUtils {
 	 * @param filter
 	 * @return
 	 */
-	public static Stream<String> filterTimedDirectories(Stream<Tuple3<String, Date, Date>> in, Tuple2<Optional<Date>, Optional<Date>> filter) {
-		
-		return in.filter(t3 -> filter._1()
+	public static Stream<String> filterTimedDirectories(final Stream<Tuple3<String, Date, Date>> in, final Tuple2<Optional<Date>, Optional<Date>> filter) {		
+		return in
+				.filter(t3 -> filter._1()
 									.map(tmin -> { //lower bound
 										return tmin.getTime() < t3._3().getTime(); // just has to be smaller than the largest time in the group
 									}).orElse(true))
-					.filter(t3 -> filter._2()
+				.filter(t3 -> filter._2()
 									.map(tmax -> { //lower bound
 										return tmax.getTime() >= t3._2().getTime(); // just has to be larger than the smallest time in the group
 									}).orElse(true))
-					.map(t3 -> t3._1())
-					;
+				.map(t3 -> t3._1())
+				;
 	}
 	
 	/** Low level util because java8 time "plus" is odd

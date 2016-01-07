@@ -95,8 +95,6 @@ public class TestAnalyticsContext_FileSystemChecks {
 		}
 	}
 	
-	// This seems broken - look into it but ignore for now to check nothing else is a problem
-	@org.junit.Ignore
 	@Test
 	public void test_storageService_timedInputPaths() throws InterruptedException, ExecutionException {
 		
@@ -148,7 +146,7 @@ public class TestAnalyticsContext_FileSystemChecks {
 		final List<String> res = test_context.getInputPaths(Optional.of(test_bucket), analytic_job1, analytic_input1);
 		
 		assertEquals("Timed slices: " + res.stream().collect(Collectors.joining(";")),
-				Arrays.asList("/current/test_2014/*", "/current/test_2015/*"),
+				Arrays.asList("/current/test_" + (year-1) + "/*", "/current/test_" + year + "/*"),
 				res.stream().map(s -> s.substring(s.indexOf("/current/"))).sorted().collect(Collectors.toList())
 				);
 	}
@@ -251,7 +249,9 @@ public class TestAnalyticsContext_FileSystemChecks {
 	public void createDirs(File f, List<String> dirs) {
 		dirs.stream().forEach(dir -> {
 			try {
-				FileUtils.forceMkdir(new File(f.toString() + "/" + dir));
+				final File dir_obj = new File(f.toString() + "/" + dir);
+				FileUtils.deleteDirectory(dir_obj);
+				FileUtils.forceMkdir(dir_obj);
 				
 				//DEBUG
 				//System.out.println("CREATED " + new File(f.toString() + "/" + dir));
