@@ -174,7 +174,7 @@ public class BucketActionSupervisor extends UntypedActor {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
 					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
-							Collections.emptyList(), Collections.emptySet()
+							Collections.emptyList(), Collections.emptySet(), Collections.emptySet()
 							));
 		}
 		else {
@@ -213,7 +213,13 @@ public class BucketActionSupervisor extends UntypedActor {
 																									.addAll(stream.timed_out())
 																									.addAll(harvest.timed_out())
 																								.build();
-													return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), combined_replies, timed_out);
+													
+													final java.util.Set<String> rejected = ImmutableSet.<String>builder()
+															.addAll(stream.rejected())
+															.addAll(harvest.rejected())
+														.build();
+													
+													return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), combined_replies, timed_out, rejected);
 												}
 												else {
 													return harvest;
@@ -266,7 +272,7 @@ public class BucketActionSupervisor extends UntypedActor {
 									.done())
 									.collect(Collectors.toList());
 
-					return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), replace, stream.timed_out());
+					return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), replace, stream.timed_out(), stream.rejected());
 				});
 	}
 														
@@ -313,7 +319,12 @@ public class BucketActionSupervisor extends UntypedActor {
 						.flatMap(reply -> reply.timed_out().stream())
 							.collect(Collectors.toSet());
 				
-				return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), all_replies, all_timed_out);
+				final Set<String> all_rejected =
+						results.stream().map(CompletableFuture::join)
+						.flatMap(reply -> reply.rejected().stream())
+							.collect(Collectors.toSet());
+				
+				return new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(), all_replies, all_timed_out, all_rejected);
 			});		
 	}
 	

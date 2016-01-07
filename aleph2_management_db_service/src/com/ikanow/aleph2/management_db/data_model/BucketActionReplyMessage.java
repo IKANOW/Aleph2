@@ -57,17 +57,20 @@ public class BucketActionReplyMessage implements Serializable {
 		 * @param replies - replies from any hosts that handled the message or timed out trying
 		 * @param timed_out - the set of hosts that timed out
 		 */
-		public BucketActionCollectedRepliesMessage(final String source, final List<BasicMessageBean> replies, Set<String> timed_out)
+		public BucketActionCollectedRepliesMessage(final String source, final List<BasicMessageBean> replies, Set<String> timed_out, Set<String> rejected)
 		{
 			this.source = source;
 			this.replies = replies;
-			this.timed_out = timed_out;			
+			this.timed_out = timed_out;
+			this.rejected = rejected;
 		}		
 		public String source() { return source; }
 		public List<BasicMessageBean> replies() { return replies; }
 		public Set<String> timed_out() { return timed_out; }
+		public Set<String> rejected() { return rejected; }
 		private List<BasicMessageBean> replies;
 		private Set<String> timed_out;
+		private Set<String> rejected;
 		private String source;
 	}
 	

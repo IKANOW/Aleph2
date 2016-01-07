@@ -1445,7 +1445,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				.collect(Collectors.toList())
 				;
 				
-				return (BucketActionReplyMessage) new BucketActionCollectedRepliesMessage(source, replies, Collections.emptySet());
+				return (BucketActionReplyMessage) new BucketActionCollectedRepliesMessage(source, replies, Collections.emptySet(), Collections.emptySet());
 			})
 			.exceptionally(t -> {
 				return (BucketActionReplyMessage) new BucketActionHandlerMessage(source, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class.getSimpleName(), source, ErrorUtils.getLongForm("{0}", t)));					

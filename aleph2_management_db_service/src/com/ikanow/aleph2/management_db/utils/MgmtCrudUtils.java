@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import scala.Tuple2;
@@ -39,6 +40,8 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
+import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
@@ -94,18 +97,101 @@ public class MgmtCrudUtils {
 						(BucketActionMessage)mgmt_operation, 
 						Optional.empty());
 		
+		// Handle retry 
+		f.thenAccept(replies -> {
+			// (enough has gone wrong already - just fire and forget this)
+			replies.timed_out().stream().forEach(source -> {
+				retry_store.storeObject(
+						new BucketActionRetryMessage(source, clone_lambda_with_source.apply(source)
+								));
+			});
+		});
+		
+		// Build user error message
+		return buildBucketReplyForUser(bucket, f);
+		
+	}
+	
+	/** Utility to append some useful diagnostic information to the replies returned from the DIM 
+	 * @param bucket
+	 * @param f
+	 * @return
+	 */
+	static public <T extends BucketActionMessage> CompletableFuture<Collection<BasicMessageBean>> buildBucketReplyForUser(
+			final DataBucketBean bucket,
+			final CompletableFuture<BucketActionCollectedRepliesMessage> f)
+	{
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 				f.<Collection<BasicMessageBean>>thenApply(replies -> {
-					// (enough has gone wrong already - just fire and forget this)
-					replies.timed_out().stream().forEach(source -> {
-						retry_store.storeObject(
-								new BucketActionRetryMessage(source, clone_lambda_with_source.apply(source)
-										));
-					});
-					return replies.replies(); 
-				});
+					
+					final int rejected = Optionals.ofNullable(replies.rejected()).size();
+					final int timed_out = Optionals.ofNullable(replies.timed_out()).size();
+					return Optional.of(Lambdas.get(() -> {
+						if (replies.replies().isEmpty()) {
+							boolean some_timed_out = timed_out > 0;
+							boolean some_rejected = rejected > 0;
+							
+							return Arrays.asList(
+									ErrorUtils.buildErrorMessage(MgmtCrudUtils.class.getSimpleName(), "applyRetriableManagementOperation",
+											Lambdas.get(() -> {
+												if (some_rejected && some_timed_out) {
+													return ManagementDbErrorUtils.ALL_NODES_TIMED_OUT_OR_REJECTED;
+												}
+												else if (some_rejected) {
+													return ManagementDbErrorUtils.ALL_NODES_REJECTED_BUCKET;
+												}
+												else if (some_timed_out) {
+													return ManagementDbErrorUtils.ALL_NODES_TIMED_OUT;													
+												}
+												else {
+													return ManagementDbErrorUtils.NO_NODES_AVAILABLE;
+												}
+											}),
+											bucket.full_name(), timed_out, rejected));							
+						}
+						else return replies.replies();
+					}))
+					//TODO: do the same for timeouts
+					.map(l -> {
+						if (rejected > 0) { // (add an INFO message)
+							return Stream.concat(l.stream(),
+									Arrays.asList(
+											ErrorUtils.buildSuccessMessage(MgmtCrudUtils.class.getSimpleName(), "applyRetriableManagementOperation", 
+														ManagementDbErrorUtils.SOME_NODES_REJECTED_BUCKET, 
+															bucket.full_name(),
+															rejected,
+															replies.rejected().stream().limit(3).sorted().collect(Collectors.joining(";"))
+															)
+											).stream()
+									).collect(Collectors.toList());
+						}
+						else {
+							return l;
+						}
+					})
+					.map(l -> {
+						if (timed_out > 0) { // (add an INFO message)
+							return Stream.concat(l.stream(),
+									Arrays.asList(
+											ErrorUtils.buildSuccessMessage(MgmtCrudUtils.class.getSimpleName(), "applyRetriableManagementOperation", 
+														ManagementDbErrorUtils.SOME_NODES_TIMED_OUT, 
+															bucket.full_name(),
+															timed_out,
+															replies.timed_out().stream().limit(3).sorted().collect(Collectors.joining(";"))
+															)
+											).stream()
+									).collect(Collectors.toList());
+						}
+						else {
+							return l;
+						}
+					})
+					.get()
+					;
+				})
+				;
 		
-		return management_results;
+		return management_results;		
 	}
 	
 	/** Handles the case where no nodes reply - still perform the operation but then suspend the bucket (user will have to unsuspend once nodes are available)

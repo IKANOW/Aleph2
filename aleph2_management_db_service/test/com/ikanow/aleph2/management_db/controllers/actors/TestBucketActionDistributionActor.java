@@ -97,7 +97,7 @@ public class TestBucketActionDistributionActor {
 			_logger.info("Accept MESSAGE from: " + uuid);
 			this.sender().tell(
 					multi_reply
-					? new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(uuid, Arrays.asList(reply.reply()), Collections.emptySet())
+					? new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(uuid, Arrays.asList(reply.reply()), Collections.emptySet(), Collections.emptySet())
 					: reply
 					,
 					this.self());

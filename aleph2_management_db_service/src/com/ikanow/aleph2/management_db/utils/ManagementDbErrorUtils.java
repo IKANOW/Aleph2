@@ -149,4 +149,16 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 
 	public static final String ILLEGAL_UPDATE_COMMAND = "Only a subset of update commands are supported: {0} and {1} are not in this subset.";
 	public static final String MISSING_STATUS_BEAN_OR_BUCKET = "One of the bucket or bucket status could not be found for {0}";
+	
+	///////////////////////////////////////////////////////////////////////////////////////////
+	
+	// BUCKET ACTION REPLIES
+
+	public static final String SOME_NODES_TIMED_OUT = "Bucket {0}: >0 Data Import Managers (= {1}) timed out trying to handle this bucket, eg: {2}";
+	public static final String SOME_NODES_REJECTED_BUCKET = "Bucket {0}: >0 Data Import Managers (= {1}) reject this bucket due to either node rules or the harvest/analytic engine rules, eg: {2}";
+	public static final String ALL_NODES_REJECTED_BUCKET = "Bucket {0}: all active Data Import Managers rejected this bucket (engine couldn't run on the nodes, or filtered by node_rules)";
+	public static final String ALL_NODES_TIMED_OUT = "Bucket {0}: all active Data Import Managers timed out trying to handle the bucket (or catastrophically failed)";
+	public static final String ALL_NODES_TIMED_OUT_OR_REJECTED = "Bucket {0}: all active Data Import Managers timed out/rejected trying to handle the bucket (or catastrophically failed): timed out={1}, rejected={2} (engine couldn't run on the nodes, or filtered by node_rules)"; 
+	public static final String NO_NODES_AVAILABLE = "This cluster has no active Data Import Managers";
+	
 }

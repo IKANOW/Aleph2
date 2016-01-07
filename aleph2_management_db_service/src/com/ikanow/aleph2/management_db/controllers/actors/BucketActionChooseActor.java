@@ -85,6 +85,7 @@ public class BucketActionChooseActor extends AbstractActor {
 		protected String current_timeout_id = null;
 		protected int tries = 0;
 		protected HashSet<String> blacklist = new HashSet<String>();
+		protected final HashSet<String> rejecting_clients = new HashSet<String>();
 	}
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
@@ -128,6 +129,7 @@ public class BucketActionChooseActor extends AbstractActor {
 			.match(BucketActionIgnoredMessage.class, 
 				m -> {
 					_state.data_import_manager_set.remove(m.source());
+					_state.rejecting_clients.add(m.source());
 					this.checkIfComplete();
 				})
 			.match(BucketActionHandlerMessage.class, // Can receive this if the call errors, just treat it like an ignored
@@ -196,7 +198,7 @@ public class BucketActionChooseActor extends AbstractActor {
 		}
 		else { // Just terminate with a "nothing to say" request
 			_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(),
-					Arrays.asList(), _state.data_import_manager_set), 
+					Arrays.asList(), _state.data_import_manager_set, _state.rejecting_clients), 
 					this.self());		
 			this.context().stop(this.self());			
 		}
@@ -301,7 +303,7 @@ public class BucketActionChooseActor extends AbstractActor {
 		}
 	}
 	protected void sendReplyAndClose(final List<BasicMessageBean> replies) {
-		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), replies, Collections.emptySet()), 
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), replies, Collections.emptySet(), _state.rejecting_clients), 
 				this.self());		
 		this.context().stop(this.self());
 	}

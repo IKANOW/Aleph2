@@ -71,6 +71,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
 		protected final SetOnce<Boolean> restrict_replies = new SetOnce<Boolean>();
 		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<BucketActionMessage>();
+		protected final HashSet<String> rejecting_clients = new HashSet<String>();
 	}
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
@@ -126,6 +127,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 				})
 			.match(BucketActionIgnoredMessage.class, 
 				m -> {
+					_state.rejecting_clients.add(m.source());
 					if (_state.data_import_manager_set.remove(m.source())) {
 						this.checkIfComplete();
 					}
@@ -248,7 +250,7 @@ public class BucketActionDistributionActor extends AbstractActor {
 																.collect(Collectors.toList());
 		_state.reply_list.addAll(convert_timeouts_to_replies);
 		
-		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), _state.reply_list, _state.down_targeted_clients), 
+		_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(), _state.reply_list, _state.down_targeted_clients, _state.rejecting_clients), 
 									this.self());		
 		this.context().stop(this.self());
 	}
