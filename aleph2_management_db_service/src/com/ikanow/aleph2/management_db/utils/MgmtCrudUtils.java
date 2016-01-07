@@ -98,17 +98,17 @@ public class MgmtCrudUtils {
 						Optional.empty());
 		
 		// Handle retry 
-		f.thenAccept(replies -> {
+		return f.thenAccept(replies -> {
 			// (enough has gone wrong already - just fire and forget this)
 			replies.timed_out().stream().forEach(source -> {
 				retry_store.storeObject(
 						new BucketActionRetryMessage(source, clone_lambda_with_source.apply(source)
 								));
 			});
-		});
-		
+		})
 		// Build user error message
-		return buildBucketReplyForUser(bucket, f);
+		.thenCompose(__ -> buildBucketReplyForUser(bucket, f))
+		;
 		
 	}
 	
@@ -151,7 +151,6 @@ public class MgmtCrudUtils {
 						}
 						else return replies.replies();
 					}))
-					//TODO: do the same for timeouts
 					.map(l -> {
 						if (rejected > 0) { // (add an INFO message)
 							return Stream.concat(l.stream(),
