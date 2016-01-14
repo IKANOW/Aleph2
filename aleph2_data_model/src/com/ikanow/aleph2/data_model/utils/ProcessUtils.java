@@ -23,12 +23,18 @@ import scala.Tuple2;
 //import scala.collection.immutable.Stream;
 
 
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 public class ProcessUtils {
 	private static final Logger logger = LogManager.getLogger();
 	private static final String PID_PREFIX = "/proc/";
 	private static final String PID_MANAGER_DIR_NAME = "pid_manager" + File.separator;
+	
+	
+	/** Most applications will use <aleph2_home>/run as the the location to store their process information
+	 */
+	public static final String DEFAULT_RUN_PATH_SUFFIX = "/run/";
 
 	/**
 	 * Starts the given process by calling process_builder.start();

@@ -197,12 +197,14 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @param config - Generic configuration for input data
 		 */
 		public AnalyticThreadJobInputBean(final Boolean enabled,
+											final String name,
 											final String resource_name_or_id, final String data_service, 
 											final LinkedHashMap<String, Object> filter,
 											final AnalyticThreadJobInputConfigBean config 
 											)
 		{
 			this.enabled = enabled;
+			this.name = name;
 			this.resource_name_or_id = resource_name_or_id;
 			this.data_service = data_service;
 			this.filter = filter;
@@ -213,6 +215,11 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @return Whether the job is currently enabled, defaults to true
 		 */
 		public Boolean enabled() { return enabled; }
+		
+		/** An optional name/role for the input - does not have to be unique within a job 
+		 * @return the optional job name
+		 */
+		public String name() { return name; }
 		
 		/** The resource name of the input: one of the bucket path/id, the bucket queue, the "name" of the internal dependency, an external file path, etc
 		 *  If it's a bucket path with data_service:stream then ":" can optionally be added to the end to stream from a stage:
@@ -239,6 +246,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		public AnalyticThreadJobInputConfigBean config() { return config; }
 		
 		private Boolean enabled;
+		private String name;
 		private String resource_name_or_id; 
 		private String data_service;	
 		private LinkedHashMap<String, Object> filter;
