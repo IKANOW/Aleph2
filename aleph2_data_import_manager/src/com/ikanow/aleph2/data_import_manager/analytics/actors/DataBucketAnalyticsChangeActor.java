@@ -575,7 +575,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
 					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
 							true, //(enabled)
-							"bucket_input", //(name)
+							null, //(name)
 							"", // (myself) 
 							"stream", 
 							null, // (no filter)
@@ -619,7 +619,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
 					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
 							true, //(enabled) 
-							"bucket_input", //(name)
+							null, //(name)
 							"", // (myself) 
 							"batch", 
 							null, // (no filter)
