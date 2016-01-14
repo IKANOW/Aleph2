@@ -314,6 +314,11 @@ public class TestContextUtils {
 		}
 
 		@Override
+		public Optional<AnalyticThreadJobBean> getJob() {
+			return null;
+		}
+		
+		@Override
 		public SharedLibraryBean getTechnologyConfig() {
 			return null;
 		}

@@ -213,6 +213,11 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	Optional<DataBucketBean> getBucket();
 	
+	/** (AnalyticsTechnology/Analytics Module) Returns the specified job
+	 * @return The job that is currently running, or Optional.empty() if that is ambiguous
+	 */
+	Optional<AnalyticThreadJobBean> getJob();
+	
 	/** (AnalyticsTechnology/Analytics Module) Returns the library bean that provided the user callback currently being executed
 	 *  This library bean can be used together with the CoreManagementDb (getPerLibraryState) to store/retrieve state
 	 *  To convert the library_config field to a bean, just use Optional.ofNullable(_context.getLibraryConfig().library_config()).map(j -> BeanTemplateUtils.from(j).get()) 

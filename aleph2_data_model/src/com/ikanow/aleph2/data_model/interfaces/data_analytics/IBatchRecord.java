@@ -25,6 +25,13 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public interface IBatchRecord {
 
+	/** If available, returns the name of the analytic input
+	 * @return the name of the analytic input, if available
+	 */
+	default Optional<String> getInputName() {
+		return Optional.empty();
+	}
+	
 	/** The JSON corresponding to the record
 	 * @return The JSON corresponding to the record
 	 */
@@ -33,5 +40,7 @@ public interface IBatchRecord {
 	/** For files, a stream containing the binary contents of the file
 	 * @return For files, a stream containing the binary contents of the file
 	 */
-	Optional<ByteArrayOutputStream> getContent();
+	default Optional<ByteArrayOutputStream> getContent() {
+		return Optional.empty();		
+	}
 }

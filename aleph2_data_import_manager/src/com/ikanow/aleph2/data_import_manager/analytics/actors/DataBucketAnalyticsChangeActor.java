@@ -574,7 +574,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			
 			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
 					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
-							true, //(enabled) 
+							true, //(enabled)
+							"bucket_input", //(name)
 							"", // (myself) 
 							"stream", 
 							null, // (no filter)
@@ -618,6 +619,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final AnalyticThreadJobBean.AnalyticThreadJobInputBean input =
 					new AnalyticThreadJobBean.AnalyticThreadJobInputBean(
 							true, //(enabled) 
+							"bucket_input", //(name)
 							"", // (myself) 
 							"batch", 
 							null, // (no filter)
@@ -990,7 +992,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					if (shouldLog(m))
 						_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
 										Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
-										tech_module.onInit(context);
+										
+					tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
 					if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
