@@ -7,6 +7,9 @@
 	<aleph2.scope>compile</aleph2.scope>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
 	<aleph2.hadoop>2.6.0</aleph2.hadoop>
+	<!-- Overridden in test_depdendencies profile that is activated if skip 
+		tests is true -->
+	<maven.test.skip>true</maven.test.skip>
   </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -135,30 +138,6 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>  		
   	</dependency>
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_crud_service_mongodb</artifactId>
-  		<version>${aleph2.version}</version>
-  		<scope>test</scope>
-  	</dependency>
-   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_storage_service_hdfs</artifactId>
-  		<version>${aleph2.version}</version>
-	    <scope>test</scope>
-  	</dependency>  	
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
-  		<version>${aleph2.version}</version>
-  		<scope>test</scope>
-  	</dependency>
-  	<dependency>
-  		<groupId>junit</groupId>
-  		<artifactId>junit</artifactId>
-  		<version>4.12</version>
-  		<scope>test</scope>
-  	</dependency>
 	<dependency>
 		<groupId>com.google.inject</groupId>
 		<artifactId>guice</artifactId>
@@ -176,11 +155,52 @@
   		<version>${aleph2.hadoop}</version>
 		<scope>provided</scope>
 	</dependency>
-  	<dependency>
-  		<groupId>org.mockito</groupId>
-  		<artifactId>mockito-all</artifactId>
-  		<version>1.10.19</version>
-  		<scope>test</scope>
-  	</dependency>
   </dependencies>
+	<!-- Test dependencies -->
+  <profiles>
+	<profile>
+	    <id>test_dependencies</id>
+		<activation>
+			<property>
+				<name>skipTests</name>
+				<value>!true</value>
+			</property>
+		</activation>
+		<properties>
+			<maven.test.skip>false</maven.test.skip>
+		</properties>
+		<dependencies>
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_crud_service_mongodb</artifactId>
+		  		<version>${aleph2.version}</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		   	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_storage_service_hdfs</artifactId>
+		  		<version>${aleph2.version}</version>
+			    <scope>test</scope>
+		  	</dependency>  	
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
+		  		<version>${aleph2.version}</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		  	<dependency>
+		  		<groupId>junit</groupId>
+		  		<artifactId>junit</artifactId>
+		  		<version>4.12</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		  	<dependency>
+		  		<groupId>org.mockito</groupId>
+		  		<artifactId>mockito-all</artifactId>
+		  		<version>1.10.19</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		</dependencies>
+	</profile>	
+  </profiles>	
 </project>

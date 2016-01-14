@@ -6,6 +6,9 @@
   <properties>
 	<aleph2.scope>compile</aleph2.scope>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
+	<!-- Overridden in test_depdendencies profile that is activated if skip 
+		tests is true -->
+	<maven.test.skip>true</maven.test.skip>
   </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -142,29 +145,11 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>  		
   	</dependency>
-   	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_storage_service_hdfs</artifactId>
-  		<version>${aleph2.version}</version>
-	    <scope>test</scope>
-  	</dependency>  	
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
-  		<version>${aleph2.version}</version>
-	    <scope>test</scope>
-  	</dependency>
 	<dependency>
 		<groupId>commons-io</groupId>
 		<artifactId>commons-io</artifactId>
 		<version>2.4</version>
 	</dependency>
-  	 <dependency>
-  		<groupId>junit</groupId>
-  		<artifactId>junit</artifactId>
-  		<version>4.12</version>
-  		<scope>test</scope>
-  	</dependency>
 	<dependency>
 	    <groupId>jdk.tools</groupId>
 	    <artifactId>jdk.tools</artifactId>
@@ -173,4 +158,39 @@
 	    <systemPath>${JAVA_HOME}/lib/tools.jar</systemPath>
 	</dependency>
   </dependencies>
+	<!-- Test dependencies -->
+  <profiles>
+	<profile>
+	    <id>test_dependencies</id>
+		<activation>
+			<property>
+				<name>skipTests</name>
+				<value>!true</value>
+			</property>
+		</activation>
+		<properties>
+			<maven.test.skip>false</maven.test.skip>
+		</properties>
+		<dependencies>
+		   	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_storage_service_hdfs</artifactId>
+		  		<version>${aleph2.version}</version>
+			    <scope>test</scope>
+		  	</dependency>  	
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_management_db_service_mongodb</artifactId>
+		  		<version>${aleph2.version}</version>
+			    <scope>test</scope>
+		  	</dependency>
+		  	 <dependency>
+		  		<groupId>junit</groupId>
+		  		<artifactId>junit</artifactId>
+		  		<version>4.12</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		</dependencies>
+	</profile>	
+  </profiles>	
 </project>
