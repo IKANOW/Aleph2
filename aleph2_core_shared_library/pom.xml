@@ -162,12 +162,6 @@
 				<maven.test.skip>false</maven.test.skip>
 			</properties>
 			<dependencies>
-				<dependency>
-					<groupId>com.ikanow.aleph2</groupId>
-					<artifactId>aleph2_core_security</artifactId>
-					<version>${aleph2.version}</version>
-					<scope>test</scope>
-				</dependency>
 			</dependencies>
 		</profile>
 	</profiles>
