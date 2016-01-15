@@ -45,8 +45,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.ikanow.aleph2.core.shared.services.DeduplicationService;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
@@ -817,7 +817,7 @@ public class HarvestContext implements IHarvestContext {
 				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);				
 			}
 			return Stream.concat(
-				Stream.of(this, _service_context, new DeduplicationService()) //(last one gives us the core_shared_lib)
+				Stream.of(this, _service_context, new SharedErrorUtils()) //(last one gives us the core_shared_lib)
 				,
 				_mutable_state.service_manifest_override.get().stream()
 					.map(t2 -> _service_context.getService(t2._1(), t2._2()))

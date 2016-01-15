@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.ikanow.aleph2.core.shared.services;
+package com.ikanow.aleph2.analytics.services;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
