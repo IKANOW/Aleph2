@@ -1316,6 +1316,7 @@ public class TestDeduplicationService {
 					.with(DataBucketBean::full_name, "/dedup/context2")
 				.done();
 		
+		_service_context.getCoreManagementDbService().getDataBucketStore().deleteDatastore().join();
 		_service_context.getCoreManagementDbService().getDataBucketStore().storeObject(context_bucket1, true).join();
 		_service_context.getCoreManagementDbService().getDataBucketStore().storeObject(context_bucket2, true).join();
 		assertEquals(2, _service_context.getCoreManagementDbService().getDataBucketStore().countObjects().join().intValue());
