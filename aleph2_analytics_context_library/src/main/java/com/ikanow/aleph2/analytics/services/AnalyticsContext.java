@@ -58,6 +58,7 @@ import com.google.inject.Inject;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.analytics.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
+import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
@@ -554,7 +555,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				throw new RuntimeException(ErrorUtils.SERVICE_RESTRICTIONS);				
 			}
 			return Stream.concat(
-				Stream.of(this, _service_context, new DeduplicationService()) //(last one gives us the core_shared_lib)
+				Stream.of(this, _service_context, new SharedErrorUtils()) //(last one gives us the core_shared_lib)
 				,
 				_mutable_state.service_manifest_override.get().stream()
 					.map(t2 -> _service_context.getService(t2._1(), t2._2()))

@@ -641,7 +641,7 @@ public class TestHarvestContext {
 		// Empty service set:
 		test_context.getHarvestContextSignature(Optional.of(test_bucket), Optional.empty());		
 		final Collection<Object> res1 = test_context.getUnderlyingArtefacts();
-		final String exp1 = "class com.ikanow.aleph2.core.shared.services.DeduplicationService:class com.ikanow.aleph2.data_import.services.HarvestContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService";
+		final String exp1 = "class com.ikanow.aleph2.core.shared.utils.SharedErrorUtils:class com.ikanow.aleph2.data_import.services.HarvestContext:class com.ikanow.aleph2.data_model.utils.ModuleUtils$ServiceContext:class com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices:class com.ikanow.aleph2.management_db.mongodb.services.MockMongoDbManagementDbService:class com.ikanow.aleph2.management_db.services.CoreManagementDbService:class com.ikanow.aleph2.shared.crud.mongodb.services.MockMongoDbCrudServiceFactory:class com.ikanow.aleph2.storage_service_hdfs.services.MockHdfsStorageService";
 		assertEquals(exp1, res1.stream().map(o -> o.getClass().toString()).sorted().collect(Collectors.joining(":")));
 	}
 	
