@@ -80,7 +80,7 @@ public class TestDeduplicationService {
 	public void setup() throws Exception {
 		
 		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;		
-		
+
 		Config config = ConfigFactory.parseReader(new InputStreamReader(this.getClass().getResourceAsStream("/context_local_test.properties")))
 				.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
 				.withValue("globals.local_cached_jar_dir", ConfigValueFactory.fromAnyRef(temp_dir))

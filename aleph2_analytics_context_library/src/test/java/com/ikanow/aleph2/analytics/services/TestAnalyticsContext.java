@@ -91,6 +91,7 @@ import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigValueFactory;
 
 import fj.data.Either;
 import fj.data.Validation;
@@ -109,7 +110,14 @@ public class TestAnalyticsContext {
 	public void injectModules() throws Exception {
 		_logger.info("run injectModules");
 		
-		final Config config = ConfigFactory.parseFile(new File("./example_config_files/context_local_test.properties"));
+		final String temp_dir = System.getProperty("java.io.tmpdir") + File.separator;		
+		
+		final Config config = ConfigFactory.parseFile(new File("./example_config_files/context_local_test.properties"))
+				.withValue("globals.local_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+				.withValue("globals.local_cached_jar_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+				.withValue("globals.distributed_root_dir", ConfigValueFactory.fromAnyRef(temp_dir))
+				.withValue("globals.local_yarn_config_dir", ConfigValueFactory.fromAnyRef(temp_dir));
+				;
 		
 		try {
 			_app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));
