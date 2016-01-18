@@ -1280,7 +1280,7 @@ public class TestAnalyticsContext {
 	public Tuple2<DataBucketBean, AnalyticsContext> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 		_logger.info("run test_objectEmitting: " + preserve_out);
 
-		//TODO (ALEPH-12): also check file output 		
+		//(See _FileSystemChecks for file output) 		
 		
 		final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
 		

@@ -282,15 +282,16 @@ public class MgmtCrudUtils {
 			final ICrudService<DataBucketStatusBean> status_store, 
 			final CompletableFuture<Collection<BasicMessageBean>> management_results)
 	{
-		final boolean lock_to_nodes = Optional.ofNullable(bucket.lock_to_nodes()).orElse(true);		
+		final boolean is_pure_analytic_thread = (null == bucket.harvest_technology_name_or_id());
+		final boolean lock_to_nodes = Optional.ofNullable(bucket.lock_to_nodes()).orElse(!is_pure_analytic_thread); //(default is different for pure analytic thread vs harvest)		
 		final CompletableFuture<Boolean> update_future = 
 				lock_to_nodes
 				? 					
 				MgmtCrudUtils.applyNodeAffinity(bucket._id(), status_store, 
 						MgmtCrudUtils.getSuccessfulNodes(management_results, 
-								(null == bucket.harvest_technology_name_or_id()) 
+								is_pure_analytic_thread 
 								?
-								SuccessfulNodeType.all_technologies // pure analytic_thead
+								SuccessfulNodeType.all_technologies // pure analytic_thead if lock_to_nodes is set then do lock from analytic technologies
 								:
 								SuccessfulNodeType.harvest_only // harvest thread - don't lock analytic technologies
 								))
