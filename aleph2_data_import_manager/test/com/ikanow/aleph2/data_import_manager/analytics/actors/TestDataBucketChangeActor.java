@@ -46,6 +46,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import scala.Tuple2;
 import scala.concurrent.duration.Duration;
@@ -861,30 +862,39 @@ public class TestDataBucketChangeActor {
 	public void test_checkNodeAffinityMatches() {
 		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
 		
-		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> ret_val = 
-				ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
-						"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
-						Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
-						Collections.emptyList(), "test1", "test")
-						.map(a -> Tuples._2T(a, Thread.currentThread().getContextClassLoader()))
-						;						
-	
-		assertTrue(ret_val.isSuccess());
-		
-		final IAnalyticsContext a_context = _actor_context.getNewAnalyticsContext();
-		
-		final DataBucketBean bucket_lock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, true).done();
-
+		final IAnalyticsContext a_context = _actor_context.getNewAnalyticsContext();			
+		final DataBucketBean bucket_lock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, true).done();	
 		final DataBucketBean bucket_nolock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, false).done();
 		
+		// "Real" case returning default "false" 
+		{
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> ret_val = 
+					ClassloaderUtils.getFromCustomClasspath(IAnalyticsTechnologyModule.class, 
+							"com.ikanow.aleph2.test.example.ExampleAnalyticsTechnology", 
+							Optional.of(new File(System.getProperty("user.dir") + File.separator + "misc_test_assets" + File.separator + "simple-analytics-example.jar").getAbsoluteFile().toURI().toString()),
+							Collections.emptyList(), "test1", "test")
+							.map(a -> Tuples._2T(a, Thread.currentThread().getContextClassLoader()))
+							;						
 		
-		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket, ret_val.success(), a_context));
-		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_nolock, ret_val.success(), a_context));
-		assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock, ret_val.success(), a_context).isFail());
-		
-		// Check no lock case ignored when impure
-		final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
-		assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, ret_val.success(), a_context));
+			assertTrue(ret_val.isSuccess());
+			
+			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket, ret_val.success(), a_context));
+			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_nolock, ret_val.success(), a_context));
+			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock, ret_val.success(), a_context).isFail());
+			
+			// Check no lock case ignored when impure
+			final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
+			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, ret_val.success(), a_context));
+		}
+		// Similar set of tests but returning true
+		{
+			final IAnalyticsTechnologyModule mock_tech_module = Mockito.mock(IAnalyticsTechnologyModule.class);
+			Mockito.when(mock_tech_module.applyNodeAffinity(Mockito.any(), Mockito.any())).thenReturn(true);
+			
+			// CHeck will fail in the lock case
+			final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
+			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, Tuples._2T(mock_tech_module, this.getClass().getClassLoader()), a_context).isFail());
+		}
 	}
 	
 	

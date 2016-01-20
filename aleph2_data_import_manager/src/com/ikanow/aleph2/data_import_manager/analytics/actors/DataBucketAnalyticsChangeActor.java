@@ -891,13 +891,14 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final IAnalyticsContext context
 			) 
 	{
-		// Simplest case: not a pure analytic technology so we're good
-		if (null != bucket.harvest_technology_name_or_id()) {
-			return Validation.<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>success(technology_classloader);
-		}
+		final boolean is_pure_analytic_thread = (null == bucket.harvest_technology_name_or_id());
+		final boolean lock_to_nodes = is_pure_analytic_thread 
+				? Optional.ofNullable(bucket.lock_to_nodes()).orElse(false)
+				: false // if not an analytic thread then can't lock - so will error if analytic tech needs that
+				;
 		
 		Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> x = 
-			Optional.ofNullable(bucket.lock_to_nodes())
+			Optional.of(lock_to_nodes)
 				.filter(lock -> lock != technology_classloader._1().applyNodeAffinity(bucket, context))
 				.map(still_here -> Validation.<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>>fail(
 						ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class.getSimpleName(), "applyNodeAffinity", 
