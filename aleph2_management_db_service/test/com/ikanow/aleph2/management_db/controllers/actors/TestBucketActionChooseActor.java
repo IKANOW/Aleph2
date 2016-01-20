@@ -38,6 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContex
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.services.MockCoreDistributedServices;
@@ -68,6 +69,21 @@ public class TestBucketActionChooseActor {
 			_logger.info("Refuse from: " + uuid);
 			
 			this.sender().tell(new BucketActionReplyMessage.BucketActionIgnoredMessage(uuid), this.self());
+		}		
+	}
+	// This one always refuses ... but with a reply
+	public static class TestActor_RefuserWithReply extends UntypedActor {
+		public TestActor_RefuserWithReply(String uuid, boolean success_or_error) {
+			this.uuid = uuid;
+			this.success_or_error = success_or_error;
+		}
+		private final String uuid;
+		private final boolean success_or_error;
+		@Override
+		public void onReceive(Object arg0) throws Exception {
+			_logger.info("Refuse from: " + uuid + ": " + success_or_error);
+			
+			this.sender().tell(new BucketActionReplyMessage.BucketActionHandlerMessage(uuid, ErrorUtils.buildMessage(success_or_error, uuid, "return", "return")), this.self());
 		}		
 	}
 
@@ -265,6 +281,50 @@ public class TestBucketActionChooseActor {
 		assertEquals((Integer)0, (Integer)reply.timed_out().size());
 		
 		assertEquals(Collections.emptyList(), reply.replies());
+	}
+	
+	@Test
+	public void test_distributionTest_allActorsIgnoreWithError() throws Exception {
+		
+		// Similar to the above, except this time we'll create some nodes as if there were nodes to listen on
+		
+		for (int i = 0; i < 5; ++i) {
+			String uuid = UuidUtils.get().getRandomUuid();
+			ManagementDbActorContext.get().getDistributedServices()
+				.getCuratorFramework().create().creatingParentsIfNeeded()
+				.forPath(ActorUtils.BUCKET_ACTION_ZOOKEEPER + "/" + uuid);
+			
+			ActorRef handler = ManagementDbActorContext.get().getActorSystem().actorOf(Props.create(TestActor_RefuserWithReply.class, uuid, 0 == (i % 2)), uuid);
+			ManagementDbActorContext.get().getBucketActionMessageBus().subscribe(handler, ActorUtils.BUCKET_ACTION_EVENT_BUS);
+		}
+		
+		// Now do the test
+		
+		NewBucketActionMessage test_message = new NewBucketActionMessage(
+				BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::harvest_technology_name_or_id, "test").done().get()
+				, false);
+		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+		
+		final long before_time = new Date().getTime();
+		
+		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+				BucketActionSupervisor.askChooseActor(
+						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+						(BucketActionMessage)test_message, 
+						Optional.of(timeout));
+																
+		BucketActionCollectedRepliesMessage reply = f.get();
+		
+		final long time_elapsed = new Date().getTime() - before_time;
+		
+		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+
+		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+		
+		assertEquals((Integer)0, (Integer)reply.timed_out().size());
+		
+		assertEquals(2, reply.replies().size());
+		assertEquals(2, reply.replies().stream().filter(m -> !m.success()).count());
 	}
 	
 	/////////////////////////////////////////

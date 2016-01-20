@@ -34,6 +34,8 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.Bucke
 
 public class TestMgmtCrudUtils {
 
+	//TODO: need a test for applyNodeAffinityWrapper
+	
 	//NOTE: These functions are quite hard to test standalone, but they are covered by the Test*CrudService tests
 	
 	// Here's a nice tidy one we can test though:

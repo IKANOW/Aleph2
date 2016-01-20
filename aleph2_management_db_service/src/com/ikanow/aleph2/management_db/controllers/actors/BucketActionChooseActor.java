@@ -75,17 +75,19 @@ public class BucketActionChooseActor extends AbstractActor {
 			data_import_manager_set.clear();
 			targeted_source = null;
 			current_timeout_id = null;
+			errors_to_offer.clear();
 		}
-		protected final List<Tuple2<String, ActorRef>> reply_list = new LinkedList<Tuple2<String, ActorRef>>();
-		protected final HashSet<String> data_import_manager_set = new HashSet<String>();
-		protected final SetOnce<ActorRef> original_sender = new SetOnce<ActorRef>();
-		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<BucketActionMessage>();
+		protected final List<Tuple2<String, ActorRef>> reply_list = new LinkedList<>();
+		protected final HashSet<String> data_import_manager_set = new HashSet<>();
+		protected final SetOnce<ActorRef> original_sender = new SetOnce<>();
+		protected final SetOnce<BucketActionMessage> original_message = new SetOnce<>();
 		// (These are genuinely mutable, can change if the actor resets and tries a different target)
 		protected Tuple2<String, ActorRef> targeted_source; 
 		protected String current_timeout_id = null;
 		protected int tries = 0;
-		protected HashSet<String> blacklist = new HashSet<String>();
-		protected final HashSet<String> rejecting_clients = new HashSet<String>();
+		protected HashSet<String> blacklist = new HashSet<>();
+		protected final HashSet<String> rejecting_clients = new HashSet<>();
+		protected final LinkedList<BasicMessageBean> errors_to_offer = new LinkedList<>();
 	}
 	protected final MutableState _state = new MutableState();
 	protected final FiniteDuration _timeout;	
@@ -135,6 +137,13 @@ public class BucketActionChooseActor extends AbstractActor {
 			.match(BucketActionHandlerMessage.class, // Can receive this if the call errors, just treat it like an ignored
 				m -> {
 					_state.data_import_manager_set.remove(m.source());
+					_state.rejecting_clients.add(m.source());
+					
+					// Add errors for display purposes
+					if (!m.reply().success()) {
+						_state.errors_to_offer.add(m.reply());
+					}
+
 					this.checkIfComplete();
 				})
 			.match(BucketActionTimeoutMessage.class, m -> m.source().equals(_state.current_timeout_id),
@@ -198,7 +207,7 @@ public class BucketActionChooseActor extends AbstractActor {
 		}
 		else { // Just terminate with a "nothing to say" request
 			_state.original_sender.get().tell(new BucketActionCollectedRepliesMessage(this.getClass().getSimpleName(),
-					Arrays.asList(), _state.data_import_manager_set, _state.rejecting_clients), 
+					_state.errors_to_offer, _state.data_import_manager_set, _state.rejecting_clients), 
 					this.self());		
 			this.context().stop(this.self());			
 		}
