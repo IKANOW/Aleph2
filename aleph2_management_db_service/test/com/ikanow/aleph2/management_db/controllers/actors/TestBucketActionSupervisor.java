@@ -41,6 +41,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -785,35 +787,73 @@ public class TestBucketActionSupervisor {
 		// Do the test
 		
 		// THIS WILL ALSO CHECK THAT THE NODE AFFINITY IS STRIPPED
-		
-		UpdateBucketActionMessage test_message = new UpdateBucketActionMessage(
-				bucket, false, bucket, ImmutableSet.<String>builder().add(UuidUtils.get().getRandomUuid()).build());
-		// (if the stream handler didn't strip the node affinity then it wouldn't get sent anywhere)		
-
-		FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
-		
-		final long before_time = new Date().getTime();
-		
-		final CompletableFuture<BucketActionCollectedRepliesMessage> f =
-				BucketActionSupervisor.askChooseActor(
-						ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
-						(BucketActionMessage)test_message, 
-						Optional.of(timeout));
-																
-		BucketActionCollectedRepliesMessage reply = f.get();
-		
-		final long time_elapsed = new Date().getTime() - before_time;
-		
-		assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
-
-		assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
-		
-		assertEquals((Integer)0, (Integer)reply.timed_out().size());
-		
-		// Should contain no errors - 5 replies - ie everything 
-		assertEquals("Replies: " + reply.replies().stream().map(m->m.message()).collect(Collectors.joining(" ; ")), 5, reply.replies().size());
-		assertEquals(true, reply.replies().stream().allMatch(m -> m.success()));		
-		assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
-		
+		{
+			UpdateBucketActionMessage test_message = new UpdateBucketActionMessage(
+					bucket, false, bucket, ImmutableSet.<String>builder().add(UuidUtils.get().getRandomUuid()).build());
+			// (if the stream handler didn't strip the node affinity then it wouldn't get sent anywhere)		
+	
+			FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+			
+			final long before_time = new Date().getTime();
+			
+			final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+					BucketActionSupervisor.askChooseActor(
+							ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+							(BucketActionMessage)test_message, 
+							Optional.of(timeout));
+																	
+			BucketActionCollectedRepliesMessage reply = f.get();
+			
+			final long time_elapsed = new Date().getTime() - before_time;
+			
+			assertTrue("Shouldn't have timed out in actor", time_elapsed < 1000L);
+	
+			assertTrue("Shouldn't have timed out in ask", time_elapsed < 6000L);
+			
+			assertEquals((Integer)0, (Integer)reply.timed_out().size());
+			
+			// Should contain no errors - 5 replies - ie everything 
+			assertEquals("Replies: " + reply.replies().stream().map(m->m.message()).collect(Collectors.joining(" ; ")), 5, reply.replies().size());
+			assertEquals(true, reply.replies().stream().allMatch(m -> m.success()));		
+			assertEquals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, reply.replies().get(0).command());		
+		}
+		// THIS VERSION CHECKS THE CASE WHERE THE NODE AFFINITY ISN'T STRIPPED
+		{
+			final DataBucketBean analytic_bucket_with_locked_nodes =
+					BeanTemplateUtils.clone(bucket)
+							.with(DataBucketBean::harvest_technology_name_or_id, null)
+							.with(DataBucketBean::analytic_thread, 
+									BeanTemplateUtils.clone(bucket.analytic_thread())
+										.with(AnalyticThreadBean::jobs,
+												bucket.analytic_thread().jobs().stream()
+												.map(job -> BeanTemplateUtils.clone(job)
+																.with(AnalyticThreadJobBean::lock_to_nodes, true)
+															.done()
+												)
+												.collect(Collectors.toList())
+												)
+									.done())
+						.done();
+			
+			UpdateBucketActionMessage test_message = new UpdateBucketActionMessage(
+					analytic_bucket_with_locked_nodes, false, bucket, ImmutableSet.<String>builder().add(UuidUtils.get().getRandomUuid()).build());
+			
+			// because of node affinity will timeout
+			
+			FiniteDuration timeout = Duration.create(3, TimeUnit.SECONDS);
+			
+			final CompletableFuture<BucketActionCollectedRepliesMessage> f =
+					BucketActionSupervisor.askChooseActor(
+							ManagementDbActorContext.get().getBucketActionSupervisor(), ManagementDbActorContext.get().getActorSystem(),
+							(BucketActionMessage)test_message, 
+							Optional.of(timeout));
+																	
+			BucketActionCollectedRepliesMessage reply = f.get();
+			
+			assertEquals((Integer)0, (Integer)reply.rejected().size());
+			assertEquals((Integer)0, (Integer)reply.timed_out().size());
+			assertEquals((Integer)0, (Integer)reply.replies().size());
+			
+		}
 	}
 }

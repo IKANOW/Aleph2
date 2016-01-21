@@ -13,6 +13,7 @@
 		        "config": {"userScript": "$$SCRIPT_js$$"},
 		        "node_list_rules":[],
 		        "multi_node_enabled":false,
+                "lock_to_nodes": false,
 		        "dependencies":[],
 		        "inputs": [
 		        	{

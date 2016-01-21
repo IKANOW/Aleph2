@@ -368,10 +368,23 @@ public class BucketValidationUtils {
 			}		
 			
 			final AnalyticThreadBean analytic_thread = bean.analytic_thread();
+			final Collection<AnalyticThreadJobBean> jobs = Optionals.ofNullable(bean.analytic_thread().jobs());			
 
-			// 1) Jobs can be empty
+			// 0) Some current (pragmatic) restrictions on analytic bucket distribution settings:
 			
-			final Collection<AnalyticThreadJobBean> jobs = Optionals.ofNullable(bean.analytic_thread().jobs());
+			final boolean multi_node_enabled = Optionals.of(() -> jobs.stream().findFirst().map(j -> j.multi_node_enabled()).get()).orElse(false);
+			if (multi_node_enabled) {
+				errs.add(ErrorUtils.get(ManagementDbErrorUtils.CURRENT_ANALYTIC_DISTRIBUTION_RESTRICTIONS, bean.full_name()));
+			}
+			final boolean lock_to_nodes = Optionals.of(() -> jobs.stream().findFirst().map(j -> j.lock_to_nodes()).get()).orElse(false);
+			if (lock_to_nodes && (null != bean.harvest_technology_name_or_id())) {
+				errs.add(ErrorUtils.get(ManagementDbErrorUtils.CURRENT_ANALYTIC_DISTRIBUTION_RESTRICTIONS, bean.full_name()));
+			}
+			if (jobs.stream().anyMatch(j -> !Optional.ofNullable(j.lock_to_nodes()).orElse(false).equals(lock_to_nodes))) {
+				errs.add(ErrorUtils.get(ManagementDbErrorUtils.CURRENT_ANALYTIC_DISTRIBUTION_RESTRICTIONS, bean.full_name()));				
+			}
+			
+			// 1) Jobs can be empty
 			
 			jobs.stream().filter(job -> Optional.ofNullable(job.enabled()).orElse(true)).forEach(job -> {
 

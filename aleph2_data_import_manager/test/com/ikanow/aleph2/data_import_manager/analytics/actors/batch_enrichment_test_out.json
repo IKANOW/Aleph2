@@ -22,6 +22,7 @@
                               "config": { "enrich_pipeline": [] },
                               "node_list_rules": [],
                                "multi_node_enabled": false,
+                               "lock_to_nodes": false,
                                 "dependencies": [],
                             "output": {
                                 "is_transient": false,

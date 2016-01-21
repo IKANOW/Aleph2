@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.junit.Test;
@@ -43,6 +44,7 @@ import com.ikanow.aleph2.management_db.utils.BucketValidationUtils;
 
 public class TestDataBucketCrudService_Analytics {
 
+	
 	@Test
 	public void test_basicAnalyticsValidation() {
 
@@ -456,6 +458,81 @@ public class TestDataBucketCrudService_Analytics {
 		}
 	}
 
+	@Test
+	public void test_bucketDistributionRestrictions() {
+
+		final DataBucketBean base_bucket_pure = getBaseBucket("/tb0", null, null);
+		final DataBucketBean base_bucket_harvest = 
+				BeanTemplateUtils.clone(getBaseBucket("/tb0", null, null))
+					.with(DataBucketBean::harvest_technology_name_or_id, "/test")
+				.done()
+				;
+		
+		final AnalyticThreadJobBean job1 = BeanTemplateUtils.clone(getBaseJob("name1", null, null, null))
+				.with(AnalyticThreadJobBean::lock_to_nodes, true)
+				.done();
+		final AnalyticThreadJobBean job2 = BeanTemplateUtils.clone(getBaseJob("name2", null, null, null))
+				.with(AnalyticThreadJobBean::lock_to_nodes, false)
+				.done();
+		final AnalyticThreadJobBean job3 = BeanTemplateUtils.clone(getBaseJob("name3", null, null, null))
+				.with(AnalyticThreadJobBean::lock_to_nodes, true)
+				.done();
+		final AnalyticThreadJobBean job4 = BeanTemplateUtils.clone(getBaseJob("name3", null, null, null))
+				.with(AnalyticThreadJobBean::multi_node_enabled, true)
+				.done();
+				
+		final BiFunction<DataBucketBean, List<AnalyticThreadJobBean>, DataBucketBean> fn = (bucket, jobs) -> 
+			BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.clone(bucket.analytic_thread())
+								.with(AnalyticThreadBean::jobs, jobs)
+							.done())
+				.done();
+		
+		// Quick check that validation works
+		{
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(base_bucket_pure);
+			assertTrue(res0.isEmpty());
+			List<String> res1 = BucketValidationUtils.validateAnalyticBucket(base_bucket_harvest);
+			assertTrue(res1.isEmpty());
+		}
+		// Multi node enabled
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_pure, Arrays.asList(job4));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(1, res0.size());
+		}
+		// Lock to nodes enabled - pure (works)
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_pure, Arrays.asList(job1));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(0, res0.size());
+		}
+		// Lock to nodes enabled - hybrid (false)
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_harvest, Arrays.asList(job1));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(1, res0.size());
+		}
+		// Lock to nodes enabled - pure but two are different
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_pure, Arrays.asList(job1, job2, job3));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(1, res0.size());
+		}
+		// Lock to nodes enabled - pure and all the same
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_pure, Arrays.asList(job1, job3));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(0, res0.size());
+		}
+		{
+			final DataBucketBean b1 = fn.apply(base_bucket_pure, Arrays.asList(job2));
+			List<String> res0 = BucketValidationUtils.validateAnalyticBucket(b1);
+			assertEquals(0, res0.size());
+		}
+	}
+	
 	@Test
 	public void test_analyticsValidation_triggers() {
 		

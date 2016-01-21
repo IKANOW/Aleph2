@@ -42,6 +42,7 @@ public class AnalyticThreadJobBean implements Serializable {
 	 * @param config - The analytic technology specific module configuration JSON
 	 * @param node_list_rules - the node list rules
 	 * @param multi_node_enabled - Determines whether this analytic job should run on a single node, or multiples nodes
+	 * @param lock_to_nodes - Determines whether this analytic job should run on the same node(s) each time or is just calling a distributed API
 	 * @param dependencies - The list of internal dependencies (ie "name" fields from the job list of this thread) that need to be satisfied before this job is run
 	 * @param inputs - The list of input configurations for this job
 	 * @param global_input_input - A global configuration for the inputs, can be overridden by each job
@@ -57,6 +58,7 @@ public class AnalyticThreadJobBean implements Serializable {
 									final DataBucketBean.MasterEnrichmentType analytic_type,
 									final List<String> node_list_rules, 
 									final Boolean multi_node_enabled,
+									final Boolean lock_to_nodes,
 									final List<String> dependencies,
 									final List<AnalyticThreadJobInputBean> inputs,
 									final AnalyticThreadJobInputConfigBean global_input_config,
@@ -73,6 +75,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		this.analytic_type = analytic_type;
 		this.node_list_rules = node_list_rules;
 		this.multi_node_enabled = multi_node_enabled;
+		this.lock_to_nodes = lock_to_nodes;
 		this.dependencies = dependencies;
 		this.inputs = inputs;
 		this.global_input_config = global_input_config;
@@ -160,8 +163,20 @@ public class AnalyticThreadJobBean implements Serializable {
 	 */
 	public Boolean multi_node_enabled() { return multi_node_enabled; }
 	
+	/** If disabled (default: true) then each analytics call is mapped to a new node
+	 *  If enabled (ie the default), then once the analytic (/set of analytics for multi node) has handled an analytics call, all future calls will
+	 *  be sent to that same node 
+	 *  For analyics, NOT-lock_to_nodes is the standard behavior because they are normally (eg) stateless calls to distributed frameworks 
+	 *  vs (eg) external processes that are launched and persist,   
+	 *  NOTE: because setting this incorrectly would be so disastrous, this flag has to match the IAnalyticsTechnology.applyNodeAffinity call 
+	 *  or the bucket will generate errors and not run.
+	 * @return whether the analytic is locked to a set of nodes once run for the first time
+	 */
+	public Boolean lock_to_nodes() { return lock_to_nodes; }
+	
 	private List<String> node_list_rules;
 	private Boolean multi_node_enabled;
+	private Boolean lock_to_nodes;
 
 	////////////////////////////////////////
 	

@@ -37,6 +37,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileContext;
@@ -863,8 +864,24 @@ public class TestDataBucketChangeActor {
 		final DataBucketBean bucket = createBucket("test_tech_id_analytics");		
 		
 		final IAnalyticsContext a_context = _actor_context.getNewAnalyticsContext();			
-		final DataBucketBean bucket_lock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, true).done();	
-		final DataBucketBean bucket_nolock = BeanTemplateUtils.clone(bucket).with(DataBucketBean::lock_to_nodes, false).done();
+				
+		final Function<Boolean, DataBucketBean> fn = locked -> 
+			BeanTemplateUtils.clone(bucket)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.clone(bucket.analytic_thread())
+								.with(AnalyticThreadBean::jobs,
+										bucket.analytic_thread().jobs().stream()
+										.map(job -> BeanTemplateUtils.clone(job)
+														.with(AnalyticThreadJobBean::lock_to_nodes, locked)
+													.done()
+										)
+										.collect(Collectors.toList())
+										)
+							.done())
+				.done();
+			
+		final DataBucketBean bucket_lock = fn.apply(true);
+		final DataBucketBean bucket_nolock = fn.apply(false);		
 		
 		// "Real" case returning default "false" 
 		{
@@ -881,10 +898,6 @@ public class TestDataBucketChangeActor {
 			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket, ret_val.success(), a_context));
 			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_nolock, ret_val.success(), a_context));
 			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock, ret_val.success(), a_context).isFail());
-			
-			// Check no lock case ignored when impure
-			final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
-			assertEquals(Validation.success(ret_val.success()), DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, ret_val.success(), a_context));
 		}
 		// Similar set of tests but returning true
 		{
@@ -892,8 +905,8 @@ public class TestDataBucketChangeActor {
 			Mockito.when(mock_tech_module.applyNodeAffinity(Mockito.any(), Mockito.any())).thenReturn(true);
 			
 			// CHeck will fail in the lock case
-			final DataBucketBean bucket_lock_harvest = BeanTemplateUtils.clone(bucket_lock).with(DataBucketBean::harvest_technology_name_or_id, "/test").done();
-			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock_harvest, Tuples._2T(mock_tech_module, this.getClass().getClassLoader()), a_context).isFail());
+			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_nolock, Tuples._2T(mock_tech_module, this.getClass().getClassLoader()), a_context).isFail());
+			assertTrue(DataBucketAnalyticsChangeActor.checkNodeAffinityMatches(bucket_lock, Tuples._2T(mock_tech_module, this.getClass().getClassLoader()), a_context).isSuccess());
 		}
 	}
 	
@@ -914,7 +927,7 @@ public class TestDataBucketChangeActor {
 		if (ret_val.isFail()) {
 			fail("getAnalyticsTechnology call failed: " + ret_val.fail().message());
 		}
-		assertTrue("harvest tech created: ", ret_val.success() != null);
+		assertTrue("analytic tech created: ", ret_val.success() != null);
 		
 		final IAnalyticsTechnologyModule analytics_tech = ret_val.success();
 		
@@ -940,13 +953,23 @@ public class TestDataBucketChangeActor {
 			assertEquals("test_message", test1err.reply().command());
 			assertEquals("test_error", test1err.reply().message());
 		}		
-		// Test 1b: check errors 
+		// Test 1b: check errors (multi node)
 		{
 			final DataBucketBean fail_test =
 					BeanTemplateUtils.clone(bucket)
-						.with(DataBucketBean::harvest_technology_name_or_id, null)
-						.with(DataBucketBean::multi_node_enabled, true)
-					.done();
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.clone(bucket.analytic_thread())
+								.with(AnalyticThreadBean::jobs,
+										bucket.analytic_thread().jobs().stream()
+										.map(job -> BeanTemplateUtils.clone(job)
+														.with(AnalyticThreadJobBean::multi_node_enabled, true)
+													.done()
+										)
+										.collect(Collectors.toList())
+										)
+							.done())
+						.done();
+			
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
 			
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(

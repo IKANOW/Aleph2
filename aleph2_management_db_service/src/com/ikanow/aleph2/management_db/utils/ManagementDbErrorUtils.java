@@ -127,6 +127,8 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String ANALYTIC_CUSTOM_TRIGGER_NOT_COMPLETE = "Bucket {0} has custom trigger specified but not custom analytic technology to execute it";
 	public static final String ANALYTIC_INVALID_LOCK_TO_NODES = "Bucket {0}: pure analytic threads can only have 'lock_to_nodes': true if they contain a single analytic technology: {1}";
 	
+	public static final String CURRENT_ANALYTIC_DISTRIBUTION_RESTRICTIONS = "Bucket {0}: current restrictions: all jobs in a thread must have the same lock_to_nodes and multi_node_enabled (multi_node_enabled: false), can't set either unless a pure analytic thread";
+	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
 	// BUCKET UPDATE

@@ -61,14 +61,12 @@ import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
-import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage.AnalyticsTriggerActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
-import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 import fj.Unit;
 import akka.actor.UntypedActor;
@@ -161,10 +159,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					is_suspended,
 					Optional.empty());
 
-		//TODO (ALEPH-12): don't support locked_to_host currently .. when do then need to interpret this this since for harvest+analytic threads, multi_node_enabled -> applies to harvest not analytics..
-//					Optional.ofNullable(message.bucket().multi_node_enabled())
-//										.filter(enabled -> enabled)
-//										.map(__ -> _local_actor_context.getInformationService().getHostname()));
+		//TODO (ALEPH-12): don't support locked_to_host currently .. 
 
 		// Handle bucket collisions
 		final Consumer<String> on_collision = path -> {			
@@ -325,11 +320,6 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 												.map(bucket ->
 														BeanTemplateUtils.clone(bucket)
 															.with(DataBucketBean::harvest_technology_name_or_id, null) // remove this so that only gets sent to analytics/enrichment engine
-															.with(DataBucketBean::multi_node_enabled, 
-																	(null != bucket.harvest_technology_name_or_id()) // if harvest_tech is non-null then multi-node applies to that so ignore here
-																	? false
-																	: Optional.ofNullable(bucket.multi_node_enabled()).orElse(false) // if harvest_tech is null then multi-node did apply to leave alone
-																	)
 															.done()
 														)
 												.map(bucket -> {
@@ -445,10 +435,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final BucketActionMessage new_message = 
 				AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket, Arrays.asList(job), JobMessageType.check_completion, Optional.ofNullable(trigger.locked_to_host()));		
 		
-		BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
-				ManagementDbActorContext.get().getBucketActionSupervisor(), 
-				ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
-		
+		AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get());
 	}
 	
 	/** If a bucket is inactive, want to know whether to trigger it
@@ -765,7 +752,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, null, JobMessageType.stopping, locked_to_host);						
 
 				AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message); });
+					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
 				//(don't wait for a reply or anything)
 				
 				// Delete the bucket record
@@ -829,7 +816,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, null, JobMessageType.starting, locked_to_host);						
 
 				AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message); });
+					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
 				//(don't wait for a reply or anything)
 				
 				// 2) Update all the jobs
@@ -906,7 +893,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final BucketActionMessage new_message = AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, mutable_newly_active_jobs, JobMessageType.starting, locked_to_host);
 
 			AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-				.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message); });
+				.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
 			//(don't wait for a reply or anything)
 			
 			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),

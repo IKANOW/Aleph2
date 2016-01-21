@@ -601,6 +601,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					DataBucketBean.MasterEnrichmentType.streaming, // (type) 
 					Collections.emptyList(), //(node rules)
 					false, //(multi node enabled)
+					false, //(lock to nodes)
 					Collections.emptyList(), // (dependencies) 
 					Arrays.asList(input), 
 					null, //(global input config)
@@ -663,6 +664,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					DataBucketBean.MasterEnrichmentType.batch, // (type) 
 					Collections.emptyList(), //(node rules)
 					false, //(multi node enabled)
+					false, // (lock to nodes)
 					Collections.emptyList(), // (dependencies) 
 					Arrays.asList(input), 
 					null, //(global input config)
@@ -891,11 +893,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final IAnalyticsContext context
 			) 
 	{
-		final boolean is_pure_analytic_thread = (null == bucket.harvest_technology_name_or_id());
-		final boolean lock_to_nodes = is_pure_analytic_thread 
-				? Optional.ofNullable(bucket.lock_to_nodes()).orElse(false)
-				: false // if not an analytic thread then can't lock - so will error if analytic tech needs that
-				;
+		// By construction, all the jobs have the same setting, so:
+		final boolean lock_to_nodes = Optionals.of(() -> bucket.analytic_thread().jobs().stream().findAny().map(j -> j.lock_to_nodes()).get()).orElse(false);
 		
 		Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> x = 
 			Optional.of(lock_to_nodes)
@@ -997,13 +996,13 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
-					if (null == bucket.harvest_technology_name_or_id()) { // (for harvest buckets, multi-node applies to that not this)
-						if (Optional.ofNullable(bucket.multi_node_enabled()).orElse(false)) {
-							if (!tech_module.supportsMultiNode(bucket, jobs, context)) {
-								return CompletableFuture.completedFuture(
-										new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-											ErrorUtils.get(AnalyticsErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
-							}
+					// By construction, all the jobs have the same setting, so:
+					final boolean multi_node_enabled = jobs.stream().findFirst().map(j -> j.multi_node_enabled()).orElse(false);					
+					if (multi_node_enabled) {
+						if (!tech_module.supportsMultiNode(bucket, jobs, context)) {
+							return CompletableFuture.completedFuture(
+									new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
+										ErrorUtils.get(AnalyticsErrorUtils.TRIED_TO_RUN_MULTI_NODE_ON_UNSUPPORTED_TECH, bucket.full_name(), tech_module.getClass().getSimpleName()))));
 						}
 					}
 					

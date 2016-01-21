@@ -1298,7 +1298,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, valid_bucket.full_name()), err_msg.message());
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
-		assertEquals(0, status_after.node_affinity().size());
+		assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
 		assertEquals(true, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
@@ -1357,7 +1357,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, valid_bucket.full_name()), err_msg.message());
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
-		assertEquals(0, status_after.node_affinity().size());
+		assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
 		assertEquals(true, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + "/data/" + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
@@ -1730,8 +1730,7 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(streaming_msg.command(), ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER);
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
-		assertEquals(1, status_after.node_affinity().size());
-		assertTrue("Check the node affinity is correct: " + status_after.node_affinity().toString() + " vs " + streaming_host, status_after.node_affinity().contains(streaming_host));
+		assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
 		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());

@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -32,18 +33,102 @@ import scala.Tuple2;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.MockManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
+import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
 
 public class TestAnalyticTriggerBeanUtils {
 
+	@Test 
+	public void test_internalMessageBuilding_lockWorkaround() {
+		MockManagementCrudService<DataBucketStatusBean> test_status = new MockManagementCrudService<>();
+		
+		// Empty ie won't find
+		test_status.setMockValues(Arrays.asList());
+		
+		final AnalyticThreadJobBean job1 = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+				.with(AnalyticThreadJobBean::lock_to_nodes, true)
+			.done().get();
+		
+		final AnalyticThreadJobBean job2 = 
+				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
+			.done().get();
+		
+		final DataBucketBean bucket1 = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs,
+										Arrays.asList(job1)
+										)
+							.done().get()
+							)
+				.done().get()
+				;
+
+		final DataBucketBean bucket2 = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs,
+										Arrays.asList(job2)
+										)
+							.done().get()
+							)
+				.done().get()
+				;
+		
+		final DataBucketStatusBean bucket_status1 = 				
+				BeanTemplateUtils.build(DataBucketStatusBean.class)
+					.with(DataBucketStatusBean::node_affinity, Arrays.asList("test1"))
+				.done().get()
+				;
+
+		{
+			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket1, Arrays.asList(job1), JobMessageType.check_completion),
+					test_status
+					).join()
+					;
+			
+			assertTrue(res1.isEmpty());
+		}
+		
+		test_status.setMockValues(Arrays.asList(bucket_status1));
+		
+		{
+			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket1, Arrays.asList(job1), JobMessageType.check_completion),
+					test_status
+					).join()
+					;
+			
+			assertEquals(Arrays.asList("test1"), res1);
+		}
+		{
+			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
+					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket2, Arrays.asList(job2), JobMessageType.check_completion),
+					test_status
+					).join()
+					;
+			
+			assertTrue(res1.isEmpty());
+		}
+		
+	}
+	
 	@Test
 	public void test_automaticTriggers() {		
 		final DataBucketBean auto_trigger_bucket = TestAnalyticTriggerCrudUtils.buildBucket("/test/trigger", false);

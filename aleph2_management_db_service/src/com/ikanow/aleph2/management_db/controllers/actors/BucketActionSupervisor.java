@@ -258,10 +258,17 @@ public class BucketActionSupervisor extends UntypedActor {
 						final BucketActionMessage message, 
 						final Optional<FiniteDuration> timeout)
 	{
+		// By construction, all the jobs have the same setting, so:
+		final boolean lock_to_nodes = Optionals.of(() -> bucket.analytic_thread().jobs().stream().findAny().map(j -> j.lock_to_nodes()).get()).orElse(false);
+		
 		final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
-				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, Collections.emptySet()).done(),
+				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, 
+						lock_to_nodes
+						? message.handling_clients() // preserve node affinity for pure analytic bucket with node-locking enabled
+						: Collections.emptySet() // strip node affinity (they always get distributed across available nodes)
+						)
+					.done(),
 				ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER, timeout);
-		// (note that I'm stripping the node_affinity for analytics messages, they always get distributed across available nodes)
 
 		return AkkaFutureUtils.<BucketActionReplyMessage.BucketActionCollectedRepliesMessage>efficientWrap(akka.pattern.Patterns.ask(supervisor, m, 
 				getTimeoutMultipler(BucketActionChooseActor.class)*timeout.orElse(DEFAULT_TIMEOUT).toMillis()), actor_context.dispatcher())

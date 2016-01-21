@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_import_manager.analytics.utils;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.stream.Stream;
 import scala.Tuple2;
 
 import com.google.common.collect.ImmutableSet;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobInputBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
@@ -36,6 +38,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTrigger
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerOperator;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -379,6 +382,8 @@ public class AnalyticTriggerBeanUtils {
 	
 	// MESSAGING UTILS
 	
+	//TODO: handle lock to nodes (!= locked_to_host ugh!)
+	
 	public static BucketActionMessage buildInternalEventMessage(final DataBucketBean bucket, final List<AnalyticThreadJobBean> jobs, final JobMessageType message_type, final Optional<String> locked_to_host) {
 		final BucketActionMessage.BucketActionAnalyticJobMessage new_message =
 				new BucketActionMessage.BucketActionAnalyticJobMessage(bucket, jobs, message_type);
@@ -396,13 +401,46 @@ public class AnalyticTriggerBeanUtils {
 	
 	/** Sends a message (eg one build from buildInternalEventMessage)
 	 * @param new_message
+	 * @param status_crud - workaround while we handle a restricted set of lock_to_nodes case but not the general locked_to_host case... 
 	 * @return the reply future (currently unused)
 	 */
-	public static CompletableFuture<?> sendInternalEventMessage(final BucketActionMessage new_message) {
-		return BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
-				ManagementDbActorContext.get().getBucketActionSupervisor(), 
-				ManagementDbActorContext.get().getActorSystem(), new_message, Optional.empty());
-		
+	public static CompletableFuture<?> sendInternalEventMessage(final BucketActionMessage new_message, final ICrudService<DataBucketStatusBean> status_crud) {
+		return sendInternalEventMessage_internal(new_message, status_crud).thenCompose(node_affinity -> {
+			
+			return BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
+					ManagementDbActorContext.get().getBucketActionSupervisor(), 
+					ManagementDbActorContext.get().getActorSystem(), 
+					BeanTemplateUtils.clone(new_message)
+						.with(BucketActionMessage::handling_clients, ImmutableSet.builder().addAll(node_affinity).build())
+					.done()
+					, 
+					Optional.empty());
+		})
+		;
 	}
 
+	/** Interim Workaround for locked_to_host not working but needing restricted support for lock_to_node
+	 * @param new_message
+	 * @param status_crud
+	 * @return
+	 */
+	protected static CompletableFuture<Collection<String>> sendInternalEventMessage_internal(final BucketActionMessage new_message, final ICrudService<DataBucketStatusBean> status_crud) {
+		
+		final boolean lock_to_single_node = Optionals.of(() -> 
+			new_message.bucket()
+						.analytic_thread()
+						.jobs().stream()
+						.anyMatch(j -> Optional.ofNullable(j.lock_to_nodes()).orElse(false)))
+					.orElse(false)
+					;
+
+		return (lock_to_single_node
+			? 
+			status_crud.getObjectById(new_message, Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::node_affinity)), true)
+			.thenApply(maybe_status -> maybe_status.map(stat -> stat.node_affinity()).orElse(Collections.emptyList()))
+			:
+			CompletableFuture.completedFuture(Collections.emptyList())
+			);
+	}
+		
 }

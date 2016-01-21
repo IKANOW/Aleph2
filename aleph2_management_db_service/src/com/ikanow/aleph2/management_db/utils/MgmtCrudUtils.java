@@ -208,6 +208,8 @@ public class MgmtCrudUtils {
 			final ICrudService<DataBucketStatusBean> status_store
 			)
 	{
+		//TODO: add harvest technology name or id to this
+		
 		return return_from_handlers.thenApply(results -> {
 			if (results.isEmpty()) { // uh oh, nobody answered, so we're going to generate an error after all and suspend it
 				if (!is_suspended) { // suspend it
@@ -282,8 +284,17 @@ public class MgmtCrudUtils {
 			final ICrudService<DataBucketStatusBean> status_store, 
 			final CompletableFuture<Collection<BasicMessageBean>> management_results)
 	{
+		// Currently a bucket must either be:
+		// - pure analytic thread (possibly with lock_to_nodes enabled)
+		// - normal bucket with no lock_to_node analytic jobs
+		// (In the former case - By construction, all the jobs have the same setting, so:)
+		// THIS WILL NEED TO GET A LOT MORE COMPLICATED ONCE WE DECOUPLE THE JOBS/BUCKET RESTRICTIONS (if ever!)
 		final boolean is_pure_analytic_thread = (null == bucket.harvest_technology_name_or_id());
-		final boolean lock_to_nodes = Optional.ofNullable(bucket.lock_to_nodes()).orElse(!is_pure_analytic_thread); //(default is different for pure analytic thread vs harvest)		
+		final boolean lock_to_nodes = 
+				!is_pure_analytic_thread
+				? Optional.ofNullable(bucket.lock_to_nodes()).orElse(true)
+				: Optionals.of(() -> bucket.analytic_thread().jobs().stream().findAny().map(j -> j.lock_to_nodes()).get()).orElse(false);				
+		
 		final CompletableFuture<Boolean> update_future = 
 				lock_to_nodes
 				? 					

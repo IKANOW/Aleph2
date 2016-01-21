@@ -190,7 +190,7 @@ public class DataBucketBean implements Serializable {
 	/** If disabled (default: true) then each new harvest call (or analytics calls for pure analytic threads) is mapped to a new node
 	 *  If enabled (ie the default), then once the harvester/analytic (/set of harvesters for multi node) has handled a harvest/analytics call, all future calls will
 	 *  be sent to that same node 
-	 *  For harvesters, lock_to_nodes is the standard behavior because they are normally external processes that are launched and persistm, 
+	 *  For harvesters, lock_to_nodes is the standard behavior because they are normally external processes that are launched and persist, 
 	 *  vs (eg) stateless calls to distributed frameworks   
 	 *  NOTE: because setting this incorrectly would be so disastrous, this flag has to match the IHarvestTechnology.applyNodeAffinity call 
 	 *  (or the IAnalyticsTechnology call for pure analytic threads), or the bucket will generate errors and not run.
