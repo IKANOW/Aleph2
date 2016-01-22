@@ -289,7 +289,11 @@ public class BucketActionChooseActor extends AbstractActor {
 										Patterns.match(message).<String>andReturn()
 											.when(BucketActionMessage.BucketActionAnalyticJobMessage.class, 
 													msg -> JobMessageType.check_completion != msg.type(), __ -> "") // (=> don't publish)
-											.otherwise(msg -> msg.getClass().toString()))))
+											.otherwise(msg -> msg.getClass().toString()),
+											Optional.ofNullable(message.handling_clients()).orElse(Collections.emptySet())
+											)
+						)
+				)
 						;
 				
 				_state.current_timeout_id = UuidUtils.get().getRandomUuid();

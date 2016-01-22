@@ -82,6 +82,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	final ICoreDistributedServices _distributed_services;
 	
 	final SetOnce<ICrudService<DataBucketStatusBean>> _bucket_status_crud = new SetOnce<>();
+	final SetOnce<ICrudService<BucketTimeoutMessage>> _bucket_test_status_crud = new SetOnce<>();
 	
 	/** Akka c'tor
 	 */
@@ -99,6 +100,13 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					_service_context.getService(IManagementDbService.class, Optional.empty()) // (must have been provided by now)
 					.get() // (must exist)
 					.getDataBucketStatusStore()
+					);
+		}
+		if (!_bucket_test_status_crud.isSet()) {
+			_bucket_test_status_crud.set(
+					_service_context.getService(IManagementDbService.class, Optional.empty()) // (must have been provided by now)
+					.get() // (must exist)
+					.getBucketTestQueue(BucketTimeoutMessage.class)
 					);
 		}
 	}
@@ -435,7 +443,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		final BucketActionMessage new_message = 
 				AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket, Arrays.asList(job), JobMessageType.check_completion, Optional.ofNullable(trigger.locked_to_host()));		
 		
-		AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get());
+		AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get(), _bucket_test_status_crud.get());
 	}
 	
 	/** If a bucket is inactive, want to know whether to trigger it
@@ -752,7 +760,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, null, JobMessageType.stopping, locked_to_host);						
 
 				AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
+					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get(), _bucket_test_status_crud.get()); });
 				//(don't wait for a reply or anything)
 				
 				// Delete the bucket record
@@ -816,7 +824,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 						AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, null, JobMessageType.starting, locked_to_host);						
 
 				AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
+					.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get(), _bucket_test_status_crud.get()); });
 				//(don't wait for a reply or anything)
 				
 				// 2) Update all the jobs
@@ -893,7 +901,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			final BucketActionMessage new_message = AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket_to_check, mutable_newly_active_jobs, JobMessageType.starting, locked_to_host);
 
 			AnalyticTriggerCrudUtils.updateAnalyticThreadState(new_message, bucket_to_check, _bucket_status_crud.get(), Optional.of(now))
-				.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get()); });
+				.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get(), _bucket_test_status_crud.get()); });
 			//(don't wait for a reply or anything)
 			
 			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),

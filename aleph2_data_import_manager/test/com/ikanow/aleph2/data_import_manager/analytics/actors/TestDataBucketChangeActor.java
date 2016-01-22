@@ -219,7 +219,7 @@ public class TestDataBucketChangeActor {
 			}
 			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
@@ -238,7 +238,7 @@ public class TestDataBucketChangeActor {
 			}
 			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
@@ -311,7 +311,7 @@ public class TestDataBucketChangeActor {
 			}
 			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			_db_actor_context.getAnalyticsMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 			
@@ -330,7 +330,7 @@ public class TestDataBucketChangeActor {
 			}
 			
 			final BucketActionMessage.BucketActionOfferMessage broadcast =
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			assertTrue(DataBucketAnalyticsChangeActor.isEnrichmentRequest(broadcast));			
 			
@@ -413,7 +413,7 @@ public class TestDataBucketChangeActor {
 					bucket, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME, 
 					true, 
 					Optional.empty(), Optional.empty(),
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test1", 
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test1", 
 					Validation.success(Collections.emptyMap()));
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
@@ -423,7 +423,7 @@ public class TestDataBucketChangeActor {
 					true, 
 					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), Optional.empty(),
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test2", 
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test2", 
 					Validation.success(Collections.emptyMap()));
 	
 			assertTrue("Failed with no analytic technology: " + test2.validation(f -> f.message(),  s -> "(worked)"), test2.isSuccess());
@@ -437,7 +437,7 @@ public class TestDataBucketChangeActor {
 					bucket, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_TECH_NAME, 
 					true, 
 					Optional.empty(), Optional.empty(),
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test1", 
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test1", 
 					Validation.success(Collections.emptyMap()));
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
@@ -448,7 +448,7 @@ public class TestDataBucketChangeActor {
 					Optional.empty(),
 					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), 
-					new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test2", 
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test2", 
 					Validation.success(Collections.emptyMap()));
 	
 			assertTrue("Failed with no analytic technology: " + test2.validation(f -> f.message(),  s -> "(worked)"), test2.isSuccess());
@@ -477,7 +477,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = 
 				DataBucketAnalyticsChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(), Optional.empty(),
-						new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2", Validation.fail(error));
+						new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
 		assertEquals("test_source", test1.fail().source());
@@ -496,7 +496,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2a = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
 				true, Optional.empty(), Optional.empty(),
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2a", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2a", 
 				Validation.success(test2_input));
 
 		assertTrue("Got error back", test2a.isFail());
@@ -508,7 +508,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test2b = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
 				true, Optional.empty(), Optional.empty(),
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2b", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2b", 
 				Validation.success(test2_input));
 
 		assertTrue("Got error back", test2b.isFail());
@@ -549,7 +549,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				true, Optional.empty(), Optional.empty(),
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source3", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3", 
 				Validation.success(test3_input));
 
 		if (test3.isFail()) {
@@ -590,7 +590,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test3b = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
 				bucket, "test_tech_id_analytics",
 				false, Optional.empty(), Optional.empty(),
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source3b", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3b", 
 				Validation.success(test3b_input));
 
 		if (test3b.isFail()) {
@@ -970,7 +970,7 @@ public class TestDataBucketChangeActor {
 							.done())
 						.done();
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					fail_test, offer,
@@ -985,7 +985,7 @@ public class TestDataBucketChangeActor {
 		}
 		// Test 2: offer
 		{
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, offer,

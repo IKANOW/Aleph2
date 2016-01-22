@@ -117,7 +117,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList());	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -132,7 +132,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host1.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList(hostname));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -146,7 +146,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host1.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("$host1*"));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -160,7 +160,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host1.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("-not_this_host"));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -174,7 +174,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host2.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("-$host1*"));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -188,7 +188,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host2.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("$host1*", "$host2*", "$host3*"));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -203,7 +203,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host2.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("host1*", "host2*", "host3*", hostname));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -218,7 +218,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host2.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("$host1*", "$host2*", "$host3*", "host1*", "host2*", "host3*", hostname));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
@@ -232,7 +232,7 @@ public class TestDataBucketChangeActorNodeRules {
 			final IHarvestTechnologyModule harvest_tech = setupDependencies(new HashSet<String>(Arrays.asList("host5.aaa")));
 			final DataBucketBean bucket = createBucketWithRules(Arrays.asList("$host1*", "$host2*", "$host3*", "host1*", "host2*", "host3*"));	
 			
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 

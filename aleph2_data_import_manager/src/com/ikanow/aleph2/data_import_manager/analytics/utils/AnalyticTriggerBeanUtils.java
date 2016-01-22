@@ -40,6 +40,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTrigger
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
@@ -48,6 +49,7 @@ import com.ikanow.aleph2.management_db.controllers.actors.BucketActionSupervisor
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 /** Utilities for converting analytic jobs into trigger state beans
@@ -404,8 +406,11 @@ public class AnalyticTriggerBeanUtils {
 	 * @param status_crud - workaround while we handle a restricted set of lock_to_nodes case but not the general locked_to_host case... 
 	 * @return the reply future (currently unused)
 	 */
-	public static CompletableFuture<?> sendInternalEventMessage(final BucketActionMessage new_message, final ICrudService<DataBucketStatusBean> status_crud) {
-		return sendInternalEventMessage_internal(new_message, status_crud).thenCompose(node_affinity -> {
+	public static CompletableFuture<?> sendInternalEventMessage(final BucketActionMessage new_message, 
+			final ICrudService<DataBucketStatusBean> status_crud,
+			final ICrudService<BucketTimeoutMessage> test_status_crud)
+	{
+		return sendInternalEventMessage_internal(new_message, status_crud, test_status_crud).thenCompose(node_affinity -> {
 			
 			return BucketActionSupervisor.askBucketActionActor(Optional.of(false), // (single node only) 
 					ManagementDbActorContext.get().getBucketActionSupervisor(), 
@@ -424,7 +429,11 @@ public class AnalyticTriggerBeanUtils {
 	 * @param status_crud
 	 * @return
 	 */
-	protected static CompletableFuture<Collection<String>> sendInternalEventMessage_internal(final BucketActionMessage new_message, final ICrudService<DataBucketStatusBean> status_crud) {
+	protected static CompletableFuture<Collection<String>> sendInternalEventMessage_internal(
+			final BucketActionMessage new_message, 
+			final ICrudService<DataBucketStatusBean> status_crud,
+			final ICrudService<BucketTimeoutMessage> test_status_crud)
+	{
 		
 		final boolean lock_to_single_node = Optionals.of(() -> 
 			new_message.bucket()
@@ -434,13 +443,22 @@ public class AnalyticTriggerBeanUtils {
 					.orElse(false)
 					;
 
-		return (lock_to_single_node
-			? 
-			status_crud.getObjectById(new_message, Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::node_affinity)), true)
-			.thenApply(maybe_status -> maybe_status.map(stat -> stat.node_affinity()).orElse(Collections.emptyList()))
-			:
-			CompletableFuture.completedFuture(Collections.emptyList())
-			);
+		return Lambdas.<CompletableFuture<Collection<String>>>get(() -> {
+			if (lock_to_single_node) {
+				if (BucketUtils.isTestBucket(new_message.bucket())) { // no status crud, but the test contains the information we need					
+					return test_status_crud.getObjectById(new_message.bucket().full_name(), 
+												Arrays.asList(BeanTemplateUtils.from(BucketTimeoutMessage.class).field(BucketTimeoutMessage::handling_clients)), true
+												)
+							.thenApply(maybe_status -> maybe_status.map(stat -> stat.handling_clients()).orElse(Collections.emptySet()));
+				}
+				else {
+					return 	status_crud
+							.getObjectById(new_message, Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::node_affinity)), true)
+							.thenApply(maybe_status -> maybe_status.map(stat -> stat.node_affinity()).orElse(Collections.emptyList()));
+				}
+			}
+			else return CompletableFuture.completedFuture(Collections.<String>emptyList());
+		});
 	}
 		
 }

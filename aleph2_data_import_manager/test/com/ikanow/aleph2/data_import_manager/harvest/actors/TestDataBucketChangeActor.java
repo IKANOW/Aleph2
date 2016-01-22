@@ -187,7 +187,7 @@ public class TestDataBucketChangeActor {
 		final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test1 = DataBucketHarvestChangeActor.getHarvestTechnology(bucket, true, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2", Validation.fail(error));
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2", Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
 		assertEquals("test_source", test1.fail().source());
@@ -206,7 +206,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2a = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2a").done(), 
 				true, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2a", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2a", 
 				Validation.success(test2_input));
 
 		assertTrue("Got error back", test2a.isFail());
@@ -218,7 +218,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test2b = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest_2b").done(), 
 				true, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source2b", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2b", 
 				Validation.success(test2_input));
 
 		assertTrue("Got error back", test2b.isFail());
@@ -259,7 +259,7 @@ public class TestDataBucketChangeActor {
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> test3 = DataBucketHarvestChangeActor.getHarvestTechnology(
 				BeanTemplateUtils.clone(bucket).with(DataBucketBean::harvest_technology_name_or_id,  "test_tech_id_harvest").done(), 
 				true, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source3", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3", 
 				Validation.success(test3_input));
 
 		if (test3.isFail()) {
@@ -307,7 +307,7 @@ public class TestDataBucketChangeActor {
 					.with(DataBucketBean::harvest_configs, Arrays.asList(harvest_module))
 					.done(), 
 				false, 
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null), "test_source3b", 
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3b", 
 				Validation.success(test3b_input));
 
 		if (test3b.isFail()) {
@@ -378,7 +378,7 @@ public class TestDataBucketChangeActor {
 		}		
 		// Test 2: offer
 		{
-			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
@@ -683,7 +683,7 @@ public class TestDataBucketChangeActor {
 		// 3) A message that it will process because it's a broadcast
 
 		final BucketActionMessage.BucketActionOfferMessage broadcast =
-				new BucketActionMessage.BucketActionOfferMessage(bucket, null);
+				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 		
 		_db_actor_context.getBucketActionMessageBus().publish(new BucketActionEventBusWrapper(inbox.getRef(), broadcast));
 		

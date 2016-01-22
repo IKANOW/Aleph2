@@ -32,6 +32,7 @@ import org.junit.Test;
 import scala.Tuple2;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockManagementCrudService;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
@@ -43,19 +44,23 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTrigger
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerStateBean;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType;
+import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketTimeoutMessage;
 
 public class TestAnalyticTriggerBeanUtils {
 
 	@Test 
 	public void test_internalMessageBuilding_lockWorkaround() {
 		MockManagementCrudService<DataBucketStatusBean> test_status = new MockManagementCrudService<>();
+		MockManagementCrudService<BucketTimeoutMessage> test_test_status = new MockManagementCrudService<>();
 		
 		// Empty ie won't find
 		test_status.setMockValues(Arrays.asList());
+		test_test_status.setMockValues(Arrays.asList());
 		
 		final AnalyticThreadJobBean job1 = 
 				BeanTemplateUtils.build(AnalyticThreadJobBean.class)
@@ -68,6 +73,8 @@ public class TestAnalyticTriggerBeanUtils {
 		
 		final DataBucketBean bucket1 = 
 				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test")
+					.with(DataBucketBean::owner_id, "owner")
 					.with(DataBucketBean::analytic_thread, 
 							BeanTemplateUtils.build(AnalyticThreadBean.class)
 								.with(AnalyticThreadBean::jobs,
@@ -99,7 +106,8 @@ public class TestAnalyticTriggerBeanUtils {
 		{
 			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket1, Arrays.asList(job1), JobMessageType.check_completion),
-					test_status
+					test_status,
+					test_test_status
 					).join()
 					;
 			
@@ -111,7 +119,8 @@ public class TestAnalyticTriggerBeanUtils {
 		{
 			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket1, Arrays.asList(job1), JobMessageType.check_completion),
-					test_status
+					test_status,
+					test_test_status
 					).join()
 					;
 			
@@ -120,13 +129,35 @@ public class TestAnalyticTriggerBeanUtils {
 		{
 			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
 					new BucketActionMessage.BucketActionAnalyticJobMessage(bucket2, Arrays.asList(job2), JobMessageType.check_completion),
-					test_status
+					test_status,test_test_status
 					).join()
 					;
 			
 			assertTrue(res1.isEmpty());
 		}
 		
+		// OK now test test mode:
+		
+		final BucketTimeoutMessage timeout_msg = 
+				BeanTemplateUtils.build(BucketTimeoutMessage.class)
+				.with(BucketTimeoutMessage::handling_clients, ImmutableSet.of("test_test1"))
+				.done().get();
+		
+		test_status.setMockValues(Arrays.asList());
+		test_test_status.setMockValues(Arrays.asList(timeout_msg));
+		
+		final DataBucketBean test_bucket1 = BucketUtils.convertDataBucketBeanToTest(bucket1, "owner2");
+		
+		{
+			final Collection<String> res1 = AnalyticTriggerBeanUtils.sendInternalEventMessage_internal(
+					new BucketActionMessage.BucketActionAnalyticJobMessage(test_bucket1, Arrays.asList(job1), JobMessageType.check_completion),
+					test_status,
+					test_test_status
+					).join()
+					;
+			
+			assertEquals(ImmutableSet.of("test_test1"), res1);
+		}		
 	}
 	
 	@Test
