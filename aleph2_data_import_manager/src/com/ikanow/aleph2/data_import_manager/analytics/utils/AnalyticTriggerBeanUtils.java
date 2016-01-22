@@ -462,7 +462,7 @@ public class AnalyticTriggerBeanUtils {
 				}
 				else {
 					return 	status_crud
-							.getObjectById(new_message, Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::node_affinity)), true)
+							.getObjectById(new_message.bucket()._id(), Arrays.asList(BeanTemplateUtils.from(DataBucketStatusBean.class).field(DataBucketStatusBean::node_affinity)), true)
 							.thenApply(maybe_status -> maybe_status.map(stat -> stat.node_affinity()).orElse(Collections.emptyList()));
 				}
 			}
