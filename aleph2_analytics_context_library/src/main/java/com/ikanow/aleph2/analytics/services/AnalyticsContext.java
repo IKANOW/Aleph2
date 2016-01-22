@@ -117,6 +117,11 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 
 	protected static final Logger _logger = LogManager.getLogger();	
 
+	//TODO: lol at me, I create the data services based on the output config
+	// and then use them for input stuff via getInputService
+	// need to have a separate input set
+	// and then initialize those lazily as required
+	
 	////////////////////////////////////////////////////////////////
 	
 	// CONSTRUCTION
@@ -163,13 +168,16 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	//TODO (ALEPH-12): need to only load services requested from the schema (eg currently always loading search index/doc) - and apply the service_name
 	
 	// For writing objects out
-	// TODO (ALEPH-12): this needs to get moved into the object output library
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_index_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_doc_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service;
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_storage_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;
+	public static class OutputCache {
+		// TODO (ALEPH-12): this needs to get moved into the object output library
+		protected transient Optional<IDataWriteService<JsonNode>> _crud_index_service;
+		protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
+		protected transient Optional<IDataWriteService<JsonNode>> _crud_doc_service;
+		protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service;
+		protected transient Optional<IDataWriteService<JsonNode>> _crud_storage_service;
+		protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;				
+	}
+	protected transient OutputCache _output = new OutputCache();
 	
 	private static ConcurrentHashMap<String, AnalyticsContext> static_instances = new ConcurrentHashMap<>();
 	
@@ -1168,32 +1176,22 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		
 		// the job config is in the format owner_id:bucket_name:{input_config}
 		final Optional<String> job_config = Optional.of(my_bucket.owner_id() + ":" + my_bucket.full_name() + ":" + BeanTemplateUtils.toJson(job_input).toString());
-		if ("storage_service".equalsIgnoreCase(data_service)) {
-			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
-		}
-		else if ("search_index_service".equalsIgnoreCase(data_service)) {			
-			return _index_service.flatMap(s ->s.getUnderlyingPlatformDriver(clazz, job_config));
-		}
-		else if ("document_service".equalsIgnoreCase(data_service)) {			
-			return _doc_service.flatMap(s ->s.getUnderlyingPlatformDriver(clazz, job_config));
-		}
-		else { // other cases, more complicated:			
-			final String[] other_service = data_service.split("[.]");
+
+		final String[] other_service = data_service.split("[.]");
 			
-			final Optional<T> ret_val =
-					getDataService(_service_context, other_service[0], Optionals.of(() -> other_service[1]))
-					.flatMap(service -> service.getUnderlyingPlatformDriver(clazz, job_config));
-			
-			// Add to list of extra services to add automatically
-			if (ret_val.isPresent()) { // only if we managed to load the analytics access context
-				getDataService(other_service[0]).ifPresent(ds -> 
-					_mutable_state.extra_auto_context_libs.add(
-							Tuples._2T(ds, Optionals.of(() -> other_service[1]).filter(s->!s.isEmpty()))
-							));
-			}
-			
-			return ret_val;
+		final Optional<T> ret_val =
+				getDataService(_service_context, other_service[0], Optionals.of(() -> other_service[1]))
+				.flatMap(service -> service.getUnderlyingPlatformDriver(clazz, job_config));
+		
+		// Add to list of extra services to add automatically
+		if (ret_val.isPresent()) { // only if we managed to load the analytics access context
+			getDataService(other_service[0]).ifPresent(ds -> 
+				_mutable_state.extra_auto_context_libs.add(
+						Tuples._2T(ds, Optionals.of(() -> other_service[1]).filter(s->!s.isEmpty()))
+						));
 		}
+		
+		return ret_val;
 	}
 
 	/* (non-Javadoc)
@@ -1245,23 +1243,23 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			return externalEmit(this_bucket, job, obj_json);
 		}
 		
-		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(obj_json);
+		if (_output._batch_index_service.isPresent()) {
+			_output._batch_index_service.get().storeObject(obj_json);
 		}
-		else if (_crud_index_service.isPresent()){ // (super slow)
-			_crud_index_service.get().storeObject(obj_json);
+		else if (_output._crud_index_service.isPresent()){ // (super slow)
+			_output._crud_index_service.get().storeObject(obj_json);
 		}
-		if (_batch_doc_service.isPresent()) {
-			_batch_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
+		if (_output._batch_doc_service.isPresent()) {
+			_output._batch_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
-		else if (_crud_doc_service.isPresent()){ // (super slow)
-			_crud_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
+		else if (_output._crud_doc_service.isPresent()){ // (super slow)
+			_output._crud_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
-		if (_batch_storage_service.isPresent()) {
-			_batch_storage_service.get().storeObject(obj_json);
+		if (_output._batch_storage_service.isPresent()) {
+			_output._batch_storage_service.get().storeObject(obj_json);
 		}
-		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_crud_storage_service.get().storeObject(obj_json);
+		else if (_output._crud_storage_service.isPresent()){ // (super slow)
+			_output._crud_storage_service.get().storeObject(obj_json);
 		}
 		
 		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
@@ -1449,9 +1447,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));			
 		};
 		
-		final CompletableFuture<Object> cf1 = flusher.apply(_batch_index_service);
-		final CompletableFuture<Object> cf2 = flusher.apply(_batch_storage_service);
-		final CompletableFuture<Object> cf3 = flusher.apply(_batch_doc_service);
+		final CompletableFuture<Object> cf1 = flusher.apply(_output._batch_index_service);
+		final CompletableFuture<Object> cf2 = flusher.apply(_output._batch_storage_service);
+		final CompletableFuture<Object> cf3 = flusher.apply(_output._batch_doc_service);
 
 		// Flush external and sub-buckets:
 		_mutable_state.external_buckets.values().stream().forEach(e -> {
@@ -1514,14 +1512,14 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final boolean output_is_transient = Optionals.of(() -> job.output().is_transient()).orElse(false);
 		
 		if (output_is_transient) { // no index output if batch disabled
-			_batch_index_service = Optional.empty();
-			_crud_index_service = Optional.empty();
-			_batch_doc_service = Optional.empty();
-			_crud_doc_service = Optional.empty();
+			_output._batch_index_service = Optional.empty();
+			_output._crud_index_service = Optional.empty();
+			_output._batch_doc_service = Optional.empty();
+			_output._crud_doc_service = Optional.empty();
 		}
 		else { // normal case
-			_batch_doc_service = 
-					(_crud_doc_service = _doc_service
+			_output._batch_doc_service = 
+					(_output._crud_doc_service = _doc_service
 												.flatMap(s -> s.getDataService())
 												.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
 														getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
@@ -1529,8 +1527,8 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 					.flatMap(IDataWriteService::getBatchWriteSubservice)
 					;
 				
-			_batch_index_service = 
-						(_crud_index_service = _index_service
+			_output._batch_index_service = 
+						(_output._crud_index_service = _index_service
 													.flatMap(s -> s.getDataService())
 													.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
 															getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
@@ -1545,8 +1543,8 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				: IStorageService.StorageStage.processed.toString()
 				;
 		
-		_batch_storage_service = 
-				(_crud_storage_service = _storage_service.getDataService()
+		_output._batch_storage_service = 
+				(_output._crud_storage_service = _storage_service.getDataService()
 											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
 															Optional.of(storage_output_type), 
 																getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
@@ -1572,7 +1570,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			// If it's transient then delete the transient buffer
 			// (for non transient jobs - ie that share the bucket's output, then we do it centrally below)
 			if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
-				_crud_storage_service.ifPresent(outputter -> {
+				_output._crud_storage_service.ifPresent(outputter -> {
 					outputter.deleteDatastore().join();
 				});				
 			}
