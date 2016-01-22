@@ -24,6 +24,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -57,6 +60,7 @@ import akka.actor.UntypedActor;
  * @author acp
  */
 public class BucketActionSupervisor extends UntypedActor {
+	protected static final Logger _logger = LogManager.getLogger();	
 
 	//TODO (ALEPH-19): Need a scheduled thread that runs through the retries and checks each one
 	
@@ -170,6 +174,11 @@ public class BucketActionSupervisor extends UntypedActor {
 		final boolean has_analytics = !has_enrichment && bucketHasAnalytics(bucket);
 		final boolean has_harvester = hasHarvester(bucket);
 		
+		/**/
+		if (message instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+			_logger.info("?? " +has_analytics + " / " + has_enrichment + " / " +  has_harvester);
+		}
+		
 		if (!has_enrichment && !has_harvester && !has_analytics) {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
@@ -260,6 +269,12 @@ public class BucketActionSupervisor extends UntypedActor {
 	{
 		// By construction, all the jobs have the same setting, so:
 		final boolean lock_to_nodes = Optionals.of(() -> bucket.analytic_thread().jobs().stream().findAny().map(j -> j.lock_to_nodes()).get()).orElse(false);
+		
+		/**/
+		if (message instanceof BucketActionMessage.BucketActionAnalyticJobMessage) {
+			_logger.info("??2 " + lock_to_nodes + " ... " + Optional.ofNullable(message.handling_clients()).map(Object::toString).orElse("(no)"));
+		}
+		
 		
 		final RequestMessage m = new RequestMessage(BucketActionChooseActor.class,
 				BeanTemplateUtils.clone(message).with(BucketActionMessage::handling_clients, 

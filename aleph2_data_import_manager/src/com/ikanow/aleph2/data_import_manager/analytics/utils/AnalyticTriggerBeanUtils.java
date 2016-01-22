@@ -27,6 +27,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 
 import com.google.common.collect.ImmutableSet;
@@ -41,6 +44,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
@@ -56,6 +60,7 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
  * @author Alex
  */
 public class AnalyticTriggerBeanUtils {
+	private static final Logger _logger = LogManager.getLogger();	
 	
 	/** Generates a list of analytic trigger states from a job
 	 * @param bucket
@@ -420,6 +425,10 @@ public class AnalyticTriggerBeanUtils {
 					.done()
 					, 
 					Optional.empty());
+		})
+		.exceptionally(t -> {
+			_logger.warn(ErrorUtils.getLongForm("Internal message sending failed: {1}: {0}", t, new_message.bucket().full_name()));
+			return null; //(never used)
 		})
 		;
 	}

@@ -120,8 +120,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -135,8 +135,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -149,8 +149,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -163,8 +163,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -177,8 +177,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -191,8 +191,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -206,8 +206,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -221,8 +221,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -235,8 +235,8 @@ public class TestDataBucketChangeActorNodeRules {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test1", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionIgnoredMessage.class, test1.get().getClass());
 		}

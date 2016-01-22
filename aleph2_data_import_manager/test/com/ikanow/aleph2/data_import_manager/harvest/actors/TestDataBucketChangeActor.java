@@ -366,8 +366,8 @@ public class TestDataBucketChangeActor {
 			final BasicMessageBean error = SharedErrorUtils.buildErrorMessage("test_source", "test_message", "test_error");
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(), 
-					Validation.fail(error), _actor_context);
+					bucket, new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet()), "test1", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.fail(error));
 	
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
@@ -381,8 +381,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.BucketActionOfferMessage offer = new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test2 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, offer, "test2", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, offer, "test2", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
 			final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
@@ -393,8 +393,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.DeleteBucketActionMessage delete = new BucketActionMessage.DeleteBucketActionMessage(bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test3 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, delete, "test3", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, delete, "test3", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test3.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test3_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test3.get();
@@ -407,8 +407,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.NewBucketActionMessage create = new BucketActionMessage.NewBucketActionMessage(bucket, true);
 			
 			final CompletableFuture<BucketActionReplyMessage> test4 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, create, "test4", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, create, "test4", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test4_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4.get();
@@ -421,8 +421,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.UpdateBucketActionMessage update = new BucketActionMessage.UpdateBucketActionMessage(bucket, true, bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test5 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, update, "test5", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, update, "test5", _actor_context.getNewHarvestContext(),  _actor_context,
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test5_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();
@@ -439,8 +439,8 @@ public class TestDataBucketChangeActor {
 			final PurgeBucketActionMessage purge_msg = new PurgeBucketActionMessage(bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test7 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, purge_msg, "test7", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, purge_msg, "test7", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 	
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();		
@@ -454,8 +454,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.TestBucketActionMessage test = new BucketActionMessage.TestBucketActionMessage(bucket, test_spec);
 			
 			final CompletableFuture<BucketActionReplyMessage> test8 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, test, "test8", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, test, "test8", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test8_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
@@ -468,8 +468,8 @@ public class TestDataBucketChangeActor {
 			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
 			
 			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, poll, "test9", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, poll, "test9", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test9.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test9_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test9.get();
@@ -485,8 +485,8 @@ public class TestDataBucketChangeActor {
 			BucketActionMessage bad_msg = contructor.newInstance(bucket);
 	
 			final CompletableFuture<BucketActionReplyMessage> testX = DataBucketHarvestChangeActor.talkToHarvester(
-					bucket, bad_msg, "testX", _actor_context.getNewHarvestContext(), 
-					Validation.success(harvest_tech), _actor_context);		
+					bucket, bad_msg, "testX", _actor_context.getNewHarvestContext(), _actor_context, 
+					Validation.success(harvest_tech));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, testX.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage testX_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) testX.get();

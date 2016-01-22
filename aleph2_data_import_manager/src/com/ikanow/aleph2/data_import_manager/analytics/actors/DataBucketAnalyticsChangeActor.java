@@ -21,11 +21,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -82,8 +84,12 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 
 
@@ -182,6 +188,8 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
 import com.codepoetics.protonpack.StreamUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -189,11 +197,13 @@ import com.google.common.collect.Maps;
 import com.ikanow.aleph2.analytics.services.AnalyticsContext;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticsErrorUtils;
+import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.harvest.actors.DataBucketHarvestChangeActor;
 import com.ikanow.aleph2.data_import_manager.harvest.utils.HarvestErrorUtils;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.utils.ActorNameUtils;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
+import com.ikanow.aleph2.data_import_manager.utils.NodeRuleUtils;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
@@ -459,7 +469,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				// One final system classpath/streaming enrichment fix:
 				final DataBucketBean final_bucket = finalBucketConversion(technology_name_or_id, message.bucket(), err_or_map);
 				
-				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, Tuples._2T(closing_self, _trigger_sibling), 
+				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, _context, Tuples._2T(closing_self, _trigger_sibling), 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
 																			err_or_tech_module);
 				
@@ -964,6 +974,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final BucketActionMessage m,			
 			final String source,
 			final AnalyticsContext context,
+			final DataImportActorContext dim_context,
 			final Tuple2<ActorRef, ActorSelection> me_sibling,
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)
 			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module // "pipeline element"
@@ -1008,7 +1019,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					
 					return Patterns.match(m).<CompletableFuture<BucketActionReplyMessage>>andReturn()
 						.when(BucketActionMessage.BucketActionOfferMessage.class, msg -> {
-							final boolean accept_or_ignore = tech_module.canRunOnThisNode(bucket, jobs, context);
+							final boolean accept_or_ignore = 
+									NodeRuleUtils.canRunOnThisNode(jobs.stream().map(j -> Optional.ofNullable(j.node_list_rules())), dim_context) &&
+									tech_module.canRunOnThisNode(bucket, jobs, context);
+							
 							return CompletableFuture.completedFuture(accept_or_ignore
 									? new BucketActionReplyMessage.BucketActionWillAcceptMessage(source)
 									: new BucketActionReplyMessage.BucketActionIgnoredMessage(source));
