@@ -22,6 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -257,8 +258,14 @@ public class BucketActionChooseActor extends AbstractActor {
 			
 			CuratorFramework curator = _system_context.getDistributedServices().getCuratorFramework();
 			
+			final Optional<Set<String>> maybe_restricted_to = Optional.ofNullable(message.handling_clients()).filter(set -> !set.isEmpty());
+			
 			try {
-				_state.data_import_manager_set.addAll(curator.getChildren().forPath(_zookeeper_path));
+				_state.data_import_manager_set.addAll(
+						curator.getChildren().forPath(_zookeeper_path).stream()
+							.filter(host -> maybe_restricted_to.map(set -> set.contains(host)).orElse(true))
+							.collect(Collectors.toList())
+						);
 				
 			}
 			catch (NoNodeException e) { 
@@ -276,6 +283,7 @@ public class BucketActionChooseActor extends AbstractActor {
 						+ "; message_id=" + message
 						+ "; actor_id=" + this.self().toString()
 						+ "; candidates_found=" + _state.data_import_manager_set.size()
+						+ "; locked_to=" + maybe_restricted_to.map(set -> set.size()).orElse(0)
 						+ "; blacklisted=" + _state.blacklist.size()
 						);
 			
