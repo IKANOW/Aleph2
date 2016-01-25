@@ -135,6 +135,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		
 		maybe_read_crud.ifPresent(read_crud -> _dedup_context.set(read_crud));
 		
+		/**/
+		maybe_read_crud.ifPresent(read_crud -> System.out.println("*************** " + read_crud.countObjects().join().intValue())); 		
+		
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
 			//TODO (ALEPH-20): for now only support one dedup enrichment config (really the "multi-enrichment" pipeline code should be in core shared vs the technology I think?)
@@ -192,6 +195,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
 				getDedupQuery(batch, dedup_fields);
+
+		/**/
+		System.out.println("****** QUERY = " + fieldinfo_dedupquery_keyfields._1().toString());
 		
 		// Get duplicate results
 		
@@ -239,10 +245,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		// Handle the results
 		
 		Optionals.streamOf(cursor, true)
+		/**/
+		.peek(j -> System.out.println("$$$$$$$$$$$$$$$$ FOUND: " + j.toString()))
 					.forEach(ret_obj -> {
 						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
 						final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
 
+						/**/
+						System.out.println("###################### MAYBE KEY = " + maybe_key);
+						/**/
+						System.out.println("###################### MATCHED = " + matching_records.map(x -> x.size()).orElse(-1));
+						
 						//DEBUG
 						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
 						
