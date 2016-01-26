@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -91,7 +92,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		public final String default_modifier() { return Optional.ofNullable(default_modifier).orElse(""); }
 		public final Map<String, String> field_override() { return Optional.ofNullable(field_override).orElse(Collections.emptyMap()); }
 	}
-	protected final SetOnce<ElasticsearchTechnologyOverride> _tech_override = new SetOnce<>();
+	protected final SetOnce<Function<String, String>> _db_mapper = new SetOnce<>();
 	
 	/** Implementation of IBatchRecord
 	 * @author Alex
@@ -149,8 +150,16 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		
 		maybe_read_crud.ifPresent(read_crud -> _dedup_context.set(read_crud));
 		
-		_tech_override.set(BeanTemplateUtils.from(
-				Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get());
+		//TODO (ALEPH-20): move this into the DB
+		final ElasticsearchTechnologyOverride tech_override = 
+				BeanTemplateUtils.from(
+						Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get();		
+		_db_mapper.set(f -> {
+				return JsonUtils._ID.equals(f)
+					   ? f
+					   :tech_override.field_override().getOrDefault(f, f + tech_override.default_modifier())
+					   ;
+				});											
 		
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
@@ -202,22 +211,13 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), Optional.empty()));
 			return;
 		}		
-		final List<String> dedup_fields = 
-				Optional.ofNullable(
-						_doc_schema.get().deduplication_fields()
-				)
-				.map(l -> l.stream()
-							.map(f -> _tech_override.get().field_override().getOrDefault(f, f + _tech_override.get().default_modifier()))
-							.collect(Collectors.toList())
-				)
-				.orElse(Arrays.asList(JsonUtils._ID))				
-				;
+		final List<String> dedup_fields = Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(JsonUtils._ID));
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		
 		// Create big query
 		
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
-				getDedupQuery(batch, dedup_fields);
+				getDedupQuery(batch, dedup_fields, _db_mapper.get());
 
 		// Get duplicate results
 		
@@ -425,13 +425,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 * @param dedup_fields
 	 * @return a 3-tuple containing: the query to apply, the list of records indexed by the key, the field-or-fields that form the key
 	 */
-	protected static Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> getDedupQuery(final Stream<Tuple2<Long, IBatchRecord>> batch, final List<String> dedup_fields) {
-		
+	protected static Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> getDedupQuery(
+			final Stream<Tuple2<Long, IBatchRecord>> batch, 
+			final List<String> dedup_fields,
+			final Function<String, String> db_field_mapper
+	)
+	{		
 		if (1 == dedup_fields.size()) { // this is a simpler case
 			final String key_field = dedup_fields.stream().findFirst().get();
 			final List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> field_info = extractKeyField(batch, key_field);
 			return Tuples._3T(
-					CrudUtils.allOf().withAny(key_field, field_info.stream().map(t2 -> t2._1().toString()).collect(Collectors.toList())).limit(Integer.MAX_VALUE)
+					CrudUtils.allOf().withAny(db_field_mapper.apply(key_field), field_info.stream().map(t2 -> t2._1().toString()).collect(Collectors.toList())).limit(Integer.MAX_VALUE)
 					,
 					field_info
 					,
@@ -446,7 +450,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					.map(t2 -> {
 						return Optionals.streamOf(t2._1().fields(), false)
 						 	.reduce(CrudUtils.allOf(),
-						 			(acc, kv) -> acc.when(kv.getKey(), JsonUtils.jacksonToJava(kv.getValue())),
+						 			(acc, kv) -> acc.when(db_field_mapper.apply(kv.getKey()), JsonUtils.jacksonToJava(kv.getValue())),
 						 			(acc1, acc2) -> acc1 // (not possible because not parallel()
 						 			)
 						 	;
