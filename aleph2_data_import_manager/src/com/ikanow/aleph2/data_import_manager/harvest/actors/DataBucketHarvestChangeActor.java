@@ -185,6 +185,10 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    								if (shouldLog(m))
 	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()));
 	    							})
+	    							.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> { 
+	    								if (shouldLog(m))
+	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()));
+	    							})
 	    							.otherwise(msg ->  //(always log)
 	    								_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
 	    						

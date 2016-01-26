@@ -499,6 +499,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 							if (shouldLog(message))
 								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()));	
 						})
+						.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> {
+							if (shouldLog(message))
+								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()));	
+						})
 						.otherwise(msg -> {
 							//(always log errors)
 							_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", 
