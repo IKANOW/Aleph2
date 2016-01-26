@@ -22,6 +22,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
@@ -44,6 +47,7 @@ import fj.data.Validation;
  * @author Alex
  */
 public class LibraryCacheUtils {
+	protected static final Logger _logger = LogManager.getLogger();	
 
 	/** Given a bucket ...returns either - a future containing the first error encountered, _or_ a map (both name and id as keys) of path names 
 	 * (and guarantee that the file has been cached when the future completes)
@@ -106,7 +110,10 @@ public class LibraryCacheUtils {
 										return ret.<Stream<Tuple2<String, Tuple2<SharedLibraryBean, String>>>>
 											validation(
 												//Error:
-												err -> { throw new RuntimeException(err.message()); } // (not ideal, but will do)
+												err -> {
+													// (not ideal, but will do)
+													throw new RuntimeException(err.message()); 
+												} 
 												,
 												// Normal:
 												s -> { 
