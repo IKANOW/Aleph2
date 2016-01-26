@@ -151,13 +151,14 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		maybe_read_crud.ifPresent(read_crud -> _dedup_context.set(read_crud));
 		
 		//TODO (ALEPH-20): move this into the DB
+		//TODO: handle :s -> .s in the key
 		final ElasticsearchTechnologyOverride tech_override = 
 				BeanTemplateUtils.from(
 						Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get();		
 		_db_mapper.set(f -> {
 				return JsonUtils._ID.equals(f)
 					   ? f
-					   :tech_override.field_override().getOrDefault(f, f + tech_override.default_modifier())
+					   :tech_override.field_override().getOrDefault(f.replace(".", ":"), f + tech_override.default_modifier())
 					   ;
 				});											
 		
@@ -423,6 +424,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	/** Creates the query and some associated metadata
 	 * @param batch
 	 * @param dedup_fields
+	 * @param db_field_mapper - allows the fields to be transformed (initial workaround for some ES issues, can just leave and pass f->f in once no longer needed)
 	 * @return a 3-tuple containing: the query to apply, the list of records indexed by the key, the field-or-fields that form the key
 	 */
 	protected static Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> getDedupQuery(
@@ -435,7 +437,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final String key_field = dedup_fields.stream().findFirst().get();
 			final List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> field_info = extractKeyField(batch, key_field);
 			return Tuples._3T(
-					CrudUtils.allOf().withAny(db_field_mapper.apply(key_field), field_info.stream().map(t2 -> t2._1().toString()).collect(Collectors.toList())).limit(Integer.MAX_VALUE)
+					CrudUtils.allOf().withAny(db_field_mapper.apply(key_field), field_info.stream().map(t2 -> JsonUtils.jacksonToJava(t2._1())).collect(Collectors.toList())).limit(Integer.MAX_VALUE)
 					,
 					field_info
 					,
