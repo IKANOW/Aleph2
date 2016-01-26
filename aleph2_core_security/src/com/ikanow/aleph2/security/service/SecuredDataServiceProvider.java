@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -45,8 +44,8 @@ import com.ikanow.aleph2.security.utils.ErrorUtils;
  */
 public class SecuredDataServiceProvider implements IDataServiceProvider {
 	protected final IDataServiceProvider _delegate;
-	protected final AuthorizationBean _bean;
 	protected final IServiceContext _service_context;
+	protected final AuthorizationBean _bean;
 	
 	/** User ctor
 	 * @param service_context
@@ -64,11 +63,11 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 	 */
 	public static class SecuredDataService implements IGenericDataService {
 		protected final IGenericDataService _delegate;
-		protected final AuthorizationBean _bean;
 		protected final IServiceContext _service_context;
 		protected final ISecurityService _security_service;
 		protected final IManagementCrudService<DataBucketBean> _bucket_store;
 		protected final ISubject subject; // system user's subject
+		protected final AuthorizationBean _bean;
 
 		
 		/** User ctor
@@ -76,18 +75,16 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @param delegate
 		 * @param bean
 		 */
-		public SecuredDataService(final IServiceContext service_context, final IGenericDataService delegate, final AuthorizationBean bean) {
+		protected SecuredDataService(final IServiceContext service_context, final IGenericDataService delegate, final AuthorizationBean bean) {
 			_service_context = service_context;
 			_delegate = delegate;
-			_bean = bean;
 			_security_service = _service_context.getSecurityService();			
 			
-			_bucket_store = _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().secured(_service_context, _bean);
+			_bucket_store = _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().secured(_service_context, bean);
 			
 			// Login:
-			this.subject = _security_service.loginAsSystem();			
-			_security_service.releaseRunAs(subject);		
-			_security_service.runAs(subject, Arrays.asList(_bean.getPrincipalName()));			
+			_bean = bean;
+			this.subject = _security_service.getUserContext(bean.getPrincipalName());
 		}
 		
 		/** Checks if the user has write permission on this bucket

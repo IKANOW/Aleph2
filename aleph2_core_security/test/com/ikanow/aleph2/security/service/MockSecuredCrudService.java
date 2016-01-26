@@ -23,7 +23,6 @@ public class MockSecuredCrudService extends SecuredCrudManagementDbService<Strin
 
 	public MockSecuredCrudService(IServiceContext serviceContext, IManagementCrudService<String> delegate, AuthorizationBean authBean) {
 		super(serviceContext, delegate, authBean);
-		// TODO Auto-generated constructor stub
 	}
 
 }
