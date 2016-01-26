@@ -89,7 +89,7 @@ public class ReadOnlyMultiCrudService<T> implements ICrudService.IReadOnlyCrudSe
 					.map(bucket_crud -> 
 						maybe_extra_query_builder
 							.flatMap(qb -> qb.apply(bucket_crud._1()))
-							.map(extra_query -> CrudServiceUtils.intercept(clazz, bucket_crud._2(), Optional.of(extra_query), Collections.emptyMap(), Optional.empty()))
+							.map(extra_query -> CrudServiceUtils.intercept(clazz, bucket_crud._2(), Optional.of(extra_query), Optional.empty(), Collections.emptyMap(), Optional.empty()))
 							.orElse(bucket_crud._2())
 					)
 					.collect(Collectors.toList())

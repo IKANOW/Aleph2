@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -586,6 +587,7 @@ public class CrudServiceUtils {
 	public static <T> ICrudService<T> intercept(final Class<T> clazz,
 												final ICrudService<T> delegate, 
 												final Optional<QueryComponent<T>> extra_query, 
+												final Optional<Function<QueryComponent<T>, QueryComponent<T>>> query_transform,
 												final Map<String, BiFunction<Object, Object[], Object>> interceptors,
 												final Optional<BiFunction<Object, Object[], Object>> default_interceptor)
 	{		
@@ -595,14 +597,14 @@ public class CrudServiceUtils {
 				final Method m = delegate.getClass().getMethod(method.getName(), method.getParameterTypes());
 				
 				// First off, apply the extra term to any relevant args:
-				final Object[] args_with_extra_query = 
-						extra_query
+				final Object[] args_with_extra_query_pretransform = 						
+						query_transform
 							.map(q -> {
 								return (null != args)
 										? Arrays.stream(args)
 											.map(o -> 
 												(null != o) && QueryComponent.class.isAssignableFrom(o.getClass())
-													? CrudUtils.allOf((QueryComponent<T>)o, q)
+													? q.apply((QueryComponent<T>)o)
 													: o
 											)
 											.collect(Collectors.toList())
@@ -610,6 +612,22 @@ public class CrudServiceUtils {
 										: args;
 							})
 							.orElse(args);
+
+				final Object[] args_with_extra_query = 						
+						extra_query
+							.map(q -> {
+								return (null != args_with_extra_query_pretransform)
+										? Arrays.stream(args_with_extra_query_pretransform)
+											.map(o -> 
+												(null != o) && QueryComponent.class.isAssignableFrom(o.getClass())
+													? CrudUtils.allOf((QueryComponent<T>)o, q)
+													: o
+											)
+											.collect(Collectors.toList())
+											.toArray()
+										: args_with_extra_query_pretransform;
+							})
+							.orElse(args_with_extra_query_pretransform);
 				
 				// Special cases for: readOnlyVersion, getFilterdRepo / countObjects / getRawService / *byId
 				final Object o = Lambdas.get(() -> {
@@ -642,12 +660,12 @@ public class CrudServiceUtils {
 						else if (m.getName().equals("getRawService")) { // special case....convert the default query to JSON, if present
 							Object o_internal = m.invoke(delegate, args_with_extra_query);
 							Optional<QueryComponent<JsonNode>> json_extra_query = extra_query.map(qc -> qc.toJson());
-							return intercept(JsonNode.class, (ICrudService<JsonNode>)o_internal, json_extra_query, interceptors, default_interceptor);
+							return intercept(JsonNode.class, (ICrudService<JsonNode>)o_internal, json_extra_query, Optional.empty(), interceptors, default_interceptor);
 						}
 						else { // wrap any CrudService types
 							Object o_internal = m.invoke(delegate, args_with_extra_query);
 							return (null != o_internal) && ICrudService.class.isAssignableFrom(o_internal.getClass())
-									? intercept(clazz, (ICrudService<T>)o_internal, extra_query, interceptors, default_interceptor)
+									? intercept(clazz, (ICrudService<T>)o_internal, extra_query, Optional.empty(), interceptors, default_interceptor)
 									: o_internal;
 						}
 					}

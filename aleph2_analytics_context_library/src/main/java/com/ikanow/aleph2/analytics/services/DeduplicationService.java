@@ -79,6 +79,20 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	
 	protected final SetOnce<IEnrichmentBatchModule> _custom_handler = new SetOnce<>();
 	
+	//TODO (ALEPH-20): move this into the ES service
+	public static class ElasticsearchTechnologyOverride {
+		protected ElasticsearchTechnologyOverride() {}
+		public ElasticsearchTechnologyOverride(final String default_modifier, final Map<String, String> field_override) {
+			this.default_modifier = default_modifier;
+			this.field_override = field_override;
+		}
+		private String default_modifier;
+		private Map<String, String> field_override;
+		public final String default_modifier() { return Optional.ofNullable(default_modifier).orElse(""); }
+		public final Map<String, String> field_override() { return Optional.ofNullable(field_override).orElse(Collections.emptyMap()); }
+	}
+	protected final SetOnce<ElasticsearchTechnologyOverride> _tech_override = new SetOnce<>();
+	
 	/** Implementation of IBatchRecord
 	 * @author Alex
 	 */
@@ -135,8 +149,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		
 		maybe_read_crud.ifPresent(read_crud -> _dedup_context.set(read_crud));
 		
-		/**/
-		maybe_read_crud.ifPresent(read_crud -> System.out.println("*************** " + read_crud.countObjects().join().intValue())); 		
+		_tech_override.set(BeanTemplateUtils.from(
+				Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get());
 		
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
@@ -188,7 +202,16 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), Optional.empty()));
 			return;
 		}		
-		final List<String> dedup_fields = Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(JsonUtils._ID));
+		final List<String> dedup_fields = 
+				Optional.ofNullable(
+						_doc_schema.get().deduplication_fields()
+				)
+				.map(l -> l.stream()
+							.map(f -> _tech_override.get().field_override().getOrDefault(f, f + _tech_override.get().default_modifier()))
+							.collect(Collectors.toList())
+				)
+				.orElse(Arrays.asList(JsonUtils._ID))				
+				;
 		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		
 		// Create big query
@@ -196,9 +219,6 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
 				getDedupQuery(batch, dedup_fields);
 
-		/**/
-		System.out.println("****** QUERY = " + fieldinfo_dedupquery_keyfields._1().toString());
-		
 		// Get duplicate results
 		
 		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(policy, dedup_fields, _timestamp_field.get());
@@ -245,17 +265,10 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		// Handle the results
 		
 		Optionals.streamOf(cursor, true)
-		/**/
-		.peek(j -> System.out.println("$$$$$$$$$$$$$$$$ FOUND: " + j.toString()))
 					.forEach(ret_obj -> {
 						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
 						final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
 
-						/**/
-						System.out.println("###################### MAYBE KEY = " + maybe_key);
-						/**/
-						System.out.println("###################### MATCHED = " + matching_records.map(x -> x.size()).orElse(-1));
-						
 						//DEBUG
 						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
 						

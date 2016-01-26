@@ -188,7 +188,7 @@ public class TestCrudServiceUtils {
 		// Add a few dummy entries
 		mock_crud.setMockValues(Arrays.asList("test1", "test2"));
 		
-		ICrudService<String> intercepted_crud = CrudServiceUtils.intercept(String.class, mock_crud, Optional.of(CrudUtils.allOf(String.class)), interceptors, Optional.of(default_interceptor));
+		ICrudService<String> intercepted_crud = CrudServiceUtils.intercept(String.class, mock_crud, Optional.of(CrudUtils.allOf(String.class)), Optional.empty(), interceptors, Optional.of(default_interceptor));
 		
 		assertEquals(mock_crud.countObjectsBySpec(CrudUtils.allOf(String.class)).join(), intercepted_crud.countObjects().join());
 		assertTrue("Called the default interceptor", default_interceptor_called.isSet());
@@ -216,7 +216,7 @@ public class TestCrudServiceUtils {
 		// Check it behaves normally with nothing inserted (+chaining)
 		
 		final ReadOnlyCrudService<String> ro_crud = new ReadOnlyCrudService<>(mock_crud);		
-		ICrudService<String> intercepted_ro_crud = CrudServiceUtils.intercept(String.class, ro_crud, Optional.empty(), Collections.emptyMap(), Optional.empty());
+		ICrudService<String> intercepted_ro_crud = CrudServiceUtils.intercept(String.class, ro_crud, Optional.empty(), Optional.empty(), Collections.emptyMap(), Optional.empty());
 		test_readOnly(intercepted_ro_crud, mock_crud);
 
 		// Check read-only-ness is preserved:
