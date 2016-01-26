@@ -1544,6 +1544,8 @@ public class TestAnalyticsContext {
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::full_name, is_test ? "/aleph2_testing/useriid/test/me" : "/test/me")
 				.with(DataBucketBean::owner_id, "me")
+				.with(DataBucketBean::external_emit_paths, Arrays.asList("/test/s**", "/test/analytics/no_input", "/test/noperms/stream", "/test/notpresent/stream"))
+				// (include the noperms, will still fail)
 			.done().get();		
 		
 		test_context.setBucket(my_bucket);
@@ -1578,7 +1580,21 @@ public class TestAnalyticsContext {
 		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_no_self_input, true).join();
 		mock_security.setUserMockRole("me", analytic_bucket_no_self_input.full_name(), ISecurityService.ACTION_READ_WRITE, true);
 		
-		// 4) Bucket that we don't have write permission for
+		// 4a) Bucket that isn't in the perm list
+
+		final DataBucketBean analytic_bucket_not_in_perm_list = 
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::full_name, "/test/analytics/no_input/not_in_perm_list")
+					.with(DataBucketBean::analytic_thread,
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::jobs, Arrays.asList(job))
+							.done().get()
+							)
+				.done().get();
+		test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(analytic_bucket_not_in_perm_list, true).join();
+		mock_security.setUserMockRole("me", analytic_bucket_no_self_input.full_name(), ISecurityService.ACTION_READ_WRITE, true);
+		
+		// 4b) Bucket that we don't have write permission for
 		
 		final DataBucketBean stream_bucket_no_perms = 
 				BeanTemplateUtils.build(DataBucketBean.class)
@@ -1652,7 +1668,25 @@ public class TestAnalyticsContext {
 			
 		}
 		
-		// 4) Bucket that we don't have write permission for
+		// 4a) bucket that we have perms for but not declared
+		
+		{
+			Validation<BasicMessageBean, JsonNode> ret_val_1 =
+					test_context.emitObject(Optional.of(analytic_bucket_not_in_perm_list), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream1\"}")), Optional.empty());
+
+			final String listen_topic = test_context._distributed_services.generateTopicName(analytic_bucket_not_in_perm_list.full_name(), Optional.empty());
+			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			
+			// Will fail because nobody has write perms
+			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());
+			
+			// check failure is cached though
+			assertTrue("Not cached: " + test_context._mutable_state.external_buckets, test_context._mutable_state.external_buckets.containsKey(analytic_bucket_not_in_perm_list.full_name()));
+			assertEquals(null, test_context._mutable_state.external_buckets.get(analytic_bucket_not_in_perm_list.full_name()).right().value());			
+		}
+		
+		
+		// 4b) Bucket that we don't have write permission for
 		{
 			Validation<BasicMessageBean, JsonNode> ret_val_1 =
 					test_context.emitObject(Optional.of(stream_bucket_no_perms), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream1\"}")), Optional.empty());

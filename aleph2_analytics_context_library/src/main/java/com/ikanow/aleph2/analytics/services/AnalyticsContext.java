@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1290,17 +1291,32 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			final boolean is_test_bucket = BucketUtils.isTestBucket(_mutable_state.bucket.get());
 			
 			final Either<Either<IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String> element = 
-					_mutable_state.external_buckets.computeIfAbsent(external_bucket.full_name(), s -> getNewExternalEndpoint(s));
+					_mutable_state.external_buckets.computeIfAbsent(external_bucket.full_name(), 
+							s -> {
+								// Check this is supported:
+								final boolean matches_glob = 
+										Optionals.of(() -> _mutable_state.bucket.get().external_emit_paths()).orElse(Collections.emptyList())
+										.stream()
+										.map(p -> FileSystems.getDefault().getPathMatcher("glob:" + p))
+										.anyMatch(matcher -> matcher.matches(FileSystems.getDefault().getPath(s)))
+										;
+							
+								return matches_glob
+										? getNewExternalEndpoint(s)
+										: Either.right(null)
+										;
+							});
 			
 			return element.<Validation<BasicMessageBean, JsonNode>>either(
 					e -> e.either(batch -> {
-						if (!is_test_bucket) batch.storeObject(obj_json);
-						return Validation.success(obj_json);
-					}, 
-					slow -> {
-						if (!is_test_bucket) slow.storeObject(obj_json);
-						return Validation.success(obj_json);
-					})
+							if (!is_test_bucket) batch.storeObject(obj_json);
+							return Validation.success(obj_json);
+						}, 
+						slow -> {
+							if (!is_test_bucket) slow.storeObject(obj_json);
+							return Validation.success(obj_json);
+						}
+					)
 					,
 					topic -> {
 						if (null == topic) { // this hack means not present

@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
@@ -265,6 +266,20 @@ public class DataBucketBean implements Serializable {
 	 */
 	public AnalyticThreadBean analytic_thread() { return analytic_thread; }
 	private AnalyticThreadBean analytic_thread;
+	
+	////////////////////////////////////////
+	
+	// Joint analytics/enrichment metadata 
+	
+	/** Users must declare up front which output paths to which they will allow external emitting (glob format, ie * and ** supported)
+	 *  This helps with avoiding inadvertent mistakes and also means that graphs of bucket interactions can be generated more accurately
+	 *  If you really want to spray externalEmits everywhere, you can always set "/**" 
+	 * @return
+	 */
+	public List<String> external_emit_paths() { return Optional.ofNullable(external_emit_paths).map(l -> Collections.unmodifiableList(l)).orElse(Collections.emptyList()); }
+	
+	private List<String> external_emit_paths;
+	
 	
 	////////////////////////////////////////
 	
