@@ -91,8 +91,8 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkWritePermission(final DataBucketBean bucket) {
-			//TODO (ALEPH-41): implement this
-			return false;
+			//TODO (ALEPH-41): this needs some test coverage
+			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ_WRITE));
 		}
 		
 		/** Checks the bucket path for read permission
@@ -100,7 +100,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final String bucket_path) {
-			return _security_service.isPermitted(subject, bucket_path);
+			return checkReadPermission(BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, bucket_path).done().get());
 		}
 		
 		/**Checks the bucket for read permission
@@ -108,7 +108,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final DataBucketBean bucket) {
-			return checkReadPermission(bucket.full_name());
+			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ));
 		}
 		
 		/* (non-Javadoc)

@@ -163,7 +163,7 @@ public class MockSecurityService implements ISecurityService {
 	 * @param role
 	 * @param permission
 	 */
-	public void setUserMockRole(String user_id, String asset, String action, boolean permission) {
+	public void setUserMockRole(String user_id, String asset, String action, boolean permission) {		
 		_test_role_map.put(user_id + ":" + asset + ":" + action, permission);
 	}
 	
@@ -213,8 +213,6 @@ public class MockSecurityService implements ISecurityService {
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission,
 			Optional<String> oAction) {
 		
-		loginAsSystem();
-		
 		return Patterns.match(assetOrPermission).<List<String>>andReturn()
 			.when(DataBucketBean.class, b -> Arrays.asList(b._id(), b.full_name()))
 			.when(SharedLibraryBean.class, s -> Arrays.asList(s._id(), s.path_name()))
@@ -234,8 +232,6 @@ public class MockSecurityService implements ISecurityService {
 	@Override
 	public boolean hasUserRole(Optional<String> userID, String role) {
 		
-		loginAsSystem();
-		
 		return _mock_role_map.get().getOrDefault(role, false);
 	}
 
@@ -244,8 +240,8 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public ISubject getUserContext(String user_id) {
-		// TODO Auto-generated method stub
-		return null;
+		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
+		return new MockSubject();
 	}
 
 	/* (non-Javadoc)

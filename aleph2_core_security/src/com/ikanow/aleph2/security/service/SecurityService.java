@@ -147,12 +147,31 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	
 	@Override
 	public boolean isPermitted(ISubject subject, String permission) {
-		boolean ret = false;
-		if(subject!=null)
-		{
-			ret = ((Subject)subject.getSubject()).isPermitted(permission);
+		return ((Subject)subject.getSubject()).isPermitted(permission);
+	}
+	
+	@Override
+	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
+		ISubject subject = null;
+		try {
+			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
+			return isUserPermitted(subject, assetOrPermission, action);
 		}
-		return ret;
+		finally {
+			if (null != subject) this.invalidateUserContext(subject);
+		}
+	}
+
+	@Override
+	public boolean hasUserRole(Optional<String> userID, String role) {
+		ISubject subject = null;
+		try {
+			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
+			return hasUserRole(subject, role);
+		}
+		finally {
+			if (null != subject) this.invalidateUserContext(subject);
+		}
 	}
 	
 	/////////////////////////////////////////////////////////////////////////////
@@ -362,46 +381,5 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-	//TODO: ->protected (/remove)
-	@Override
-	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
-		boolean permitted = false;
-		ISubject currentSubject = null;
-		if (userID.isPresent() && tlCurrentSubject.get() != null) {
-			currentSubject = tlCurrentSubject.get();
-			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
-		}
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
-		if (permissions != null && permissions.size() > 0) {
-			for (String permission : permissions) {
-				permitted = isPermitted(tlCurrentSubject.get(), permission);
-				if (permitted) {
-					break;
-				}
-			}
-		}
-
-		if (currentSubject != null) {
-			((Subject) currentSubject.getSubject()).releaseRunAs();
-		}
-		return permitted;
-	}
-
-	//TODO: ->protected (/remove)
-	@Override
-	public boolean hasUserRole(Optional<String> userID, String role) {
-		boolean permitted = false;
-		ISubject currentSubject = null;
-		if (userID.isPresent() && tlCurrentSubject.get() != null) {
-			currentSubject = tlCurrentSubject.get();
-			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
-		}
-		permitted = hasRole(tlCurrentSubject.get(),role);
-
-		if (currentSubject != null) {
-			((Subject) currentSubject.getSubject()).releaseRunAs();
-		}
-		return permitted;
-	}
 	
 }

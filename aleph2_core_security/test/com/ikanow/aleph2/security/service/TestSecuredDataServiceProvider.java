@@ -90,17 +90,17 @@ public class TestSecuredDataServiceProvider {
 		Mockito.when(dummy_management_db.readOnlyVersion()).thenReturn(dummy_management_db);
 		
 		_security_service = new MockSecurityService();		
-		_security_service.setGlobalMockRole("/test/allowed", true);
-		_security_service.setGlobalMockRole("/test/not_allowed", false);
-		_security_service.setGlobalMockRole("/test/missing", false);
-		_security_service.setGlobalMockRole("/fixed/1", true);
-		_security_service.setGlobalMockRole("/fixed/1b", true);
-		_security_service.setGlobalMockRole("/fixed/2", false);
-		_security_service.setGlobalMockRole("/multi/1", true);
-		_security_service.setGlobalMockRole("/multi/1b", true);
-		_security_service.setGlobalMockRole("/multi/only/disallowed", true);
-		_security_service.setGlobalMockRole("/multi/2", false);
-		_security_service.setGlobalMockRole("/allowed/1", true);
+		_security_service.setUserMockRole("*", "/test/allowed", "read", true);
+		_security_service.setUserMockRole("*", "/test/not_allowed", "read", false);
+		_security_service.setUserMockRole("*", "/test/missing", "read", false);
+		_security_service.setUserMockRole("*", "/fixed/1", "read", true);
+		_security_service.setUserMockRole("*", "/fixed/1b", "read", true);
+		_security_service.setUserMockRole("*", "/fixed/2", "read", false);
+		_security_service.setUserMockRole("*", "/multi/1", "read", true);
+		_security_service.setUserMockRole("*", "/multi/1b", "read", true);
+		_security_service.setUserMockRole("*", "/multi/only/disallowed", "read", true);
+		_security_service.setUserMockRole("*", "/multi/2", "read", false);
+		_security_service.setUserMockRole("*", "/allowed/1", "read", true);
 		
 		_service_context = new MockServiceContext();
 		_service_context.addService(ISecurityService.class, Optional.empty(), _security_service);
