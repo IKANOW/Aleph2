@@ -305,6 +305,57 @@ public class TestBucketPollFreqSingletonActor {
 		assertEquals("Actor should have received 2 poll request and accepted it", 2, TestActor_Accepter.num_accepted_messages);
 		
 	}
+	
+	/**
+	 * Tests poll finding a source that has its next_poll_time set but not poll_frequency set.
+	 * 
+	 * This can occur if someone uploads a bucket with a poll freq, it hits, then they remove it so its left w/ the freq
+	 * as a field.  The test should just remove the field and carry on with life.
+	 * @throws Exception 
+	 * 
+	 */
+	@Test
+	public void test_cleanup_removed_poll_freq() throws Exception {
+		// Setup: register an accepting actor to listen:
+		_logger.debug("ABOUT TO ADD A NEW ACTOR");		
+		insertActor(TestActor_Accepter.class);
+		assertEquals("No messages should be accepted yet", 0, TestActor_Accepter.num_accepted_messages);
+		
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketStatusBean> underlying_crud_status = (
+				ICrudService<DataBucketStatusBean>) this._core_mgmt_db.getDataBucketStatusStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();				
+		@SuppressWarnings("unchecked")
+		final ICrudService<DataBucketBean> underlying_crud = (
+				ICrudService<DataBucketBean>) this._core_mgmt_db.getDataBucketStore().getUnderlyingPlatformDriver(ICrudService.class, Optional.empty()).get();
+		underlying_crud.deleteDatastore().get();
+		underlying_crud_status.deleteDatastore().get();
+		assertEquals(0, underlying_crud.countObjects().get().intValue());
+		assertEquals(0, underlying_crud_status.countObjects().get().intValue());	
+				
+		//create another that doesn't have a poll frequency
+		final DataBucketBean bucket_no_poll = createBucket(null);
+		
+		//put it in the datastore with a next_poll_date	
+		storeBucketAndStatus(bucket_no_poll, true, Optional.of(new Date()), underlying_crud_status, underlying_crud);
+		final DataBucketStatusBean bucket_no_poll_status = underlying_crud_status.getObjectById(bucket_no_poll._id()).get().get();
+		
+		//verify next_poll_date is set so we know the poll should hit
+		assertNotNull(bucket_no_poll_status.next_poll_date());
+		
+		//actor checks every second, give it long enough to hit a cycle
+		for (int i = 0; i < 10; ++i) {
+			Thread.sleep(500L);
+		}
+		
+		//get the (hopefully) updated bucket		
+		final DataBucketStatusBean bucket_no_poll_updated = underlying_crud_status.getObjectById(bucket_no_poll._id()).get().get();
+		
+		assertNull("poll should have removed next_poll_date of bucket without poll_freq", bucket_no_poll_updated.next_poll_date());
+//		assertTrue("Poll never time should not have been set", bucket_no_poll_updated.next_poll_date() == null );
+		
+		//2. tries to send out poll messsage	
+		assertEquals("Actor should have received 1 poll request and accepted it", 1, TestActor_Accepter.num_accepted_messages);
+	}
 
 	@After
 	public void cleanupTest() {
