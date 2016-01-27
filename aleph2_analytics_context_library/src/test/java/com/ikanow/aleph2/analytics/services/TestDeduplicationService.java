@@ -294,7 +294,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("field_1"), f -> f);
 			
-			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([\"test1a\", \"test2a\"],null))]})", res._1().toString());
+			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={field_1=[(any_of,([test1a, test2a],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
 			assertEquals(2, res._2().size());
 			assertEquals(Either.left("field_1"), res._3());
@@ -304,7 +304,7 @@ public class TestDeduplicationService {
 			final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> res =
 					DeduplicationService.getDedupQuery(batch.stream(), Arrays.asList("nested.nested_1"), f -> f);
 			
-			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([\"nested1\", \"nested2\"],null))]})", res._1().toString());
+			assertEquals("(SingleQueryComponent: limit=2147483647 sort=(none) op=all_of element=(none) extra={nested.nested_1=[(any_of,([nested1, nested2],null))]})", res._1().toString());
 			//_2 is adequately tested by test_extractKeyOrKeys 
 			assertEquals(2, res._2().size());
 			assertEquals(Either.left("nested.nested_1"), res._3());

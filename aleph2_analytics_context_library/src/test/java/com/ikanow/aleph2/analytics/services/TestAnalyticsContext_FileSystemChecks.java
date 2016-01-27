@@ -186,6 +186,7 @@ public class TestAnalyticsContext_FileSystemChecks {
 				BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::full_name, is_test ? "/aleph2_testing/useriid/test/me" : "/test/me")
 				.with(DataBucketBean::owner_id, "me")
+				.with(DataBucketBean::external_emit_paths, Arrays.asList("/test/analytics/*"))
 			.done().get();		
 		
 		test_context.setBucket(my_bucket);
