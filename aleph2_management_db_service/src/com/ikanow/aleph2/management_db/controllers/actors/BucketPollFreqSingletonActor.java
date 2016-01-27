@@ -46,6 +46,7 @@ import com.ikanow.aleph2.management_db.data_model.BucketActionMessage.PollFreqBu
 import com.ikanow.aleph2.management_db.data_model.BucketActionReplyMessage.BucketActionCollectedRepliesMessage;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
+import fj.data.Validation;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
@@ -151,13 +152,32 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		}
 		//update this buckets with a new next_date		
 		//TODO handle validation failure (shouldn't happen if poll date was already set? (i.e. instead of calling .success())
-		final Date next_poll_date = TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date())).success();
-		_logger.debug("Setting next poll time to: " + next_poll_date.toString());
-		final QueryComponent<DataBucketStatusBean> expired_bucket_status = 
-				CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, bucket._id());
-		final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
-				.set(DataBucketStatusBean::next_poll_date, next_poll_date);
-		return _bucket_status_crud.get().updateObjectBySpec(expired_bucket_status, Optional.of(false), update);
+		return Optional.ofNullable(bucket.poll_frequency())
+				.map(p_f -> TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date()))) //success pass back poll_freq
+				.orElse(Validation.fail("next_poll_time does not exist, probably was removed when bucket was republished")) //poll_freq doesn't exist, fail validation
+				.validation(f->{
+					//didn't have a poll_freq, clean up and kick out
+					_logger.debug(f + " unsetting next_poll_date so we don't call this again");
+					final QueryComponent<DataBucketStatusBean> expired_bucket_status = 
+							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, bucket._id());
+					final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
+							.unset(DataBucketStatusBean::next_poll_date);
+					return _bucket_status_crud.get().updateObjectBySpec(expired_bucket_status, Optional.of(false), update);
+//					CompletableFuture<Boolean> fail_future = new CompletableFuture<Boolean>();
+//					fail_future.complete(false);
+//					return fail_future;
+				}, 
+				next_poll_date->{
+					//success, update next_poll_date and continue
+					_logger.debug("Setting next poll time to: " + next_poll_date.toString());
+					final QueryComponent<DataBucketStatusBean> expired_bucket_status = 
+							CrudUtils.allOf(DataBucketStatusBean.class).when(DataBucketStatusBean::_id, bucket._id());
+					final UpdateComponent<DataBucketStatusBean> update = CrudUtils.update(DataBucketStatusBean.class)
+							.set(DataBucketStatusBean::next_poll_date, next_poll_date);
+					return _bucket_status_crud.get().updateObjectBySpec(expired_bucket_status, Optional.of(false), update);
+				});
+//		final Date next_poll_date = TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date())).success();
+		
 	}
 
 	/* (non-Javadoc)
