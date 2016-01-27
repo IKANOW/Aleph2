@@ -118,11 +118,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 
 	protected static final Logger _logger = LogManager.getLogger();	
 
-	//TODO: lol at me, I create the data services based on the output config
-	// and then use them for input stuff via getInputService
-	// need to have a separate input set
-	// and then initialize those lazily as required
-	
 	////////////////////////////////////////////////////////////////
 	
 	// CONSTRUCTION
@@ -148,6 +143,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final ConcurrentHashMap<String, Either<Either<IDataWriteService.IBatchSubservice<JsonNode>, IDataWriteService<JsonNode>>, String>> external_buckets = new ConcurrentHashMap<>();
 		final HashMap<String, AnalyticsContext> sub_buckets = new HashMap<>();
 		final Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> extra_auto_context_libs = new HashSet<>();
+		boolean has_unflushed_data = false; //(not intended to be fully thread safe, just better than nothing if we shutdown mid write)
 	};	
 	protected transient final MutableState _mutable_state = new MutableState(); 
 	
@@ -336,6 +332,13 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	@Override
 	public void initializeNewContext(final String signature) {
 		_mutable_serializable_signature = signature;
+		
+		// Register myself a shutdown hook:
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			if (_mutable_state.has_unflushed_data) {
+				this.flushBatchOutput(Optional.empty(), _mutable_state.job.get());
+			}			
+		}));
 		
 		try {
 			// Inject dependencies
@@ -1242,27 +1245,34 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		}
 		
 		if (_batch_index_service.isPresent()) {
+			_mutable_state.has_unflushed_data = true;
 			_batch_index_service.get().storeObject(obj_json);
 		}
 		else if (_crud_index_service.isPresent()){ // (super slow)
+			_mutable_state.has_unflushed_data = true;
 			_crud_index_service.get().storeObject(obj_json);
 		}
 		if (_batch_doc_service.isPresent()) {
+			_mutable_state.has_unflushed_data = true;
 			_batch_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		else if (_crud_doc_service.isPresent()){ // (super slow)
+			_mutable_state.has_unflushed_data = true;
 			_crud_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
 		}
 		if (_batch_storage_service.isPresent()) {
+			_mutable_state.has_unflushed_data = true;
 			_batch_storage_service.get().storeObject(obj_json);
 		}
 		else if (_crud_storage_service.isPresent()){ // (super slow)
+			_mutable_state.has_unflushed_data = true;
 			_crud_storage_service.get().storeObject(obj_json);
 		}
 		
 		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
 		if (_distributed_services.doesTopicExist(topic)) {
 			// (ie someone is listening in on our output data, so duplicate it for their benefit)
+			_mutable_state.has_unflushed_data = true;
 			_distributed_services.produce(topic, obj_json.toString());
 		}
 		//(else nothing to do)
@@ -1309,11 +1319,17 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			
 			return element.<Validation<BasicMessageBean, JsonNode>>either(
 					e -> e.either(batch -> {
-							if (!is_test_bucket) batch.storeObject(obj_json);
+							if (!is_test_bucket) {
+								_mutable_state.has_unflushed_data = true;
+								batch.storeObject(obj_json);
+							}
 							return Validation.success(obj_json);
 						}, 
 						slow -> {
-							if (!is_test_bucket) slow.storeObject(obj_json);
+							if (!is_test_bucket) {
+								_mutable_state.has_unflushed_data = true;
+								slow.storeObject(obj_json);
+							}
 							return Validation.success(obj_json);
 						}
 					)
@@ -1324,7 +1340,10 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						}
 						else if (_distributed_services.doesTopicExist(topic)) {
 							// (ie someone is listening in on our output data, so duplicate it for their benefit)
-							if (!is_test_bucket) _distributed_services.produce(topic, obj_json.toString());
+							if (!is_test_bucket) {
+								_mutable_state.has_unflushed_data = true;
+								_distributed_services.produce(topic, obj_json.toString());
+							}
 							return Validation.success(obj_json);
 						}
 						else {
@@ -1445,7 +1464,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	 */
 	@Override
 	public CompletableFuture<?> flushBatchOutput(
-			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job)
+	{
+		_mutable_state.has_unflushed_data = false; 
 		
 		// (this can safely be run for multiple jobs since it only applies to the outputter we're using in this process anyway, plus multiple
 		// flushes don't have any functional side effects)
