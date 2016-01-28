@@ -15,13 +15,16 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.junit.Test;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 
@@ -53,5 +56,24 @@ public class TestAnalyticsUtils {
 		assertEquals("service_name=String options=", test.describe());
 	}
 	
+	public static class TestClass {
+		TestClass(String s) { _s = s; }
+		String _s;
+	}
 	
+	public interface MyFunction extends Function<String, TestClass> {} 
+	
+	
+	@Test
+	public void test_functionInjection() {
+		
+		// Check if function type getting works
+		
+		{
+			final Optional<Tuple2<Class<?>, Class<?>>> ret_val = AnalyticsUtils.getFunctionTypes(MyFunction.class);
+			assertTrue(ret_val.isPresent());
+			assertEquals(String.class, ret_val.get()._1());
+			assertEquals(TestClass.class, ret_val.get()._2());
+		}
+	}
 }

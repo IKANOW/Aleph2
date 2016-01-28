@@ -19,6 +19,11 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
+import java.lang.reflect.Type;
+import java.util.Optional;
+import java.util.function.Function;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 
@@ -53,5 +58,25 @@ public class AnalyticsUtils {
 						return m.invoke(implementation, args);
 					}				
 		});
+	}
+	
+	/** Utility function to retrieve the types of a function
+	 *  The idea for this is that users will be able to injection functions into AnalyticsContexts, but it requires more changes
+	 *  to injectionImplementation because you can't cast from a lambda to a extension of a functional interface
+	 * @param function_clazz
+	 * @return
+	 */
+	public static <F extends Function<?, ?>> Optional<Tuple2<Class<?>, Class<?>>> getFunctionTypes(final Class<F> function_clazz) {
+	    final Type super_type = function_clazz.getGenericInterfaces()[0];
+
+	    if (super_type instanceof ParameterizedType) {
+	        ParameterizedType parameterized_type = (ParameterizedType) super_type;
+	        return Optional.of(
+	        		Tuples._2T(
+	        				(Class<?>) parameterized_type.getActualTypeArguments()[0],
+	        				(Class<?>) parameterized_type.getActualTypeArguments()[1]
+	        				));	        				
+	    }
+	    else return Optional.empty();
 	}
 }
