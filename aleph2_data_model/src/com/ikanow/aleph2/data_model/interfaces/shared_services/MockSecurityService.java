@@ -212,6 +212,7 @@ public class MockSecurityService implements ISecurityService {
 	@Override
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission,
 			Optional<String> oAction) {
+		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map)); //(equivalent to a login)
 		
 		return Patterns.match(assetOrPermission).<List<String>>andReturn()
 			.when(DataBucketBean.class, b -> Arrays.asList(b._id(), b.full_name()))
@@ -231,6 +232,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public boolean hasUserRole(Optional<String> userID, String role) {
+		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map)); //(equivalent to a login)
 		
 		return _mock_role_map.get().getOrDefault(role, false);
 	}
