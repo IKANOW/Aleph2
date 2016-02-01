@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.core.shared.utils;
 
 import java.net.URL;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -91,10 +92,21 @@ public class ClassloaderUtils {
 			
 			final JclObjectFactory factory = JclObjectFactory.getInstance();
 		
-			@SuppressWarnings("unchecked")
-			final R ret_val = (R) factory.create(jcl, implementation_classname);
+			@SuppressWarnings("unchecked")		
+			final R ret_val = Lambdas.<R>get(Lambdas.wrap_u(() -> {
+				for (int i = 0; i < 1000; ++i) {
+					try {
+						return (R) factory.create(jcl, implementation_classname);
+					}
+					catch (ConcurrentModificationException e) {
+						Thread.sleep(1L);
+					}
+				}
+				return (R) null;
+			}));
+			
 			if (null == ret_val) {
-				throw new RuntimeException("Unknown error");
+				throw new RuntimeException("Unknown error (possibly concurrent modification exception in 2.4)");
 			}
 			else if (!interface_clazz.isAssignableFrom(ret_val.getClass())) {
 				return Validation.fail(SharedErrorUtils.buildErrorMessage(handler_for_errors, 

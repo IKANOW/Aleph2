@@ -161,7 +161,7 @@ public class TestClassloaderUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		final String expected_err_fragment = "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: JclException]";
+		final String expected_err_fragment = "Error loading class com.ikanow.aleph2.test.example.ExampleHarvestTechnology: [org.xeustechnologies.jcl.exception.JclException: java.lang.ClassNotFoundException: com.ikanow.aleph2.test.example.ExampleHarvestTechnology: RuntimeException]";
 		assertTrue("Failed error message, should contain: " + expected_err_fragment + " vs " + error.message(), 
 				error.message().contains(expected_err_fragment));
 		assertEquals(error.message_code(), null);

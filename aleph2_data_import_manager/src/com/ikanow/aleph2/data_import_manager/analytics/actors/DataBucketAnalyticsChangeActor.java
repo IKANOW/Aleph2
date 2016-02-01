@@ -1393,7 +1393,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		catch (Throwable e) { // (trying to use Validation to avoid this, but just in case...)
 			return CompletableFuture.completedFuture(
 					new BucketActionHandlerMessage(source, SharedErrorUtils.buildErrorMessage(source, m,
-						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.success().getClass()))));
+						ErrorUtils.getLongForm(SharedErrorUtils.ERROR_LOADING_CLASS, e, err_or_tech_module.success()._1().getClass()))));
 		}		
 		finally {
 			Thread.currentThread().setContextClassLoader(saved_current_classloader);
