@@ -408,11 +408,11 @@ public class TestDeduplicationService {
 						.collect(Collectors.toList());
 		
 		
-		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().collect(Collectors.toList()), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().collect(Collectors.toList()), Optional.of(test2), _mapper.createObjectNode());
 		
 		assertEquals(0L, _called_batch.get());
 
-		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().collect(Collectors.toList()), test2, _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().collect(Collectors.toList()), Optional.of(test2), _mapper.createObjectNode());
 		
 		assertEquals(3L, _called_batch.get());
 	}
