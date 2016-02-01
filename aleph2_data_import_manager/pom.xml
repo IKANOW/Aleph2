@@ -168,12 +168,6 @@
   		<version>${aleph2.hadoop}</version>
   		<scope>provided</scope>
   	</dependency>
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_hadoop_dependencies</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>${aleph2.scope}</scope>
-  	</dependency>
   </dependencies>
   <profiles>
 	<profile>

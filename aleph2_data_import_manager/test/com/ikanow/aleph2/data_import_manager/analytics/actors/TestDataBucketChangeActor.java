@@ -1549,6 +1549,10 @@ public class TestDataBucketChangeActor {
 					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
 						
 			Thread.sleep(100L);
+			
+			com.ikanow.aleph2.data_model.utils.Patterns.match(test.get()).andAct()
+				.when(BucketActionReplyMessage.BucketActionHandlerMessage.class, msg -> System.out.println("WRONG MESSAGE TYPE, ERR = " + msg.reply().message()));			
+			
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
 			assertEquals(0, TestActor_Counter.job_counter.get());
 			assertEquals(0, TestActor_Counter.msg_counter.get());
