@@ -289,6 +289,7 @@ public class DataSchemaBean implements Serializable {
 				final List<String> deduplication_fields,
 				final List<String> deduplication_contexts,
 				final List<EnrichmentControlMetadataBean> custom_deduplication_configs,
+				final Boolean custom_finalize_all_objects,
 				final Map<String, Object> technology_override_schema)
 		{
 			this.enabled = enabled;
@@ -298,6 +299,7 @@ public class DataSchemaBean implements Serializable {
 			this.deduplication_fields = deduplication_fields;
 			this.deduplication_contexts = deduplication_contexts;
 			this.custom_deduplication_configs = custom_deduplication_configs;
+			this.custom_finalize_all_objects = custom_finalize_all_objects;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -342,12 +344,18 @@ public class DataSchemaBean implements Serializable {
 		public List<String> deduplication_contexts() {
 			return deduplication_contexts;
 		}
-		/** For "custom" deduplication policy, this bean determines the 
+		/** For "custom" deduplication policy, this bean determines the processing to occur (currently only the first element is processed)
 		 * @return
 		 */
 		public List<EnrichmentControlMetadataBean> custom_deduplication_configs() {
 			return custom_deduplication_configs;
 		}		
+		/** If true (default: false) then all objects are run through the custom dedup (ie acting as a "finalize" step before emitting when there is no matching dedup)
+		 * @return whether to finalize all objects, even if they didn't match a dedup
+		 */
+		public Boolean custom_finalize_all_objects() {
+			return custom_finalize_all_objects;
+		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -362,6 +370,7 @@ public class DataSchemaBean implements Serializable {
 		private List<String> deduplication_fields;
 		private List<String> deduplication_contexts;
 		private List<EnrichmentControlMetadataBean> custom_deduplication_configs;
+		private Boolean custom_finalize_all_objects;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service

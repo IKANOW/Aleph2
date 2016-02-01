@@ -38,6 +38,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.ikanow.aleph2.analytics.data_model.DedupConfigBean;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -125,7 +126,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	{
 		_context.set(context);
 
-		final DocumentSchemaBean doc_schema = bucket.data_schema().document_schema(); //(exists by construction)
+		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(dedup_control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
+		
+		final DocumentSchemaBean doc_schema = Optional.ofNullable(dedup_config.doc_schema_override()).orElse(bucket.data_schema().document_schema()); //(exists by construction)
 		_doc_schema.set(doc_schema);
 		
 		final String timestamp_field = Optionals.of(() -> bucket.data_schema().temporal_schema().time_field())
@@ -277,10 +280,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 							handleDuplicateRecord(policy, _context.get(), _custom_handler.optional(), _timestamp_field.get(), records, ret_obj, maybe_key.get(), mutable_obj_map));
 					});
 		
-		mutable_obj_map.values().stream()
-			.map(t -> t.peekLast())
-			.forEach(t -> _context.get().emitImmutableObject(t._1(), t._2().getJson(), Optional.of(t._3()), Optional.empty(), Optional.empty()))
-			;
+		if (Optional.ofNullable(_doc_schema.get().custom_finalize_all_objects()).orElse(false)) {
+			mutable_obj_map.entrySet().stream()
+				.forEach(kv -> handleCustomDeduplication(_custom_handler.optional(), kv.getValue(), Optional.empty(), kv.getKey()))
+				;			
+		}
+		else { // Just emit the last element of each grouped object set
+			mutable_obj_map.values().stream()
+				.map(t -> t.peekLast())
+				.forEach(t -> _context.get().emitImmutableObject(t._1(), t._2().getJson(), Optional.of(t._3()), Optional.empty(), Optional.empty()))
+				;
+		}
 	}
 
 	/** The heart of the dedup logic
@@ -324,7 +334,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
 						mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)
-						handleCustomDeduplication(custom_handler, new_records, old_record, key);
+						handleCustomDeduplication(custom_handler, new_records, Optional.of(old_record), key);
 					}
 					else {
 						mutable_obj_map.remove(key); //(drop new record)
@@ -332,7 +342,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				})
 				.otherwise(__ -> {
 					mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)		
-					handleCustomDeduplication(custom_handler, new_records, old_record, key);
+					handleCustomDeduplication(custom_handler, new_records, Optional.of(old_record), key);
 				});
 	}
 	
@@ -366,7 +376,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static void handleCustomDeduplication(
 			final Optional<IEnrichmentBatchModule> custom_handler,
-			final List<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final JsonNode old_record, final JsonNode key)
+			final List<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final Optional<JsonNode> maybe_old_record, final JsonNode key)
 	{
 		custom_handler
 			.map(base_module -> base_module.cloneForNewGrouping())
@@ -374,10 +384,16 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				final Stream<Tuple2<Long, IBatchRecord>> dedup_stream =
 						Stream.concat(
 								new_records.stream().map(t3 -> Tuples._2T(t3._1(), t3._2())),
-								Stream.of(Tuples._2T(-1L, new MyBatchRecord(old_record)))
+								maybe_old_record.<Stream<Tuple2<Long, IBatchRecord>>>
+									map(old_record -> Stream.of(Tuples._2T(-1L, (IBatchRecord)new MyBatchRecord(old_record)))).orElse(Stream.empty())
 								);
 				
-				new_module.onObjectBatch(dedup_stream, Optional.of(1 + new_records.size()), Optional.of(key));
+				final int batch_size = new_records.size();
+				
+				new_module.onObjectBatch(dedup_stream, 
+						maybe_old_record.map(__ -> 1 + batch_size), // (ie leave batch size blank if there's no dedup) 
+						Optional.of(key));
+				
 				new_module.onStageComplete(false);
 			});		
 	}
