@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 
 import org.xeustechnologies.jcl.JarClassLoader;
 import org.xeustechnologies.jcl.JclObjectFactory;
+import org.xeustechnologies.jcl.exception.JclException;
 
 import scala.Tuple2;
 
@@ -97,6 +98,12 @@ public class ClassloaderUtils {
 				for (int i = 0; i < 1000; ++i) {
 					try {
 						return (R) factory.create(jcl, implementation_classname);
+					}
+					catch (JclException e) { // Jcl but its cause is concurrent modification
+						if (Optional.ofNullable(e.getCause()).map(ee -> ee.getCause()).filter(ee -> ee instanceof ConcurrentModificationException).isPresent()) {
+							Thread.sleep(1L);
+						}
+						else throw e;
 					}
 					catch (ConcurrentModificationException e) {
 						Thread.sleep(1L);
