@@ -21,9 +21,11 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.junit.Test;
+import org.xeustechnologies.jcl.exception.JclException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
 import java.util.Optional;
 
@@ -129,6 +131,33 @@ public class TestClassloaderUtils {
 		catch (ClassNotFoundException e) {
 			//expected!
 		}
+	}
+	
+	@Test
+	public void test_exceptionHandling() throws UnsupportedFileSystemException, InterruptedException {
+		
+		{
+			final String ret_val = ClassloaderUtils.exceptionWrapper(() -> "test");
+			assertEquals("test", ret_val);
+		}
+		{
+			final String ret_val = ClassloaderUtils.exceptionWrapper(() -> { throw new JclException(new ConcurrentModificationException()); });
+			assertEquals(null, ret_val);
+		}
+		{
+			final String ret_val = ClassloaderUtils.exceptionWrapper(() -> { throw new ConcurrentModificationException(); });
+			assertEquals(null, ret_val);
+		}
+		try {
+			ClassloaderUtils.exceptionWrapper(() -> { throw new RuntimeException("fail"); });
+			fail("Should have thrown");
+		}
+		catch (Exception e) {}
+		try {
+			ClassloaderUtils.exceptionWrapper(() -> { throw new JclException(new RuntimeException("fail")); });
+			fail("Should have thrown");
+		}
+		catch (Exception e) {}
 	}
 	
 	@Test

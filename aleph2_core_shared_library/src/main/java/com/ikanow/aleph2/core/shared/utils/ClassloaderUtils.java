@@ -20,6 +20,7 @@ import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -94,23 +95,7 @@ public class ClassloaderUtils {
 			final JclObjectFactory factory = JclObjectFactory.getInstance();
 		
 			@SuppressWarnings("unchecked")		
-			final R ret_val = Lambdas.<R>get(Lambdas.wrap_u(() -> {
-				for (int i = 0; i < 1000; ++i) {
-					try {
-						return (R) factory.create(jcl, implementation_classname);
-					}
-					catch (JclException e) { // Jcl but its cause is concurrent modification
-						if (Optional.ofNullable(e.getCause()).map(ee -> ee.getCause()).filter(ee -> ee instanceof ConcurrentModificationException).isPresent()) {
-							Thread.sleep(1L);
-						}
-						else throw e;
-					}
-					catch (ConcurrentModificationException e) {
-						Thread.sleep(1L);
-					}
-				}
-				return (R) null;
-			}));
+			final R ret_val = exceptionWrapper(() -> (R) factory.create(jcl, implementation_classname));
 			
 			if (null == ret_val) {
 				throw new RuntimeException("Unknown error (possibly concurrent modification exception in 2.4)");
@@ -130,6 +115,30 @@ public class ClassloaderUtils {
 							));
 		}
 	}	
+	
+	/** Workaround for JCL 2.4 bug (can't move to 2.7 because of other issues) 
+	 * @param supplier
+	 * @return
+	 */
+	protected static <R> R exceptionWrapper(Supplier<R> supplier) {
+		return Lambdas.<R>get(Lambdas.wrap_u(() -> {
+			for (int i = 0; i < 1000; ++i) {
+				try {
+					return supplier.get();
+				}
+				catch (JclException e) { // Jcl but its cause is concurrent modification
+					if (Optional.ofNullable(e.getCause()).filter(ee -> ee instanceof ConcurrentModificationException).isPresent()) {
+						Thread.sleep(1L);
+					}
+					else throw e;
+				}
+				catch (ConcurrentModificationException e) {
+					Thread.sleep(1L);
+				}
+			}
+			return (R) null;
+		}));		
+	}
 	
 	/** Returns a string that is used to access the object cache
 	 * @param primary_lib
