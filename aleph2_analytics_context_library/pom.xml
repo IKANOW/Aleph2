@@ -6,7 +6,7 @@
   <properties>
 	<aleph2.version>0.0.1-SNAPSHOT</aleph2.version>
 	<aleph2.scope>compile</aleph2.scope>
-	<aleph2.hadoop>2.6.0</aleph2.hadoop>
+	<aleph2.hadoop>2.7.1</aleph2.hadoop>
 	<!-- Overridden in test_depdendencies profile that is activated if skip tests is true -->
 	<maven.test.skip>true</maven.test.skip>
   </properties>
