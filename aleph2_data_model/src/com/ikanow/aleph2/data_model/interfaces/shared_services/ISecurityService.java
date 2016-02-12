@@ -31,18 +31,37 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
  *
  */
 public interface ISecurityService extends IUnderlyingService {
-		
-	public String IKANOW_SYSTEM_LOGIN = "IKANOW_SECURITY_LOGIN";
-	public String IKANOW_SYSTEM_PASSWORD = "IKANOW_SECURITY_PASSWORD";
 
+	/////////////////////////////////////////////////////////////////////////
+	
+	public final static String IKANOW_SYSTEM_LOGIN = "IKANOW_SECURITY_LOGIN";
+	public final static String IKANOW_SYSTEM_PASSWORD = "IKANOW_SECURITY_PASSWORD";
 
-	public static String ACTION_READ="read";
-	public static String ACTION_READ_WRITE="read,write";
-	public static String ACTION_WRITE="write";
-	public static String ACTION_WILDCARD="*";
+	public final static String ACTION_READ="read";
+	public final static String ACTION_READ_WRITE="read,write";
+	public final static String ACTION_WRITE="write";
+	public final static String ACTION_WILDCARD="*";
 
+	public final static String ROLE_ADMIN="admin";
+	
+	/////////////////////////////////////////////////////////////////////////
+	
+	// NEW API
+	
+	ISubject getUserContext(String user_id);
 
-	public static String ROLE_ADMIN="admin";
+	ISubject getUserContext(String user_id, String password);
+	
+	ISubject getSystemUserContext();
+	
+	void invalidateUserContext(ISubject subject);
+	
+	boolean isUserPermitted(ISubject user_token, Object assetOrPermission, Optional<String> action);
+
+	boolean hasUserRole(ISubject user_token, String role);
+	
+	/////////////////////////////////////////////////////////////////////////
+	
 	
 	public ISubject login(String principalName, Object credentials);
 
