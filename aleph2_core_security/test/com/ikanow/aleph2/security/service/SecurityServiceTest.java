@@ -44,6 +44,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -76,8 +77,7 @@ public class SecurityServiceTest {
 	protected IServiceContext _temp_service_context = null;
 	protected static IServiceContext _service_context = null;
 
-	//TODO: move this back to ISecService
-	protected SecurityService securityService = null;
+	protected ISecurityService securityService = null;
 	
 	protected String regularUserId = "user";
 
@@ -100,11 +100,7 @@ public class SecurityServiceTest {
 				app_injector.injectMembers(this);
 				_service_context = _temp_service_context;
 			}
-			this.securityService = (SecurityService)_service_context.getSecurityService();
-			
-			SecurityService.systemPassword = "admin123";
-			SecurityService.systemUsername = "admin";
-			
+			this.securityService = _service_context.getSecurityService();
 		} catch (Throwable e) {
 			logger.error(ErrorUtils.getLongForm(ErrorUtils.EXCEPTION_CAUGHT, e));
 
@@ -126,25 +122,12 @@ public class SecurityServiceTest {
 	}
 	
 	@Test
-	public void testRole_newAPI(){
-		ISubject subject = securityService.getSystemUserContext();
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.hasRole(subject,"admin"));
-	}
-	@Test
 	public void testRole(){
 		ISubject subject = loginAsAdmin();
         //test a typed permission (not instance-level)
 		assertEquals(true,securityService.hasRole(subject,"admin"));
 	}
 
-	@Test
-	public void testPermission_newAPI(){
-		ISubject subject = securityService.getUserContext("user");
-		String permission = "permission1";
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,permission));
-	}
 	@Test
 	public void testPermission(){
 		ISubject subject = loginAsRegularUser();
@@ -153,22 +136,6 @@ public class SecurityServiceTest {
 		assertEquals(true,securityService.isPermitted(subject,permission));
 	}
 
-	@Test
-	public void testRunAs_newAPI(){
-		// system community
-		String runAsPrincipal = "user";
-		String runAsRole = "user";
-		String runAsPersonalPermission = "permission1";
-		String runAsPersonalPermission_not = "NOT_permission1";
-
-		ISubject subject = securityService.getUserContext(runAsPrincipal);
-		assertEquals(true, subject.isAuthenticated());
-				
-		assertEquals(true,securityService.hasRole(subject,runAsRole));
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
-		assertEquals(false,securityService.isPermitted(subject,runAsPersonalPermission_not));
-	}
 	@Test
 	public void testRunAs(){
 		ISubject subject = loginAsTestUser();
@@ -292,13 +259,6 @@ public class SecurityServiceTest {
 		}
 	}
 
-	@Test
-	public void testRunAsDemoted_newAPI(){
-		ISubject subject = securityService.getUserContext(regularUserId);	
-		ISubject other_subject = securityService.getSystemUserContext();	
-		assertEquals(false,securityService.hasRole(subject,"admin"));
-		assertEquals(true,securityService.hasRole(other_subject,"admin"));
-	}
 	@Test
 	public void testRunAsDemoted(){
 		ISubject subject = loginAsAdmin();
@@ -539,47 +499,6 @@ public class SecurityServiceTest {
 		securityService.getUnderlyingPlatformDriver(this.getClass(), Optional.empty());				
 	}
 	
-	@Test 
-	public void testUserAccess_newAPI() throws Exception{
-		// test read access
-     	AuthorizationBean authBean = new AuthorizationBean("user");		
-     	MockSecuredCrudServiceBean mockedDelegate = mock(MockSecuredCrudServiceBean.class);
-		SingleQueryComponent<DataBucketBean> query = CrudUtils.allOf(DataBucketBean.class);
-
-		DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
-				.with(DataBucketBean::full_name, "/test/allowed")
-				.with(DataBucketBean::_id, "bucketId1")
-			.done().get();
-
-		IManagementCrudService<DataBucketBean> securedCrudService = securityService.secured(mockedDelegate, authBean);
-
-		CompletableFuture<Optional<DataBucketBean>> future = CompletableFuture.completedFuture(Optional.of(bucket));
-		ManagementFuture<Optional<DataBucketBean>> managedFuture =  FutureUtils.createManagementFuture(future);
-		when(mockedDelegate.getObjectBySpec(any())).thenReturn(managedFuture);
-		when(mockedDelegate.getObjectById(any())).thenReturn(managedFuture);
-
-		ManagementFuture<Optional<DataBucketBean>> f = securedCrudService.getObjectBySpec(query);
-		Optional<DataBucketBean> o = f.get();
-		DataBucketBean b = o.get();
-		assertNotNull(b);
-		
-		
-		// test read with a different user
-		ISubject subject1 = securityService.getUserContext("testUser");
-		ISubject subject2 = securityService.getUserContext("user");
-		
-		boolean permitted = securityService.isUserPermitted(subject1, bucket, Optional.of("read"));
-		assertFalse(permitted);
-		// test write with a user who has (only) read permissions
-		permitted = securityService.isUserPermitted(subject2, bucket, Optional.of("write"));
-		assertFalse(permitted);
-		// test read  by logging in as system but testing with userId permissions
-		assertTrue(securityService.isUserPermitted(subject2, bucket, Optional.of("read")));
-		assertFalse(securityService.isUserPermitted(subject1, bucket, Optional.of("read")));
-		assertFalse(securityService.isUserPermitted(subject1, "community:read:communityId1", Optional.empty()));
-		assertTrue(securityService.isUserPermitted(subject2, "community:read:communityId1", Optional.empty()));
-
-	}
 	@Test 
 	public void testUserAccess() throws Exception{
 		// test read access

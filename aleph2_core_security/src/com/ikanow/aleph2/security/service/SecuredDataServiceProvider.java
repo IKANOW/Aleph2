@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -44,8 +45,8 @@ import com.ikanow.aleph2.security.utils.ErrorUtils;
  */
 public class SecuredDataServiceProvider implements IDataServiceProvider {
 	protected final IDataServiceProvider _delegate;
-	protected final IServiceContext _service_context;
 	protected final AuthorizationBean _bean;
+	protected final IServiceContext _service_context;
 	
 	/** User ctor
 	 * @param service_context
@@ -63,11 +64,11 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 	 */
 	public static class SecuredDataService implements IGenericDataService {
 		protected final IGenericDataService _delegate;
+		protected final AuthorizationBean _bean;
 		protected final IServiceContext _service_context;
 		protected final ISecurityService _security_service;
 		protected final IManagementCrudService<DataBucketBean> _bucket_store;
 		protected final ISubject subject; // system user's subject
-		protected final AuthorizationBean _bean;
 
 		
 		/** User ctor
@@ -75,24 +76,26 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @param delegate
 		 * @param bean
 		 */
-		protected SecuredDataService(final IServiceContext service_context, final IGenericDataService delegate, final AuthorizationBean bean) {
+		public SecuredDataService(final IServiceContext service_context, final IGenericDataService delegate, final AuthorizationBean bean) {
 			_service_context = service_context;
 			_delegate = delegate;
+			_bean = bean;
 			_security_service = _service_context.getSecurityService();			
 			
-			_bucket_store = _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().secured(_service_context, bean);
+			_bucket_store = _service_context.getCoreManagementDbService().readOnlyVersion().getDataBucketStore().secured(_service_context, _bean);
 			
 			// Login:
-			_bean = bean;
-			this.subject = _security_service.getUserContext(bean.getPrincipalName());
+			this.subject = _security_service.loginAsSystem();			
+			_security_service.releaseRunAs(subject);		
+			_security_service.runAs(subject, Arrays.asList(_bean.getPrincipalName()));			
 		}
 		
 		/** Checks if the user has write permission on this bucket
 		 * @return
 		 */
 		public boolean checkWritePermission(final DataBucketBean bucket) {
-			//TODO (ALEPH-41): this needs some test coverage
-			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ_WRITE));
+			//TODO (ALEPH-41): implement this
+			return false;
 		}
 		
 		/** Checks the bucket path for read permission
@@ -100,7 +103,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final String bucket_path) {
-			return checkReadPermission(BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, bucket_path).done().get());
+			return _security_service.isPermitted(subject, bucket_path);
 		}
 		
 		/**Checks the bucket for read permission
@@ -108,7 +111,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final DataBucketBean bucket) {
-			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ));
+			return checkReadPermission(bucket.full_name());
 		}
 		
 		/* (non-Javadoc)

@@ -100,59 +100,13 @@ public class SampleSecurityService implements ISecurityService {
 
 	@Override
 	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> oAction) {
+		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean hasUserRole(Optional<String> userID, String role) {
+		// TODO Auto-generated method stub
 		return false;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String)
-	 */
-	@Override
-	public ISubject getUserContext(String user_id) {
-		return null;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String, java.lang.String)
-	 */
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		return null;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSystemUserAccessToken()
-	 */
-	@Override
-	public ISubject getSystemUserContext() {
-		return null;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#isUserPermitted(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.Object, java.util.Optional)
-	 */
-	@Override
-	public boolean isUserPermitted(ISubject user_token,
-			Object assetOrPermission, Optional<String> action) {
-		return false;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#hasUserRole(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.String)
-	 */
-	@Override
-	public boolean hasUserRole(ISubject user_token, String role) {
-		return false;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateUserContext(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject)
-	 */
-	@Override
-	public void invalidateUserContext(ISubject subject) {
 	}
 }

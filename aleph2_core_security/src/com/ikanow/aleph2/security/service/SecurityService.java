@@ -95,94 +95,12 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return Optional.empty();
 	}
 
-	/////////////////////////////////////////////////////////////////////////
-	
-	// NEW API
-	
-	@Override
-	public ISubject getUserContext(String user_id) {
-		ISubject root_subject = getUserContext(systemUsername, systemPassword);
-		((Subject)(root_subject.getSubject())).runAs(new SimplePrincipalCollection(user_id,getRealmName()));
-		return root_subject;
-	}
 
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		final Subject new_subject = new Subject.Builder().buildSubject();
-        final UsernamePasswordToken token = new UsernamePasswordToken(user_id,password);
-        new_subject.login(token);
-		return new SubjectWrapper(new_subject);
-	}
-	
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-		((Subject)(subject.getSubject())).logout();
-	}
-	
-	@Override
-	public ISubject getSystemUserContext() {
-		return getUserContext(systemUsername, systemPassword);
-	}
-	
-	@Override
-	public boolean isUserPermitted(ISubject user_token, Object assetOrPermission, Optional<String> action) {
-		boolean permitted = false;
-		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
-		if (permissions != null && permissions.size() > 0) {
-			for (String permission : permissions) {
-				permitted = isPermitted(user_token, permission);
-				if (permitted) {
-					break;
-				}
-			}
-		}
-		return permitted;
-	}
-
-	@Override
-	public boolean hasUserRole(ISubject user_token, String role) {
-		//TODO get rid of hasRole and replace with this
-		return hasRole(user_token,role);
-	}			
-	
-	@Override
-	public boolean isPermitted(ISubject subject, String permission) {
-		return ((Subject)subject.getSubject()).isPermitted(permission);
-	}
-	
-	@Override
-	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return isUserPermitted(subject, assetOrPermission, action);
-		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
-		}
-	}
-
-	@Override
-	public boolean hasUserRole(Optional<String> userID, String role) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return hasUserRole(subject, role);
-		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
-		}
-	}
-	
-	/////////////////////////////////////////////////////////////////////////////
-	
 	@Override
 	public ISubject login(String principalName, Object credentials) {
 		
-		
 		String password = (String)credentials;
         UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
-        
         //token.setRememberMe(true);
 
         ensureUserIsLoggedOut();
@@ -254,6 +172,15 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+	@Override
+	public boolean isPermitted(ISubject subject, String permission) {
+		boolean ret = false;
+		if(subject!=null)
+		{
+			ret = ((Subject)subject.getSubject()).isPermitted(permission);
+		}
+		return ret;
+	}
 
 
 
@@ -269,7 +196,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 	
 	
-	//TODO: ->protected
 	@Override
 	public ISubject loginAsSystem() {
 		ISubject subject = login(systemUsername,systemPassword);		
@@ -277,7 +203,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-	//TODO: ->protected
 	@Override
 	public void runAs(ISubject subject,Collection<String> principals) {
 		// TODO Auto-generated method stub	
@@ -289,7 +214,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-	//TODO: ->protected
 	@SuppressWarnings("unchecked")
 	@Override
 	public Collection<String> releaseRunAs(ISubject subject) {
@@ -381,5 +305,44 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+	@Override
+	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
+		boolean permitted = false;
+		ISubject currentSubject = null;
+		if (userID.isPresent() && tlCurrentSubject.get() != null) {
+			currentSubject = tlCurrentSubject.get();
+			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
+		}
+		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
+		if (permissions != null && permissions.size() > 0) {
+			for (String permission : permissions) {
+				permitted = isPermitted(tlCurrentSubject.get(), permission);
+				if (permitted) {
+					break;
+				}
+			}
+		}
+
+		if (currentSubject != null) {
+			((Subject) currentSubject.getSubject()).releaseRunAs();
+		}
+		return permitted;
+	}
+
+	@Override
+	public boolean hasUserRole(Optional<String> userID, String role) {
+		boolean permitted = false;
+		ISubject currentSubject = null;
+		if (userID.isPresent() && tlCurrentSubject.get() != null) {
+			currentSubject = tlCurrentSubject.get();
+			((Subject) currentSubject.getSubject()).runAs(new SimplePrincipalCollection(userID.get(), getRealmName()));
+		}
+		permitted = hasRole(tlCurrentSubject.get(),role);
+
+		if (currentSubject != null) {
+			((Subject) currentSubject.getSubject()).releaseRunAs();
+		}
+		return permitted;
+	}
 	
 }

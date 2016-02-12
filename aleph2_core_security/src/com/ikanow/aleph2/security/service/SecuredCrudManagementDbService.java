@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,13 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 			    };
 	
 
+   /*  protected BiConsumer<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>, ? super Throwable> readCheckMany = (c, t) -> {
+	      logger.debug("readCheckMany:"+c+",t="+t);
+	      //System.out.println(t);
+			//checkReadPermissions(c);
+	      
+	    };
+*/
 		Function<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>,? extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> convertCursor = (c)->{
 			return new SecuredCursor(c);
 		};
@@ -82,7 +90,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		this.serviceContext  = serviceContext;
 		this.authBean = authBean;
 		this.securityService = serviceContext.getSecurityService();
-		this.subject = login();
+		login();
 	}
 
 
@@ -372,7 +380,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected void checkWritePermissions(T new_object) {
 		
 		//boolean permitted = securityService.hasRole(subject,ROLE_ADMIN);
-		boolean permitted = securityService.isUserPermitted(subject ,new_object,Optional.of(ISecurityService.ACTION_WRITE)); 
+		boolean permitted = securityService.isUserPermitted(Optional.empty(),new_object,Optional.of(ISecurityService.ACTION_WRITE)); 
 		//still not permitted, we are out of luck
 		if(!permitted){
 			//String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permissions+")for "+new_object.getClass();
@@ -450,7 +458,9 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	 * @return
 	 */
 	protected ISubject login() {
-		ISubject subject = securityService.getUserContext(authBean.getPrincipalName());			
+		this.subject = securityService.loginAsSystem();			
+		securityService.releaseRunAs(subject);		
+		securityService.runAs(subject, Arrays.asList(authBean.getPrincipalName()));
 		return subject;
 	}
 
