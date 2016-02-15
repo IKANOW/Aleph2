@@ -252,7 +252,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					CompletableFuture.completedFuture(Collections.emptyList())
 					);				
 		}
-		
+
 		// Some fields like multi-node, you can only change if the bucket status is set to suspended, to make
 		// the control logic easy
 		old_bucket.ifPresent(ob -> {
@@ -265,7 +265,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 					CompletableFuture.completedFuture(validation_info)
 					);
 		}
-		
 		// Made it this far, try to set the next_poll_time in the status object
 		if ( null != new_object.poll_frequency()) {
 			//get the next poll time
@@ -280,10 +279,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			createFilePaths(new_object, _storage_service.get());
 		}
 		catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
+			
 			return FutureUtils.createManagementFuture(
 					FutureUtils.returnError(e));			
 		}
-		
 		// OK if the bucket is validated we can store it (and create a status object)
 				
 		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.get().storeObject(new_object, replace_if_present);
@@ -876,9 +875,12 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				});
 		
 		// Apply the affinity to the bucket status (which must exist, by construction):
-		// (node any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
+		// (note any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
 		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinityWrapper(new_object, status_store, management_results);
 
+		/**/
+		System.out.println("?? 1");	
+		
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
 		return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
@@ -901,6 +903,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
+		/**/
+		System.out.println("?? 2a");			
+		
 		// First off, a couple of special cases relating to node affinity
 		final boolean multi_node_enabled = Optional.ofNullable(new_object.multi_node_enabled()).orElse(false);
 		final Set<String> node_affinity = Optional.ofNullable(status.node_affinity())
@@ -920,6 +925,9 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
 				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version, node_affinity);
+		
+		/**/
+		System.out.println("?? 2");			
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 			MgmtCrudUtils.applyRetriableManagementOperation(new_object, 

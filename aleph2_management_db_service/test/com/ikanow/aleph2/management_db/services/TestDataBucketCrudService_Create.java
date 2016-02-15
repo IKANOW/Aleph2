@@ -624,13 +624,13 @@ public class TestDataBucketCrudService_Create {
 		assertEquals(0L, (long)_bucket_crud.countObjects().get());
 		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
 		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
-		assertEquals(false, err_msg.success());
-		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_DATA_IMPORT_MANAGERS_STARTED_SUSPENDED, valid_bucket.full_name()), err_msg.message());
+		assertEquals(true, err_msg.success());
+		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_PROCESSING_BUCKET, valid_bucket.full_name()), err_msg.message());
 			// (note the replace first, checks bucket full name has been normalized)
 		assertEquals(valid_bucket._id(), insert_future.get().get());
 		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
 		assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
-		assertEquals(true, status_after.suspended());
+		assertEquals(false, status_after.suspended());
 		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
 		assertEquals(1L, (long)_bucket_crud.countObjects().get());
 		assertEquals(valid_bucket.full_name(), status_after.bucket_path()); // (check has been normalized)

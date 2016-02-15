@@ -38,6 +38,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	public static final String BUCKET_FULL_NAME_UNIQUENESS = "Bucket {0} already exists, choose another full_name";
 	public static final String BUCKET_FULL_NAME_FORMAT_ERROR = "Bucket {0} should have the format /path/to/here (as deep as desired) with leading /, no trailing / and no '//'s or '..'s or '.'s";
 	public static final String BUCKET_FULL_NAME_RESERVED_ERROR = "Bucket {0} cannot start with \"/aleph2_\" - these are reserved for system use";
+	public static final String NO_PROCESSING_BUCKET = "Bucket {0} was created, with no processing attached";
 	
 	// Simple field rules
 	

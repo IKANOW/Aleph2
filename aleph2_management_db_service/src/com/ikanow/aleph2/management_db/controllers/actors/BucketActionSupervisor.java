@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.management_db.controllers.actors;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
@@ -46,6 +48,7 @@ import com.ikanow.aleph2.management_db.utils.ActorUtils;
 
 
 import com.ikanow.aleph2.management_db.utils.AnalyticActorUtils;
+import com.ikanow.aleph2.management_db.utils.ManagementDbErrorUtils;
 
 import scala.Tuple3;
 import scala.concurrent.duration.Duration;
@@ -178,7 +181,8 @@ public class BucketActionSupervisor extends UntypedActor {
 			// Centralized check: if the harvest_technology_name_or_id isnt' present, nobody cares so short cut actually checking
 			return CompletableFuture.completedFuture(
 					new BucketActionReplyMessage.BucketActionCollectedRepliesMessage(BucketActionSupervisor.class.getSimpleName(),
-							Collections.emptyList(), Collections.emptySet(), Collections.emptySet()
+							Arrays.asList(ErrorUtils.buildSuccessMessage(BucketActionSupervisor.class, message.getClass().getSimpleName(), ManagementDbErrorUtils.NO_PROCESSING_BUCKET, bucket.full_name())), 
+							Collections.emptySet(), Collections.emptySet()
 							));
 		}
 		else {

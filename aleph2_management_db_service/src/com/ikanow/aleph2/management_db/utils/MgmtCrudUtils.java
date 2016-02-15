@@ -208,8 +208,6 @@ public class MgmtCrudUtils {
 			final ICrudService<DataBucketStatusBean> status_store
 			)
 	{
-		//TODO: add harvest technology name or id to this
-		
 		return return_from_handlers.thenApply(results -> {
 			if (results.isEmpty()) { // uh oh, nobody answered, so we're going to generate an error after all and suspend it
 				if (!is_suspended) { // suspend it
