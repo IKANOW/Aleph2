@@ -345,6 +345,9 @@ public class DataBucketStatusCrudService implements IManagementCrudService<DataB
 			.updateAndReturnObjectBySpec(unique_spec, Optional.of(false), update, Optional.of(false),
 										 Arrays.asList(
 												 helper.field(DataBucketStatusBean::_id),
+												 helper.field(DataBucketStatusBean::confirmed_suspended), 
+												 helper.field(DataBucketStatusBean::confirmed_multi_node_enabled), 
+												 helper.field(DataBucketStatusBean::confirmed_master_enrichment_type), 
 												 helper.field(DataBucketStatusBean::suspended), 
 												 helper.field(DataBucketStatusBean::quarantined_until),
 												 helper.field(DataBucketStatusBean::node_affinity)), 

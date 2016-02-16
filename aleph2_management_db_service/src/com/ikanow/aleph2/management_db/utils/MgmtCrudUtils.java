@@ -195,6 +195,7 @@ public class MgmtCrudUtils {
 	}
 	
 	/** Handles the case where no nodes reply - still perform the operation but then suspend the bucket (user will have to unsuspend once nodes are available)
+	 *  (NOTE: called from two places, need to ensure the status bean has the right fields returned, eg the confirmed*, in both cases)
 	 * @param bucket
 	 * @param is_suspended
 	 * @param return_from_handlers
@@ -242,14 +243,14 @@ public class MgmtCrudUtils {
 						.map(change_update -> {
 							final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
 							return (Boolean.valueOf(multi_node_enabled) != status.confirmed_multi_node_enabled()) 
-									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, bucket.multi_node_enabled()))
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, multi_node_enabled))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
 						// Confirm master enrichment type, if changed
 						.map(change_update -> {
 							final MasterEnrichmentType master_enrichment_type = Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none);
 							return (master_enrichment_type != status.confirmed_master_enrichment_type()) 
-									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_master_enrichment_type, bucket.master_enrichment_type()))
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_master_enrichment_type, master_enrichment_type))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
 						.ifPresent(change_update -> {
