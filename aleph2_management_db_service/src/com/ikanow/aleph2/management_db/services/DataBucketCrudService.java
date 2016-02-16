@@ -882,9 +882,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// (note any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
 		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinityWrapper(new_object, status_store, management_results);
 
-		/**/
-		System.out.println("?? 1");	
-		
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
 		return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
@@ -907,9 +904,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
-		/**/
-		System.out.println("?? 2a");			
-		
 		// First off, a couple of special cases relating to node affinity
 		final boolean multi_node_enabled = Optional.ofNullable(new_object.multi_node_enabled()).orElse(false);
 		final Set<String> node_affinity = Optional.ofNullable(status.node_affinity())
@@ -929,9 +923,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
 				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version, node_affinity);
-		
-		/**/
-		System.out.println("?? 2");			
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 			MgmtCrudUtils.applyRetriableManagementOperation(new_object, 
