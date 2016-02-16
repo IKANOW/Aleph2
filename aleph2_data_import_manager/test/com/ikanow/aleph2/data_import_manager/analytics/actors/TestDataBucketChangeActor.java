@@ -70,6 +70,7 @@ import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import_manager.analytics.actors.DataBucketAnalyticsChangeActor;
+import com.ikanow.aleph2.data_import_manager.data_model.DataImportConfigurationBean;
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.data_import_manager.utils.LibraryCacheUtils;
@@ -91,6 +92,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.PropertiesUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.utils.AkkaFutureUtils;
 import com.ikanow.aleph2.management_db.data_model.AnalyticTriggerMessage;
@@ -141,7 +143,9 @@ public class TestDataBucketChangeActor {
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
 		
-		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), null, null); 
+		final DataImportConfigurationBean bean = BeanTemplateUtils.from(PropertiesUtils.getSubConfig(config, DataImportConfigurationBean.PROPERTIES_ROOT).orElse(null), DataImportConfigurationBean.class);		
+		
+		_actor_context = new DataImportActorContext(_service_context, new GeneralInformationService(), bean, null); 
 		app_injector.injectMembers(_actor_context);
 		
 		// Have to do this in order for the underlying management db to live...		
@@ -404,8 +408,8 @@ public class TestDataBucketChangeActor {
 
 	@Test
 	public void test_getAnalyticsTechnology_specialCases() throws UnsupportedFileSystemException, InterruptedException, ExecutionException {
-		// Just check the streaming enrichment error and success cases
-		
+				
+		// Just check the streaming enrichment error and success cases		
 		{
 			final DataBucketBean bucket = createBucket(DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_TECH_NAME); //(note this also sets the analytics name in the jobs)	
 			
@@ -414,7 +418,7 @@ public class TestDataBucketChangeActor {
 					true, 
 					Optional.empty(), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test1", 
-					Validation.success(Collections.emptyMap()));
+					_actor_context.getDataImportConfigurationBean(), Validation.success(Collections.emptyMap()));
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
 			
@@ -424,7 +428,7 @@ public class TestDataBucketChangeActor {
 					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.STREAMING_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test2", 
-					Validation.success(Collections.emptyMap()));
+					_actor_context.getDataImportConfigurationBean(), Validation.success(Collections.emptyMap()));
 	
 			assertTrue("Failed with no analytic technology: " + test2.validation(f -> f.message(),  s -> "(worked)"), test2.isSuccess());
 		}
@@ -438,7 +442,7 @@ public class TestDataBucketChangeActor {
 					true, 
 					Optional.empty(), Optional.empty(),
 					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test1", 
-					Validation.success(Collections.emptyMap()));
+					_actor_context.getDataImportConfigurationBean(), Validation.success(Collections.emptyMap()));
 			
 			assertTrue("Failed with no analytic technology", test1.isFail());
 			
@@ -449,12 +453,25 @@ public class TestDataBucketChangeActor {
 					_service_context.getService(IAnalyticsTechnologyService.class, DataBucketAnalyticsChangeActor.BATCH_ENRICHMENT_DEFAULT)
 						.map(s->(IAnalyticsTechnologyModule)s), 
 					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test2", 
-					Validation.success(Collections.emptyMap()));
+					_actor_context.getDataImportConfigurationBean(), Validation.success(Collections.emptyMap()));
 	
 			assertTrue("Failed with no analytic technology: " + test2.validation(f -> f.message(),  s -> "(worked)"), test2.isSuccess());
 		}
 		
-		// (Later will include the system classpath cases also)		
+		// System classpath cases:
+		
+		{
+			final DataBucketBean bucket = createBucket("test_registered_classpath"); //(note this also sets the analytics name in the jobs)	
+			
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = DataBucketAnalyticsChangeActor.getAnalyticsTechnology(
+					bucket, "test_registered_classpath", 
+					true, 
+					Optional.empty(), Optional.empty(),
+					new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test1", 
+					_actor_context.getDataImportConfigurationBean(), Validation.success(Collections.emptyMap()));
+			
+			assertTrue("Failed with no analytic technology: " + test1.validation(f -> f.message(),  s -> "(worked)"), test1.isSuccess());
+		}
 	}
 
 	
@@ -477,7 +494,7 @@ public class TestDataBucketChangeActor {
 		
 		final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> test1 = 
 				DataBucketAnalyticsChangeActor.getAnalyticsTechnology(bucket, "test_tech_id_analytics", true, Optional.empty(), Optional.empty(),
-						new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2", Validation.fail(error));
+						new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2", _actor_context.getDataImportConfigurationBean(), Validation.fail(error));
 		
 		assertTrue("Got error back", test1.isFail());
 		assertEquals("test_source", test1.fail().source());
@@ -497,7 +514,7 @@ public class TestDataBucketChangeActor {
 				createBucket("test_tech_id_analytics_2a"), "test_tech_id_analytics_2a", 
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2a", 
-				Validation.success(test2_input));
+				_actor_context.getDataImportConfigurationBean(), Validation.success(test2_input));
 
 		assertTrue("Got error back", test2a.isFail());
 		assertEquals("test_source2a", test2a.fail().source());
@@ -509,7 +526,7 @@ public class TestDataBucketChangeActor {
 				createBucket("test_tech_id_analytics_2b"), "test_tech_id_analytics_2b",
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source2b", 
-				Validation.success(test2_input));
+				_actor_context.getDataImportConfigurationBean(), Validation.success(test2_input));
 
 		assertTrue("Got error back", test2b.isFail());
 		assertEquals("test_source2b", test2b.fail().source());
@@ -550,7 +567,7 @@ public class TestDataBucketChangeActor {
 				bucket, "test_tech_id_analytics",
 				true, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3", 
-				Validation.success(test3_input));
+				_actor_context.getDataImportConfigurationBean(), Validation.success(test3_input));
 
 		if (test3.isFail()) {
 			fail("About to crash with: " + test3.fail().message());
@@ -591,7 +608,7 @@ public class TestDataBucketChangeActor {
 				bucket, "test_tech_id_analytics",
 				false, Optional.empty(), Optional.empty(),
 				new BucketActionMessage.BucketActionOfferMessage(bucket, null, Collections.emptySet()), "test_source3b", 
-				Validation.success(test3b_input));
+				_actor_context.getDataImportConfigurationBean(), Validation.success(test3b_input));
 
 		if (test3b.isFail()) {
 			fail("About to crash with: " + test3b.fail().message());

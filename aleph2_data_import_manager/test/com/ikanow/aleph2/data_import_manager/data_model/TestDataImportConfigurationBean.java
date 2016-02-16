@@ -18,8 +18,10 @@ package com.ikanow.aleph2.data_import_manager.data_model;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 
+import org.elasticsearch.common.collect.ImmutableMap;
 import org.junit.Test;
 
 public class TestDataImportConfigurationBean {
@@ -30,44 +32,49 @@ public class TestDataImportConfigurationBean {
 		assertEquals("DataImportManager", DataImportConfigurationBean.PROPERTIES_ROOT);
 		
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, true, new HashSet<String>());
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(true, false, true, new HashSet<String>(), Collections.emptyMap());
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(false, x.analytics_enabled());
 			assertEquals(true, x.governance_enabled());
 			assertEquals(0, x.node_rules().size());
+			assertEquals(0, x.registered_technologies().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, new HashSet<String>(Arrays.asList("a","b")));
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, true, false, new HashSet<String>(Arrays.asList("a","b")), null);
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(true, x.analytics_enabled());
 			assertEquals(false, x.governance_enabled());
 			assertEquals(2, x.node_rules().size());
+			assertEquals(0, x.registered_technologies().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, null, new HashSet<String>(Arrays.asList("a")));
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, null, new HashSet<String>(Arrays.asList("a")), ImmutableMap.of("a", "b"));
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.analytics_enabled());
 			assertEquals(true, x.governance_enabled());
 			assertEquals(1, x.node_rules().size());
+			assertEquals(1, x.registered_technologies().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, new HashSet<String>(Arrays.asList("a","b","a")));
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(false, false, true, new HashSet<String>(Arrays.asList("a","b","a")), null);
 			
 			assertEquals(false, x.harvest_enabled());
 			assertEquals(false, x.analytics_enabled());
 			assertEquals(true, x.governance_enabled());
 			assertEquals(2, x.node_rules().size());
+			assertEquals(0, x.registered_technologies().size());
 		}
 		{
-			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null);
+			final DataImportConfigurationBean x = new DataImportConfigurationBean(null, null, null, null, null);
 			
 			assertEquals(true, x.harvest_enabled());
 			assertEquals(true, x.analytics_enabled());
 			assertEquals(true, x.governance_enabled());
 			assertEquals(0, x.node_rules().size());
+			assertEquals(0, x.registered_technologies().size());
 		}
 		
 	}
