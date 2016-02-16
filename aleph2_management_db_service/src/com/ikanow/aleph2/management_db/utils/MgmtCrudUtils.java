@@ -241,7 +241,7 @@ public class MgmtCrudUtils {
 						// If we weren't confirmed multi-node before, then change that
 						.map(change_update -> {
 							final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
-							return (multi_node_enabled != status.confirmed_multi_node_enabled()) 
+							return (Boolean.valueOf(multi_node_enabled) != status.confirmed_multi_node_enabled()) 
 									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, bucket.multi_node_enabled()))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
