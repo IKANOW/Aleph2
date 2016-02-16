@@ -748,12 +748,16 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						.orElse(Optional.ofNullable(corresponding_status.suspended())
 						.orElse(false)))
 		{
-			if (new_bucket.multi_node_enabled() != corresponding_status.confirmed_multi_node_enabled()) {
+			if ((null != corresponding_status.confirmed_multi_node_enabled()) 
+					&& (new_bucket.multi_node_enabled() != corresponding_status.confirmed_multi_node_enabled()))
+			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
 								new_bucket.full_name(), "multi_node_enabled")));				
 			}
-			if (new_bucket.master_enrichment_type() != corresponding_status.confirmed_master_enrichment_type()) {
+			if ((null != corresponding_status.confirmed_master_enrichment_type()) 
+					&& (new_bucket.master_enrichment_type() != corresponding_status.confirmed_master_enrichment_type()))
+			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
 								new_bucket.full_name(), "master_enrichment_type")));				

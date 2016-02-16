@@ -336,6 +336,8 @@ public class MgmtCrudUtils {
 		return mgmt_results.thenApply(list -> {
 			return list.stream()
 					.filter(msg -> msg.success())
+					.filter(msg -> !MgmtCrudUtils.class.getSimpleName().equals(msg.source()) && !BucketActionSupervisor.class.getSimpleName().equals(msg.source()))
+						// (filter out messages from various management entities so they don't get applied to the node affinity list)
 					.filter(msg -> (SuccessfulNodeType.all_technologies == which_nodes) ||
 								(null == msg.command()) || !msg.command().equals(ActorUtils.BUCKET_ANALYTICS_ZOOKEEPER)) // (these are streaming enrichment messages, ignore them for node affinity purposes)
 					.map(msg -> msg.source())
