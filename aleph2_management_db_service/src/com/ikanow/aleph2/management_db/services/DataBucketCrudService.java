@@ -61,6 +61,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -748,15 +749,18 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						.orElse(Optional.ofNullable(corresponding_status.suspended())
 						.orElse(false)))
 		{
+			final boolean multi_node_enabled = Optional.ofNullable(new_bucket.multi_node_enabled()).orElse(false);
+			final MasterEnrichmentType master_enrichment_type = Optional.ofNullable(new_bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none);
+			
 			if ((null != corresponding_status.confirmed_multi_node_enabled()) 
-					&& (new_bucket.multi_node_enabled() != corresponding_status.confirmed_multi_node_enabled()))
+					&& (Boolean.valueOf(multi_node_enabled) != corresponding_status.confirmed_multi_node_enabled()))
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
 								new_bucket.full_name(), "multi_node_enabled")));				
 			}
 			if ((null != corresponding_status.confirmed_master_enrichment_type()) 
-					&& (new_bucket.master_enrichment_type() != corresponding_status.confirmed_master_enrichment_type()))
+					&& (master_enrichment_type != corresponding_status.confirmed_master_enrichment_type()))
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
