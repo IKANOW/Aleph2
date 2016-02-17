@@ -110,6 +110,17 @@ public interface IDataServiceProvider {
 		return Optional.empty();
 	}
 	
+	/** Callback to all registered data services whenever a bucket is modified
+	 * @param bucket - the bucket in question
+	 * @param new_bucket - if this is the first time the bucket has been seen
+	 * @param suspended - if the bucket is currently suspended
+	 * @param data_services -  the set of data services the implementing class instance handles (eg ES can handle data_warehouse, search_index_service, etc)
+	 * @return a future containing an optional return message
+	 */
+	default CompletableFuture<Optional<BasicMessageBean>> onPublishOrUpdate(final DataBucketBean bucket, final boolean new_bucket, final boolean suspended, final Set<String> data_services) {
+		return CompletableFuture.completedFuture(Optional.empty());
+	}
+	
 	/** Returns a secured version of the data provider service. 
 	 * @param service_context - the system service context
 	 * @param auth_bean - the authorization context of the calling user
