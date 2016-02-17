@@ -1148,6 +1148,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		if (_mutable_state.service_manifest_override.isSet()) { // Can't call getServiceInput after getContextSignature/getContextLibraries
 			throw new RuntimeException(ErrorUtils.get(ErrorUtils.SERVICE_RESTRICTIONS));
 		}
+
+		//TODO: should support "" as myself (clone or something?) - also check if null works in getInputPaths/Queues
+		//TODO: what happens if I external emit to myself (again supporting "") .. not sure if the output services will be set up?
 		
 		// First off, check we have permissions:
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
@@ -1385,6 +1388,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 					// easy case:
 					if (null != bucket.master_enrichment_type()) {
 						return getExternalEndpoint(bucket, bucket.master_enrichment_type());
+					}
+					else if (null == bucket.analytic_thread()) { // if no enrichment specified and no analytic thread, then assume we're just using it as a file queue (ie batch)
+						return getExternalEndpoint(bucket, MasterEnrichmentType.batch);						
 					}
 					else { // Analytic bucket, this is more complicated
 						
