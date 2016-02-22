@@ -693,6 +693,11 @@ public class DataSchemaBean implements Serializable {
 		 * @author Alex
 		 */
 		public static class Table {
+			/** Sets the name of the database (will default to "default" if not specified)
+			 * @return
+			 */
+			public String database_name() { return database_name; }
+			
 			/** Sets the name of the table (needs to be admin), otherwise will be the usual "unique signature" (with view if specified)
 			 * @return
 			 */
@@ -720,6 +725,7 @@ public class DataSchemaBean implements Serializable {
 			 */
 			public Map<String, Object> table_format() { return table_format; }
 						
+			private String database_name;
 			private String name_override;
 			private String view_name;
 			private String sql_query;
