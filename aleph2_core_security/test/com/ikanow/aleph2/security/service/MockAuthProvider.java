@@ -17,12 +17,17 @@ package com.ikanow.aleph2.security.service;
 
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.interfaces.IAuthProvider;
 
 public class MockAuthProvider implements IAuthProvider{
 
+	protected static final Logger logger = LogManager.getLogger(MockAuthProvider.class);
 	protected Map<String, AuthorizationBean> authMap;
+	protected long callCount = 0;
 	
 	public MockAuthProvider(Map<String,AuthorizationBean> authMap){
 		this.authMap = authMap;
@@ -30,7 +35,18 @@ public class MockAuthProvider implements IAuthProvider{
 
 	@Override
 	public AuthorizationBean getAuthBean(String principalName) {
-		return authMap.get(principalName);
+		callCount++;
+		AuthorizationBean a = authMap.get(principalName); 
+		logger.debug("MockRoleProvider.getAuthBean:"+a);
+		return a;
+	}
+
+	public long getCallCount() {
+		return callCount;
+	}
+
+	public void setCallCount(long callCount) {
+		this.callCount = callCount;
 	}
 
 }

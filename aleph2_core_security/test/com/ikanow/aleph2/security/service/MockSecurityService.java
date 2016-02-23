@@ -16,14 +16,23 @@
 package com.ikanow.aleph2.security.service;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.session.SessionException;
+import org.apache.shiro.subject.SimplePrincipalCollection;
+import org.apache.shiro.subject.Subject;
+import org.apache.shiro.subject.support.DelegatingSubject;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -36,13 +45,16 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.interfaces.IAuthProvider;
 import com.ikanow.aleph2.security.interfaces.IRoleProvider;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
+import org.apache.shiro.util.ThreadContext;
 
 public class MockSecurityService extends SecurityService implements ISecurityService {
 	
 	protected static Map<String, Set<String>> rolesMap = new HashMap<String, Set<String>>();
 	protected static Map<String, Set<String>> permissionsMap = new HashMap<String, Set<String>>();
 	protected static Map<String, AuthorizationBean> authMap = new HashMap<String, AuthorizationBean>();
-	
+	protected static MockRoleProvider roleProvider =  new MockRoleProvider(rolesMap, permissionsMap);
+	protected static MockAuthProvider authProvider = new MockAuthProvider(authMap);
+			
 	static{
 		System.setProperty(IKANOW_SYSTEM_LOGIN, "system");
 		System.setProperty(IKANOW_SYSTEM_PASSWORD, "system123");
@@ -81,10 +93,8 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 				protected void bindRoleProviders() {				
 					//calling  super to increase junit coverage
 					super.bindRoleProviders();
-					Multibinder<IRoleProvider> uriBinder = Multibinder.newSetBinder(binder(), IRoleProvider.class);
-					
-					MockRoleProvider mrp = new MockRoleProvider(rolesMap, permissionsMap);
-				    uriBinder.addBinding().toInstance(mrp);
+					Multibinder<IRoleProvider> uriBinder = Multibinder.newSetBinder(binder(), IRoleProvider.class);					
+				    uriBinder.addBinding().toInstance(roleProvider);
 				}
 				
 				@Override
@@ -100,7 +110,6 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 					//calling super to increase junit coverage
 					super.bindAuthProviders();
 
-					MockAuthProvider authProvider = new MockAuthProvider(authMap);
 			 		bind(IAuthProvider.class).toInstance(authProvider);
 				
 				}
@@ -116,5 +125,72 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 		return injector;
 	}
 
+//// new set of threading tests
+	public Subject loginAsSystem2(){
+		Subject currentUser = SecurityUtils.getSubject();
+		String principalName = systemUsername;
+		String password = systemPassword;
+		boolean needsLogin = true;
+		try{
+		    Session session = currentUser.getSession();
+		    logger.debug("loginAsSystem2 : "+session.getId()+" : "+currentUser);
 
+		if(currentUser.isAuthenticated()){
+			while(currentUser.isRunAs()){
+				currentUser.releaseRunAs();
+			}
+			Object principal = currentUser.getPrincipal();
+			// check if currentPrincipal 
+			if(systemUsername.equals(""+principal)){
+				needsLogin=false;
+			}else{
+				logger.warn("Found authenticated user ("+principal+") different than system user, logging out this user.");
+				currentUser.logout();
+			}
+		}
+		}catch(Exception e){
+			// try to get rid of expired session so system can login again
+			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
+			// create new session
+			ThreadContext.unbindSubject();
+			currentUser = SecurityUtils.getSubject();			
+			needsLogin = true;
+		}
+		if(needsLogin){
+			UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
+		    currentUser.login((AuthenticationToken)token);
+		    Session session = currentUser.getSession(true);
+		    logger.debug("Logged in user and Created session:"+session.getId());
+		}
+
+		return currentUser;
+	}
+	
+	
+	public void runAs2(String principal) {
+		Subject currentUser = loginAsSystem2();		
+		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
+	}
+
+	public boolean isPermitted2(String permission) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.isPermitted(permission);
+	}
+
+	public boolean hasRole2(String role) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.hasRole(role);
+	}
+
+	public boolean isUserPermitted2(String principal, String permission) {
+		runAs2(principal);
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.isPermitted(permission);
+	}
+
+	public boolean hasUserRole2(String principal, String role) {
+		runAs2(principal);
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.hasRole(role);
+	}
 }

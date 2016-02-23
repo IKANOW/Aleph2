@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.subject.Subject;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -80,6 +81,7 @@ public class SecurityServiceTest {
 	protected SecurityService securityService = null;
 	
 	protected String regularUserId = "user";
+	protected String testUserId = "testUser";
 
 	@Before
 	public void setupDependencies() throws Exception {
@@ -210,7 +212,10 @@ public class SecurityServiceTest {
 	
 	@Test
 	public void testCaching(){
+		MockAuthProvider authProvider = ((MockSecurityService)securityService).authProvider; 
+		MockRoleProvider roleProvider = ((MockSecurityService)securityService).roleProvider;
 		ISubject subject = loginAsRegularUser();
+		assertEquals(1L,authProvider.getCallCount());
 		// test personal community permission
 		String permission = "permission2";
         //test a typed permission (not instance-level)
@@ -222,7 +227,9 @@ public class SecurityServiceTest {
 			assertEquals(true,securityService.isPermitted(subject,permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 		}
+		assertEquals(1L,roleProvider.getCallCount());
 		subject = loginAsAdmin();
+		assertEquals(2L,authProvider.getCallCount());
 		// test personal community permission
 		permission = "permission2";
         //test a typed permission (not instance-level)
@@ -235,6 +242,7 @@ public class SecurityServiceTest {
 			ProfilingUtility.timeStopAndLog("AU-permisssion"+i+1);
 		}
 		
+		// every time we log in we are loading all invalidating the cache.
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU2-permisssion_L"+(i+1));
 		subject = loginAsRegularUser();
@@ -244,6 +252,8 @@ public class SecurityServiceTest {
 		assertEquals(true,securityService.isPermitted(subject,permission));
 			ProfilingUtility.timeStopAndLog("TU2-permisssion"+(i+1));
 		}
+		assertEquals(12,roleProvider.getCallCount());
+		assertEquals(12,authProvider.getCallCount());
 	}
 
 	@Test
@@ -332,30 +342,6 @@ public class SecurityServiceTest {
 		finally {
 			securityService.enableJvmSecurityManager(false);
 		} 
-	}
-
-	@Test
-	@Ignore
-	public void testSecurityServiceMultiThreading(){
-		ISubject subject = securityService.loginAsSystem();
-		long timeNow = System.currentTimeMillis();
-		long timeOut = timeNow+3000L;
-		boolean hasAdminRole = false;
-		while(timeNow < timeOut){
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			hasAdminRole  = securityService.hasRole(subject, "admin");
-			if(hasAdminRole){
-				fail("Subject received admin rights");
-				break;
-			}
-			timeNow = System.currentTimeMillis();
-		} // while
-	
 	}
 
 
@@ -620,4 +606,146 @@ public class SecurityServiceTest {
 		assertTrue(permitted);
 
 	}
+	
+	@Test
+	public void testLoginRunAsAndCaching(){
+//		try{
+			
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		MockAuthProvider authProvider = ms.authProvider; 
+		MockRoleProvider roleProvider = ms.roleProvider;
+		Subject s = ms.loginAsSystem2();
+		assertEquals(1L,authProvider.getCallCount());
+//		}catch(Throwable t){
+//			t.printStackTrace();
+//			fail("caught Exception:"+t.getMessage());
+//		}
+		//loginAsSystem again after just doing so
+		s = ms.loginAsSystem2();
+		assertEquals(1L,authProvider.getCallCount());
+		// runAsUser
+		
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs2(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		
+		// runAsUser and check caching
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs2(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted2("permission1"));
+		assertEquals(1L,roleProvider.getCallCount());
+
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		// runAsuser2 and check Caching
+		ms.runAs2(testUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted2("t1"));
+		assertEquals(1L,roleProvider.getCallCount());
+
+		// runAsuser and check Caching
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs2(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted2("permission1"));
+		assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));
+		// expected here no load hit, permission needs to come from cache
+		assertEquals(0L,roleProvider.getCallCount());
+		assertTrue(ms.hasRole2("user"));
+		assertTrue(ms.hasUserRole2(regularUserId,"user"));
+		// expected here no load hit, permission needs to come from cache
+		assertEquals(0L,roleProvider.getCallCount());
+		
+		//loginAsSystem again and check Caching
+		s = ms.loginAsSystem2();
+		assertEquals(0L,authProvider.getCallCount());
+
+	}
+	
+	@Test
+	public void testSessionTimeout(){
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		ms.setSessionTimeout(500);
+		Subject s = ms.loginAsSystem2();
+		//timeoutSession
+		sleep(1000);
+		//loginAsSystem again
+		s = ms.loginAsSystem2();
+		// check user permission
+		assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));
+		// timout and check again
+		sleep(1000);		
+		assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));				
+		// timout and check role
+		sleep(1000);		
+		assertTrue(ms.hasUserRole2(regularUserId,"user"));				
+	}
+
+	protected void sleep(long millis){
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+	}
+
+	@Test
+	public void testMultiThreading(){
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		Subject s = ms.loginAsSystem2();
+		PermissionChecker pc = new PermissionChecker(testUserId,"t1",testUserId);
+		Thread t1  = new Thread(pc);
+		t1.start();
+		
+		// check user permission
+		for(int i=0;i<5;i++){
+			assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));
+			sleep(1000);
+			assertTrue(ms.hasUserRole2(regularUserId,"user"));				
+			sleep(1000);
+		} 
+		// wait for thread to finish
+		while(!pc.isDone()){
+			sleep(2);			
+		}
+	}
+	
+	protected class PermissionChecker implements Runnable {
+
+		protected String userName;
+		protected String permission;
+		protected String role;
+		public boolean done = true;
+
+		public PermissionChecker(String userName, String permission, String role) {
+			this.userName = userName;
+			this.permission = permission;
+			this.role = role;
+		}
+
+		@Override
+		public void run() {
+			done = false;
+			MockSecurityService ms = ((MockSecurityService) securityService);
+			Subject s = ms.loginAsSystem2();
+			// check user permission
+			for (int i = 0; i < 5; i++) {
+				assertTrue(ms.isUserPermitted2(userName, permission));
+				sleep(1000);
+				assertTrue(ms.hasUserRole2(userName, role));
+				sleep(1000);
+			}
+			done = true;
+		} // run
+
+		public boolean isDone() {
+			return done;
+		}
+	}
+
 }

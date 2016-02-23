@@ -53,7 +53,7 @@ import com.ikanow.aleph2.security.module.CoreSecurityModule;
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
 	protected ThreadLocal<ISubject> tlCurrentSubject = new ThreadLocal<ISubject>();
-	private static final Logger logger = LogManager.getLogger(SecurityService.class);
+	protected static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
 	protected static String systemUsername = null;
 	protected static String systemPassword = null;

@@ -19,23 +19,27 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 
 import com.ikanow.aleph2.security.interfaces.IRoleProvider;
 
 public class MockRoleProvider implements IRoleProvider{
 
-	
+	protected static final Logger logger = LogManager.getLogger(MockRoleProvider.class);
+
 	protected Map<String, Set<String>> rolesMap;
 	protected Map<String, Set<String>> permissionsMap;
-	
+	protected long callCount = 0;
+
 	public MockRoleProvider(Map<String,Set<String>> rolesMap, Map<String,Set<String>> permissionsMap){
 		this.rolesMap = rolesMap;
 		this.permissionsMap = permissionsMap;
 	}
 	@Override
 	public Tuple2<Set<String>, Set<String>> getRolesAndPermissions(String principalName) {
-
 		Set<String> roles = rolesMap.get(principalName);
 		Set<String> permissions = permissionsMap.get(principalName);
 		if(roles==null){
@@ -44,7 +48,16 @@ public class MockRoleProvider implements IRoleProvider{
 		if(permissions==null){
 			permissions =  new HashSet<String>();
 		}
-		return new Tuple2<Set<String>, Set<String>>(roles,permissions);
+		callCount++;
+		Tuple2<Set<String>, Set<String>> t2 = new Tuple2<Set<String>, Set<String>>(roles,permissions);
+		logger.debug("MockRoleProvider.getRolesAndPermissions:"+t2);
+		return t2;
+	}
+	public long getCallCount() {
+		return callCount;
+	}
+	public void setCallCount(long callCount) {
+		this.callCount = callCount;
 	}
 
 }
