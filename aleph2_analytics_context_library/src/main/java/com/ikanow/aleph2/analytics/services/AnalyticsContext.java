@@ -1411,7 +1411,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 									})
 									.map(j -> j.analytic_type())
 									.findFirst()
-									.orElse(MasterEnrichmentType.none)
+									.orElse(MasterEnrichmentType.batch) // if no enrichment specified and no analytic thread sat on the input, then assume we're just using it as a file queue (ie batch)
 									;
 						
 						return getExternalEndpoint(bucket, streaming_type_guess);
