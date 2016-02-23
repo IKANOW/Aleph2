@@ -695,6 +695,7 @@ public class SecurityServiceTest {
 	}
 
 	@Test
+//	@Ignore
 	public void testMultiThreading(){
 		MockSecurityService ms = ((MockSecurityService)securityService);
 		Subject s = ms.loginAsSystem2();
@@ -704,9 +705,9 @@ public class SecurityServiceTest {
 		
 		// check user permission
 		for(int i=0;i<5;i++){
-			assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));
-			sleep(1000);
 			assertTrue(ms.hasUserRole2(regularUserId,"user"));				
+			sleep(1000);
+			assertTrue(ms.isUserPermitted2(regularUserId,"permission1"));
 			sleep(1000);
 		} 
 		// wait for thread to finish
@@ -730,6 +731,8 @@ public class SecurityServiceTest {
 
 		@Override
 		public void run() {
+			try {
+				
 			done = false;
 			MockSecurityService ms = ((MockSecurityService) securityService);
 			Subject s = ms.loginAsSystem2();
@@ -739,6 +742,10 @@ public class SecurityServiceTest {
 				sleep(1000);
 				assertTrue(ms.hasUserRole2(userName, role));
 				sleep(1000);
+			}
+			} catch (Throwable e) {
+				e.printStackTrace();
+				fail(e.getMessage());
 			}
 			done = true;
 		} // run

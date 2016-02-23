@@ -173,10 +173,17 @@
 		</dependency>
 		<!-- Shiro uses SLF4J for logging. We'll use the 'simple' binding in this 
 			example app. See http://www.slf4j.org for more info. -->
-		<dependency>
+<!-- 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<version>1.6.1</version>
+			<scope>test</scope>
+		</dependency>
+		-->
+		<dependency>
+    		<groupId>org.apache.logging.log4j</groupId>
+		    <artifactId>log4j-slf4j-impl</artifactId>
+    		<version>2.0.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
