@@ -167,30 +167,29 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	}
 	
 	
-	public synchronized void runAs2(String principal) {
+	public synchronized Subject runAs2(String principal) {
 		Subject currentUser = loginAsSystem2();		
 		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
+		return currentUser;
 	}
 
-	public synchronized boolean isPermitted2(String permission) {
+	public boolean isPermitted2(String permission) {
 		Subject currentUser = SecurityUtils.getSubject();		
 		return currentUser.isPermitted(permission);
 	}
 
-	public synchronized boolean hasRole2(String role) {
+	public boolean hasRole2(String role) {
 		Subject currentUser = SecurityUtils.getSubject();		
 		return currentUser.hasRole(role);
 	}
 
-	public synchronized boolean isUserPermitted2(String principal, String permission) {
-		runAs2(principal);
-		Subject currentUser = SecurityUtils.getSubject();		
+	public boolean isUserPermitted2(String principal, String permission) {		
+		Subject currentUser = runAs2(principal);		
 		return currentUser.isPermitted(permission);
 	}
 
-	public synchronized  boolean hasUserRole2(String principal, String role) {
-		runAs2(principal);
-		Subject currentUser = SecurityUtils.getSubject();		
+	public boolean hasUserRole2(String principal, String role) {
+		Subject currentUser = runAs2(principal);		
 		return currentUser.hasRole(role);
 	}
 }
