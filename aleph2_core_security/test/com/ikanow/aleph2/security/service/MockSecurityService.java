@@ -16,7 +16,6 @@
 package com.ikanow.aleph2.security.service;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,10 +28,9 @@ import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.session.Session;
-import org.apache.shiro.session.SessionException;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
-import org.apache.shiro.subject.support.DelegatingSubject;
+import org.apache.shiro.util.ThreadContext;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -45,7 +43,6 @@ import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.interfaces.IAuthProvider;
 import com.ikanow.aleph2.security.interfaces.IRoleProvider;
 import com.ikanow.aleph2.security.module.CoreSecurityModule;
-import org.apache.shiro.util.ThreadContext;
 
 public class MockSecurityService extends SecurityService implements ISecurityService {
 	
@@ -126,7 +123,7 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	}
 
 //// new set of threading tests
-	public synchronized Subject loginAsSystem2(){
+	protected synchronized Subject loginAsSystem2(){
 		Subject currentUser = SecurityUtils.getSubject();
 		String principalName = systemUsername;
 		String password = systemPassword;
@@ -167,7 +164,7 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	}
 	
 	
-	public synchronized Subject runAs2(String principal) {
+	protected synchronized Subject runAs2(String principal) {
 		Subject currentUser = loginAsSystem2();		
 		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
 		return currentUser;
