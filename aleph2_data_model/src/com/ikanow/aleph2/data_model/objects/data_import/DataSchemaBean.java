@@ -114,6 +114,8 @@ public class DataSchemaBean implements Serializable {
 	 *
 	 */
 	public static class StorageSchemaBean implements Serializable {
+		public static final String name = "storage_service";
+		
 		private static final long serialVersionUID = 6846462609660288814L;
 		protected StorageSchemaBean() {}
 		
@@ -258,6 +260,8 @@ public class DataSchemaBean implements Serializable {
 	 *
 	 */
 	public static class DocumentSchemaBean implements Serializable {
+		public static final String name = "document_service";
+		
 		private static final long serialVersionUID = 6407137348665175660L;
 		protected DocumentSchemaBean() {}
 		
@@ -377,6 +381,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class SearchIndexSchemaBean implements Serializable {
+		public static final String name = "search_index_service";
+		
 		private static final long serialVersionUID = -1023079126153099337L;
 		protected SearchIndexSchemaBean() {}
 		
@@ -438,6 +444,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class ColumnarSchemaBean implements Serializable {
+		public static final String name = "columnar_service";
+		
 		private static final long serialVersionUID = -6651815017077463900L;
 		protected ColumnarSchemaBean() {}
 		
@@ -531,6 +539,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class TemporalSchemaBean implements Serializable {
+		public static final String name = "temporal_service";
+
 		private static final long serialVersionUID = -8025554290903106836L;
 		protected TemporalSchemaBean() {}
 		
@@ -629,6 +639,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class GeospatialSchemaBean implements Serializable {
+		public static final String name = "geospatial_service";
+		
 		private static final long serialVersionUID = -3380350300379967374L;
 		//TODO (ALEPH-16): define an initial set of geo-spatial schema
 		//private Boolean enabled;
@@ -639,6 +651,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class GraphSchemaBean implements Serializable {
+		public static final String name = "graph_service";
+		
 		private static final long serialVersionUID = -824592579880124213L;
 		//TODO (ALEPH-15): define an initial set of graph schema 
 		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
@@ -651,6 +665,8 @@ public class DataSchemaBean implements Serializable {
 	 * @author acp
 	 */
 	public static class DataWarehouseSchemaBean implements Serializable {
+		public static final String name = "data_warehouse_service";
+		
 		private static final long serialVersionUID = -5234936234777519175L;
 		/** Describes if the columnar db service is used for this bucket
 		 * @return the enabled
