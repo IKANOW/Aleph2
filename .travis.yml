@@ -20,7 +20,8 @@ script: cd $TEST_DIR && mvn -B install -DskipTests=true && mvn -B clean test jac
 
 #after_success:
 # - mvn clean test jacoco:report coveralls:report
-after_failure
+
+after_failure:
  - ls -alrt /tmp
 
 # blacklist
