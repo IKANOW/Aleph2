@@ -614,6 +614,8 @@ public class SecurityServiceTest {
 		MockSecurityService ms = ((MockSecurityService)securityService);
 		MockAuthProvider authProvider = ms.authProvider; 
 		MockRoleProvider roleProvider = ms.roleProvider;
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
 		Subject s = ms.loginAsSystem2();
 		assertEquals(1L,authProvider.getCallCount());
 //		}catch(Throwable t){

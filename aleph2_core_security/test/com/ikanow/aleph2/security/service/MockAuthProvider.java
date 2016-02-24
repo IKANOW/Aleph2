@@ -27,7 +27,12 @@ public class MockAuthProvider implements IAuthProvider{
 
 	protected static final Logger logger = LogManager.getLogger(MockAuthProvider.class);
 	protected Map<String, AuthorizationBean> authMap;
-	protected long callCount = 0;
+    private ThreadLocal<Long> tlCallCount =
+            new ThreadLocal<Long>() {
+                @Override protected Long initialValue() {
+                    return 0L;
+            }
+        };
 	
 	public MockAuthProvider(Map<String,AuthorizationBean> authMap){
 		this.authMap = authMap;
@@ -35,18 +40,19 @@ public class MockAuthProvider implements IAuthProvider{
 
 	@Override
 	public AuthorizationBean getAuthBean(String principalName) {
-		callCount++;
+		Long count  = tlCallCount.get();
+		count++;
+		tlCallCount.set(count);
 		AuthorizationBean a = authMap.get(principalName); 
 		logger.debug("MockRoleProvider.getAuthBean:"+a);
 		return a;
 	}
 
 	public long getCallCount() {
-		return callCount;
+		return tlCallCount.get();
 	}
-
 	public void setCallCount(long callCount) {
-		this.callCount = callCount;
+		this.tlCallCount.set(callCount);
 	}
 
 }

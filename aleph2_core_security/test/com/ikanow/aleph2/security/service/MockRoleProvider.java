@@ -32,8 +32,13 @@ public class MockRoleProvider implements IRoleProvider{
 
 	protected Map<String, Set<String>> rolesMap;
 	protected Map<String, Set<String>> permissionsMap;
-	protected long callCount = 0;
-
+    private ThreadLocal<Long> tlCallCount =
+        new ThreadLocal<Long>() {
+            @Override protected Long initialValue() {
+                return 0L;
+        }
+    };
+    
 	public MockRoleProvider(Map<String,Set<String>> rolesMap, Map<String,Set<String>> permissionsMap){
 		this.rolesMap = rolesMap;
 		this.permissionsMap = permissionsMap;
@@ -48,16 +53,18 @@ public class MockRoleProvider implements IRoleProvider{
 		if(permissions==null){
 			permissions =  new HashSet<String>();
 		}
-		callCount++;
+		Long count  = tlCallCount.get();
+		count++;
+		tlCallCount.set(count);
 		Tuple2<Set<String>, Set<String>> t2 = new Tuple2<Set<String>, Set<String>>(roles,permissions);
 		logger.debug("MockRoleProvider.getRolesAndPermissions:"+t2);
 		return t2;
 	}
 	public long getCallCount() {
-		return callCount;
+		return tlCallCount.get();
 	}
 	public void setCallCount(long callCount) {
-		this.callCount = callCount;
+		this.tlCallCount.set(callCount);
 	}
 
 }
