@@ -588,52 +588,59 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::owner_id, "owner1")
 				.done().get();
 
-		//(delete the file path)
-		try {
-			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
-		}
-		catch (Exception e) {} // (fine, dir prob dones't delete)
-		assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
-		
-		// 1) Check needs status object to be present
-		
-		try {
+		{
+			//(delete the file path)
+			try {
+				FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name()));
+			}
+			catch (Exception e) {} // (fine, dir prob dones't delete)
+			assertFalse("The file path has been deleted", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			
+			// 1) Check needs status object to be present
+			
 			final ManagementFuture<Supplier<Object>> result = _bucket_crud.storeObject(valid_bucket);
-			assertEquals(0, result.getManagementResults().get().size());			
-			result.get();
-			fail("Should have thrown an exception");
+			assertEquals(0, result.getManagementResults().get().size());
+			
+			try {
+				result.get();
+				fail("Should have thrown an exception");
+			}
+			catch (Exception e) {
+				System.out.println("expected, err=" + e.getCause().getMessage());
+				assertEquals(RuntimeException.class, e.getCause().getClass());
+			}		
+			
+			//(add the status object and try)
+			final DataBucketStatusBean status = 
+					BeanTemplateUtils.build(DataBucketStatusBean.class)
+					.with(DataBucketStatusBean::_id, valid_bucket._id())
+					.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
+					.with(DataBucketStatusBean::suspended, false)
+					.with(DataBucketStatusBean::confirmed_suspended, true)
+					.done().get();
+			
+			assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
+			_bucket_status_crud.storeObject(status).get();
+			assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
+	
+			// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
+			assertEquals(0L, (long)_bucket_crud.countObjects().get());
+			final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
+			final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
+			assertEquals(true, err_msg.success());
+			assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_PROCESSING_BUCKET, valid_bucket.full_name()), err_msg.message());
+				// (note the replace first, checks bucket full name has been normalized)
+			assertEquals(valid_bucket._id(), insert_future.get().get());
+			final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
+			assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
+			assertEquals(false, status_after.suspended());
+			assertEquals(false, status_after.confirmed_suspended());
+			assertEquals(false, status_after.confirmed_multi_node_enabled());
+			assertEquals(MasterEnrichmentType.none, status_after.confirmed_master_enrichment_type());
+			assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
+			assertEquals(1L, (long)_bucket_crud.countObjects().get());
+			assertEquals(valid_bucket.full_name(), status_after.bucket_path()); // (check has been normalized)
 		}
-		catch (Exception e) {
-			System.out.println("expected, err=" + e.getCause().getMessage());
-			assertEquals(RuntimeException.class, e.getCause().getClass());
-		}		
-		
-		//(add the status object and try)
-		final DataBucketStatusBean status = 
-				BeanTemplateUtils.build(DataBucketStatusBean.class)
-				.with(DataBucketStatusBean::_id, valid_bucket._id())
-				.with(DataBucketStatusBean::bucket_path, valid_bucket.full_name())
-				.with(DataBucketStatusBean::suspended, false)
-				.done().get();
-		
-		assertEquals(0L, (long)_bucket_status_crud.countObjects().get());
-		_bucket_status_crud.storeObject(status).get();
-		assertEquals(1L, (long)_bucket_status_crud.countObjects().get());
-
-		// Try again, assert - sort of works this time, creates the bucket but in suspended mode because there are no registered data import managers
-		assertEquals(0L, (long)_bucket_crud.countObjects().get());
-		final ManagementFuture<Supplier<Object>> insert_future = _bucket_crud.storeObject(valid_bucket);
-		final BasicMessageBean err_msg = insert_future.getManagementResults().get().iterator().next();
-		assertEquals(true, err_msg.success());
-		assertEquals(ErrorUtils.get(ManagementDbErrorUtils.NO_PROCESSING_BUCKET, valid_bucket.full_name()), err_msg.message());
-			// (note the replace first, checks bucket full name has been normalized)
-		assertEquals(valid_bucket._id(), insert_future.get().get());
-		final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById(valid_bucket._id()).get().get();
-		assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
-		assertEquals(false, status_after.suspended());
-		assertTrue("The file path has been built", new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + valid_bucket.full_name() + "/managed_bucket").exists());
-		assertEquals(1L, (long)_bucket_crud.countObjects().get());
-		assertEquals(valid_bucket.full_name(), status_after.bucket_path()); // (check has been normalized)
 		
 		//////////////////////////
 		

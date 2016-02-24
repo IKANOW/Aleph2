@@ -15,7 +15,9 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_import_manager.data_model;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -35,20 +37,26 @@ public class DataImportConfigurationBean {
 	 */
 	public DataImportConfigurationBean(
 			Boolean harvest_enabled, Boolean analytics_enabled,  
-			Boolean governance_enabled, Set<String> node_rules) {
+			Boolean governance_enabled, Set<String> node_rules,
+			Map<String, String> registered_technologies
+			) {
 		this.harvest_enabled = harvest_enabled;
 		this.analytics_enabled = analytics_enabled;
 		this.governance_enabled = governance_enabled;
 		this.node_rules = node_rules;
+		this.registered_technologies = registered_technologies;
 	}
 	public boolean harvest_enabled()  { return Optional.ofNullable(harvest_enabled).orElse(true); }
 	public boolean analytics_enabled()  { return Optional.ofNullable(analytics_enabled).orElse(true); }
 	public boolean governance_enabled() { return Optional.ofNullable(governance_enabled).orElse(true); }
 	public Set<String> node_rules() { return Optional.ofNullable(node_rules).orElse(new HashSet<String>()); }
 	
+	public Map<String, String> registered_technologies() { return Optional.ofNullable(registered_technologies).orElse(Collections.emptyMap()); }
+	
 	private Boolean harvest_enabled;
 	private Boolean analytics_enabled;
 	private Boolean governance_enabled;
 	private Set<String> node_rules;
+	private Map<String, String> registered_technologies;
 	
 }

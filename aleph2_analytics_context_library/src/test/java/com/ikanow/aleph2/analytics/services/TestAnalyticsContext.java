@@ -1651,7 +1651,7 @@ public class TestAnalyticsContext {
 		
 		//(see TestAnalyticsContext_FileSystemChecks)
 		
-		// 3)  Analytic bucket that doesn't use a "self" input
+		// 3)  Analytic bucket that doesn't use a "self" input - NOW TREATS AS BATCH
 		{
 			Validation<BasicMessageBean, JsonNode> ret_val_1 =
 					test_context.emitObject(Optional.of(analytic_bucket_no_self_input), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"batch_fail\"}")), Optional.empty());
@@ -1659,12 +1659,12 @@ public class TestAnalyticsContext {
 			final String listen_topic = test_context._distributed_services.generateTopicName(analytic_bucket_no_self_input.full_name(), Optional.empty());			
 			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
 			
-			// Will fail because nobody is listening
-			assertTrue("Should fail: " + ret_val_1.toString(), ret_val_1.isFail());		
+			// Will succeed and default to batch (previously: Will fail because nobody is listening)
+			assertTrue("Should succeed: " + ret_val_1.toString(), ret_val_1.isSuccess());		
 			
 			// check failure is cached though
 			assertTrue("Not cached: " + test_context._mutable_state.external_buckets, test_context._mutable_state.external_buckets.containsKey(analytic_bucket_no_self_input.full_name()));
-			assertEquals(null, test_context._mutable_state.external_buckets.get(analytic_bucket_no_self_input.full_name()).right().value());
+			assertTrue(null != test_context._mutable_state.external_buckets.get(analytic_bucket_no_self_input.full_name()).left().value());
 			
 		}
 		

@@ -652,12 +652,85 @@ public class DataSchemaBean implements Serializable {
 	 */
 	public static class DataWarehouseSchemaBean implements Serializable {
 		private static final long serialVersionUID = -5234936234777519175L;
-		//TODO (ALEPH-17): "sql" (hive) view of the data
-		//config: map JSON to sql fields ie allow generation of serde
-		//also maps buckets to database/table format
-		//private Boolean enabled;
-		//private String service_name;
-		//private Map<String, Object> technology_override_schema;
+		/** Describes if the columnar db service is used for this bucket
+		 * @return the enabled
+		 */
+		public Boolean enabled() {
+			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
+		}
+		/** Technology-specific settings for this schema - see the specific service implementation for details 
+		 * USE WITH CAUTION
+		 * @return the technology_override_schema
+		 */
+		public Map<String, Object> technology_override_schema() {
+			return technology_override_schema;
+		}
+		
+		/** The main table corresponding to this bucket
+		 * @return
+		 */
+		public Table main_table() { return main_table; }		
+		
+		/** A list of views
+		 * @return
+		 */
+		public List<Table> views() { return views; }
+		
+		private Boolean enabled;
+		private String service_name;
+		private Map<String, Object> technology_override_schema;
+		
+		private Table main_table;
+		private List<Table> views;
+		
+		/** Table information
+		 * @author Alex
+		 */
+		public static class Table {
+			/** Sets the name of the database (will default to "default" if not specified)
+			 * @return
+			 */
+			public String database_name() { return database_name; }
+			
+			/** Sets the name of the table (needs to be admin), otherwise will be the usual "unique signature" (with view if specified)
+			 * @return
+			 */
+			public String name_override() { return name_override; }
+						
+			/** For views, the sub-name of the view (applied to the unique signature in the usual way)
+			 * @return
+			 */
+			public String view_name() { return view_name; }
+			
+			/** For views, allows a SQL query to be applied to the view
+			 * @return
+			 */
+			public String sql_query() { return sql_query; }
+						
+			/** A representation of the table format (or leave blank or empty to auto generate if supported)
+			 *  For views, leaving it unfilled in, inherits the parent view 
+			 *  table_format: string -> (date_type) one of
+			 *  : (primitive_type) "CHAR"/"VARCHAR"/"DATE"/"DECIMAL[(precision,scale)]"/"TIMESTAMP"/"BINARY"/"STRING"/"DOUBLE"/"FLOAT"/"BOOLEAN"/"BIGINT"/"INT"/"SMALLINT"/"TINYINT"
+			 *  : (array_type) [ data_type ]
+			 *  : (map_type) [ string data_type ]
+			 *  : (struct_type) { string: data_type }
+			 *  : (union_type) [ {} data_type data_type .... ] 
+			 * @return
+			 */
+			public Map<String, Object> table_format() { return table_format; }
+						
+			private String database_name;
+			private String name_override;
+			private String view_name;
+			private String sql_query;
+			private Map<String, Object> table_format;
+		}		
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////

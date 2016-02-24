@@ -35,6 +35,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
@@ -194,6 +195,7 @@ public class MgmtCrudUtils {
 	}
 	
 	/** Handles the case where no nodes reply - still perform the operation but then suspend the bucket (user will have to unsuspend once nodes are available)
+	 *  (NOTE: called from two places, need to ensure the status bean has the right fields returned, eg the confirmed*, in both cases)
 	 * @param bucket
 	 * @param is_suspended
 	 * @param return_from_handlers
@@ -239,14 +241,16 @@ public class MgmtCrudUtils {
 						})
 						// If we weren't confirmed multi-node before, then change that
 						.map(change_update -> {
-							return (bucket.multi_node_enabled() != status.confirmed_multi_node_enabled()) 
-									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, bucket.multi_node_enabled()))
+							final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
+							return (Boolean.valueOf(multi_node_enabled) != status.confirmed_multi_node_enabled()) 
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_multi_node_enabled, multi_node_enabled))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
 						// Confirm master enrichment type, if changed
 						.map(change_update -> {
-							return (bucket.master_enrichment_type() != status.confirmed_master_enrichment_type()) 
-									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_master_enrichment_type, bucket.master_enrichment_type()))
+							final MasterEnrichmentType master_enrichment_type = Optional.ofNullable(bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none);
+							return (master_enrichment_type != status.confirmed_master_enrichment_type()) 
+									? Tuples._2T(true,change_update._2().set(DataBucketStatusBean::confirmed_master_enrichment_type, master_enrichment_type))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
 						.ifPresent(change_update -> {

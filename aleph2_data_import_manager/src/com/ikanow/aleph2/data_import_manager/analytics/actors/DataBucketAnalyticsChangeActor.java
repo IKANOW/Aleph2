@@ -452,7 +452,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 						getAnalyticsTechnology(message.bucket(), technology_name_or_id, analytic_tech_only, 
 								_stream_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
 								_batch_analytics_tech.map(s -> (IAnalyticsTechnologyModule)s), 
-								message, hostname, err_or_map)
+								message, hostname, _context.getDataImportConfigurationBean(), err_or_map)
 								.bind(t2 -> checkNodeAffinityMatches(message.bucket(), t2, a_context))
 								;
 				
@@ -835,6 +835,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final Optional<IAnalyticsTechnologyModule> batch_enrichment,
 			final BucketActionMessage m, 
 			final String source,
+			final DataImportConfigurationBean config,
 			final Validation<BasicMessageBean, Map<String, Tuple2<SharedLibraryBean, String>>> err_or_libs // "pipeline element"
 			)
 	{
@@ -846,13 +847,15 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					// Normal
 					libs -> {
 						
-						// Special case: streaming enrichment classpath
-						//TODO (ALEPH-12: handle general "on classpath" case)
+						// Special case: system-registered classpaths
 						final Tuple2<String, String> entrypoint_path = Lambdas.get(() -> {
 							return Optional.ofNullable(libs.get(technology_name_or_id)) 
-										.map(bean_path -> Tuples._2T(bean_path._1().misc_entry_point(), bean_path._2()))
+									.map(bean_path -> Tuples._2T(bean_path._1().misc_entry_point(), bean_path._2()))
 									.orElseGet(() -> {
 										return Patterns.match(technology_name_or_id).<Tuple2<String, String>>andReturn()
+											.when(t -> config.registered_technologies().containsKey(t), t -> {												
+												return Tuples._2T(config.registered_technologies().get(t), null); 
+											})
 											.when(t -> STREAMING_ENRICHMENT_TECH_NAME.equals(t), __ -> {
 												try { 
 													return Tuples._2T(streaming_enrichment.get().getClass().getName(), null); 

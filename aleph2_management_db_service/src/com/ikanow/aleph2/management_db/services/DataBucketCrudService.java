@@ -61,6 +61,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
@@ -748,15 +749,18 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						.orElse(Optional.ofNullable(corresponding_status.suspended())
 						.orElse(false)))
 		{
+			final boolean multi_node_enabled = Optional.ofNullable(new_bucket.multi_node_enabled()).orElse(false);
+			final MasterEnrichmentType master_enrichment_type = Optional.ofNullable(new_bucket.master_enrichment_type()).orElse(MasterEnrichmentType.none);
+			
 			if ((null != corresponding_status.confirmed_multi_node_enabled()) 
-					&& (new_bucket.multi_node_enabled() != corresponding_status.confirmed_multi_node_enabled()))
+					&& (Boolean.valueOf(multi_node_enabled) != corresponding_status.confirmed_multi_node_enabled()))
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
 								new_bucket.full_name(), "multi_node_enabled")));				
 			}
 			if ((null != corresponding_status.confirmed_master_enrichment_type()) 
-					&& (new_bucket.master_enrichment_type() != corresponding_status.confirmed_master_enrichment_type()))
+					&& (master_enrichment_type != corresponding_status.confirmed_master_enrichment_type()))
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.BUCKET_UPDATE_ILLEGAL_FIELD_CHANGED_ACTIVE, 
@@ -882,9 +886,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// (note any node information coming back from streaming enrichment is filtered out by the getSuccessfulNodes call below)
 		final CompletableFuture<Boolean> update_future = MgmtCrudUtils.applyNodeAffinityWrapper(new_object, status_store, management_results);
 
-		/**/
-		System.out.println("?? 1");	
-		
 		// Convert BucketActionCollectedRepliesMessage into a management side-channel:
 		// (combine the 2 futures but then only return the management results, just need for the update to have completed)
 		return management_results.thenCombine(update_future, (mgmt, update) -> mgmt);							
@@ -907,9 +908,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			final ICrudService<BucketActionRetryMessage> retry_store
 			)
 	{
-		/**/
-		System.out.println("?? 2a");			
-		
 		// First off, a couple of special cases relating to node affinity
 		final boolean multi_node_enabled = Optional.ofNullable(new_object.multi_node_enabled()).orElse(false);
 		final Set<String> node_affinity = Optional.ofNullable(status.node_affinity())
@@ -929,9 +927,6 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 				
 		final BucketActionMessage.UpdateBucketActionMessage update_message = 
 				new BucketActionMessage.UpdateBucketActionMessage(new_object, !status.suspended(), old_version, node_affinity);
-		
-		/**/
-		System.out.println("?? 2");			
 		
 		final CompletableFuture<Collection<BasicMessageBean>> management_results =
 			MgmtCrudUtils.applyRetriableManagementOperation(new_object, 
