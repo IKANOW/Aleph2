@@ -65,7 +65,10 @@ public class DataServiceUtils {
 				Tuples._2T(data_schema.temporal_schema(), data_schema.temporal_schema().name),
 				Tuples._2T(data_schema.data_warehouse_schema(), data_schema.data_warehouse_schema().name)
 				)
-			.map(schema_name -> Tuples._2T(BeanTemplateUtils.build(schema_name._1()), schema_name._2()))
+			.flatMap(schema_name -> Optional.<Object>ofNullable(schema_name._1())
+										.map(schema -> Tuples._2T(BeanTemplateUtils.build(schema), schema_name._2()))
+										.map(Stream::of).orElseGet(Stream::empty)
+			)
 			.forEach(schema_name -> {
 				Optional.of(schema_name._1()).filter(s -> Optional.ofNullable(s.<Boolean>get(enabled_)).orElse(true)).ifPresent(schema -> {
 					Optional.of(schema)
