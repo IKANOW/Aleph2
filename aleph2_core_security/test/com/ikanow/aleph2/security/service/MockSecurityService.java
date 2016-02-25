@@ -189,4 +189,5 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 		Subject currentUser = runAs2(principal);		
 		return currentUser.hasRole(role);
 	}
+
 }

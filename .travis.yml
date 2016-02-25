@@ -22,7 +22,7 @@ script: cd $TEST_DIR && mvn -B install -DskipTests=true && mvn -B clean test jac
 # - mvn clean test jacoco:report coveralls:report
 
 after_failure:
- - ls -alrt /tmp
+ - ls -alRt /tmp/shiro*
 
 # blacklist
 branches:
