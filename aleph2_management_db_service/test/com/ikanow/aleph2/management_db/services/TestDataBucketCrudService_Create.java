@@ -139,7 +139,7 @@ public class TestDataBucketCrudService_Create {
 		final IDataWarehouseService mock_data_warehouse_service = Mockito.mock(IDataWarehouseService.class);
 		Mockito.when(mock_data_warehouse_service.validateSchema(Mockito.any(), Mockito.any())).thenReturn(Tuples._2T("test", Collections.emptyList()));
 		Mockito.when(mock_data_warehouse_service.onPublishOrUpdate(Mockito.any(), Mockito.any(), Mockito.anyBoolean(), Mockito.anySet(), Mockito.anySet()))
-				.thenReturn(CompletableFuture.completedFuture(Optional.of(ErrorUtils.buildErrorMessage("TEST", "TEST", "TEST"))));
+				.thenReturn(CompletableFuture.completedFuture(Arrays.asList(ErrorUtils.buildErrorMessage("TEST", "TEST", "TEST"))));
 		_mock_service_context.addService(IDataWarehouseService.class, Optional.empty(), mock_data_warehouse_service);
 		
 		_db_actor_context = new ManagementDbActorContext(_mock_service_context, true);

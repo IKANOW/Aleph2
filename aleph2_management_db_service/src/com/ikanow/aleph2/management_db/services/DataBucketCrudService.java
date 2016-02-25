@@ -297,7 +297,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		final  Multimap<IDataServiceProvider, String> data_service_info = DataServiceUtils.selectDataServices(new_object.data_schema(), _service_context);
 		final Optional<Multimap<IDataServiceProvider, String>> old_data_service_info = old_bucket.map(old -> DataServiceUtils.selectDataServices(old.data_schema(), _service_context));
 		
-		final List<CompletableFuture<Optional<BasicMessageBean>>> ds_update_results = data_service_info.asMap().entrySet().stream()
+		final List<CompletableFuture<Collection<BasicMessageBean>>> ds_update_results = data_service_info.asMap().entrySet().stream()
 			.map(kv -> 
 					kv.getKey()
 						.onPublishOrUpdate(new_object, old_bucket, is_suspended, 
@@ -312,10 +312,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			;
 		
 		// Process old data services that are no longer in use
-		final List<CompletableFuture<Optional<BasicMessageBean>>> old_ds_update_results = old_data_service_info.map(old_ds_info -> {
+		final List<CompletableFuture<Collection<BasicMessageBean>>> old_ds_update_results = old_data_service_info.map(old_ds_info -> {
 			return old_ds_info.asMap().entrySet().stream()
 					.filter(kv -> !data_service_info.containsKey(kv.getKey()))
-					.<CompletableFuture<Optional<BasicMessageBean>>>map(kv -> 
+					.<CompletableFuture<Collection<BasicMessageBean>>>map(kv -> 
 						kv.getKey().onPublishOrUpdate(new_object, old_bucket, is_suspended, Collections.emptySet(), kv.getValue().stream().collect(Collectors.toSet())))
 					.collect(Collectors.toList())
 					;					
@@ -324,7 +324,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		//(combine)
 		@SuppressWarnings("unchecked")
-		CompletableFuture<Optional<BasicMessageBean>> all_service_registration_complete[] =
+		CompletableFuture<Collection<BasicMessageBean>> all_service_registration_complete[] =
 				Stream.concat(ds_update_results.stream(), old_ds_update_results.stream()).toArray(CompletableFuture[]::new);
 		
 		// Get the status and then decide whether to broadcast out the new/update message
@@ -338,7 +338,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 						(__, harvest_results) -> {
 							return (Collection<BasicMessageBean>)
 									Stream.concat(
-										Arrays.stream(all_service_registration_complete).flatMap(s -> s.join().map(Stream::of).orElse(Stream.empty()))
+										Arrays.stream(all_service_registration_complete).flatMap(s -> s.join().stream())
 										,
 										harvest_results.stream()
 									)
