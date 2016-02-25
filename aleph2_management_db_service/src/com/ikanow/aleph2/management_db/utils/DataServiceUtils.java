@@ -73,7 +73,7 @@ public class DataServiceUtils {
 				Optional.of(schema_name._1()).filter(s -> Optional.ofNullable(s.<Boolean>get(enabled_)).orElse(true)).ifPresent(schema -> {
 					Optional.of(schema)
 						.flatMap(s -> getDataServiceInterface(schema_name._2()))
-						.flatMap(ds_name -> context.getService((Class<IUnderlyingService>)ds_name, Optional.ofNullable(schema.<String>get(service_name_))))
+						.flatMap(ds_name -> context.getService((Class<IUnderlyingService>)(Class<?>)ds_name, Optional.ofNullable(schema.<String>get(service_name_))))
 						.ifPresent(ds -> mutable_output.put((IDataServiceProvider)ds, schema_name._2()));
 						;
 				});					
