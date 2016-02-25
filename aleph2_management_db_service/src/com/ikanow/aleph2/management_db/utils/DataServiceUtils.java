@@ -47,11 +47,11 @@ public class DataServiceUtils {
 	 * @return
 	 */
 	@SuppressWarnings({ "static-access", "unchecked" })
-	public static Multimap<IDataServiceProvider, String> selectDataServices(final DataSchemaBean data_schema, final IServiceContext context) {
-		
-		// Want to end up with MultiMap<IDataServiceProvider, Set<String>>
-		
+	public static Multimap<IDataServiceProvider, String> selectDataServices(final DataSchemaBean data_schema, final IServiceContext context) {		
 		final Multimap<IDataServiceProvider, String> mutable_output = HashMultimap.create();
+		if (null == data_schema) { //(rare NPE check! - lets calling client invoke bucket.data_schema() without having to worry about it)
+			return mutable_output;
+		}
 		
 		// common fields
 		final String enabled_ = "enabled";

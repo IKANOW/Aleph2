@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -42,6 +43,7 @@ import akka.actor.UntypedActor;
 
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -114,7 +116,7 @@ public class TestDataBucketCrudService_Create {
 	public ICrudService<DataBucketStatusBean> _underlying_bucket_status_crud;
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation", "unchecked" })
 	@Before
 	public void setup() throws Exception {
 		ModuleUtils.disableTestInjection();
@@ -132,6 +134,14 @@ public class TestDataBucketCrudService_Create {
 		_mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), _core_distributed_services);
 		_mock_service_context.addService(IStorageService.class, Optional.empty(),_storage_service);
 		_mock_service_context.addService(ISecurityService.class, Optional.empty(), new MockSecurityService());
+		
+		// Add a data warehouse service that returns a message in the onPublish call
+		final IDataWarehouseService mock_data_warehouse_service = Mockito.mock(IDataWarehouseService.class);
+		Mockito.when(mock_data_warehouse_service.validateSchema(Mockito.any(), Mockito.any())).thenReturn(Tuples._2T("test", Collections.emptyList()));
+		Mockito.when(mock_data_warehouse_service.onPublishOrUpdate(Mockito.any(), Mockito.any(), Mockito.anyBoolean(), Mockito.anySet(), Mockito.anySet()))
+				.thenReturn(CompletableFuture.completedFuture(Optional.of(ErrorUtils.buildErrorMessage("TEST", "TEST", "TEST"))));
+		_mock_service_context.addService(IDataWarehouseService.class, Optional.empty(), mock_data_warehouse_service);
+		
 		_db_actor_context = new ManagementDbActorContext(_mock_service_context, true);
 
 		_bucket_crud = new DataBucketCrudService(_mock_service_context, _db_actor_context);
@@ -285,6 +295,8 @@ public class TestDataBucketCrudService_Create {
 														BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).with(DataSchemaBean.StorageSchemaBean::enabled, true).done().get())
 												.with(DataSchemaBean::temporal_schema, 
 														BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).with(DataSchemaBean.TemporalSchemaBean::enabled, true).done().get())
+												.with(DataSchemaBean::data_warehouse_schema, 
+														BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class).with(DataSchemaBean.DataWarehouseSchemaBean::enabled, true).done().get())
 												.done().get();
 		
 		final DataBucketBean bucket_with_schema = BeanTemplateUtils.clone(valid_bucket)
@@ -314,12 +326,17 @@ public class TestDataBucketCrudService_Create {
 		Mockito.when(service5.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t5", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
 		test_context.addService(ITemporalService.class, Optional.empty(), service5);
 
+		IDataWarehouseService service6 = Mockito.mock(IDataWarehouseService.class);
+		Mockito.when(service6.validateSchema(Matchers.any(), Matchers.any())).thenReturn(Tuples._2T("t6", Arrays.asList(new BasicMessageBean(null, true, null, null, null, null, null))));
+		test_context.addService(IDataWarehouseService.class, Optional.empty(), service6);
+
 		final Tuple2<Map<String, String>, List<BasicMessageBean>> results1 = BucketValidationUtils.validateSchema(bucket_with_schema, test_context);
-		assertEquals(5, results1._2().size());
+		assertEquals(6, results1._2().size());
 		assertTrue("All returned success==true", results1._2().stream().allMatch(m -> m.success()));
-		assertEquals(5, results1._1().size());
+		assertEquals(6, results1._1().size());
 		assertEquals(ImmutableMap.<String, String>builder()
-				.put("columnar_schema", "t1").put("document_schema", "t2").put("search_index_schema", "t3").put("storage_schema", "t4").put("temporal_schema", "t5")
+				.put("columnar_schema", "t1").put("document_schema", "t2").put("search_index_schema", "t3")
+				.put("storage_schema", "t4").put("temporal_schema", "t5").put("data_warehouse_schema", "t6")
 				.build()
 				,
 				results1._1());
@@ -2032,6 +2049,55 @@ public class TestDataBucketCrudService_Create {
 			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
 			assertEquals(null, status_after4.node_affinity());			
+		}
+		//TODO: do some testing of data service registration
+		{
+			final DataBucketBean mod_bucket6 = BeanTemplateUtils.clone(mod_bucket4)
+					.with(DataBucketBean::data_schema, 
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::data_warehouse_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class)
+										.done().get()
+										)
+							.done().get()
+					)
+					.done();
+			
+			{
+				final ManagementFuture<Supplier<Object>> update_future6 = _bucket_crud.storeObject(mod_bucket6, true);
+				
+				assertEquals("id1", update_future6.get().get());
+				
+				final Collection<BasicMessageBean> res = update_future6.getManagementResults().join();
+				
+				assertEquals("Wrong size: " + res.stream().map(b -> b.success() + ": " + b.message()).collect(Collectors.joining(";")), 3, res.size());
+				assertEquals(1, res.stream().filter(b -> !b.success()).count());
+			}
+			
+			// OK, now store again minus the data warehouse bean ... will still get the error because of the old bucket
+			{
+				final ManagementFuture<Supplier<Object>> update_future6 = _bucket_crud.storeObject(mod_bucket4, true);
+				
+				assertEquals("id1", update_future6.get().get());
+				
+				final Collection<BasicMessageBean> res = update_future6.getManagementResults().join();
+				
+				assertEquals("Wrong size: " + res.stream().map(b -> b.success() + ": " + b.message()).collect(Collectors.joining(";")), 3, res.size());
+				assertEquals(1, res.stream().filter(b -> !b.success()).count());				
+			}
+			
+			// Store one more time - this time won't get an error because data warehouse is in neither
+			{
+				final ManagementFuture<Supplier<Object>> update_future6 = _bucket_crud.storeObject(mod_bucket4, true);
+				
+				assertEquals("id1", update_future6.get().get());
+				
+				final Collection<BasicMessageBean> res = update_future6.getManagementResults().join();
+				
+				assertEquals("Wrong size: " + res.stream().map(b -> b.success() + ": " + b.message()).collect(Collectors.joining(";")), 2, res.size());
+				assertEquals(0, res.stream().filter(b -> !b.success()).count());
+				
+			}
 		}
 	}
 }

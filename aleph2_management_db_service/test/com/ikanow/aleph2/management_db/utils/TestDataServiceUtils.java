@@ -74,7 +74,7 @@ public class TestDataServiceUtils {
 					ITemporalService.class,
 					IDataWarehouseService.class
 					)
-					.forEach(s -> mock_service_context.addService((Class<IUnderlyingService>)s, Optional.empty(), Mockito.mock(s)))
+					.forEach(s -> mock_service_context.addService((Class<IUnderlyingService>)(Class<?>)s, Optional.empty(), Mockito.mock(s)))
 					;
 			
 			final DataSchemaBean schema = 
@@ -113,7 +113,7 @@ public class TestDataServiceUtils {
 					ITemporalService.class,
 					IDataWarehouseService.class
 					)
-					.forEach(s -> mock_service_context.addService((Class<IUnderlyingService>)s, Optional.empty(), shared_service))
+					.forEach(s -> mock_service_context.addService((Class<IUnderlyingService>)(Class<?>)s, Optional.empty(), shared_service))
 					;
 			Stream.of(
 					IStorageService.class
