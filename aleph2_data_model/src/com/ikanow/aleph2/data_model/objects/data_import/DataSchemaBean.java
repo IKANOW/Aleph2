@@ -708,7 +708,9 @@ public class DataSchemaBean implements Serializable {
 		/** Table information
 		 * @author Alex
 		 */
-		public static class Table {
+		public static class Table implements Serializable {
+			private static final long serialVersionUID = -251021576889300239L;
+			
 			/** Sets the name of the database (will default to "default" if not specified)
 			 * @return
 			 */

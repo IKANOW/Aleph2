@@ -170,7 +170,7 @@ public class BucketValidationUtils {
 								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "temporal_schema")))));
 			}
-			if (null != bucket.data_schema().data_warehouse_schema())
+			if ((null != bucket.data_schema().data_warehouse_schema()) && Optional.ofNullable(bucket.data_schema().data_warehouse_schema().enabled()).orElse(true))
 			{
 				errors.addAll(service_context.getService(IDataWarehouseService.class, Optional.ofNullable(bucket.data_schema().data_warehouse_schema().service_name()))
 						.map(s -> s.validateSchema(bucket.data_schema().data_warehouse_schema(), bucket))
