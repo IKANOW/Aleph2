@@ -352,6 +352,22 @@ public class BeanTemplateUtils {
 			return this;
 		}
 		
+		/** Gets an element of the bean 
+		 * @param getter
+		 * @return
+		 */
+		@SuppressWarnings("unchecked")
+		public <R> R get(final String name) {
+			try {
+				final Field f = getDeclaredAndInheritedField(name, _element.getClass());
+				f.setAccessible(true);
+				return (R)f.get(_element);
+			}
+			catch (Exception e) {
+				throw new RuntimeException("BeanTemplate.get", e);
+			}
+		}
+		
 		private Field getDeclaredAndInheritedField(final String field, Class<?> clazz) throws NoSuchFieldException {
 			try {
 				return clazz.getDeclaredField(field);
