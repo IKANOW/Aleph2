@@ -227,31 +227,6 @@ public class MockSecurityService implements ISecurityService {
 		return _mock_role_map.get().getOrDefault(role, false);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String, java.lang.String)
-	 */
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
-		return new MockSubject();
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSystemUserAccessToken()
-	 */
-	@Override
-	public ISubject getSystemUserContext() {
-		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
-		return new MockSubject();
-	}
-
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateUserContext(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject)
-	 */
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-	}
 
 	@Override
 	public boolean isUserPermitted(String principal, String permission) {

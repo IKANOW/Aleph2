@@ -43,17 +43,7 @@ public interface ISecurityService extends IUnderlyingService {
 	public final static String ACTION_WILDCARD="*";
 
 	public final static String ROLE_ADMIN="admin";
-	
-	/////////////////////////////////////////////////////////////////////////
-	
-	// NEW API
-	
-	ISubject getUserContext(String user_id, String password);
-	
-	ISubject getSystemUserContext();
-	
-	void invalidateUserContext(ISubject subject);
-	
+		
 	
 	/////////////////////////////////////////////////////////////////////////
 	

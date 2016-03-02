@@ -116,32 +116,10 @@ public class NoSecurityService implements ISecurityService {
 		return true;
 	}
 
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String, java.lang.String)
-	 */
 	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		return new MockSubject();
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSystemUserAccessToken()
-	 */
-	@Override
-	public ISubject getSystemUserContext() {
-		return new MockSubject();
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateUserContext(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject)
-	 */
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-	}
-
-	@Override
-	public boolean isUserPermitted(String principal, String permission) {	
+	public boolean isUserPermitted(String principal, String permission) {
 		return true;
 	}
+
+
 }

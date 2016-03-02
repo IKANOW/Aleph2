@@ -130,12 +130,6 @@ public class SecurityServiceTest {
 	}
 	
 	@Test
-	public void testRole_newAPI(){
-		ISubject subject = securityService.getSystemUserContext();
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.hasRole(subject,"admin"));
-	}
-	@Test
 	public void testRole(){
 		ISubject subject = loginAsAdmin();
         //test a typed permission (not instance-level)

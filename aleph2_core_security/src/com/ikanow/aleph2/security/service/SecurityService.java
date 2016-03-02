@@ -93,29 +93,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options) {
 		return Optional.empty();
 	}
-
-	/////////////////////////////////////////////////////////////////////////
-	
-	// NEW API
-	
-
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		final Subject new_subject = new Subject.Builder().buildSubject();
-        final UsernamePasswordToken token = new UsernamePasswordToken(user_id,password);
-        new_subject.login(token);
-		return new SubjectWrapper(new_subject);
-	}
-	
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-		((Subject)(subject.getSubject())).logout();
-	}
-	
-	@Override
-	public ISubject getSystemUserContext() {
-		return getUserContext(systemUsername, systemPassword);
-	}
 	
 	@Override
 	public boolean isUserPermitted(String userId, Object assetOrPermission, Optional<String> action) {
