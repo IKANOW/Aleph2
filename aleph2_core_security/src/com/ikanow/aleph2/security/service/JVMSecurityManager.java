@@ -119,7 +119,8 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!file.startsWith(JAVA_HOME)) {
 				if (!(file.endsWith(".class") || file.endsWith(".jar") || file.endsWith(".dll") || file.endsWith(".so"))) {
 					String check = "read:" + convertPathToWildcardPermission(file);
-					if (!securityService.isPermitted(tlSubject.get(), check)) {
+//					if (!securityService.isPermitted(tlSubject.get(), check)) {
+    				if (!securityService.isPermitted(check)) {
 						throwSecurityException(tlSubject,"checkRead", file);
 					}
 				}
@@ -264,7 +265,7 @@ public class JVMSecurityManager extends SecurityManager {
 			setAlsoCheckSuper(false);
 			logger.trace("isPermitted*"+enabled+"*"+permission);
 			try {
-				permitted = securityService.isPermitted(tlSubject.get(), permission);				
+				permitted = securityService.isPermitted(permission);				
 			} catch (Throwable t) {
 				logger.error(t);
 			}

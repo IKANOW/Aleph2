@@ -53,11 +53,11 @@ public class TestMockSecurityService {
 		service.enableJvmSecurityManager(false);
 		Assert.assertEquals(Collections.emptyList(), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
-		Assert.assertEquals(false, service.hasRole(subject, "role"));
+		Assert.assertEquals(false, service.hasUserRole("user", "role"));
 		Assert.assertEquals(false, service.hasUserRole("user", "role"));
 		service.invalidateAuthenticationCache(Arrays.asList(""));
 		service.invalidateCache();
-		Assert.assertEquals(false, service.isPermitted(subject, "action"));
+		Assert.assertEquals(false, service.isUserPermitted("user", "action"));
 		Assert.assertEquals(false, service.isUserPermitted("user", "test", Optional.empty()));
 		Assert.assertEquals(MockSecurityService.MockSubject.class, service.login("", "").getClass());
 		

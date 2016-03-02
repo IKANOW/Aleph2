@@ -15,7 +15,12 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyCollectionOf;
@@ -25,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -131,9 +135,8 @@ public class SecurityServiceTest {
 	
 	@Test
 	public void testRole(){
-		ISubject subject = loginAsAdmin();
         //test a typed permission (not instance-level)
-		assertEquals(true,securityService.hasRole(subject,"admin"));
+		assertEquals(true,securityService.hasUserRole(adminUserId,"admin"));
 	}
 
 	@Test
@@ -141,7 +144,7 @@ public class SecurityServiceTest {
 		ISubject subject = loginAsRegularUser();
 		String permission = "permission1";
         //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 	}
 	
 	protected ISubject loginAsTestUser() throws AuthenticationException{
@@ -166,11 +169,11 @@ public class SecurityServiceTest {
 		String permission = "permission2";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 		}
 		subject = loginAsAdmin();
@@ -178,11 +181,11 @@ public class SecurityServiceTest {
 		permission = "permission2";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("AU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("AU-permisssion");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("AU-permisssion"+i+1);
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("AU-permisssion"+i+1);
 		}
 		
@@ -192,26 +195,24 @@ public class SecurityServiceTest {
 		ProfilingUtility.timeStopAndLog("TU2-permisssion_L"+(i+1));
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU2-permisssion"+(i+1));
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 			ProfilingUtility.timeStopAndLog("TU2-permisssion"+(i+1));
 		}
 	}
 
 	@Test
 	public void testInvalidateAuthenticationCache(){
-		ISubject subject = loginAsTestUser();
+		ISubject subject = loginAsRegularUser();
 		
-		securityService.runAs(subject,Arrays.asList(regularUserId));
-
 		// test personal community permission
 		String permission = "permission1";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 			if(i==5){
 				securityService.invalidateAuthenticationCache(Arrays.asList(regularUserId));	
@@ -222,19 +223,16 @@ public class SecurityServiceTest {
 
 	@Test
 	public void testInvalidateCache(){
-		ISubject subject = loginAsTestUser();
-		
-		securityService.runAs(subject,Arrays.asList(regularUserId));
 
 		// test personal community permission
 		String permission = "permission1";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 			if(i==5){
 				securityService.invalidateCache();	

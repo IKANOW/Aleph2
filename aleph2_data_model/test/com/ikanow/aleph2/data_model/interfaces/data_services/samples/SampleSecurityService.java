@@ -43,16 +43,6 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public boolean hasRole(ISubject subject, String role) {
-		return false;
-	}
-
-	@Override
-	public boolean isPermitted(ISubject subject, String string) {
-		return false;
-	}
-
-	@Override
 	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
 		return null;
 	}
@@ -95,6 +85,18 @@ public class SampleSecurityService implements ISecurityService {
 
 	@Override
 	public boolean isUserPermitted(String principal, String permission) {
+		return false;
+	}
+
+	@Override
+	public boolean isPermitted(String permission) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean hasRole(String role) {
+		// TODO Auto-generated method stub
 		return false;
 	}
 }

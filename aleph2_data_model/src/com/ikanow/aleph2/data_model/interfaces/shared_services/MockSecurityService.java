@@ -84,23 +84,6 @@ public class MockSecurityService implements ISecurityService {
 	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#hasRole(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.String)
-	 */
-	@Override
-	public boolean hasRole(ISubject subject, String role) {		
-		return _mock_role_map.get().getOrDefault(role, false);
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#isPermitted(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.String)
-	 */
-	@Override
-	public boolean isPermitted(ISubject subject, String string) {
-		return _mock_role_map.get().getOrDefault(string, false);
-	}
-
-
-	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#releaseRunAs(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject)
 	 */
 
@@ -243,6 +226,18 @@ public class MockSecurityService implements ISecurityService {
 			return _mock_role_map.get().getOrDefault(test_string, false);
 		})
 		;
+	}
+
+	@Override
+	public boolean isPermitted(String permission) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean hasRole(String role) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 	
 	

@@ -108,13 +108,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		}
 		return permitted;
 	}
-
-	
-	@Override
-	public boolean isPermitted(ISubject subject, String permission) {
-		return ((Subject)subject.getSubject()).isPermitted(permission);
-	}
-	
 	
 	/////////////////////////////////////////////////////////////////////////////
 	
@@ -176,14 +169,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 	
 
-	@Override
-	public boolean hasRole(ISubject subject, String roleIdentifier) {
-		boolean ret = ((Subject)subject.getSubject()).hasRole(roleIdentifier);
-		return ret;
-	}
-
-	
-
 	public static List<Module> getExtraDependencyModules() {
 		return Arrays.asList((Module)new CoreSecurityModule());
 	}
@@ -194,9 +179,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		// TODO Auto-generated method stub
 		
 	}
-
-
-
 
 
 	@Override
@@ -210,18 +192,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return new SecuredDataServiceProvider(serviceContext, provider, authorizationBean);
 	}
 	
-
-
-	//TODO: ->protected
-	protected void runAs(ISubject subject,Collection<String> principals) {
-		// TODO Auto-generated method stub	
-		((Subject)subject.getSubject()).runAs(new SimplePrincipalCollection(principals,getRealmName()));
-        if(jvmSecurityManager!=null){
-        	jvmSecurityManager.setSubject(subject);
-        }
-
-	}
-
 	protected String getRealmName(){
 		String name = "SecurityService";
 		if(realms.iterator().hasNext()){

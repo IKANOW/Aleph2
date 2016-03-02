@@ -47,11 +47,11 @@ public class TestNoSecurityService {
 		service.enableJvmSecurityManager(false);
 		Assert.assertEquals((Collection<Object>)Arrays.<Object>asList(service), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
-		Assert.assertEquals(true, service.hasRole(subject, "role"));
+		Assert.assertEquals(true, service.hasUserRole("user", "role"));
 		Assert.assertEquals(true, service.hasUserRole("user", "role"));
 		service.invalidateAuthenticationCache(Arrays.asList(""));
 		service.invalidateCache();
-		Assert.assertEquals(true, service.isPermitted(subject, "action"));
+		Assert.assertEquals(true, service.isUserPermitted("user", "action"));
 		Assert.assertEquals(true, service.isUserPermitted("user", "test", Optional.empty()));
 		Assert.assertEquals(NoSecurityService.MockSubject.class, service.login("", "").getClass());
 		

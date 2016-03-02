@@ -17,7 +17,6 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
 import java.util.Collection;
 import java.util.Optional;
-
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 
 /**
@@ -49,10 +48,6 @@ public interface ISecurityService extends IUnderlyingService {
 	
 	
 	public ISubject login(String principalName, Object credentials);
-
-	public boolean hasRole(ISubject subject, String role);
-	
-	public boolean isPermitted(ISubject subject, String string);
 		
 
 	/** Returns a secured management CRUD
@@ -107,4 +102,11 @@ public interface ISecurityService extends IUnderlyingService {
 	boolean hasUserRole(String principal, String role);
 
 	boolean isUserPermitted(String principal, String permission);
+	
+    boolean isPermitted(String permission);
+
+	public boolean hasRole(String role);
+
+
+	
 }
