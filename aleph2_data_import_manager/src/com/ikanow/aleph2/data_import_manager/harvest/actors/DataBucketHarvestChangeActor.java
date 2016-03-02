@@ -319,7 +319,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
     				if (shouldLog(m))
 						_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
 										Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());
-										tech_module.onInit(context);
+										
+					tech_module.onInit(context);
 					
 					// One final check before we do anything: are we allowed to run multi-node if we're trying
 					//TODO (ALEPH-12): add test coverage for this
