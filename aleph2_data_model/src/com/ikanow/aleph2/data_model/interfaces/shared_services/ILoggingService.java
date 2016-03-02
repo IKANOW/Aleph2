@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.Level;
@@ -27,8 +28,27 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  *
  */
 public interface ILoggingService {
-	//user log
+	/**
+	 * Typical entrypoint for user generated log messages.  These will be filtered and sent to storage based on the bucket config.
+	 * They always have the field "generated_by" set to "user".
+	 * 
+	 * @param level
+	 * @param bucket
+	 * @param message
+	 * @return
+	 */
 	public CompletableFuture<?> log(final Level level, final DataBucketBean bucket, final BasicMessageBean message);
+	
 	//system log - todo some day we can split these out to be 2 different interfaces to help avoid confusion to users
-	public CompletableFuture<?> systemLog(final Level level, final DataBucketBean bucket, final BasicMessageBean message);
+	/**
+	 * Logging entrypoint for system generated log messages.  These will be filtered and sent to storage based on the bucket config.
+	 * They always have the field "generated_by" set to "system".  If bucket is empty, will grab the external bucket and send messages to
+	 * there instead.
+	 * 
+	 * @param level
+	 * @param bucket
+	 * @param message
+	 * @return
+	 */
+	public CompletableFuture<?> systemLog(final Level level, final Optional<DataBucketBean> bucket, final BasicMessageBean message);
 }
