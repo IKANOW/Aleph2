@@ -22,15 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.AuthenticationToken;
-import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.session.Session;
-import org.apache.shiro.subject.SimplePrincipalCollection;
-import org.apache.shiro.subject.Subject;
-import org.apache.shiro.util.ThreadContext;
 
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -120,74 +113,6 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	protected Injector getInjector(){
 		Injector injector = Guice.createInjector(getExtraDependencyModules().get(0));
 		return injector;
-	}
-
-//// new set of threading tests
-	protected synchronized Subject loginAsSystem2(){
-		Subject currentUser = SecurityUtils.getSubject();
-		String principalName = systemUsername;
-		String password = systemPassword;
-		boolean needsLogin = true;
-		try{
-		    Session session = currentUser.getSession();
-		    logger.debug("loginAsSystem2 : "+session.getId()+" : "+currentUser);
-
-		if(currentUser.isAuthenticated()){
-			while(currentUser.isRunAs()){
-				currentUser.releaseRunAs();
-			}
-			Object principal = currentUser.getPrincipal();
-			// check if currentPrincipal 
-			if(systemUsername.equals(""+principal)){
-				needsLogin=false;
-			}else{
-				logger.warn("Found authenticated user ("+principal+") different than system user, logging out this user.");
-				currentUser.logout();
-			}
-		}
-		}catch(Exception e){
-			// try to get rid of expired session so system can login again
-			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
-			// create new session
-			ThreadContext.unbindSubject();
-			currentUser = SecurityUtils.getSubject();			
-			needsLogin = true;
-		}
-		if(needsLogin){
-			UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
-		    currentUser.login((AuthenticationToken)token);
-		    Session session = currentUser.getSession(true);
-		    logger.debug("Logged in user and Created session:"+session.getId());
-		}
-
-		return currentUser;
-	}
-	
-	
-	protected synchronized Subject runAs2(String principal) {
-		Subject currentUser = loginAsSystem2();		
-		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
-		return currentUser;
-	}
-
-	public boolean isPermitted2(String permission) {
-		Subject currentUser = SecurityUtils.getSubject();		
-		return currentUser.isPermitted(permission);
-	}
-
-	public boolean hasRole2(String role) {
-		Subject currentUser = SecurityUtils.getSubject();		
-		return currentUser.hasRole(role);
-	}
-
-	public boolean isUserPermitted2(String principal, String permission) {		
-		Subject currentUser = runAs2(principal);		
-		return currentUser.isPermitted(permission);
-	}
-
-	public boolean hasUserRole2(String principal, String role) {
-		Subject currentUser = runAs2(principal);		
-		return currentUser.hasRole(role);
 	}
 
 }

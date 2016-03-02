@@ -33,7 +33,6 @@ import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.session.mgt.SessionManager;
-import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.ThreadContext;
@@ -99,12 +98,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	
 	// NEW API
 	
-	@Override
-	public ISubject getUserContext(String user_id) {
-		ISubject root_subject = getUserContext(systemUsername, systemPassword);
-		((Subject)(root_subject.getSubject())).runAs(new SimplePrincipalCollection(user_id,getRealmName()));
-		return root_subject;
-	}
 
 	@Override
 	public ISubject getUserContext(String user_id, String password) {
@@ -125,12 +118,12 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 	
 	@Override
-	public boolean isUserPermitted(ISubject user_token, Object assetOrPermission, Optional<String> action) {
+	public boolean isUserPermitted(String userId, Object assetOrPermission, Optional<String> action) {
 		boolean permitted = false;
 		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
 		if (permissions != null && permissions.size() > 0) {
 			for (String permission : permissions) {
-				permitted = isPermitted(user_token, permission);
+				permitted = isUserPermitted(userId, permission);
 				if (permitted) {
 					break;
 				}
@@ -139,40 +132,12 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return permitted;
 	}
 
-	@Override
-	public boolean hasUserRole(ISubject user_token, String role) {
-		//TODO get rid of hasRole and replace with this
-		return hasRole(user_token,role);
-	}			
 	
 	@Override
 	public boolean isPermitted(ISubject subject, String permission) {
 		return ((Subject)subject.getSubject()).isPermitted(permission);
 	}
 	
-	@Override
-	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return isUserPermitted(subject, assetOrPermission, action);
-		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
-		}
-	}
-
-	@Override
-	public boolean hasUserRole(Optional<String> userID, String role) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return hasUserRole(subject, role);
-		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
-		}
-	}
 	
 	/////////////////////////////////////////////////////////////////////////////
 	
@@ -268,18 +233,10 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return new SecuredDataServiceProvider(serviceContext, provider, authorizationBean);
 	}
 	
-	
-	//TODO: ->protected
-	@Override
-	public ISubject loginAsSystem() {
-		ISubject subject = login(systemUsername,systemPassword);		
-		return subject;
-	}
 
 
 	//TODO: ->protected
-	@Override
-	public void runAs(ISubject subject,Collection<String> principals) {
+	protected void runAs(ISubject subject,Collection<String> principals) {
 		// TODO Auto-generated method stub	
 		((Subject)subject.getSubject()).runAs(new SimplePrincipalCollection(principals,getRealmName()));
         if(jvmSecurityManager!=null){
@@ -287,17 +244,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
         }
 
 	}
-
-
-	//TODO: ->protected
-	@SuppressWarnings("unchecked")
-	@Override
-	public Collection<String> releaseRunAs(ISubject subject) {
-		PrincipalCollection p = ((Subject)subject.getSubject()).releaseRunAs();
-		return (p!=null)? p.asList(): null;
-		}
-
-
 
 	protected String getRealmName(){
 		String name = "SecurityService";
@@ -381,5 +327,75 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+////new set of threading tests
+	protected synchronized Subject loginAsSystem(){
+		Subject currentUser = SecurityUtils.getSubject();
+		String principalName = systemUsername;
+		String password = systemPassword;
+		boolean needsLogin = true;
+		try{
+		    Session session = currentUser.getSession();
+		    logger.debug("loginAsSystem2 : "+session.getId()+" : "+currentUser);
+
+		if(currentUser.isAuthenticated()){
+			while(currentUser.isRunAs()){
+				currentUser.releaseRunAs();
+			}
+			Object principal = currentUser.getPrincipal();
+			// check if currentPrincipal 
+			if(systemUsername.equals(""+principal)){
+				needsLogin=false;
+			}else{
+				logger.warn("Found authenticated user ("+principal+") different than system user, logging out this user.");
+				currentUser.logout();
+			}
+		}
+		}catch(Exception e){
+			// try to get rid of expired session so system can login again
+			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
+			// create new session
+			ThreadContext.unbindSubject();
+			currentUser = SecurityUtils.getSubject();			
+			needsLogin = true;
+		}
+		if(needsLogin){
+			UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
+		    currentUser.login((AuthenticationToken)token);
+		    Session session = currentUser.getSession(true);
+		    logger.debug("Logged in user and Created session:"+session.getId());
+		}
+
+		return currentUser;
+	}
 	
+	
+	protected synchronized Subject runAs2(String principal) {
+		Subject currentUser = loginAsSystem();		
+		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
+		return currentUser;
+	}
+
+	public boolean isPermitted(String permission) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.isPermitted(permission);
+	}
+
+	public boolean hasRole(String role) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.hasRole(role);
+	}
+
+	@Override
+	public boolean isUserPermitted(String principal, String permission) {		
+		Subject currentUser = runAs2(principal);		
+		return currentUser.isPermitted(permission);
+	}
+
+	@Override
+	public boolean hasUserRole(String principal, String role) {
+		Subject currentUser = runAs2(principal);		
+		return currentUser.hasRole(role);
+	}
+
+
 }

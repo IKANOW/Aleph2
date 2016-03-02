@@ -54,15 +54,12 @@ public class TestMockSecurityService {
 		Assert.assertEquals(Collections.emptyList(), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		Assert.assertEquals(false, service.hasRole(subject, "role"));
-		Assert.assertEquals(false, service.hasUserRole(Optional.empty(), "role"));
+		Assert.assertEquals(false, service.hasUserRole("user", "role"));
 		service.invalidateAuthenticationCache(Arrays.asList(""));
 		service.invalidateCache();
 		Assert.assertEquals(false, service.isPermitted(subject, "action"));
-		Assert.assertEquals(false, service.isUserPermitted(Optional.empty(), "test", Optional.empty()));
+		Assert.assertEquals(false, service.isUserPermitted("user", "test", Optional.empty()));
 		Assert.assertEquals(MockSecurityService.MockSubject.class, service.login("", "").getClass());
-		Assert.assertEquals(MockSecurityService.MockSubject.class, service.loginAsSystem().getClass());
-		Assert.assertEquals(Arrays.asList(), service.releaseRunAs(subject));
-		service.runAs(subject, Arrays.asList());
 		
 		@SuppressWarnings({ "rawtypes" })
 		final IManagementCrudService test_crud = Mockito.mock(IManagementCrudService.class);
@@ -73,17 +70,17 @@ public class TestMockSecurityService {
 		// OK check a couple of simple uses
 		
 		service.setGlobalMockRole("mock_test", true);
-		Assert.assertEquals(true, service.hasUserRole(Optional.empty(), "mock_test"));
+		Assert.assertEquals(true, service.hasUserRole("user", "mock_test"));
 		
 		service.setUserMockRole("mock_test_user", "mock_test_asset", "mock_test_action", true);
-		Assert.assertEquals(true, service.isUserPermitted(Optional.of("mock_test_user"), "mock_test_asset", Optional.of("mock_test_action")));
+		Assert.assertEquals(true, service.isUserPermitted("mock_test_user", "mock_test_asset", Optional.of("mock_test_action")));
 		
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "mock_test_asset").done().get();
 		final SharedLibraryBean library_bean  = BeanTemplateUtils.build(SharedLibraryBean.class).with(SharedLibraryBean::path_name, "mock_test_asset").done().get();
 		final Tuple2<String, String> t2 = Tuples._2T("", "mock_test_asset");
 		
-		Assert.assertEquals(true, service.isUserPermitted(Optional.of("mock_test_user"), bucket, Optional.of("mock_test_action")));
-		Assert.assertEquals(true, service.isUserPermitted(Optional.of("mock_test_user"), library_bean, Optional.of("mock_test_action")));
-		Assert.assertEquals(true, service.isUserPermitted(Optional.of("mock_test_user"), t2, Optional.of("mock_test_action")));
+		Assert.assertEquals(true, service.isUserPermitted("mock_test_user", bucket, Optional.of("mock_test_action")));
+		Assert.assertEquals(true, service.isUserPermitted("mock_test_user", library_bean, Optional.of("mock_test_action")));
+		Assert.assertEquals(true, service.isUserPermitted("mock_test_user", t2, Optional.of("mock_test_action")));
 	}
 }
