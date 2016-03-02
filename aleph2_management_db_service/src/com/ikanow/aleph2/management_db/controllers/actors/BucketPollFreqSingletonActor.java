@@ -123,7 +123,10 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		});		
 	}
 
-	private CompletableFuture<BucketActionCollectedRepliesMessage> sendPollMessage(final DataBucketBean bucket) {		
+	private CompletableFuture<BucketActionCollectedRepliesMessage> sendPollMessage(final DataBucketBean bucket) {
+		
+		//TODO: if have node affinity, should override this
+		
 		final CompletableFuture<BucketActionCollectedRepliesMessage> poll_future = BucketActionSupervisor.askBucketActionActor(Optional.empty(),
 				_actor_context.getBucketActionSupervisor(), 
 				_actor_context.getActorSystem(), 

@@ -50,12 +50,15 @@ import org.apache.logging.log4j.Logger;
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicSearchService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
@@ -287,13 +290,63 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// OK if the bucket is validated we can store it (and create a status object)
 				
 		final CompletableFuture<Supplier<Object>> ret_val = _underlying_data_bucket_db.get().storeObject(new_object, replace_if_present);
+		final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
 
+		// Register the bucket update with any applicable data services		
+		
+		final  Multimap<IDataServiceProvider, String> data_service_info = DataServiceUtils.selectDataServices(new_object.data_schema(), _service_context);
+		final Optional<Multimap<IDataServiceProvider, String>> old_data_service_info = old_bucket.map(old -> DataServiceUtils.selectDataServices(old.data_schema(), _service_context));
+		
+		final List<CompletableFuture<Collection<BasicMessageBean>>> ds_update_results = data_service_info.asMap().entrySet().stream()
+			.map(kv -> 
+					kv.getKey()
+						.onPublishOrUpdate(new_object, old_bucket, is_suspended, 
+							kv.getValue().stream().collect(Collectors.toSet()), 
+							old_data_service_info
+								.map(old_map -> old_map.get(kv.getKey()))
+								.map(old_servs -> old_servs.stream().collect(Collectors.toSet()))
+								.orElse(Collections.emptySet())
+							)
+			)
+			.collect(Collectors.toList())
+			;
+		
+		// Process old data services that are no longer in use
+		final List<CompletableFuture<Collection<BasicMessageBean>>> old_ds_update_results = old_data_service_info.map(old_ds_info -> {
+			return old_ds_info.asMap().entrySet().stream()
+					.filter(kv -> !data_service_info.containsKey(kv.getKey()))
+					.<CompletableFuture<Collection<BasicMessageBean>>>map(kv -> 
+						kv.getKey().onPublishOrUpdate(new_object, old_bucket, is_suspended, Collections.emptySet(), kv.getValue().stream().collect(Collectors.toSet())))
+					.collect(Collectors.toList())
+					;					
+		})
+		.orElse(Collections.emptyList());
+		
+		//(combine)
+		@SuppressWarnings("unchecked")
+		CompletableFuture<Collection<BasicMessageBean>> all_service_registration_complete[] =
+				Stream.concat(ds_update_results.stream(), old_ds_update_results.stream()).toArray(CompletableFuture[]::new);
+		
 		// Get the status and then decide whether to broadcast out the new/update message
 		
-		final boolean is_suspended = DataBucketStatusCrudService.bucketIsSuspended(corresponding_status.get().get());
-		final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = old_bucket.isPresent()
-				? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db.get(), _bucket_action_retry_store.get())
-				: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db.get(), _actor_context);
+		final CompletableFuture<Collection<BasicMessageBean>> mgmt_results = 
+				CompletableFuture.allOf(all_service_registration_complete).thenCombine(				
+						old_bucket.isPresent()
+							? requestUpdatedBucket(new_object, old_bucket.get(), corresponding_status.get().get(), _actor_context, _underlying_data_bucket_status_db.get(), _bucket_action_retry_store.get())
+							: requestNewBucket(new_object, is_suspended, _underlying_data_bucket_status_db.get(), _actor_context)
+						,
+						(__, harvest_results) -> {
+							return (Collection<BasicMessageBean>)
+									Stream.concat(
+										Arrays.stream(all_service_registration_complete).flatMap(s -> s.join().stream())
+										,
+										harvest_results.stream()
+									)
+									.collect(Collectors.toList())
+									;
+						})
+						.exceptionally(t -> Arrays.asList(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "storeValidatedObject", ErrorUtils.get("{0}", t))))
+						;
 			
 		// Update the status depending on the results of the management channels
 				
