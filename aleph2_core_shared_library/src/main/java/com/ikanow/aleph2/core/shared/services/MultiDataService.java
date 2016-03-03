@@ -30,6 +30,7 @@ import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
@@ -189,7 +190,7 @@ public class MultiDataService {
 		batch_storage_service = Optional.ofNullable(
 				crud_service = Optional.of(service_provider)
 											.flatMap(s -> s.getDataService())
-											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), maybe_get_buffer_name.map(f -> f.apply(s))))
+											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), maybe_get_buffer_name.<String>flatMap(f -> f.apply(s))))
 											.orElse(null)
 				)
 				.flatMap(IDataWriteService::getBatchWriteSubservice)
