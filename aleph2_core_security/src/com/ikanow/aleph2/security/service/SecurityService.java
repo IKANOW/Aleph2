@@ -110,7 +110,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	
 	/////////////////////////////////////////////////////////////////////////////
 	
-	@Override
+/*	@Override
 	public ISubject login(String principalName, Object credentials) {
 		
 		
@@ -125,41 +125,48 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
         ISubject currentSubject = new SubjectWrapper(shiroSubject);
 		return currentSubject;
 	}
+*/
+	@Override
+	public synchronized ISubject login(String principalName, Object credentials){
+		Subject currentUser = SecurityUtils.getSubject();
+		if(principalName ==null){
+			
+		}
+		boolean needsLogin = true;
+		try{
+		    Session session = currentUser.getSession();
+		    logger.debug("login: "+session.getId()+" : "+currentUser);
 
-	protected void ensureUserIsLoggedOut()
-	{
-	    try
-	    {
-	    	Subject shiroSubject = getShiroSubject();
-	        if (shiroSubject == null)
-	            return;
+		if(currentUser.isAuthenticated()){
+			while(currentUser.isRunAs()){
+				currentUser.releaseRunAs();
+			}
+			Object principal = currentUser.getPrincipal();
+			// check if currentPrincipal 
+			if(principalName.equals(""+principal)){
+				needsLogin=false;
+			}else{
+				logger.warn("login(): found authenticated user ("+principal+") different than "+principalName+", logging out this user.");
+				currentUser.logout();
+			}
+		}
+		}catch(Exception e){
+			// try to get rid of expired session so system can login again
+			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
+			// create new session
+			ThreadContext.unbindSubject();
+			currentUser = SecurityUtils.getSubject();			
+			needsLogin = true;
+		}
+		if(needsLogin){
+			UsernamePasswordToken token = new UsernamePasswordToken(principalName,""+credentials);
+		    currentUser.login((AuthenticationToken)token);
+		    Session session = currentUser.getSession(true);
+		    logger.debug("Logged in user and Created session:"+session.getId());
+		}
 
-	        // Log the user out and kill their session if possible.
-	        shiroSubject.logout();
-	        Session session = shiroSubject.getSession(false);
-	        if (session == null)
-	            return;
-
-	        session.stop();
-	    }
-	    catch (Exception e)
-	    {
-	        // Ignore all errors, as we're trying to silently 
-	        // log the user out.
-	    }
-	}
-
-	// Clean way to get the subject
-	protected Subject getShiroSubject()
-	{
-	    Subject currentUser = ThreadContext.getSubject();// SecurityUtils.getSubject();
-
-	    if (currentUser == null)
-	    {
-	        currentUser = SecurityUtils.getSubject();
-	    }
-
-	    return currentUser;
+		ISubject currentSubject = new SubjectWrapper(currentUser);
+		return currentSubject;
 	}
 	
 
@@ -310,7 +317,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 	
 	
-	protected synchronized Subject runAs2(String principal) {
+	protected synchronized Subject runAs(String principal) {
 		Subject currentUser = loginAsSystem();		
 		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
 		return currentUser;
@@ -328,13 +335,13 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 	@Override
 	public boolean isUserPermitted(String principal, String permission) {		
-		Subject currentUser = runAs2(principal);		
+		Subject currentUser = runAs(principal);		
 		return currentUser.isPermitted(permission);
 	}
 
 	@Override
 	public boolean hasUserRole(String principal, String role) {
-		Subject currentUser = runAs2(principal);		
+		Subject currentUser = runAs(principal);		
 		return currentUser.hasRole(role);
 	}
 

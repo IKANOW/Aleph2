@@ -51,6 +51,7 @@ public interface ISecurityService extends IUnderlyingService {
 
 	/** This method provides the currently logged in subject (user). 
 	 * This function facilitates  a callback access to the current user for further external security checks,e.g by the JVM security manager.
+	 * The current user can be either a directly logged in user or the system user using runAs() from a is permitted call etc.  
 	 * @return
 	 */
 	public ISubject getCurrentSubject();

@@ -501,20 +501,20 @@ public class SecurityServiceTest {
 		
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
-		ms.runAs2(regularUserId);
+		ms.runAs(regularUserId);
 		assertEquals(0L,authProvider.getCallCount());
 		
 		// runAsUser and check caching
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
-		ms.runAs2(regularUserId);
+		ms.runAs(regularUserId);
 		assertEquals(0L,authProvider.getCallCount());
 		assertTrue(ms.isPermitted("permission1"));
 
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
 		// runAsTest and check Caching
-		ms.runAs2(testUserId);
+		ms.runAs(testUserId);
 		assertEquals(0L,authProvider.getCallCount());
 		assertTrue(ms.isPermitted("t1"));
 		assertEquals(1L,roleProvider.getCallCount());
@@ -522,7 +522,7 @@ public class SecurityServiceTest {
 		// runAsuser and check Caching
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
-		ms.runAs2(regularUserId);
+		ms.runAs(regularUserId);
 		assertEquals(0L,authProvider.getCallCount());
 		assertTrue(ms.isPermitted("permission1"));
 		assertTrue(ms.isUserPermitted(regularUserId,"permission1"));
@@ -568,7 +568,6 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	@Ignore
 	public void testMultiThreading(){
 		MockSecurityService ms = ((MockSecurityService)securityService);
 		Subject s = ms.loginAsSystem();
