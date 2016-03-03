@@ -39,7 +39,6 @@ public class JVMSecurityManager extends SecurityManager {
 
 	protected ThreadLocal<Boolean> tlEnabled = new ThreadLocal<Boolean>();
 	protected ISecurityService securityService;
-	protected ThreadLocal<ISubject> tlSubject = new ThreadLocal<ISubject>();
 	protected ThreadLocal<Boolean> tlCheckSuper =  new ThreadLocal<Boolean>();
 	
 	protected static String JAVA_HOME = System.getProperty("java.home"); 
@@ -67,17 +66,6 @@ public class JVMSecurityManager extends SecurityManager {
 		tlEnabled.set(enabled);
 	}
 
-	public void setSubject(ISubject subject) {
-		tlSubject.set(subject);
-	}
-
-	/** call this to dispose of the ThreadLocal subject before nullifying the security manager
-	 * 
-	 */
-	public void releaseSubject() {
-		tlSubject.remove();
-	}
-
 	@Override
 	public void checkConnect(String host, int port) {
 
@@ -98,7 +86,7 @@ public class JVMSecurityManager extends SecurityManager {
 			String check = "connect:" + convertHostToWildcardPermission(host) + ":" + port;
 			if (!isPermitted(check))
 			{
-				throwSecurityException(tlSubject,"checkConnect", " connect host:" + port);
+				throwSecurityException(securityService.getCurrentSubject(),"checkConnect", " connect host:" + port);
 			}
 
 			// Always do this: so we're the union of configured restrictions+the
@@ -119,9 +107,9 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!file.startsWith(JAVA_HOME)) {
 				if (!(file.endsWith(".class") || file.endsWith(".jar") || file.endsWith(".dll") || file.endsWith(".so"))) {
 					String check = "read:" + convertPathToWildcardPermission(file);
-//					if (!securityService.isPermitted(tlSubject.get(), check)) {
+//					if (!securityService.isPermitted(securityService.getCurrentSubject().get(), check)) {
     				if (!securityService.isPermitted(check)) {
-						throwSecurityException(tlSubject,"checkRead", file);
+						throwSecurityException(securityService.getCurrentSubject(),"checkRead", file);
 					}
 				}
 			}
@@ -143,7 +131,7 @@ public class JVMSecurityManager extends SecurityManager {
 			if (!file.startsWith(JAVA_HOME)) {
 				if (!(file.endsWith(".class") || file.endsWith(".jar") || file.endsWith(".dll") || file.endsWith(".so"))) {
 					if (!isPermitted(check)) {
-						throwSecurityException(tlSubject, "checkRead",file);
+						throwSecurityException(securityService.getCurrentSubject(), "checkRead",file);
 					} // permitted
 				}
 			}
@@ -158,7 +146,7 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "write:" + convertPathToWildcardPermission(file);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject,"checkWrite", file);
+				throwSecurityException(securityService.getCurrentSubject(),"checkWrite", file);
 			}
 		}
 		if(checkSuper()){
@@ -171,7 +159,7 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "delete:" + convertPathToWildcardPermission(file);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject,"checkDelete" ,file);
+				throwSecurityException(securityService.getCurrentSubject(),"checkDelete" ,file);
 			}
 		}
 		if(checkSuper()){
@@ -184,7 +172,7 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "exec:" + convertPathToWildcardPermission(cmd);
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, "checkExec",cmd);
+				throwSecurityException(securityService.getCurrentSubject(), "checkExec",cmd);
 			}
 		}
 		if(checkSuper()){
@@ -197,7 +185,7 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check =  "package:" +convertPackageToWildcardPermission(packageName);			
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, "checkPackageAccess",packageName);
+				throwSecurityException(securityService.getCurrentSubject(), "checkPackageAccess",packageName);
 			}
 		}
 		if(checkSuper()){
@@ -210,7 +198,7 @@ public class JVMSecurityManager extends SecurityManager {
 		if (isEnabled()) {
 			String check = "permission:"+permission.getName();
 			if (!isPermitted( check)) {
-				throwSecurityException(tlSubject, "checkPermission",check);
+				throwSecurityException(securityService.getCurrentSubject(), "checkPermission",check);
 			}
 		}
 		if(checkSuper()){
@@ -223,9 +211,14 @@ public class JVMSecurityManager extends SecurityManager {
 		return (lock != null && lock);
 	}
 
-	protected static void throwSecurityException(ThreadLocal<ISubject> tlSubject,String source,  String message) throws SecurityException {
-		// we do not want to acces outside packages here, so we do not use Errorutils.
-		String errorMsg = "Security Error in "+source +" for "+tlSubject.get().getName()+" accessing "+message;
+	protected static void throwSecurityException(ISubject subject,String source,  String message) throws SecurityException {
+		String principalName = null;		
+		if (subject != null) {
+			principalName = subject.getName();			
+		}
+
+		String errorMsg = "Security Error in "+source +" for "+(principalName!=null?principalName:"null")+" accessing "+message;
+		// we do not want to access outside packages here, so we do not use Errorutils.
 		logger.error(errorMsg);
 		throw new SecurityException(errorMsg);
 	}
@@ -254,24 +247,27 @@ public class JVMSecurityManager extends SecurityManager {
 		return host;
 	}
 
-	protected boolean isPermitted(String permission) {
-		ISubject subject = tlSubject.get();
+		protected boolean isPermitted(String permission) {
 		boolean permitted = false;
+		ISubject subject = securityService.getCurrentSubject();
 		if (subject != null) {
-			// prevent recursive calls while checking
-			boolean enabled = isEnabled();
-			setEnabled(false);
-			boolean checkSuperEnabled = checkSuper();
-			setAlsoCheckSuper(false);
-			logger.trace("isPermitted*"+enabled+"*"+permission);
-			try {
-				permitted = securityService.isPermitted(permission);				
-			} catch (Throwable t) {
-				logger.error(t);
+			String principalName = subject.getName();
+			if(principalName!=null){
+				// prevent recursive calls while checking
+				boolean enabled = isEnabled();
+				setEnabled(false);
+				boolean checkSuperEnabled = checkSuper();
+				setAlsoCheckSuper(false);
+				logger.trace("isPermitted*"+enabled+"*"+permission);
+				try {
+					permitted = securityService.isUserPermitted(principalName,permission);				
+				} catch (Throwable t) {
+					logger.error(t);
+				}
+				// restore previous state
+				setEnabled(enabled);
+				setAlsoCheckSuper(checkSuperEnabled);
 			}
-			// restore previous state
-			setEnabled(enabled);
-			setAlsoCheckSuper(checkSuperEnabled);
 		}
 		return permitted;
 	}

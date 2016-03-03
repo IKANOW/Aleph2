@@ -239,7 +239,10 @@ public class MockSecurityService implements ISecurityService {
 		// TODO Auto-generated method stub
 		return false;
 	}
-	
-	
+
+	@Override
+	public ISubject getCurrentSubject() {
+		return new MockSubject();
+	}
 
 }

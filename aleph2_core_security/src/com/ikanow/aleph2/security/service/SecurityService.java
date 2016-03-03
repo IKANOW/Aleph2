@@ -51,7 +51,6 @@ import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
-	protected ThreadLocal<ISubject> tlCurrentSubject = new ThreadLocal<ISubject>();
 	protected static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
 	protected static String systemUsername = null;
@@ -123,12 +122,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
         ensureUserIsLoggedOut();
         Subject shiroSubject = getShiroSubject();
         shiroSubject.login((AuthenticationToken)token);
-        tlCurrentSubject.remove();
         ISubject currentSubject = new SubjectWrapper(shiroSubject);
-        tlCurrentSubject.set(currentSubject);
-        if(jvmSecurityManager!=null){
-        	jvmSecurityManager.setSubject(currentSubject);
-        }
 		return currentSubject;
 	}
 
@@ -243,8 +237,8 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 				if (currSysManager instanceof JVMSecurityManager) {
 					this.jvmSecurityManager = (JVMSecurityManager) currSysManager;
 				} else {
-					this.jvmSecurityManager = new JVMSecurityManager(this);
-					this.jvmSecurityManager.setSubject(tlCurrentSubject.get());
+					this.jvmSecurityManager = new JVMSecurityManager(this);					
+					//this.jvmSecurityManager.setSubject(tlCurrentSubject.get());
 					System.setSecurityManager(jvmSecurityManager);
 				}				
 			}
@@ -254,7 +248,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 			Object currSysManager = System.getSecurityManager();
 			if (currSysManager instanceof JVMSecurityManager) {				
 				System.setSecurityManager(null);
-				this.jvmSecurityManager.releaseSubject();				
+				//this.jvmSecurityManager.releaseSubject();				
 				this.jvmSecurityManager = null;
 			}
 		}
@@ -342,6 +336,13 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	public boolean hasUserRole(String principal, String role) {
 		Subject currentUser = runAs2(principal);		
 		return currentUser.hasRole(role);
+	}
+
+
+
+	@Override
+	public ISubject getCurrentSubject() {
+		return new SubjectWrapper(SecurityUtils.getSubject());
 	}
 
 

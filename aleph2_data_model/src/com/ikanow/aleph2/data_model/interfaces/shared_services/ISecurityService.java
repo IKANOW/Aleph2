@@ -48,6 +48,12 @@ public interface ISecurityService extends IUnderlyingService {
 	
 	
 	public ISubject login(String principalName, Object credentials);
+
+	/** This method provides the currently logged in subject (user). 
+	 * This function facilitates  a callback access to the current user for further external security checks,e.g by the JVM security manager.
+	 * @return
+	 */
+	public ISubject getCurrentSubject();
 		
 
 	/** Returns a secured management CRUD

@@ -120,6 +120,10 @@ public class NoSecurityService implements ISecurityService {
 	public boolean hasRole(String role) {
 		return true;
 	}
+	@Override
+	public ISubject getCurrentSubject() {
+		return new MockSubject();
+	}
 
 
 }

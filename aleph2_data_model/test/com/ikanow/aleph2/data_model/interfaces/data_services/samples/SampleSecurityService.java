@@ -90,13 +90,16 @@ public class SampleSecurityService implements ISecurityService {
 
 	@Override
 	public boolean isPermitted(String permission) {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public boolean hasRole(String role) {
-		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public ISubject getCurrentSubject() {
+		return null;
 	}
 }
