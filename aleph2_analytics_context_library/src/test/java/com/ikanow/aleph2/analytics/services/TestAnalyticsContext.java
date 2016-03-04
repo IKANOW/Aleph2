@@ -686,12 +686,12 @@ public class TestAnalyticsContext {
 
 			final AnalyticThreadJobBean analytic_job1 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id")
-															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name2.zip"))
 															.done().get();
 
 			final AnalyticThreadJobBean analytic_job2 = BeanTemplateUtils.build(AnalyticThreadJobBean.class)
 															.with(AnalyticThreadJobBean::analytic_technology_name_or_id, "test_analytic_tech_id_XXX") // (not actually possible, just for tesT)
-															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name3", "test_analytic_tech_id"))
+															.with(AnalyticThreadJobBean::library_names_or_ids, Arrays.asList("id1", "name3.test", "test_analytic_tech_id"))
 															.done().get();												
 			
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -705,32 +705,32 @@ public class TestAnalyticsContext {
 
 			final SharedLibraryBean atlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 												.with(SharedLibraryBean::_id, "test_analytic_tech_id")
-												.with(SharedLibraryBean::path_name, "test_analytic_tech_name")
+												.with(SharedLibraryBean::path_name, "test_analytic_tech_name.jar")
 												.done().get();
 			
 			final SharedLibraryBean atmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id1")
-					.with(SharedLibraryBean::path_name, "name1")
+					.with(SharedLibraryBean::path_name, "name1.jar")
 					.done().get();
 			
 			final SharedLibraryBean atmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id2")
-					.with(SharedLibraryBean::path_name, "name2")
+					.with(SharedLibraryBean::path_name, "name2.zip")
 					.done().get();
 			
 			final SharedLibraryBean atmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id3")
-					.with(SharedLibraryBean::path_name, "name3")
+					.with(SharedLibraryBean::path_name, "name3.test")
 					.done().get();
 			
 			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
 								.getSharedLibraryStore().storeObjects(Arrays.asList(atlib1, atmod1, atmod2, atmod3)).get();
 			
 			Map<String, String> mods = test_context.getAnalyticsLibraries(Optional.of(test_bucket), Arrays.asList(analytic_job1, analytic_job2)).get();
-			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
-			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
-			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
-			assertTrue("test_analytic_tech_name", mods.containsKey("test_analytic_tech_name") && mods.get("test_analytic_tech_name").endsWith("test_analytic_tech_id.cache.jar"));
+			assertTrue("name1", mods.containsKey("name1.jar") && mods.get("name1.jar").endsWith("id1.cache.jar"));
+			assertTrue("name2", mods.containsKey("name2.zip") && mods.get("name2.zip").endsWith("id2.cache.zip"));
+			assertTrue("name3", mods.containsKey("name3.test") && mods.get("name3.test").endsWith("id3.cache.misc.test"));
+			assertTrue("test_analytic_tech_name", mods.containsKey("test_analytic_tech_name.jar") && mods.get("test_analytic_tech_name.jar").endsWith("test_analytic_tech_id.cache.jar"));
 		}
 		catch (Exception e) {
 			try {

@@ -398,7 +398,7 @@ public class TestHarvestContext {
 
 			final SharedLibraryBean htlib1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 												.with(SharedLibraryBean::_id, "test_harvest_tech_id")
-												.with(SharedLibraryBean::path_name, "test_harvest_tech_name")
+												.with(SharedLibraryBean::path_name, "test_harvest_tech_name.jar")
 												.done().get();
 			
 			test_context.setBucket(test_empty_bucket);
@@ -420,11 +420,11 @@ public class TestHarvestContext {
 			// Now get the various shared libs
 
 			final HarvestControlMetadataBean harvest_module1 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-															.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name2"))
+															.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name2.zip"))
 															.done().get();
 			
 			final HarvestControlMetadataBean harvest_module2 = BeanTemplateUtils.build(HarvestControlMetadataBean.class)
-					.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name3", "test_harvest_tech_id"))
+					.with(HarvestControlMetadataBean::library_names_or_ids, Arrays.asList("id1", "name3.test", "test_harvest_tech_id"))
 															.done().get();
 												
 			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -435,27 +435,27 @@ public class TestHarvestContext {
 						
 			final SharedLibraryBean htmod1 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id1")
-					.with(SharedLibraryBean::path_name, "name1")
+					.with(SharedLibraryBean::path_name, "name1.jar")
 					.done().get();
 			
 			final SharedLibraryBean htmod2 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id2")
-					.with(SharedLibraryBean::path_name, "name2")
+					.with(SharedLibraryBean::path_name, "name2.zip")
 					.done().get();
 			
 			final SharedLibraryBean htmod3 = BeanTemplateUtils.build(SharedLibraryBean.class)
 					.with(SharedLibraryBean::_id, "id3")
-					.with(SharedLibraryBean::path_name, "name3")
+					.with(SharedLibraryBean::path_name, "name3.test")
 					.done().get();
 			
 			test_context._service_context.getService(IManagementDbService.class, Optional.empty()).get()
 								.getSharedLibraryStore().storeObjects(Arrays.asList(htlib1, htmod1, htmod2, htmod3)).get();
 			
 			Map<String, String> mods = test_context.getHarvestLibraries(Optional.of(test_bucket)).get();
-			assertTrue("name1", mods.containsKey("name1") && mods.get("name1").endsWith("id1.cache.jar"));
-			assertTrue("name2", mods.containsKey("name2") && mods.get("name2").endsWith("id2.cache.jar"));
-			assertTrue("name3", mods.containsKey("name3") && mods.get("name3").endsWith("id3.cache.jar"));
-			assertTrue("test_harvest_tech_name", mods.containsKey("test_harvest_tech_name") && mods.get("test_harvest_tech_name").endsWith("test_harvest_tech_id.cache.jar"));
+			assertTrue("name1:" + mods, mods.containsKey("name1.jar") && mods.get("name1.jar").endsWith("id1.cache.jar"));
+			assertTrue("name2:" + mods, mods.containsKey("name2.zip") && mods.get("name2.zip").endsWith("id2.cache.zip"));
+			assertTrue("name3:" + mods, mods.containsKey("name3.test") && mods.get("name3.test").endsWith("id3.cache.misc.test"));
+			assertTrue("test_harvest_tech_name:" + mods, mods.containsKey("test_harvest_tech_name.jar") && mods.get("test_harvest_tech_name.jar").endsWith("test_harvest_tech_id.cache.jar"));
 		}
 		catch (Exception e) {
 			try {
