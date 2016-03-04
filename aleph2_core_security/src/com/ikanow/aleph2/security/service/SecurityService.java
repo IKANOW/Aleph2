@@ -219,7 +219,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public void enableJvmSecurityManager(Optional<String> principalName,boolean enabled) {
+	public void enableJvmSecurityManager(boolean enabled) {
 		if (enabled) {			
 			if (jvmSecurityManager == null) {
 				Object currSysManager = System.getSecurityManager();
@@ -231,7 +231,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 					System.setSecurityManager(jvmSecurityManager);
 				}				
 			}
-
 		} else {
 			// disable security manager if it is our's
 			Object currSysManager = System.getSecurityManager();
@@ -247,7 +246,13 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	@Override
 	public void enableJvmSecurity(Optional<String> principalName,boolean enabled) {
 		if(enabled){
-			enableJvmSecurityManager(principalName,true);
+			// set the principalName into runAs or login as system
+			if(principalName.isPresent()){
+				runAs(principalName.get());
+			}else{
+				loginAsSystem();
+			}
+			enableJvmSecurityManager(true);
 			jvmSecurityManager.setEnabled(true);
 		}else{
 			if (jvmSecurityManager != null) {

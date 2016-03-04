@@ -64,7 +64,7 @@ public class SampleSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public void enableJvmSecurityManager(Optional<String> principalName,boolean enabled) {
+	public void enableJvmSecurityManager(boolean enabled) {
 		
 	}
 

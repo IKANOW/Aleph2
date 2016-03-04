@@ -43,8 +43,8 @@ public class TestNoSecurityService {
 		NoSecurityService service = new NoSecurityService();
 		service.enableJvmSecurity(Optional.empty(),true);
 		service.enableJvmSecurity(Optional.empty(),false);
-		service.enableJvmSecurityManager(Optional.empty(),true);
-		service.enableJvmSecurityManager(Optional.empty(),false);
+		service.enableJvmSecurityManager(true);
+		service.enableJvmSecurityManager(false);
 		Assert.assertEquals((Collection<Object>)Arrays.<Object>asList(service), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		Assert.assertEquals(true, service.hasUserRole("user", "role"));

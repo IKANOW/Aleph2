@@ -77,13 +77,13 @@ public interface ISecurityService extends IUnderlyingService {
 
 	/** 
 	 * This function enables the Jvm Security Manager in the system.
-	 * @param enabled, enables the  system wide java security manager for a given user or uses the system user if not set.
+	 * @param enabled, enables the  system wide java security manager.
 	 */
-	void enableJvmSecurityManager(Optional<String> principalName,boolean enabled);
+	void enableJvmSecurityManager(boolean enabled);
 
 	/** 
 	 * This function enables the JVM Security on a per thread basis and can be used to wrap function calls. 
-	 * @param enabled, enables the  system wide java security manager for a given user or uses the system user if not set.
+	 * @param principalName, enables the  system wide java security manager for a given user or uses the system user if not present.
 	 * @param enabled
 	 */
 	void enableJvmSecurity(Optional<String> principalName,boolean enabled);

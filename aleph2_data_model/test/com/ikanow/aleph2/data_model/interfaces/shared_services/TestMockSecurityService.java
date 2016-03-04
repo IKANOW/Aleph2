@@ -49,8 +49,8 @@ public class TestMockSecurityService {
 		MockSecurityService service = new MockSecurityService();
 		service.enableJvmSecurity(Optional.empty(),true);
 		service.enableJvmSecurity(Optional.empty(),false);
-		service.enableJvmSecurityManager(Optional.empty(),true);
-		service.enableJvmSecurityManager(Optional.empty(),false);
+		service.enableJvmSecurityManager(true);
+		service.enableJvmSecurityManager(false);
 		Assert.assertEquals(Collections.emptyList(), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		Assert.assertEquals(false, service.hasUserRole("user", "role"));
