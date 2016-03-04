@@ -15,6 +15,8 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 /**
@@ -23,9 +25,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
  */
 public interface ILoggingService {
 	
-	public IBucketLogger getLogger(final DataBucketBean bucket);
-	public IBucketLogger getSystemLogger(final DataBucketBean bucket);
-	public IBucketLogger getExternalLogger(final String subsystem);
+	public CompletableFuture<IBucketLogger> getLogger(final DataBucketBean bucket);
+	public CompletableFuture<IBucketLogger> getSystemLogger(final DataBucketBean bucket);
+	public CompletableFuture<IBucketLogger> getExternalLogger(final String subsystem);
 	
 	/**
 	 * Typical entrypoint for user generated log messages.  These will be filtered and sent to storage based on the bucket config.
