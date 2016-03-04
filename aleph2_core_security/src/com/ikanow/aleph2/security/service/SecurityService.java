@@ -108,24 +108,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return permitted;
 	}
 	
-	/////////////////////////////////////////////////////////////////////////////
-	
-/*	@Override
-	public ISubject login(String principalName, Object credentials) {
-		
-		
-		String password = (String)credentials;
-        UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
-        
-        //token.setRememberMe(true);
-
-        ensureUserIsLoggedOut();
-        Subject shiroSubject = getShiroSubject();
-        shiroSubject.login((AuthenticationToken)token);
-        ISubject currentSubject = new SubjectWrapper(shiroSubject);
-		return currentSubject;
-	}
-*/
 	@Override
 	public synchronized ISubject login(String principalName, Object credentials){
 		Subject currentUser = SecurityUtils.getSubject();
@@ -237,7 +219,7 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public void enableJvmSecurityManager(boolean enabled) {
+	public void enableJvmSecurityManager(Optional<String> principalName,boolean enabled) {
 		if (enabled) {			
 			if (jvmSecurityManager == null) {
 				Object currSysManager = System.getSecurityManager();
@@ -263,9 +245,9 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public void enableJvmSecurity(boolean enabled) {
+	public void enableJvmSecurity(Optional<String> principalName,boolean enabled) {
 		if(enabled){
-			enableJvmSecurityManager(true);
+			enableJvmSecurityManager(principalName,true);
 			jvmSecurityManager.setEnabled(true);
 		}else{
 			if (jvmSecurityManager != null) {

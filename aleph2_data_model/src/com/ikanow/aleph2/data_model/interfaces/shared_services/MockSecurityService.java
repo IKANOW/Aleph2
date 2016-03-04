@@ -169,14 +169,14 @@ public class MockSecurityService implements ISecurityService {
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#enableJvmSecurityManager(boolean)
 	 */
 	@Override
-	public void enableJvmSecurityManager(boolean enabled) {
+	public void enableJvmSecurityManager(Optional<String> principalName,boolean enabled) {
 	}
 
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#enableJvmSecurity(boolean)
 	 */
 	@Override
-	public void enableJvmSecurity(boolean enabled) {
+	public void enableJvmSecurity(Optional<String> principalName,boolean enabled) {
 	}
 
 	/* (non-Javadoc)

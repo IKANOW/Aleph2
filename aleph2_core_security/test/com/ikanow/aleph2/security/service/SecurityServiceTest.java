@@ -256,7 +256,7 @@ public class SecurityServiceTest {
 	public void testJvmSecurity(){
 		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
-		securityService.enableJvmSecurityManager(true);
+		securityService.enableJvmSecurityManager(Optional.empty(),true);
 		File f =  new File("/tmp/data/misc");
 		f.list();
 		try {
@@ -267,7 +267,7 @@ public class SecurityServiceTest {
 			logger.debug("This is correct we want to see a read a security exception here:"+t);
 		}
 		finally {
-			securityService.enableJvmSecurityManager(false);
+			securityService.enableJvmSecurityManager(Optional.empty(),false);
 		} 
 	}
 
