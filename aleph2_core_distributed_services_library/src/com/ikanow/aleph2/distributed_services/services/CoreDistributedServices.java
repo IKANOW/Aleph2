@@ -33,8 +33,8 @@ import java.util.function.Function;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+import kafka.utils.ZkUtils;
 
-import org.I0Itec.zkclient.ZkClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -93,7 +93,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 
 	// Curator, instantiated lazily (in practice immediately because we need it for Kafka)
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>();
-	protected final SetOnce<ZkClient> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
+	protected final SetOnce<ZkUtils> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
 
 	// Akka, instantiated laziy
 	protected final SetOnce<ActorSystem> _akka_system = new SetOnce<>();

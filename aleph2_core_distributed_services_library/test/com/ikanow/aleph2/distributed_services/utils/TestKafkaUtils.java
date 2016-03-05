@@ -22,8 +22,8 @@ import java.util.Optional;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+import kafka.utils.ZkUtils;
 
-import org.I0Itec.zkclient.ZkClient;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -54,7 +54,7 @@ public class TestKafkaUtils {
 	@Test
 	public void test_kafkaCaching() {
 		
-		final ZkClient zk_client = KafkaUtils.getNewZkClient();
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		
 		assertTrue("Topic should _not_ exist", !KafkaUtils.doesTopicExist("random_topic", zk_client));		
 
@@ -102,7 +102,7 @@ public class TestKafkaUtils {
 	@Test
 	public void testCreateTopic() throws InterruptedException {
 		final String topic = "test_create";
-		final ZkClient zk_client = KafkaUtils.getNewZkClient();
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
 		Thread.sleep(5000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
@@ -116,7 +116,7 @@ public class TestKafkaUtils {
 	@Test
 	public void testProduceConsume() throws InterruptedException {
 		final String topic = "test_produce_consume";
-		final ZkClient zk_client = KafkaUtils.getNewZkClient();
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
 		Thread.sleep(5000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
@@ -154,7 +154,7 @@ public class TestKafkaUtils {
 	@Test
 	public void testDeleteTopic() throws InterruptedException {
 		final String topic = "test_delete_topic11";
-		final ZkClient zk_client = KafkaUtils.getNewZkClient();
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 				
 		//Create a topic to delete later
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);
@@ -200,7 +200,7 @@ public class TestKafkaUtils {
 	@Test
 	public void testDeleteNonExistantTopic() {		
 		final String topic = "test_delete_topic_dne";
-		final ZkClient zk_client = KafkaUtils.getNewZkClient();				
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();				
 		assertFalse(KafkaUtils.doesTopicExist(topic, zk_client));
 		//delete topic just quietly ignores the request
 		KafkaUtils.deleteTopic(topic, zk_client);

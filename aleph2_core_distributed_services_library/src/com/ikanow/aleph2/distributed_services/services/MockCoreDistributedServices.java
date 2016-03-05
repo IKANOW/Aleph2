@@ -28,8 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
+import kafka.utils.ZkUtils;
 
-import org.I0Itec.zkclient.ZkClient;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -66,7 +66,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 
 	protected final SetOnce<TestingServer> _test_server = new SetOnce<>();
 	protected final SetOnce<CuratorFramework> _curator_framework = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
-	protected final SetOnce<ZkClient> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
+	protected final SetOnce<ZkUtils> _kafka_zk_framework = new SetOnce<>(); //(ZkClient is a less well maintained curator-esque library)
 	protected final ActorSystem _akka_system;
 	private final SetOnce<MockKafkaBroker> _kafka_broker = new SetOnce<>(); // (this is quite annoying for testing, so I'm going to make it lazy)
 	private final static Logger logger = LogManager.getLogger();

@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import scala.Option;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.Time;
@@ -112,7 +113,7 @@ public class MockKafkaBroker {
 			public long milliseconds() {
 				return System.currentTimeMillis();
 			}
-		});
+		}, Option.empty());
 		kafka_server.startup();
 		logger.debug("local kafka is a go");
 	}
