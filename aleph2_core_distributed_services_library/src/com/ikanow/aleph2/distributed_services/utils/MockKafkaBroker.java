@@ -90,6 +90,17 @@ public class MockKafkaBroker {
 		props.put("zookeeper.connect", zk);
 		props.put("auto.create.topics.enable", "true");
 		props.put("delete.topic.enable", "true");
+		// Some props to try to reduce memory usage in testing:
+		props.put("background.threads", 2);
+		props.put("num.io.threads", 2);		
+		props.put("num.network.threads", 2);
+		props.put("log.flush.interval.messages", 1);
+		props.put("offsets.load.buffer.size", 1048576);
+		props.put("log.segment.bytes", 1048576);
+		props.put("offsets.topic.segment.bytes", 1048576);
+		props.put("log.cleaner.io.buffer.size", 1048576);
+		props.put("log.cleaner.dedupe.buffer.size", 10485760);
+		
 		KafkaConfig config = new KafkaConfig(props);
 		
 		//NOTE: scala version won't work here for some reason, copied same implementation as {@link kafka.utils.SystemTime}
