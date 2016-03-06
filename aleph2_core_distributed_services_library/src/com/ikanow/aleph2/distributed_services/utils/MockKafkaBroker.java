@@ -72,6 +72,9 @@ public class MockKafkaBroker {
 	/**
 	 * Creates an instance of kafka on the given broker_port using the supplied
 	 * zookeeper.
+	 * NOTE THAT: it would appear that each test starts a new kafka server - I've worked around this by reducing the memory settings
+	 * (see below - the log.cleaner.io.buffer.size is probably the only one that matters), but better/longer term it should only create one
+	 * server per test harness run...
 	 * 
 	 * @param zookeeper_connection
 	 * @param broker_port
