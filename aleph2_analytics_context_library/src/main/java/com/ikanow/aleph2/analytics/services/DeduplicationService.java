@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.ikanow.aleph2.analytics.services;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -39,6 +38,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.analytics.data_model.DedupConfigBean;
+import com.ikanow.aleph2.core.shared.utils.BatchRecordUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
@@ -65,7 +65,11 @@ import com.ikanow.aleph2.data_model.utils.SetOnce;
 
 import fj.data.Either;
 
-//TODO (ALEPH-20): need to ensure that object gets added with overwrite existing: true (in the contexts)
+//TODO (ALEPH-20): default to _not_ allowing objects with no _ids to be emitted (ie append the duplicate _id)
+
+//TODO (ALEPH-20): support duplicating across multiple objects if they exist 
+
+//TODO (ALEPH-20): support deletion by update (empty object with only _id)
 
 /** An enrichment module that will perform deduplication using the provided document_schema
  * @author Alex
@@ -94,25 +98,6 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		public final Map<String, String> field_override() { return Optional.ofNullable(field_override).orElse(Collections.emptyMap()); }
 	}
 	protected final SetOnce<Function<String, String>> _db_mapper = new SetOnce<>();
-	
-	/** Implementation of IBatchRecord
-	 * @author Alex
-	 */
-	public static class MyBatchRecord implements IBatchRecord {
-		protected final JsonNode _json;
-		public MyBatchRecord(JsonNode json) {
-			_json = json;
-		}		
-		@Override
-		public JsonNode getJson() {
-			return _json;
-		}
-
-		@Override
-		public Optional<ByteArrayOutputStream> getContent() {
-			return Optional.empty();
-		}		
-	}
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#onStageInitialize(com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean, scala.Tuple2, java.util.Optional)
@@ -385,7 +370,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 						Stream.concat(
 								new_records.stream().map(t3 -> Tuples._2T(t3._1(), t3._2())),
 								maybe_old_record.<Stream<Tuple2<Long, IBatchRecord>>>
-									map(old_record -> Stream.of(Tuples._2T(-1L, (IBatchRecord)new MyBatchRecord(old_record)))).orElse(Stream.empty())
+									map(old_record -> Stream.of(Tuples._2T(-1L, (IBatchRecord)(new BatchRecordUtils.InjectedJsonBatchRecord(old_record))))).orElse(Stream.empty())
 								);
 				
 				final int batch_size = new_records.size();

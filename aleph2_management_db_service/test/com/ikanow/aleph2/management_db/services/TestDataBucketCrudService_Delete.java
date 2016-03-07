@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,6 +90,16 @@ public class TestDataBucketCrudService_Delete {
 	public ICrudService<DataBucketStatusBean> _underlying_bucket_status_crud;
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
 	public ICrudService<BucketDeletionMessage> _bucket_deletion_queue;
+	
+	@After
+	public void tidyUp() {
+		// (kill current kafka queue)
+		ManagementDbActorContext.get().getServiceContext().getService(ICoreDistributedServices.class, Optional.empty())
+			.filter(x -> MockCoreDistributedServices.class.isAssignableFrom(x.getClass()))
+			.map(x -> (MockCoreDistributedServices)x)
+			.ifPresent(x -> x.kill());
+			;
+	}
 	
 	@SuppressWarnings("deprecation")
 	@Before

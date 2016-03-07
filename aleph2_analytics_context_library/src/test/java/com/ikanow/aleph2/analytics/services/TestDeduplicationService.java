@@ -44,6 +44,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.analytics.services.DeduplicationService;
+import com.ikanow.aleph2.core.shared.utils.BatchRecordUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule.ProcessingStage;
@@ -239,7 +240,7 @@ public class TestDeduplicationService {
 							test2
 							)
 							.stream()
-							.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
+							.map(j -> Tuples._2T(0L, (IBatchRecord)new BatchRecordUtils.JsonBatchRecord(j)))
 							.collect(Collectors.toList());
 
 			assertEquals(Arrays.asList(new TextNode("test1")), DeduplicationService.extractKeyField(batch.stream(), "field1").stream().map(t2 -> t2._1()).collect(Collectors.toList()));
@@ -285,7 +286,7 @@ public class TestDeduplicationService {
 						test2
 						)
 						.stream()
-						.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
+						.map(j -> Tuples._2T(0L, (IBatchRecord)new BatchRecordUtils.JsonBatchRecord(j)))
 						.collect(Collectors.toList());
 		
 		
@@ -404,7 +405,7 @@ public class TestDeduplicationService {
 						test2
 						)
 						.stream()
-						.map(j -> Tuples._3T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j), _mapper.createObjectNode()))
+						.map(j -> Tuples._3T(0L, (IBatchRecord)new BatchRecordUtils.JsonBatchRecord(j), _mapper.createObjectNode()))
 						.collect(Collectors.toList());
 		
 		
@@ -461,8 +462,8 @@ public class TestDeduplicationService {
 		new_json_but_same_time.put("@timestamp", 0L);
 		new_json_but_same_time.put("url", "test");
 		
-		Tuple3<Long, IBatchRecord, ObjectNode> new_record = Tuples._3T(0L, new DeduplicationService.MyBatchRecord(new_json), _mapper.createObjectNode());
-		Tuple3<Long, IBatchRecord, ObjectNode> new_record_but_same_time = Tuples._3T(0L, new DeduplicationService.MyBatchRecord(new_json_but_same_time), _mapper.createObjectNode());
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record = Tuples._3T(0L, new BatchRecordUtils.JsonBatchRecord(new_json), _mapper.createObjectNode());
+		Tuple3<Long, IBatchRecord, ObjectNode> new_record_but_same_time = Tuples._3T(0L, new BatchRecordUtils.JsonBatchRecord(new_json_but_same_time), _mapper.createObjectNode());
 		
 		new_record._2().getContent(); //(code coverage!)
 		
@@ -1394,7 +1395,7 @@ public class TestDeduplicationService {
 					: Stream.of((JsonNode) obj);
 		})		
 		.flatMap(s -> s)
-		.map(j -> Tuples._2T(0L, (IBatchRecord)new DeduplicationService.MyBatchRecord(j)))
+		.map(j -> Tuples._2T(0L, (IBatchRecord)new BatchRecordUtils.JsonBatchRecord(j)))
 		.collect(Collectors.toList());
 		
 		// Other things we need:

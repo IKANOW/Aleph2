@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.I0Itec.zkclient.ZkClient;
+import org.I0Itec.zkclient.ZkConnection;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -69,8 +70,10 @@ public class KafkaUtils {
 	/** Creates a new ZK client from the properties
 	 * @return
 	 */
-	public synchronized static ZkClient getNewZkClient() {
-		return new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$);
+	public synchronized static ZkUtils getNewZkClient() {
+		return new ZkUtils(new ZkClient(kafka_properties.getProperty("zookeeper.connect"), 10000, 10000, ZKStringSerializer$.MODULE$),
+				new ZkConnection(kafka_properties.getProperty("zookeeper.connect")), false)
+		;
 	}
 	
 	/**
@@ -142,7 +145,7 @@ public class KafkaUtils {
 	 * @param topic
 	 * @return
 	 */
-	public static boolean doesTopicExist(final String topic, final ZkClient zk_client) {
+	public static boolean doesTopicExist(final String topic, final ZkUtils zk_client) {
 		Boolean does_topic_exist = my_topics.get(topic);
 		if (null != does_topic_exist) {
 			return does_topic_exist.booleanValue();
@@ -244,7 +247,7 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options, final ZkClient zk_client1) {
+	public synchronized static void createTopic(String topic, Optional<Map<String, Object>> options, final ZkUtils zk_client1) {
 		
 		//TODO (ALEPH-10): need to handle topics getting deleted but not being removed from this map
 		//TODO (ALEPH-10): override options if they change? not sure if that's possible 
@@ -254,7 +257,7 @@ public class KafkaUtils {
 			//http://stackoverflow.com/questions/27036923/how-to-create-a-topic-in-kafka-through-java
 			
 			// For some reason need to create a new zk_client in here for the createTopic call, otherwise the partitions aren't set correctly?!
-			final ZkClient zk_client = getNewZkClient();
+			final ZkUtils zk_client = getNewZkClient();
 			
 			try { if ( !AdminUtils.topicExists(zk_client, topic) ) {		
 				final Properties props = options.map(o -> { 
@@ -273,8 +276,9 @@ public class KafkaUtils {
 				
 				//debug info
 				if (logger.isDebugEnabled()) {
-					logger.debug("DONE CREATING TOPIC");	
-					logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
+					logger.debug("DONE CREATING TOPIC");
+					//(this was removed in 0.9):
+					//logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
 					TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
 					logger.debug("META: " + meta);
 				}
@@ -299,9 +303,9 @@ public class KafkaUtils {
 	 * @param timeout_ms
 	 * @return
 	 */
-	private static boolean waitUntilLeaderElected(ZkClient zk_client, String topic, long timeout_ms) {
+	private static boolean waitUntilLeaderElected(ZkUtils zk_client, String topic, long timeout_ms) {
 		long timeout_time_ms = System.currentTimeMillis() + timeout_ms;
-		Option<Object> leader = ZkUtils.getLeaderForPartition(zk_client, topic, 0);
+		Option<Object> leader = zk_client.getLeaderForPartition(topic, 0);
 		while ( System.currentTimeMillis() < timeout_time_ms && leader.isEmpty() ) {
 			try {
 				Thread.sleep(100);
@@ -323,7 +327,7 @@ public class KafkaUtils {
 	 * 
 	 * @param topic
 	 */
-	public static void deleteTopic(String topic, final ZkClient zk_client) {
+	public static void deleteTopic(String topic, final ZkUtils zk_client) {
 		// Update local cache - remote caches will need to wait to clear of course
 		known_topics.invalidate(topic);
 		my_topics.remove(topic);

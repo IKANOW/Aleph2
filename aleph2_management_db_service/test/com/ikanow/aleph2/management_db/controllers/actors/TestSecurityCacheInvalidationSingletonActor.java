@@ -54,6 +54,16 @@ public class TestSecurityCacheInvalidationSingletonActor {
 	protected ActorRef testMonitor =  null;
 	
 
+	@After
+	public void tidyUp() {
+		// (kill current kafka queue)
+		ManagementDbActorContext.get().getServiceContext().getService(ICoreDistributedServices.class, Optional.empty())
+			.filter(x -> MockCoreDistributedServices.class.isAssignableFrom(x.getClass()))
+			.map(x -> (MockCoreDistributedServices)x)
+			.ifPresent(x -> x.kill());
+			;
+	}
+	
 	@SuppressWarnings("deprecation")
 	@Before
 	public void testSetup() throws Exception {
