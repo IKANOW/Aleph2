@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -35,6 +38,8 @@ import com.ikanow.aleph2.data_model.utils.Patterns;
  *
  */
 public class MockSecurityService implements ISecurityService {
+
+	protected static final Logger logger = LogManager.getLogger(MockSecurityService.class);
 
 	/** Mock security subject
 	 * @author Alex
@@ -183,19 +188,21 @@ public class MockSecurityService implements ISecurityService {
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#isUserPermitted(java.util.Optional, java.lang.Object, java.util.Optional)
 	 */
 	@Override
-	public boolean isUserPermitted(String userID, Object assetOrPermission,
-			Optional<String> oAction) {
+	public boolean isUserPermitted(String userID, Object assetOrPermission,	Optional<String> oAction) {
 		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map)); //(equivalent to a login)
 		
 		return Patterns.match(assetOrPermission).<List<String>>andReturn()
-			.when(DataBucketBean.class, b -> Arrays.asList(b._id(), b.full_name()))
+			.when(DataBucketBean.class, b -> Arrays.asList(b.full_name(),b._id()))
 			.when(SharedLibraryBean.class, s -> Arrays.asList(s._id(), s.path_name()))
 			.when(Tuple2.class, t2 -> Arrays.asList(t2._2().toString()))
 			.otherwise(s -> Arrays.asList(s.toString()))
 			.stream()
 			.anyMatch(to_check -> {
 				final String test_string = (userID!=null?userID:"*") + ":" + to_check + ":" + oAction.orElse("*");
-				return _mock_role_map.get().getOrDefault(test_string, false);
+				final String allUsersTestString = "*:" + to_check + ":" + oAction.orElse("*");				
+				boolean permitted = _mock_role_map.get().getOrDefault(test_string, _mock_role_map.get().getOrDefault(allUsersTestString,false)); 
+				logger.trace("isUserPermitted1 ("+userID+","+assetOrPermission+","+oAction+"):"+test_string+":"+permitted);
+				return permitted;
 			})
 			;
 	}
@@ -223,7 +230,9 @@ public class MockSecurityService implements ISecurityService {
 		.stream()
 		.anyMatch(to_check -> {
 			final String test_string = (principal!=null?principal:"*") + ":" + to_check + ":" + "*";
-			return _mock_role_map.get().getOrDefault(test_string, false);
+			boolean permitted = _mock_role_map.get().getOrDefault(test_string, false); 
+			logger.trace("isUserPermitted2 ("+principal+","+permission+"):"+test_string+":"+permitted);
+			return permitted;
 		})
 		;
 	}
