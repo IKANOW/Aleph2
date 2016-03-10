@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.data_import.utils.ErrorUtils;
@@ -672,7 +673,7 @@ public class HarvestContext implements IHarvestContext {
 					return StreamSupport.stream(cursor.spliterator(), false)
 						.collect(Collectors.<SharedLibraryBean, String, String>toMap(
 								lib -> lib.path_name(), 
-								lib -> _globals.local_cached_jar_dir() + "/" + lib._id() + ".cache.jar"));
+								lib -> _globals.local_cached_jar_dir() + "/" + JarCacheUtils.buildCachedJarName(lib)));
 				});
 		}
 		else {

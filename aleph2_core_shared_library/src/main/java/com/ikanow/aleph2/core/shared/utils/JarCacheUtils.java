@@ -19,6 +19,7 @@ import java.io.FileNotFoundException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -88,7 +89,15 @@ public class JarCacheUtils {
 	 * @param library_bean the library bean to cache
 	 * @return the cache name
 	 */
-	private static String buildCachedJarName(SharedLibraryBean library_bean) {
-		return library_bean._id() + ".cache.jar";
+	public static String buildCachedJarName(SharedLibraryBean library_bean) {
+		if (library_bean.path_name().endsWith(".jar")) {
+			return library_bean._id() + ".cache.jar";
+		}
+		if (library_bean.path_name().endsWith(".zip")) {
+			return library_bean._id() + ".cache.zip";
+		}
+		else {
+			return library_bean._id() + ".cache.misc." + FilenameUtils.getExtension(library_bean.path_name());
+		}
 	}
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  *******************************************************************************/
 
-package com.ikanow.aleph2.management_db.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import java.util.Optional;
 import java.util.stream.Stream;

@@ -88,6 +88,19 @@ public class BatchRecordUtils {
 		protected ByteArrayOutputStream _content;
 	}
 	
+	/** Injected version
+	 * @author Alex
+	 */
+	public static class InjectedBatchRecord extends BatchRecord {
+		private static final long serialVersionUID = -431101243042325120L;
+
+		public InjectedBatchRecord(JsonNode json, ByteArrayOutputStream content) {
+			super(json, content);
+		}
+		
+		public boolean injected() { return true; }		
+	}
+	
 	/** Simple implementation of IBatchRecord - supports JSON only
 	 * @author jfreydank
 	 */
@@ -128,4 +141,19 @@ public class BatchRecordUtils {
 		
 		protected JsonNode _json; 
 	}
+	
+	/** Injected version
+	 * @author Alex
+	 */
+	public static class InjectedJsonBatchRecord extends JsonBatchRecord {
+		private static final long serialVersionUID = -7543001222336244118L;
+
+		public InjectedJsonBatchRecord(JsonNode json) {
+			super(json);
+		}
+		
+		public boolean injected() { return true; }		
+	}
+	
+
 }
