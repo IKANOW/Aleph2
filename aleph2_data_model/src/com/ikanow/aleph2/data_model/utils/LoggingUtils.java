@@ -94,25 +94,22 @@ public class LoggingUtils {
 	 * @return
 	 */
 	private static DataSchemaBean getLoggingDataSchema(final ManagementSchemaBean mgmt_schema) {
-		//TODO set these to proper defaults
 		return BeanTemplateUtils.build(DataSchemaBean.class)
 				.with(DataSchemaBean::columnar_schema, Optionals.of(() -> mgmt_schema.columnar_schema()).orElse(BeanTemplateUtils.build(ColumnarSchemaBean.class)
-							.with(ColumnarSchemaBean::enabled, true)
-							.with(ColumnarSchemaBean::field_type_include_list, Arrays.asList("NUMBER", "STRING"))
+							.with(ColumnarSchemaBean::field_type_include_list, Arrays.asList("number", "string", "date"))
 						.done().get()))
 				.with(DataSchemaBean::storage_schema, Optionals.of(() -> mgmt_schema.storage_schema()).orElse(BeanTemplateUtils.build(StorageSchemaBean.class)
 							.with(StorageSchemaBean::enabled, true)
 							.with(StorageSchemaBean::processed, BeanTemplateUtils.build(StorageSubSchemaBean.class)
-										.with(StorageSubSchemaBean::exist_age_max, "1 year")
-										.with(StorageSubSchemaBean::grouping_time_period, "1 month")
+										.with(StorageSubSchemaBean::exist_age_max, "3 months")
+										.with(StorageSubSchemaBean::grouping_time_period, "1 week")
 									.done().get())
 						.done().get()))
 				.with(DataSchemaBean::search_index_schema, Optionals.of(() -> mgmt_schema.search_index_schema()).orElse(BeanTemplateUtils.build(SearchIndexSchemaBean.class)
-							.with(SearchIndexSchemaBean::enabled, true)
 						.done().get()))
 				.with(DataSchemaBean::temporal_schema, Optionals.of(() -> mgmt_schema.temporal_schema()).orElse(BeanTemplateUtils.build(TemporalSchemaBean.class)
-							.with(TemporalSchemaBean::enabled, true)
 							.with(TemporalSchemaBean::exist_age_max, "1 month")
+							.with(TemporalSchemaBean::grouping_time_period, "1 week")
 						.done().get()))
 			.done().get();	
 	}
