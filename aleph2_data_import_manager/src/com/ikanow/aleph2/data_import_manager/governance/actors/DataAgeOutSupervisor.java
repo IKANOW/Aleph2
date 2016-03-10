@@ -25,6 +25,7 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,8 +35,10 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
+
 
 
 
@@ -55,11 +58,12 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
-import com.ikanow.aleph2.data_model.utils.LoggingUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+
 
 
 
@@ -192,7 +196,7 @@ public class DataAgeOutSupervisor extends UntypedActor {
 								});
 								
 								//handle logging bucket age out (lazily always send the request, we both checking if the age out was data side/logging side/both)
-								final DataBucketBean logging_bucket = LoggingUtils.convertBucketToLoggingBucket(bucket);
+								final DataBucketBean logging_bucket = BucketUtils.convertDataBucketBeanToLogging(bucket);
 								data_service.handleAgeOutRequest(logging_bucket).thenAccept(return_val -> {
 									
 									if (return_val.success()) {

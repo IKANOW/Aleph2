@@ -72,10 +72,10 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleBeanQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
-import com.ikanow.aleph2.data_model.utils.LoggingUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
@@ -523,7 +523,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
 			deleteFilePath(to_delete, _storage_service.get());
 			//delete the logging path as well if it exists
-			deleteFilePath(LoggingUtils.convertBucketToLoggingBucket(to_delete), _storage_service.get());
+			deleteFilePath(BucketUtils.convertDataBucketBeanToLogging(to_delete), _storage_service.get());
 			
 			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
 			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));

@@ -31,10 +31,30 @@ public class ManagementSchemaBean implements Serializable {
 
 	private static final long serialVersionUID = -1325104245856394072L;
 	
+	/**
+	 * Per bucket schema for the Logging Service
+	 * @return the logging_schema
+	 */
 	public LoggingSchemaBean logging_schema() { return this.logging_schema; }
+	/**
+	 * Per bucket logging schema for the Temporal Service
+	 * @return the temporal_schema
+	 */
 	public TemporalSchemaBean temporal_schema() { return this.temporal_schema; }
+	/**
+	 * Per bucket logging schema for the Storage Service
+	 * @return the storage_schema
+	 */
 	public StorageSchemaBean storage_schema() { return this.storage_schema; }
+	/**
+	 * Per bucket logging schema for the Search Index Service
+	 * @return the search_index_schema
+	 */
 	public SearchIndexSchemaBean search_index_schema() { return this.search_index_schema; }
+	/**
+	 * Per bucket logging schema for the Columnar Schema
+	 * @return the columnar_schema
+	 */
 	public ColumnarSchemaBean columnar_schema() { return this.columnar_schema; }
 	
 	private LoggingSchemaBean logging_schema;
