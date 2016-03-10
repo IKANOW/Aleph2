@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.ikanow.aleph2.analytics.utils;
+package com.ikanow.aleph2.core.shared.utils;
 
 import static org.junit.Assert.*;
 
