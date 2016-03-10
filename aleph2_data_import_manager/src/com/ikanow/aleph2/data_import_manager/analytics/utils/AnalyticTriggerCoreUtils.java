@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
@@ -60,15 +61,17 @@ public class AnalyticTriggerCoreUtils {
 		return all_triggers.entrySet()
 			.stream() //(can't be parallel - has to happen in the same thread)
 			.map(kv -> Tuples._2T(kv, ActorUtils.BUCKET_ANALYTICS_TRIGGER_ZOOKEEEPER + BucketUtils.getUniqueSignature(kv.getKey()._1(), Optional.ofNullable(kv.getKey()._2()))))
-			.flatMap(Lambdas.flatWrap_i(kv_path -> 
-						Tuples._2T(kv_path._1(), _mutex_cache.get(kv_path._2(), () -> { return new InterProcessMutex(curator, kv_path._2()); }))))
-			.flatMap(Lambdas.flatWrap_i(kv_mutex -> {
+			.map(Lambdas.wrap_u(kv_path -> 
+						Tuples._2T(kv_path._1(), _mutex_cache.get(kv_path._2(), () -> {
+							return new InterProcessMutex(curator, kv_path._2());
+			}))))
+			.flatMap(Lambdas.wrap_u(kv_mutex -> {
 				if (kv_mutex._2().acquire(mutex_fail_handler._1().getSeconds(), TimeUnit.SECONDS)) {
-					return kv_mutex._1();
+					return Stream.of(kv_mutex._1());
 				}
 				else {
 					mutex_fail_handler._2().accept(kv_mutex._1().getKey().toString()); // (run this synchronously, the callable can always run in a different thread if it wants to)
-					throw new RuntimeException(""); // (leaves the flatWrap empty)
+					return Stream.empty();
 				}
 			}))
 			.collect(Collectors.toMap(kv -> kv.getKey(), kv -> kv.getValue()))
