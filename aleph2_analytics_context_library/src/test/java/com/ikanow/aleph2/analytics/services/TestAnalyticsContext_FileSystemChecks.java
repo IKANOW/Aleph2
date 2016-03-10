@@ -149,6 +149,38 @@ public class TestAnalyticsContext_FileSystemChecks {
 				Arrays.asList("/current/test_" + (year-1) + "/*", "/current/test_" + year + "/*"),
 				res.stream().map(s -> s.substring(s.indexOf("/current/"))).sorted().collect(Collectors.toList())
 				);
+		
+		// Check high granularity mode is disabled:
+		
+		try {
+			final AnalyticThreadJobBean.AnalyticThreadJobInputBean analytic_input_fail = 
+					BeanTemplateUtils.clone(analytic_input1)
+						.with(AnalyticThreadJobBean.AnalyticThreadJobInputBean::config,
+								BeanTemplateUtils.build(AnalyticThreadJobBean.AnalyticThreadJobInputConfigBean.class)
+									.with(AnalyticThreadJobBean.AnalyticThreadJobInputConfigBean::high_granularity_filter, true)
+								.done().get()
+								)
+					.done();
+			
+			final AnalyticThreadJobBean analytic_job_fail = BeanTemplateUtils.clone(analytic_job1)
+					.with(AnalyticThreadJobBean::inputs, Arrays.asList(analytic_input_fail))
+					.done();		
+			
+			final DataBucketBean test_bucket_fail = BeanTemplateUtils.clone(test_bucket)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+							.with(AnalyticThreadBean::jobs, Arrays.asList(analytic_job_fail)
+									)
+									.done().get()
+							)
+							.done();
+			
+			test_context.getInputPaths(Optional.of(test_bucket_fail), analytic_job_fail, analytic_input_fail);
+			fail("Should have thrown error");
+		}
+		catch (Exception e) {
+			//we're good
+		}
 	}
 
 	@Test
