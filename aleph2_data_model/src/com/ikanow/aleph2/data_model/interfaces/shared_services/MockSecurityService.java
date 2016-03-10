@@ -85,6 +85,7 @@ public class MockSecurityService implements ISecurityService {
 	 */
 	@Override
 	public ISubject login(String principalName, Object credentials) {
+		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
 		return new MockSubject();
 	}
 
@@ -144,18 +145,6 @@ public class MockSecurityService implements ISecurityService {
 		_test_role_map.put(user_id + ":" + asset + ":" + action, permission);
 	}
 	
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#loginAsSystem()
-	 */
-	// TODO  delete or put code somewhere else
-/*	@Override
-	public ISubject loginAsSystem() {
-		// (not quite right because this should only be written in when run as user, but in most cases will be using higher level code that
-		//  does this for me)
-		_mock_role_map.set(Collections.unmodifiableMap(_test_role_map));
-		return new MockSubject();
-	}
-*/
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateAuthenticationCache(java.util.Collection)
 	 */
@@ -230,7 +219,8 @@ public class MockSecurityService implements ISecurityService {
 		.stream()
 		.anyMatch(to_check -> {
 			final String test_string = (principal!=null?principal:"*") + ":" + to_check + ":" + "*";
-			boolean permitted = _mock_role_map.get().getOrDefault(test_string, false); 
+			final String allUsersTestString = "*:" + to_check + ":" + "*";				
+			boolean permitted = _mock_role_map.get().getOrDefault(test_string, _mock_role_map.get().getOrDefault(allUsersTestString,false)); 
 			logger.trace("isUserPermitted2 ("+principal+","+permission+"):"+test_string+":"+permitted);
 			return permitted;
 		})
@@ -238,15 +228,13 @@ public class MockSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public boolean isPermitted(String permission) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean isPermitted(String permission) {		
+		return isUserPermitted(null, permission);
 	}
 
 	@Override
 	public boolean hasRole(String role) {
-		// TODO Auto-generated method stub
-		return false;
+		return hasUserRole(null, role);
 	}
 
 	@Override
