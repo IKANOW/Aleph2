@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.util.Optional;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -68,6 +69,16 @@ public class TestDataBucketStatusCrudService {
 	public ICrudService<DataBucketBean> _underlying_bucket_crud;
 	public ICrudService<DataBucketStatusBean> _underlying_bucket_status_crud;
 	public ICrudService<BucketActionRetryMessage> _bucket_action_retry_store;
+	
+	@After
+	public void tidyUp() {
+		// (kill current kafka queue)
+		ManagementDbActorContext.get().getServiceContext().getService(ICoreDistributedServices.class, Optional.empty())
+			.filter(x -> MockCoreDistributedServices.class.isAssignableFrom(x.getClass()))
+			.map(x -> (MockCoreDistributedServices)x)
+			.ifPresent(x -> x.kill());
+			;
+	}
 	
 	@SuppressWarnings("deprecation")
 	@Before

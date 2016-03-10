@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -104,6 +105,16 @@ public class TestBucketActionDistributionActor {
 		}		
 	}
 	
+	
+	@After
+	public void tidyUp() {
+		// (kill current kafka queue)
+		ManagementDbActorContext.get().getServiceContext().getService(ICoreDistributedServices.class, Optional.empty())
+			.filter(x -> MockCoreDistributedServices.class.isAssignableFrom(x.getClass()))
+			.map(x -> (MockCoreDistributedServices)x)
+			.ifPresent(x -> x.kill());
+			;
+	}
 	
 	@Before
 	public void testSetup() throws Exception {

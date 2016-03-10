@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.util.Optional;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,6 +54,16 @@ public class TestManagementDbActorContext {
 	private SharedLibraryCrudService _shared_library_crud;
 	private MockCoreDistributedServices _cds;
 	private ManagementDbActorContext _actor_context;
+	
+	@After
+	public void tidyUp() {
+		// (kill current kafka queue)
+		ManagementDbActorContext.get().getServiceContext().getService(ICoreDistributedServices.class, Optional.empty())
+			.filter(x -> MockCoreDistributedServices.class.isAssignableFrom(x.getClass()))
+			.map(x -> (MockCoreDistributedServices)x)
+			.ifPresent(x -> x.kill());
+			;
+	}
 	
 	@SuppressWarnings("deprecation")
 	@Before

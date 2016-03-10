@@ -23,6 +23,7 @@ import java.util.Properties;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import scala.Option;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.Time;
@@ -71,6 +72,9 @@ public class MockKafkaBroker {
 	/**
 	 * Creates an instance of kafka on the given broker_port using the supplied
 	 * zookeeper.
+	 * NOTE THAT: it would appear that each test starts a new kafka server - I've worked around this by reducing the memory settings
+	 * (see below - the log.cleaner.io.buffer.size is probably the only one that matters), but better/longer term it should only create one
+	 * server per test harness run...
 	 * 
 	 * @param zookeeper_connection
 	 * @param broker_port
@@ -89,6 +93,17 @@ public class MockKafkaBroker {
 		props.put("zookeeper.connect", zk);
 		props.put("auto.create.topics.enable", "true");
 		props.put("delete.topic.enable", "true");
+		// Some props to try to reduce memory usage in testing:
+		props.put("background.threads", 2);
+		props.put("num.io.threads", 2);		
+		props.put("num.network.threads", 2);
+		props.put("log.flush.interval.messages", 1);
+		props.put("offsets.load.buffer.size", 1048576);
+		props.put("log.segment.bytes", 1048576);
+		props.put("offsets.topic.segment.bytes", 1048576);
+		props.put("log.cleaner.io.buffer.size", 1048576);
+		props.put("log.cleaner.dedupe.buffer.size", 10485760);
+		
 		KafkaConfig config = new KafkaConfig(props);
 		
 		//NOTE: scala version won't work here for some reason, copied same implementation as {@link kafka.utils.SystemTime}
@@ -112,7 +127,7 @@ public class MockKafkaBroker {
 			public long milliseconds() {
 				return System.currentTimeMillis();
 			}
-		});
+		}, Option.empty());
 		kafka_server.startup();
 		logger.debug("local kafka is a go");
 	}
