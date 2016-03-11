@@ -832,7 +832,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 										final Stream<String> paths = 
 												Arrays.stream(fc.util().listStatus(new Path(base_path)))
 													.filter(f -> f.isDirectory())
-													.map(f -> f.getPath().toString())
+													.map(f -> f.getPath().toUri().getPath()) // (remove the hdfs:// bit, which seems to be breaking with HA)
 													;										
 										
 										return TimeSliceDirUtils.filterTimedDirectories(
