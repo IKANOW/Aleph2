@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 
-import org.elasticsearch.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
 
 public class TestDataImportConfigurationBean {
