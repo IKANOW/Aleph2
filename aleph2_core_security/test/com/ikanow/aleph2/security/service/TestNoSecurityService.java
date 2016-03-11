@@ -41,22 +41,19 @@ public class TestNoSecurityService {
 		Assert.assertEquals(true, subject.isAuthenticated());
 		
 		NoSecurityService service = new NoSecurityService();
-		service.enableJvmSecurity(true);
-		service.enableJvmSecurity(false);
+		service.enableJvmSecurity(Optional.empty(),true);
+		service.enableJvmSecurity(Optional.empty(),false);
 		service.enableJvmSecurityManager(true);
 		service.enableJvmSecurityManager(false);
 		Assert.assertEquals((Collection<Object>)Arrays.<Object>asList(service), service.getUnderlyingArtefacts());
 		Assert.assertEquals(Optional.empty(), service.getUnderlyingPlatformDriver(String.class, Optional.empty()));
-		Assert.assertEquals(true, service.hasRole(subject, "role"));
-		Assert.assertEquals(true, service.hasUserRole(Optional.empty(), "role"));
+		Assert.assertEquals(true, service.hasUserRole("user", "role"));
+		Assert.assertEquals(true, service.hasUserRole("user", "role"));
 		service.invalidateAuthenticationCache(Arrays.asList(""));
 		service.invalidateCache();
-		Assert.assertEquals(true, service.isPermitted(subject, "action"));
-		Assert.assertEquals(true, service.isUserPermitted(Optional.empty(), "test", Optional.empty()));
+		Assert.assertEquals(true, service.isUserPermitted("user", "action"));
+		Assert.assertEquals(true, service.isUserPermitted("user", "test", Optional.empty()));
 		Assert.assertEquals(NoSecurityService.MockSubject.class, service.login("", "").getClass());
-		Assert.assertEquals(NoSecurityService.MockSubject.class, service.loginAsSystem().getClass());
-		Assert.assertEquals(Arrays.asList(), service.releaseRunAs(subject));
-		service.runAs(subject, Arrays.asList());
 		
 		@SuppressWarnings({ "rawtypes" })
 		final IManagementCrudService test_crud = Mockito.mock(IManagementCrudService.class);

@@ -40,9 +40,12 @@ public class SubjectWrapper implements ISubject {
 	@Override
 	public String getName() {
 		if(subject!=null && subject instanceof Subject){
-			return ""+((Subject)subject).getPrincipal();
-		}else
-			return null;
+			String principal = (String)((Subject)subject).getPrincipal();
+			if(principal!=null){
+				return principal;
+			}
+		}
+		return null;
 		
 	}
 

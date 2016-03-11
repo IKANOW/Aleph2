@@ -29,7 +29,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -66,8 +65,8 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		protected final IServiceContext _service_context;
 		protected final ISecurityService _security_service;
 		protected final IManagementCrudService<DataBucketBean> _bucket_store;
-		protected final ISubject subject; // system user's subject
 		protected final AuthorizationBean _bean;
+		protected String principalName;
 
 		
 		/** User ctor
@@ -84,15 +83,20 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 			
 			// Login:
 			_bean = bean;
-			this.subject = _security_service.getUserContext(bean.getPrincipalName());
+			this.principalName = getPrincipal(bean);
 		}
+
+		protected String getPrincipal(AuthorizationBean authBean2) {
+			return authBean2.getPrincipalName();
+		}
+
 		
 		/** Checks if the user has write permission on this bucket
 		 * @return
 		 */
 		public boolean checkWritePermission(final DataBucketBean bucket) {
 			//TODO (ALEPH-41): this needs some test coverage
-			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ_WRITE));
+			return _security_service.isUserPermitted(principalName, bucket, Optional.of(ISecurityService.ACTION_READ_WRITE));
 		}
 		
 		/** Checks the bucket path for read permission
@@ -108,7 +112,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final DataBucketBean bucket) {
-			return _security_service.isUserPermitted(subject, bucket, Optional.of(ISecurityService.ACTION_READ));
+			return _security_service.isUserPermitted(principalName, bucket, Optional.of(ISecurityService.ACTION_READ));
 		}
 		
 		/* (non-Javadoc)

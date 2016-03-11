@@ -68,30 +68,6 @@ public class NoSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public ISubject loginAsSystem() {
-		return new MockSubject();
-	}
-
-	@Override
-	public boolean hasRole(ISubject subject, String role) {
-		return true;
-	}
-
-	@Override
-	public boolean isPermitted(ISubject subject, String string) {
-		return true;
-	}
-
-	@Override
-	public void runAs(ISubject subject, Collection<String> principals) {
-	}
-
-	@Override
-	public Collection<String> releaseRunAs(ISubject subject) {
-		return Arrays.asList();
-	}
-
-	@Override
 	public <O> IManagementCrudService<O> secured(
 			IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {
 		return crud;
@@ -117,65 +93,37 @@ public class NoSecurityService implements ISecurityService {
 	}
 
 	@Override
-	public void enableJvmSecurity(boolean enabled) {
+	public void enableJvmSecurity(Optional<String> principalName,boolean enabled) {
 	}
 
 	@Override
-	public boolean isUserPermitted(Optional<String> userID,
-			Object assetOrPermission, Optional<String> action) {
+	public boolean isUserPermitted(String userID, Object assetOrPermission, Optional<String> action) {
 		return true;
 	}
 
 	@Override
-	public boolean hasUserRole(Optional<String> userID, String role) {
+	public boolean hasUserRole(String userID, String role) {
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String)
-	 */
 	@Override
-	public ISubject getUserContext(String user_id) {
+	public boolean isUserPermitted(String principal, String permission) {
+		return true;
+	}
+
+	@Override
+	public boolean isPermitted(String permission) {
+		return true;
+	}
+
+	@Override
+	public boolean hasRole(String role) {
+		return true;
+	}
+	@Override
+	public ISubject getCurrentSubject() {
 		return new MockSubject();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getUserAccessToken(java.lang.String, java.lang.String)
-	 */
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		return new MockSubject();
-	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#getSystemUserAccessToken()
-	 */
-	@Override
-	public ISubject getSystemUserContext() {
-		return new MockSubject();
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#isUserPermitted(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.Object, java.util.Optional)
-	 */
-	@Override
-	public boolean isUserPermitted(ISubject user_token,
-			Object assetOrPermission, Optional<String> action) {
-		return true;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#hasUserRole(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject, java.lang.String)
-	 */
-	@Override
-	public boolean hasUserRole(ISubject user_token, String role) {
-		return true;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService#invalidateUserContext(com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject)
-	 */
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-	}
 }

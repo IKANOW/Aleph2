@@ -33,7 +33,6 @@ import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.session.mgt.DefaultSessionManager;
 import org.apache.shiro.session.mgt.SessionManager;
-import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.ThreadContext;
@@ -52,8 +51,7 @@ import com.ikanow.aleph2.security.module.CoreSecurityModule;
 
 public class SecurityService implements ISecurityService, IExtraDependencyLoader{
 
-	protected ThreadLocal<ISubject> tlCurrentSubject = new ThreadLocal<ISubject>();
-	private static final Logger logger = LogManager.getLogger(SecurityService.class);
+	protected static final Logger logger = LogManager.getLogger(SecurityService.class);
 	
 	protected static String systemUsername = null;
 	protected static String systemPassword = null;
@@ -94,43 +92,14 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	public <T> Optional<T> getUnderlyingPlatformDriver(Class<T> driver_class, Optional<String> driver_options) {
 		return Optional.empty();
 	}
-
-	/////////////////////////////////////////////////////////////////////////
-	
-	// NEW API
 	
 	@Override
-	public ISubject getUserContext(String user_id) {
-		ISubject root_subject = getUserContext(systemUsername, systemPassword);
-		((Subject)(root_subject.getSubject())).runAs(new SimplePrincipalCollection(user_id,getRealmName()));
-		return root_subject;
-	}
-
-	@Override
-	public ISubject getUserContext(String user_id, String password) {
-		final Subject new_subject = new Subject.Builder().buildSubject();
-        final UsernamePasswordToken token = new UsernamePasswordToken(user_id,password);
-        new_subject.login(token);
-		return new SubjectWrapper(new_subject);
-	}
-	
-	@Override
-	public void invalidateUserContext(ISubject subject) {
-		((Subject)(subject.getSubject())).logout();
-	}
-	
-	@Override
-	public ISubject getSystemUserContext() {
-		return getUserContext(systemUsername, systemPassword);
-	}
-	
-	@Override
-	public boolean isUserPermitted(ISubject user_token, Object assetOrPermission, Optional<String> action) {
+	public boolean isUserPermitted(String userId, Object assetOrPermission, Optional<String> action) {
 		boolean permitted = false;
 		List<String> permissions = permissionExtractor.extractPermissionIdentifiers(assetOrPermission, action);
 		if (permissions != null && permissions.size() > 0) {
 			for (String permission : permissions) {
-				permitted = isPermitted(user_token, permission);
+				permitted = isUserPermitted(userId, permission);
 				if (permitted) {
 					break;
 				}
@@ -138,108 +107,49 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		}
 		return permitted;
 	}
+	
+	@Override
+	public synchronized ISubject login(String principalName, Object credentials){
+		Subject currentUser = SecurityUtils.getSubject();
+		if(principalName ==null){
+			
+		}
+		boolean needsLogin = true;
+		try{
+		    Session session = currentUser.getSession();
+		    logger.debug("login: "+session.getId()+" : "+currentUser);
 
-	@Override
-	public boolean hasUserRole(ISubject user_token, String role) {
-		//TODO get rid of hasRole and replace with this
-		return hasRole(user_token,role);
-	}			
-	
-	@Override
-	public boolean isPermitted(ISubject subject, String permission) {
-		return ((Subject)subject.getSubject()).isPermitted(permission);
-	}
-	
-	@Override
-	public boolean isUserPermitted(Optional<String> userID, Object assetOrPermission, Optional<String> action) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return isUserPermitted(subject, assetOrPermission, action);
+		if(currentUser.isAuthenticated()){
+			while(currentUser.isRunAs()){
+				currentUser.releaseRunAs();
+			}
+			Object principal = currentUser.getPrincipal();
+			// check if currentPrincipal 
+			if(principalName.equals(""+principal)){
+				needsLogin=false;
+			}else{
+				logger.warn("login(): found authenticated user ("+principal+") different than "+principalName+", logging out this user.");
+				currentUser.logout();
+			}
 		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
+		}catch(Exception e){
+			// try to get rid of expired session so system can login again
+			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
+			// create new session
+			ThreadContext.unbindSubject();
+			currentUser = SecurityUtils.getSubject();			
+			needsLogin = true;
 		}
-	}
+		if(needsLogin){
+			UsernamePasswordToken token = new UsernamePasswordToken(principalName,""+credentials);
+		    currentUser.login((AuthenticationToken)token);
+		    Session session = currentUser.getSession(true);
+		    logger.debug("Logged in user and Created session:"+session.getId());
+		}
 
-	@Override
-	public boolean hasUserRole(Optional<String> userID, String role) {
-		ISubject subject = null;
-		try {
-			subject = userID.map(uid -> this.getUserContext(uid)).orElseGet(() -> this.getSystemUserContext());
-			return hasUserRole(subject, role);
-		}
-		finally {
-			if (null != subject) this.invalidateUserContext(subject);
-		}
-	}
-	
-	/////////////////////////////////////////////////////////////////////////////
-	
-	@Override
-	public ISubject login(String principalName, Object credentials) {
-		
-		
-		String password = (String)credentials;
-        UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
-        
-        //token.setRememberMe(true);
-
-        ensureUserIsLoggedOut();
-        Subject shiroSubject = getShiroSubject();
-        shiroSubject.login((AuthenticationToken)token);
-        tlCurrentSubject.remove();
-        ISubject currentSubject = new SubjectWrapper(shiroSubject);
-        tlCurrentSubject.set(currentSubject);
-        if(jvmSecurityManager!=null){
-        	jvmSecurityManager.setSubject(currentSubject);
-        }
+		ISubject currentSubject = new SubjectWrapper(currentUser);
 		return currentSubject;
 	}
-
-	protected void ensureUserIsLoggedOut()
-	{
-	    try
-	    {
-	    	Subject shiroSubject = getShiroSubject();
-	        if (shiroSubject == null)
-	            return;
-
-	        // Log the user out and kill their session if possible.
-	        shiroSubject.logout();
-	        Session session = shiroSubject.getSession(false);
-	        if (session == null)
-	            return;
-
-	        session.stop();
-	    }
-	    catch (Exception e)
-	    {
-	        // Ignore all errors, as we're trying to silently 
-	        // log the user out.
-	    }
-	}
-
-	// Clean way to get the subject
-	protected Subject getShiroSubject()
-	{
-	    Subject currentUser = ThreadContext.getSubject();// SecurityUtils.getSubject();
-
-	    if (currentUser == null)
-	    {
-	        currentUser = SecurityUtils.getSubject();
-	    }
-
-	    return currentUser;
-	}
-	
-
-	@Override
-	public boolean hasRole(ISubject subject, String roleIdentifier) {
-		boolean ret = ((Subject)subject.getSubject()).hasRole(roleIdentifier);
-		return ret;
-	}
-
 	
 
 	public static List<Module> getExtraDependencyModules() {
@@ -254,9 +164,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
-
-
-
 	@Override
 	public <O> IManagementCrudService<O> secured(IManagementCrudService<O> crud, AuthorizationBean authorizationBean) {		
 		return new SecuredCrudManagementDbService<O>(serviceContext, crud, authorizationBean);
@@ -268,37 +175,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 		return new SecuredDataServiceProvider(serviceContext, provider, authorizationBean);
 	}
 	
-	
-	//TODO: ->protected
-	@Override
-	public ISubject loginAsSystem() {
-		ISubject subject = login(systemUsername,systemPassword);		
-		return subject;
-	}
-
-
-	//TODO: ->protected
-	@Override
-	public void runAs(ISubject subject,Collection<String> principals) {
-		// TODO Auto-generated method stub	
-		((Subject)subject.getSubject()).runAs(new SimplePrincipalCollection(principals,getRealmName()));
-        if(jvmSecurityManager!=null){
-        	jvmSecurityManager.setSubject(subject);
-        }
-
-	}
-
-
-	//TODO: ->protected
-	@SuppressWarnings("unchecked")
-	@Override
-	public Collection<String> releaseRunAs(ISubject subject) {
-		PrincipalCollection p = ((Subject)subject.getSubject()).releaseRunAs();
-		return (p!=null)? p.asList(): null;
-		}
-
-
-
 	protected String getRealmName(){
 		String name = "SecurityService";
 		if(realms.iterator().hasNext()){
@@ -350,18 +226,17 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 				if (currSysManager instanceof JVMSecurityManager) {
 					this.jvmSecurityManager = (JVMSecurityManager) currSysManager;
 				} else {
-					this.jvmSecurityManager = new JVMSecurityManager(this);
-					this.jvmSecurityManager.setSubject(tlCurrentSubject.get());
+					this.jvmSecurityManager = new JVMSecurityManager(this);					
+					//this.jvmSecurityManager.setSubject(tlCurrentSubject.get());
 					System.setSecurityManager(jvmSecurityManager);
 				}				
 			}
-
 		} else {
 			// disable security manager if it is our's
 			Object currSysManager = System.getSecurityManager();
 			if (currSysManager instanceof JVMSecurityManager) {				
 				System.setSecurityManager(null);
-				this.jvmSecurityManager.releaseSubject();				
+				//this.jvmSecurityManager.releaseSubject();				
 				this.jvmSecurityManager = null;
 			}
 		}
@@ -369,8 +244,14 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 
 
 	@Override
-	public void enableJvmSecurity(boolean enabled) {
+	public void enableJvmSecurity(Optional<String> principalName,boolean enabled) {
 		if(enabled){
+			// set the principalName into runAs or login as system
+			if(principalName.isPresent()){
+				runAs(principalName.get());
+			}else{
+				loginAsSystem();
+			}
 			enableJvmSecurityManager(true);
 			jvmSecurityManager.setEnabled(true);
 		}else{
@@ -381,5 +262,82 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	}
 
 
+////new set of threading tests
+	protected synchronized Subject loginAsSystem(){
+		Subject currentUser = SecurityUtils.getSubject();
+		String principalName = systemUsername;
+		String password = systemPassword;
+		boolean needsLogin = true;
+		try{
+		    Session session = currentUser.getSession();
+		    logger.debug("loginAsSystem2 : "+session.getId()+" : "+currentUser);
+
+		if(currentUser.isAuthenticated()){
+			while(currentUser.isRunAs()){
+				currentUser.releaseRunAs();
+			}
+			Object principal = currentUser.getPrincipal();
+			// check if currentPrincipal 
+			if(systemUsername.equals(""+principal)){
+				needsLogin=false;
+			}else{
+				logger.warn("Found authenticated user ("+principal+") different than system user, logging out this user.");
+				currentUser.logout();
+			}
+		}
+		}catch(Exception e){
+			// try to get rid of expired session so system can login again
+			logger.debug("Caught "+e.getClass().getName()+": "+ e.getMessage());
+			// create new session
+			ThreadContext.unbindSubject();
+			currentUser = SecurityUtils.getSubject();			
+			needsLogin = true;
+		}
+		if(needsLogin){
+			UsernamePasswordToken token = new UsernamePasswordToken(principalName,password);
+		    currentUser.login((AuthenticationToken)token);
+		    Session session = currentUser.getSession(true);
+		    logger.debug("Logged in user and Created session:"+session.getId());
+		}
+
+		return currentUser;
+	}
 	
+	
+	protected synchronized Subject runAs(String principal) {
+		Subject currentUser = loginAsSystem();		
+		currentUser.runAs(new SimplePrincipalCollection(Arrays.asList(principal),getRealmName()));
+		return currentUser;
+	}
+
+	public boolean isPermitted(String permission) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.isPermitted(permission);
+	}
+
+	public boolean hasRole(String role) {
+		Subject currentUser = SecurityUtils.getSubject();		
+		return currentUser.hasRole(role);
+	}
+
+	@Override
+	public boolean isUserPermitted(String principal, String permission) {		
+		Subject currentUser = runAs(principal);		
+		return currentUser.isPermitted(permission);
+	}
+
+	@Override
+	public boolean hasUserRole(String principal, String role) {
+		Subject currentUser = runAs(principal);		
+		return currentUser.hasRole(role);
+	}
+
+
+
+	@Override
+	public ISubject getCurrentSubject() {
+		return new SubjectWrapper(SecurityUtils.getSubject());
+	}
+
+
 }

@@ -1373,8 +1373,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						)
 						.<Optional<DataBucketBean>>thenApply(maybe_bucket -> {
 							return maybe_bucket.<DataBucketBean>map(bucket -> {
-								_service_context.getSecurityService().loginAsSystem(); //(still necessary, though is going away)
-								if (_service_context.getSecurityService().isUserPermitted(Optional.of(_mutable_state.bucket.get().owner_id()), bucket, Optional.of(ISecurityService.ACTION_READ_WRITE)))
+								if (_service_context.getSecurityService().isUserPermitted(_mutable_state.bucket.get().owner_id(), bucket, Optional.of(ISecurityService.ACTION_READ_WRITE)))
 								{
 									return bucket;
 								}
