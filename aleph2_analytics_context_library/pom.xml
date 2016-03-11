@@ -4,7 +4,7 @@
   <artifactId>aleph2_analytics_context_library</artifactId>
   <version>${aleph2.version}</version>
   <properties>
-	<aleph2.version>2.7.0-SNAPSHOT</aleph2.version>
+	<aleph2.version>2.8.0-SNAPSHOT</aleph2.version>
 	<aleph2.scope>compile</aleph2.scope>
 	<aleph2.hadoop>2.7.1</aleph2.hadoop>
 	<!-- Overridden in test_depdendencies profile that is activated if skip tests is true -->
