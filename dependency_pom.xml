@@ -6,7 +6,7 @@
     <name>Aleph2 parent project</name>
     <version>${aleph2.version}</version>
     <properties>
-        <aleph2.version>2.6.0-SNAPSHOT</aleph2.version>
+        <aleph2.version>2.7.0-SNAPSHOT</aleph2.version>
 	      <aleph2.hadoop>2.6.0</aleph2.hadoop>
     </properties>
     <modules>
