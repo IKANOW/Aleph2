@@ -101,6 +101,10 @@ public class TestTimeSliceDirUtils {
 					"2015-10"
 					);
 		
+		assertEquals(Arrays.asList(
+				"fail1", 
+				"fail2_notdate"), TimeSliceDirUtils.getUntimedDirectories(test_dirs.stream()).collect(Collectors.toList()));		
+		
 		final Date d1 = Date.from(LocalDateTime.of(2015, 1, 1, 0, 0).atZone(ZoneOffset.systemDefault()).toInstant());
 		final Date d2 = Date.from(LocalDateTime.of(2016, 1, 1, 0, 0).atZone(ZoneOffset.systemDefault()).toInstant());
 		final Date d3 = Date.from(LocalDateTime.of(2015, 2, 1, 0, 0).atZone(ZoneOffset.systemDefault()).toInstant());
