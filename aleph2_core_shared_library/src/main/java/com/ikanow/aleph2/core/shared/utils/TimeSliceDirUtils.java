@@ -31,6 +31,8 @@ import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 
+import fj.data.Validation;
+
 /** A few utils to handle time sliced dirs
  * @author alex
  */
@@ -64,6 +66,15 @@ public class TimeSliceDirUtils {
 		return Tuples._2T(tmin, tmax);
 	}
 	
+	/** The complement to annotateTimedDirectories - returns directories that don't have associated times
+	 * @param dir_listing
+	 */
+	public static Stream<String> getUntimedDirectories(final Stream<String> dir_listing) {
+		return candidateTimedDirectories(dir_listing)
+				.filter(dir_datestr_date -> dir_datestr_date._3().isFail())
+				.map(dir_datestr_date -> dir_datestr_date._1())
+				;
+	}
 	
 	/** Takes a stream of strings (paths) and adds the date range
 	 * @param dir_listing
@@ -71,13 +82,7 @@ public class TimeSliceDirUtils {
 	 */
 	public static Stream<Tuple3<String, Date, Date>> annotateTimedDirectories(final Stream<String> dir_listing) {
 		//(first get to last element in path, then if it ends _<date> then grab <date>, else assume it's the whole thing)
-		return dir_listing
-			.map(dir -> dir.endsWith("/") ? dir.substring(0, dir.length() - 1) : dir)
-			.map(dir -> Tuples._2T(dir, dir.lastIndexOf("/"))) // if not present, returns -1 which means the substring below grabs the entire thing
-			.map(dir_date -> Tuples._2T(dir_date._1(), dir_date._1().substring(1 + dir_date._2())))
-			.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), dir_date._2().lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
-			.map(dir_date_index -> Tuples._2T(dir_date_index._1(), dir_date_index._2().substring(1 + dir_date_index._3())))
-			.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), TimeUtils.getDateFromSuffix(dir_date._2())))
+		return candidateTimedDirectories(dir_listing)
 			.filter(dir_datestr_date -> dir_datestr_date._3().isSuccess())
 			.map(dir_datestr_date -> {
 				final Optional<Tuple2<String, ChronoUnit>> info = TimeUtils.getFormatInfoFromDateString(dir_datestr_date._2());
@@ -93,6 +98,22 @@ public class TimeSliceDirUtils {
 			)
 			;
 	}
+	
+	/** Internal utility
+	 * @param dir_listing
+	 * @return
+	 */
+	private static Stream<Tuple3<String, String, Validation<String, Date>>> candidateTimedDirectories(final Stream<String> dir_listing) {
+		return dir_listing
+				.map(dir -> dir.endsWith("/") ? dir.substring(0, dir.length() - 1) : dir)
+				.map(dir -> Tuples._2T(dir, dir.lastIndexOf("/"))) // if not present, returns -1 which means the substring below grabs the entire thing
+				.map(dir_date -> Tuples._2T(dir_date._1(), dir_date._1().substring(1 + dir_date._2())))
+				.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), dir_date._2().lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
+				.map(dir_date_index -> Tuples._2T(dir_date_index._1(), dir_date_index._2().substring(1 + dir_date_index._3())))
+				.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), TimeUtils.getDateFromSuffix(dir_date._2())))
+				;
+	}
+	
 	
 	/** Filters out non matching directories
 	 * @param in
