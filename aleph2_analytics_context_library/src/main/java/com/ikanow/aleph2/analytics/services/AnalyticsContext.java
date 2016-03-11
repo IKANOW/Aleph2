@@ -57,10 +57,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
-import com.ikanow.aleph2.analytics.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
+import com.ikanow.aleph2.core.shared.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
@@ -731,8 +731,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						if (null != i.filter()) {
 							//(actually not sure if i ever plan to implement this?)
 							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
-						}						
-						
+						}								
 						final String[] bucket_subchannel = Lambdas.<String, String[]> wrap_u(s -> {
 							
 							// 1) If the resource starts with "/" then must point to an intermediate batch result of an external bucket
@@ -792,6 +791,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						});
 					}
 					else { // storage service ... 3 options :raw, :json, :processed (defaults to :processed)
+						if (Optional.of(true).equals(Optional.ofNullable(i.config()).map(cfg -> cfg.high_granularity_filter()))) {
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.HIGH_GRANULARITY_FILTER_NOT_SUPPORTED, my_bucket.full_name(), job.name(), Optional.ofNullable(i.name()).orElse("(no name)")));
+						}
 						
 						final String bucket_name = i.resource_name_or_id().split(":")[0];
 						
@@ -830,7 +832,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 										final Stream<String> paths = 
 												Arrays.stream(fc.util().listStatus(new Path(base_path)))
 													.filter(f -> f.isDirectory())
-													.map(f -> f.getPath().toString())
+													.map(f -> f.getPath().toUri().getPath()) // (remove the hdfs:// bit, which seems to be breaking with HA)
 													;										
 										
 										return TimeSliceDirUtils.filterTimedDirectories(

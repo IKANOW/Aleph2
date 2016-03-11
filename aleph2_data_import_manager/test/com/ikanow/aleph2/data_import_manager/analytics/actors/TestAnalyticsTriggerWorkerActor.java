@@ -26,6 +26,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -806,14 +809,14 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	// ENRICHMENT STYLE BUCKETS
 	
 	@Test
-	public void test_enrichment_analyticForm() throws IOException, InterruptedException {
+	public void test_enrichment_analyticForm() throws IOException, InterruptedException, ExecutionException, TimeoutException {
 		System.out.println("Starting test_enrichment_analyticForm");
 		
 		final String json_bucket = Resources.toString(Resources.getResource("com/ikanow/aleph2/data_import_manager/analytics/actors/real_test_case_batch_2.json"), Charsets.UTF_8);		
 		final DataBucketBean enrichment_bucket = BeanTemplateUtils.from(json_bucket, DataBucketBean.class).get();
 		
 		// (have to save the bucket to make trigger checks work correctly)
-		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(enrichment_bucket, true).join();		
+		_service_context.getService(IManagementDbService.class, Optional.empty()).get().getDataBucketStore().storeObject(enrichment_bucket, true).get(1, TimeUnit.MINUTES);		
 		
 		test_enrichment_common(enrichment_bucket);
 	}
