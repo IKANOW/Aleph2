@@ -138,21 +138,18 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>  		
   	</dependency>
-<<<<<<< HEAD
 <!-- 	<dependency> -->
 <!-- 		<groupId>com.ikanow.aleph2</groupId> -->
 <!-- 		<artifactId>aleph2_logging_service</artifactId> -->
 <!-- 		<version>${aleph2.version}</version> -->
 <!-- 		<scope>${aleph2.scope}</scope>   -->
 <!-- 	</dependency> -->
-=======
   	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_core_shared_library</artifactId>
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>  		
   	</dependency>
->>>>>>> refs/heads/master
 	<dependency>
 		<groupId>com.google.inject</groupId>
 		<artifactId>guice</artifactId>
