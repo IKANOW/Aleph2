@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.core.shared.services.MultiDataService;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
@@ -126,14 +127,7 @@ public class HarvestContext implements IHarvestContext {
 	protected Optional<IDataWriteService.IBatchSubservice<String>> _batch_intermed_storage_service = Optional.empty();	
 	
 	// For writing objects out
-	// TODO (ALEPH-12): this needs to get moved into the object output library
-	protected Optional<IDataWriteService<JsonNode>> _crud_index_service = Optional.empty();
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service = Optional.empty();
-	protected Optional<IDataWriteService<JsonNode>> _crud_doc_service = Optional.empty();
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service = Optional.empty();
-	protected Optional<IDataWriteService<JsonNode>> _crud_storage_service = Optional.empty();
-	protected Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service = Optional.empty();
-	
+	protected SetOnce<MultiDataService> _multi_writer = new SetOnce<>();
 	
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
@@ -324,40 +318,7 @@ public class HarvestContext implements IHarvestContext {
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		synchronized (this) {
 			_mutable_state.initialized_direct_output.trySet(true);
-			if (!_batch_index_service.isPresent()) {
-				if (hasSearchIndexOutput(my_bucket)) {
-					_batch_index_service = 
-							(_crud_index_service = _index_service
-														.flatMap(s -> s.getDataService())
-														.flatMap(s -> s.getWritableDataService(JsonNode.class, my_bucket, Optional.empty(), Optional.empty()))
-							)
-							.flatMap(IDataWriteService::getBatchWriteSubservice)
-							;
-				}
-			}
-			if (!_batch_doc_service.isPresent()) {
-				if (hasDocumentOutput(my_bucket)) {
-					_batch_doc_service = 
-							(_crud_doc_service = _doc_service
-														.flatMap(s -> s.getDataService())
-														.flatMap(s -> s.getWritableDataService(JsonNode.class, my_bucket, Optional.empty(), Optional.empty()))
-							)
-							.flatMap(IDataWriteService::getBatchWriteSubservice)
-							;
-				}
-			}
-			if (!_batch_storage_service.isPresent()) {
-				if (hasDirectStorageOutput(my_bucket)) {
-					_batch_storage_service = 
-							(_crud_storage_service = _storage_service.getDataService()
-														.flatMap(s -> 
-																	s.getWritableDataService(JsonNode.class, my_bucket, 
-																		Optional.of(IStorageService.StorageStage.processed.toString()), Optional.empty()))
-							)
-							.flatMap(IDataWriteService::getBatchWriteSubservice)
-							;								
-				}			
-			}
+			_multi_writer.set(new MultiDataService(my_bucket, _service_context, Optional.empty()));
 		}
 	}
 	
@@ -846,25 +807,7 @@ public class HarvestContext implements IHarvestContext {
 		initializeOptionalOutput(bucket);
 		
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
-		
-		if (_batch_index_service.isPresent()) {
-			_batch_index_service.get().storeObject(obj_json);
-		}
-		else if (_crud_index_service.isPresent()){ // (super slow)
-			_crud_index_service.get().storeObject(obj_json);
-		}
-		if (_batch_doc_service.isPresent()) {
-			_batch_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
-		}
-		else if (_crud_doc_service.isPresent()){ // (super slow)
-			_crud_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
-		}
-		if (_batch_storage_service.isPresent()) {
-			_batch_storage_service.get().storeObject(obj_json);
-		}
-		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_crud_storage_service.get().storeObject(obj_json);
-		}
+		_multi_writer.get().batchWrite(obj_json);
 	}
 
 	/* (non-Javadoc)
@@ -872,22 +815,6 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
-		
-		@SuppressWarnings("unchecked")
-		final CompletableFuture<Object> cf1 = 
-				_batch_index_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
-		
-		@SuppressWarnings("unchecked")
-		final CompletableFuture<Object> cf2 = 
-				_batch_storage_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
-		
-		@SuppressWarnings("unchecked")
-		final CompletableFuture<Object> cf3 = 
-				_batch_doc_service.map(s -> (CompletableFuture<Object>)s.flushOutput())
-				.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));
-		
-		return CompletableFuture.allOf(cf1, cf2, cf3);
+		return _multi_writer.get().flushBatchOutput();
 	}
 }

@@ -16,10 +16,24 @@
 
 package com.ikanow.aleph2.core.shared.services;
 
+import static org.junit.Assert.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -28,6 +42,19 @@ import java.util.stream.Stream;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -35,6 +62,7 @@ import org.mockito.Mockito;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
@@ -43,27 +71,272 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.MockServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+
+import fj.Unit;
 
 /**
  * @author Alex
  *
  */
 public class TestMultiDataService {
+	protected final static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 
-	@Test
-	public void test_MultiDataService() {
-		
-	}
-	
-	@Test
-	public void test_MultiDataService_empty() {
-		
-	}
-	
+	protected int _apply_count = 0;
 	protected Map<String, Integer> _crud_responses = new HashMap<>();
-	protected Map<String, Integer> _batch_responses = new HashMap<>();
+	protected Map<String, Integer> _batch_responses = new HashMap<>();		
+	
+	@Test
+	public void test_MultiDataService_allDifferent() {
+	
+		final DataBucketBean bucket =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::search_index_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::service_name, "test")
+										.done().get())
+								.with(DataSchemaBean::temporal_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class)
+											.with(DataSchemaBean.TemporalSchemaBean::service_name, "test")
+										.done().get())
+								.with(DataSchemaBean::columnar_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class)
+											.with(DataSchemaBean.ColumnarSchemaBean::service_name, "test")
+										.done().get())
+								.with(DataSchemaBean::data_warehouse_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class)
+											.with(DataSchemaBean.DataWarehouseSchemaBean::service_name, "test")
+										.done().get())
+								.with(DataSchemaBean::storage_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+				
+		// All services present, but configured to not write
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(0);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 0, mds.getBatchWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals(false, mds._doc_write_mode);
+			
+			assertEquals("No data services", false, mds.batchWrite(_mapper.createObjectNode()));
+			assertTrue("No batch responses: " + _batch_responses.keySet(), _batch_responses.isEmpty());
+			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
+		}
+		// All services present, use slow CRUD service
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(1);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 0, mds.getBatchWriters().size());
+			assertEquals("No cruds", 6, mds.getCrudOnlyWriters().size());
+			assertEquals(false, mds._doc_write_mode);
+			assertEquals(0, _apply_count);
+			
+			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
+			
+			assertTrue("No batch responses: " + _batch_responses.keySet(), _batch_responses.isEmpty());
+			assertEquals("CRUD responses: " + _crud_responses.keySet(), 6, _crud_responses.size());
+			_crud_responses.clear();
+			
+			//check that the the flush batch output returns with no errors
+			assertTrue(mds.flushBatchOutput().isDone());
+		}
+		// All services present, use fast CRUD service
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(2);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
+			assertEquals(false, mds._doc_write_mode);
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 6, mds.getBatchWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals(6, _apply_count);
+			
+			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
+			
+			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
+			assertEquals("batch responses: " + _batch_responses.keySet(), 6, _batch_responses.size());			
+			_batch_responses.clear();
+			
+			//check that the the flush batch output returns with no errors
+			assertTrue(mds.flushBatchOutput().isDone());
+			assertEquals("batch responses: " + _batch_responses.keySet(), 6, _batch_responses.size());			
+			_batch_responses.clear();
+		}
+	}
+	
+	
+	@Test
+	public void test_MultiDataService_commonServices() {
+	
+
+		final DataBucketBean bucket =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::search_index_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+										.done().get())
+								.with(DataSchemaBean::temporal_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::columnar_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::data_warehouse_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::storage_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+				
+		// All services present, but configured to not write
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(0);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 0, mds.getBatchWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals(true, mds._doc_write_mode);
+			
+			assertEquals("No data services", false, mds.batchWrite(_mapper.createObjectNode()));
+			assertTrue("No batch responses: " + _batch_responses.keySet(), _batch_responses.isEmpty());
+			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
+		}
+		// All services present, use slow CRUD service
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(1);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 0, mds.getBatchWriters().size());
+			assertEquals("No cruds", 3, mds.getCrudOnlyWriters().size());
+			assertEquals(true, mds._doc_write_mode);
+			assertEquals(0, _apply_count);
+			
+			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
+			
+			assertTrue("No batch responses: " + _batch_responses.keySet(), _batch_responses.isEmpty());
+			assertEquals("CRUD responses: " + _crud_responses.keySet(), 3, _crud_responses.size());
+			_crud_responses.clear();
+		}
+		// All services present, use fast CRUD service
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(2);
+			
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
+			assertEquals(true, mds._doc_write_mode);
+			
+			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("No batches", 3, mds.getBatchWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals(3, _apply_count);
+			
+			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
+			
+			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
+			assertEquals("batch responses: " + _batch_responses.keySet(), 3, _batch_responses.size());			
+			_batch_responses.clear();
+			
+			//check that the the flush batch output returns with no errors
+			assertTrue(mds.flushBatchOutput().isDone());
+			assertEquals("batch responses: " + _batch_responses.keySet(), 3, _batch_responses.size());			
+			_batch_responses.clear();
+		}
+	}
+	
+	@Test
+	public void test_getWriteMode() {
+		
+		final DataBucketBean bucket0 =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+		
+		
+		final DataBucketBean bucket1 =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+		
+		final DataBucketBean bucket2 =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, java.util.Arrays.asList("x"))
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+		
+		final DataBucketBean bucket3 =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, java.util.Arrays.asList("y"))
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+	
+		assertEquals(false, MultiDataService.getWriteMode(bucket0));
+		assertEquals(true, MultiDataService.getWriteMode(bucket1));
+		assertEquals(true, MultiDataService.getWriteMode(bucket2));
+		assertEquals(true, MultiDataService.getWriteMode(bucket3));
+	}
+	
 	
 	/**
 	 * @param mode: 0 => no data service provider (or no writable), 1 => no batch provider
@@ -72,7 +345,7 @@ public class TestMultiDataService {
 	public MockServiceContext getPopulatedServiceContext(int mode) {
 		MockServiceContext mock_service_context = new MockServiceContext();
 		
-		final ISearchIndexService search_index = Mockito.mock(ISearchIndexService.class);
+		final SearchIndexAndMoreService search_index = Mockito.mock(SearchIndexAndMoreService.class);
 		final IDocumentService document = Mockito.mock(IDocumentService.class);
 		final IColumnarService columnar = Mockito.mock(IColumnarService.class);
 		final ITemporalService temporal = Mockito.mock(ITemporalService.class);
@@ -93,31 +366,68 @@ public class TestMultiDataService {
 					}
 				}
 				else if (1 == mode) { // use slow write mode
-					final IGenericDataService gds = Mockito.mock(IGenericDataService.class);
 					
 					@SuppressWarnings("unchecked")
 					final IDataWriteService<JsonNode> dws = (IDataWriteService<JsonNode>)Mockito.mock(IDataWriteService.class);
 					Mockito.when(dws.getBatchWriteSubservice()).thenReturn(Optional.empty());
-					//TODO: also add store object
-							
-					Mockito.when(gds.getWritableDataService(JsonNode.class, Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Optional.of(dws));
+					final Answer<Object> callback = new Answer<Object>() {
+				        public Object answer(InvocationOnMock invocation) {
+				        	_crud_responses.compute(ds.getClass().toString(), (k, v) -> (null == v) ? 1 : v + 1);
+				            return (Object) CompletableFuture.completedFuture(Unit.unit());
+				        }						
+					};
+					Mockito.when(dws.storeObject(Mockito.any())).then(callback);
+					Mockito.when(dws.storeObject(Mockito.any(), Mockito.anyBoolean())).then(callback);
+					
+					final IGenericDataService gds = Mockito.mock(IGenericDataService.class);
+					Mockito.when(gds.getWritableDataService(Mockito.<Class<JsonNode>>any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Optional.of(dws));
 					Mockito.when(ds.getDataService()).thenReturn(Optional.of(gds));
-					//TODO
 				}
 				else { //full mapper
 					
+					@SuppressWarnings("unchecked")
+					final IBatchSubservice<JsonNode> bss = Mockito.mock(IBatchSubservice.class);
+
+					final Answer<Object> callback = new Answer<Object>() {
+				        public Object answer(InvocationOnMock invocation) {
+				        	_batch_responses.compute(ds.getClass().toString(), (k, v) -> (null == v) ? 1 : v + 1);
+				            return (Object) CompletableFuture.completedFuture(Unit.unit());
+				        }						
+					};
+					Mockito.doAnswer(callback).when(bss).flushOutput();
+					Mockito.doAnswer(callback).when(bss).storeObject(Mockito.any());
+					Mockito.doAnswer(callback).when(bss).storeObject(Mockito.any(), Mockito.anyBoolean());
+					
+					@SuppressWarnings("unchecked")
+					final IDataWriteService<JsonNode> dws = (IDataWriteService<JsonNode>)Mockito.mock(IDataWriteService.class);
+					Mockito.when(dws.getBatchWriteSubservice()).thenReturn(Optional.of(bss));
+					
+					final IGenericDataService gds = Mockito.mock(IGenericDataService.class);
+					Mockito.when(gds.getWritableDataService(Mockito.<Class<JsonNode>>any(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(Optional.of(dws));
+					Mockito.when(ds.getDataService()).thenReturn(Optional.of(gds));
 				}
 			});
 			;
 		
 		
 		mock_service_context.addService(ISearchIndexService.class, Optional.empty(), search_index);
-		mock_service_context.addService(IDocumentService.class, Optional.empty(), document);
-		mock_service_context.addService(IColumnarService.class, Optional.empty(), columnar);
-		mock_service_context.addService(ITemporalService.class, Optional.empty(), temporal);
+		// Defaults:
+		mock_service_context.addService(IDocumentService.class, Optional.empty(), search_index);
+		mock_service_context.addService(IColumnarService.class, Optional.empty(), search_index);
+		mock_service_context.addService(ITemporalService.class, Optional.empty(), search_index);
 		mock_service_context.addService(IDataWarehouseService.class, Optional.empty(), data_warehouse);
 		mock_service_context.addService(IStorageService.class, Optional.empty(), storage);
+		// Alts:
+		mock_service_context.addService(IDocumentService.class, Optional.of("test"), document);
+		mock_service_context.addService(IColumnarService.class, Optional.of("test"), columnar);
+		mock_service_context.addService(ITemporalService.class, Optional.of("test"), temporal);
+		mock_service_context.addService(IDataWarehouseService.class, Optional.of("test"), data_warehouse);
 		
 		return mock_service_context;
 	}
+	
+	public static interface SearchIndexAndMoreService extends ISearchIndexService, IDocumentService, IColumnarService, ITemporalService {
+		
+	};
 }
+>>>>>>> refs/heads/master
