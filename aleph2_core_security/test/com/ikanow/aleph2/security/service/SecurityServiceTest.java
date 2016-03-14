@@ -15,7 +15,12 @@
  *******************************************************************************/
 package com.ikanow.aleph2.security.service;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyCollectionOf;
@@ -25,7 +30,6 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -36,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.subject.Subject;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -79,7 +84,10 @@ public class SecurityServiceTest {
 	//TODO: move this back to ISecService
 	protected SecurityService securityService = null;
 	
+	
+	protected String adminUserId = "admin";
 	protected String regularUserId = "user";
+	protected String testUserId = "testUser";
 
 	@Before
 	public void setupDependencies() throws Exception {
@@ -126,71 +134,17 @@ public class SecurityServiceTest {
 	}
 	
 	@Test
-	public void testRole_newAPI(){
-		ISubject subject = securityService.getSystemUserContext();
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.hasRole(subject,"admin"));
-	}
-	@Test
 	public void testRole(){
-		ISubject subject = loginAsAdmin();
         //test a typed permission (not instance-level)
-		assertEquals(true,securityService.hasRole(subject,"admin"));
+		assertEquals(true,securityService.hasUserRole(adminUserId,"admin"));
 	}
 
-	@Test
-	public void testPermission_newAPI(){
-		ISubject subject = securityService.getUserContext("user");
-		String permission = "permission1";
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,permission));
-	}
 	@Test
 	public void testPermission(){
 		ISubject subject = loginAsRegularUser();
 		String permission = "permission1";
         //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,permission));
-	}
-
-	@Test
-	public void testRunAs_newAPI(){
-		// system community
-		String runAsPrincipal = "user";
-		String runAsRole = "user";
-		String runAsPersonalPermission = "permission1";
-		String runAsPersonalPermission_not = "NOT_permission1";
-
-		ISubject subject = securityService.getUserContext(runAsPrincipal);
-		assertEquals(true, subject.isAuthenticated());
-				
-		assertEquals(true,securityService.hasRole(subject,runAsRole));
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
-		assertEquals(false,securityService.isPermitted(subject,runAsPersonalPermission_not));
-	}
-	@Test
-	public void testRunAs(){
-		ISubject subject = loginAsTestUser();
-		// system community
-		String runAsPrincipal = "user";
-		String runAsRole = "user";
-		String runAsPersonalPermission = "permission1";
-		
-		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
-		
-		assertEquals(true,securityService.hasRole(subject,runAsRole));
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
-		Collection<String> p = securityService.releaseRunAs(subject);
-		logger.debug("Released Principals:"+p);
-		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
-		
-		assertEquals(true,securityService.hasRole(subject,runAsRole));
-        //test a typed permission (not instance-level)
-		assertEquals(true,securityService.isPermitted(subject,runAsPersonalPermission));
-		p = securityService.releaseRunAs(subject);
-		logger.debug("Released Principals:"+p);
+		assertEquals(true,securityService.isPermitted(permission));
 	}
 	
 	protected ISubject loginAsTestUser() throws AuthenticationException{
@@ -215,11 +169,11 @@ public class SecurityServiceTest {
 		String permission = "permission2";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 		}
 		subject = loginAsAdmin();
@@ -227,11 +181,11 @@ public class SecurityServiceTest {
 		permission = "permission2";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("AU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("AU-permisssion");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("AU-permisssion"+i+1);
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("AU-permisssion"+i+1);
 		}
 		
@@ -241,26 +195,24 @@ public class SecurityServiceTest {
 		ProfilingUtility.timeStopAndLog("TU2-permisssion_L"+(i+1));
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU2-permisssion"+(i+1));
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 			ProfilingUtility.timeStopAndLog("TU2-permisssion"+(i+1));
 		}
 	}
 
 	@Test
 	public void testInvalidateAuthenticationCache(){
-		ISubject subject = loginAsTestUser();
+		ISubject subject = loginAsRegularUser();
 		
-		securityService.runAs(subject,Arrays.asList(regularUserId));
-
 		// test personal community permission
 		String permission = "permission1";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 			if(i==5){
 				securityService.invalidateAuthenticationCache(Arrays.asList(regularUserId));	
@@ -271,19 +223,16 @@ public class SecurityServiceTest {
 
 	@Test
 	public void testInvalidateCache(){
-		ISubject subject = loginAsTestUser();
-		
-		securityService.runAs(subject,Arrays.asList(regularUserId));
 
 		// test personal community permission
 		String permission = "permission1";
         //test a typed permission (not instance-level)
 		ProfilingUtility.timeStart("TU-permisssion0");
-		assertEquals(true,securityService.isPermitted(subject,permission));
+		assertEquals(true,securityService.isPermitted(permission));
 		ProfilingUtility.timeStopAndLog("TU-permisssion0");
 		for (int i = 0; i < 10; i++) {
 			ProfilingUtility.timeStart("TU-permisssion"+(i+1));
-			assertEquals(true,securityService.isPermitted(subject,permission));			
+			assertEquals(true,securityService.isPermitted(permission));			
 			ProfilingUtility.timeStopAndLog("TU-permisssion"+(i+1));
 			if(i==5){
 				securityService.invalidateCache();	
@@ -293,26 +242,14 @@ public class SecurityServiceTest {
 	}
 
 	@Test
-	public void testRunAsDemoted_newAPI(){
-		ISubject subject = securityService.getUserContext(regularUserId);	
-		ISubject other_subject = securityService.getSystemUserContext();	
-		assertEquals(false,securityService.hasRole(subject,"admin"));
-		assertEquals(true,securityService.hasRole(other_subject,"admin"));
-	}
-	@Test
 	public void testRunAsDemoted(){
-		ISubject subject = loginAsAdmin();
 		// system community
 		String runAsPrincipal = regularUserId; 
 		
-		assertEquals(true,securityService.hasRole(subject,"admin"));
+		assertEquals(true,securityService.hasUserRole(adminUserId,"admin"));
 
-		securityService.runAs(subject,Arrays.asList(runAsPrincipal));
-		
-		assertEquals(false,securityService.hasRole(subject,"admin"));
-		Collection<String> p = securityService.releaseRunAs(subject);
-		assertEquals(true,securityService.hasRole(subject,"admin"));
-		logger.debug("Released Principals:"+p);
+		assertEquals(false,securityService.hasUserRole(runAsPrincipal,"admin"));
+		assertEquals(true,securityService.hasUserRole(adminUserId,"admin"));
 	}
 
 	@Test
@@ -334,40 +271,6 @@ public class SecurityServiceTest {
 		} 
 	}
 
-	@Test
-	@Ignore
-	public void testSecurityServiceMultiThreading(){
-		ISubject subject = securityService.loginAsSystem();
-		long timeNow = System.currentTimeMillis();
-		long timeOut = timeNow+3000L;
-		boolean hasAdminRole = false;
-		while(timeNow < timeOut){
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			hasAdminRole  = securityService.hasRole(subject, "admin");
-			if(hasAdminRole){
-				fail("Subject received admin rights");
-				break;
-			}
-			timeNow = System.currentTimeMillis();
-		} // while
-	
-	}
-
-
-	
-	@Test
-	public void testSystemLogin() {
-		ISubject subject = securityService.loginAsSystem();			
-		securityService.releaseRunAs(subject);		
-		securityService.runAs(subject, Arrays.asList("testUser"));
-		
-	}
-	
 	@Test
 	public void testSecuredCrudManagementService() throws Exception{
 		 AuthorizationBean authBean = new AuthorizationBean("admin");
@@ -540,47 +443,6 @@ public class SecurityServiceTest {
 	}
 	
 	@Test 
-	public void testUserAccess_newAPI() throws Exception{
-		// test read access
-     	AuthorizationBean authBean = new AuthorizationBean("user");		
-     	MockSecuredCrudServiceBean mockedDelegate = mock(MockSecuredCrudServiceBean.class);
-		SingleQueryComponent<DataBucketBean> query = CrudUtils.allOf(DataBucketBean.class);
-
-		DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
-				.with(DataBucketBean::full_name, "/test/allowed")
-				.with(DataBucketBean::_id, "bucketId1")
-			.done().get();
-
-		IManagementCrudService<DataBucketBean> securedCrudService = securityService.secured(mockedDelegate, authBean);
-
-		CompletableFuture<Optional<DataBucketBean>> future = CompletableFuture.completedFuture(Optional.of(bucket));
-		ManagementFuture<Optional<DataBucketBean>> managedFuture =  FutureUtils.createManagementFuture(future);
-		when(mockedDelegate.getObjectBySpec(any())).thenReturn(managedFuture);
-		when(mockedDelegate.getObjectById(any())).thenReturn(managedFuture);
-
-		ManagementFuture<Optional<DataBucketBean>> f = securedCrudService.getObjectBySpec(query);
-		Optional<DataBucketBean> o = f.get();
-		DataBucketBean b = o.get();
-		assertNotNull(b);
-		
-		
-		// test read with a different user
-		ISubject subject1 = securityService.getUserContext("testUser");
-		ISubject subject2 = securityService.getUserContext("user");
-		
-		boolean permitted = securityService.isUserPermitted(subject1, bucket, Optional.of("read"));
-		assertFalse(permitted);
-		// test write with a user who has (only) read permissions
-		permitted = securityService.isUserPermitted(subject2, bucket, Optional.of("write"));
-		assertFalse(permitted);
-		// test read  by logging in as system but testing with userId permissions
-		assertTrue(securityService.isUserPermitted(subject2, bucket, Optional.of("read")));
-		assertFalse(securityService.isUserPermitted(subject1, bucket, Optional.of("read")));
-		assertFalse(securityService.isUserPermitted(subject1, "community:read:communityId1", Optional.empty()));
-		assertTrue(securityService.isUserPermitted(subject2, "community:read:communityId1", Optional.empty()));
-
-	}
-	@Test 
 	public void testUserAccess() throws Exception{
 		// test read access
      	AuthorizationBean authBean = new AuthorizationBean("user");		
@@ -604,20 +466,165 @@ public class SecurityServiceTest {
 		DataBucketBean b = o.get();
 		assertNotNull(b);
 		// test read by being logged in from before		
-		boolean permitted = securityService.isUserPermitted(Optional.empty(), bucket, Optional.of("read"));
-		assertTrue(permitted);
+		//boolean permitted = securityService.isUserPermitted(Optional.empty(), bucket, Optional.of("read"));
+		//assertTrue(permitted);
 		// test read with a different user
-		permitted = securityService.isUserPermitted(Optional.of("testUser"), bucket, Optional.of("read"));
+		boolean permitted = securityService.isUserPermitted("testUser", bucket, Optional.of("read"));
 		assertFalse(permitted);
 		// test write with a user who has (only) read permissions
-		permitted = securityService.isUserPermitted(Optional.of("user"), bucket, Optional.of("write"));
+		permitted = securityService.isUserPermitted("user", bucket, Optional.of("write"));
 		assertFalse(permitted);
 		// test read  by logging in as system but testing with userId permissions
-		securityService.loginAsSystem();
-		permitted = securityService.isUserPermitted(Optional.of("user"), bucket, Optional.of("read"));
+		permitted = securityService.isUserPermitted("user", bucket, Optional.of("read"));
 		assertTrue(permitted);
-		permitted = securityService.isUserPermitted(Optional.of("user"), "community:read:communityId1", Optional.empty());
+		permitted = securityService.isUserPermitted("user", "community:read:communityId1", Optional.empty());
 		assertTrue(permitted);
 
 	}
+	
+	@Test
+	public void testLoginRunAsAndCaching(){
+//		try{
+			
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		MockAuthProvider authProvider = MockSecurityService.authProvider; 
+		MockRoleProvider roleProvider = MockSecurityService.roleProvider;
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		Subject s = ms.loginAsSystem();
+
+		authProvider.setCallCount(0);
+		//loginAsSystem again after just doing so
+		s = ms.loginAsSystem();
+		assertEquals(0L,authProvider.getCallCount());
+		// runAsUser
+		
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		
+		// runAsUser and check caching
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted("permission1"));
+
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		// runAsTest and check Caching
+		ms.runAs(testUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted("t1"));
+		assertEquals(1L,roleProvider.getCallCount());
+
+		// runAsuser and check Caching
+		authProvider.setCallCount(0);
+		roleProvider.setCallCount(0);
+		ms.runAs(regularUserId);
+		assertEquals(0L,authProvider.getCallCount());
+		assertTrue(ms.isPermitted("permission1"));
+		assertTrue(ms.isUserPermitted(regularUserId,"permission1"));
+		// expected here no load hit, permission needs to come from cache
+		assertEquals(0L,roleProvider.getCallCount());
+		assertTrue(ms.hasRole("user"));
+		assertTrue(ms.hasUserRole(regularUserId,"user"));
+		// expected here no load hit, permission needs to come from cache
+		assertEquals(0L,roleProvider.getCallCount());
+		
+		//loginAsSystem again and check Caching
+		s = ms.loginAsSystem();
+		assertEquals(0L,authProvider.getCallCount());
+
+	}
+	
+	@Test
+	public void testSessionTimeout(){
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		ms.setSessionTimeout(500);
+		Subject s = ms.loginAsSystem();
+		//timeoutSession
+		sleep(1000);
+		//loginAsSystem again
+		s = ms.loginAsSystem();
+		// check user permission
+		assertTrue(ms.isUserPermitted(regularUserId,"permission1"));
+		// timout and check again
+		sleep(1000);		
+		assertTrue(ms.isUserPermitted(regularUserId,"permission1"));				
+		// timout and check role
+		sleep(1000);		
+		assertTrue(ms.hasUserRole(regularUserId,"user"));				
+	}
+
+	protected void sleep(long millis){
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+	}
+
+	@Test
+	public void testMultiThreading(){
+		MockSecurityService ms = ((MockSecurityService)securityService);
+		Subject s = ms.loginAsSystem();
+		PermissionChecker pc = new PermissionChecker(testUserId,"t1",testUserId);
+		Thread t1  = new Thread(pc);
+		t1.start();
+		
+		// check user permission
+		for(int i=0;i<5;i++){
+			assertTrue(ms.hasUserRole(regularUserId,"user"));				
+			sleep(1000);
+			assertTrue(ms.isUserPermitted(regularUserId,"permission1"));
+			sleep(1000);
+		} 
+		// wait for thread to finish
+		while(!pc.isDone()){
+			sleep(2);			
+		}
+	}
+	
+	protected class PermissionChecker implements Runnable {
+
+		protected String userName;
+		protected String permission;
+		protected String role;
+		public boolean done = true;
+
+		public PermissionChecker(String userName, String permission, String role) {
+			this.userName = userName;
+			this.permission = permission;
+			this.role = role;
+		}
+
+		@Override
+		public void run() {
+			try {
+				
+			done = false;
+			MockSecurityService ms = ((MockSecurityService) securityService);
+			Subject s = ms.loginAsSystem();
+			// check user permission
+			for (int i = 0; i < 5; i++) {
+				assertTrue(ms.isUserPermitted(userName, permission));
+				sleep(1000);
+				assertTrue(ms.hasUserRole(userName, role));
+				sleep(1000);
+			}
+			} catch (Throwable e) {
+				e.printStackTrace();
+				fail(e.getMessage());
+			}
+			done = true;
+		} // run
+
+		public boolean isDone() {
+			return done;
+		}
+	}
+
 }

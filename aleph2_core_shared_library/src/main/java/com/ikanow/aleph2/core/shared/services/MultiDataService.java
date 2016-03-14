@@ -45,7 +45,7 @@ public class MultiDataService {
 
 	final protected Multimap<IDataServiceProvider, String> _services;
 	
-	final boolean doc_write_mode;
+	final protected boolean _doc_write_mode;
 	
 	// (will use nulls vs optional/setonce for efficiency)
 	protected IDataWriteService<JsonNode> _crud_index_service;
@@ -69,7 +69,7 @@ public class MultiDataService {
 	public MultiDataService(final DataBucketBean bucket, final IServiceContext context, Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name) {
 
 		// Insert or overwrite mode:
-		doc_write_mode =
+		_doc_write_mode =
 				Optionals.of(() -> bucket.data_schema().document_schema())
 					.filter(ds -> Optional.ofNullable(ds.enabled()).orElse(true))
 					.filter(ds -> (null != ds.deduplication_policy()) 
@@ -129,35 +129,35 @@ public class MultiDataService {
 		
 		if (_batch_index_service!= null) {
 			mutable_written = true;
-			_batch_index_service.storeObject(obj_json, doc_write_mode);
+			_batch_index_service.storeObject(obj_json, _doc_write_mode);
 		}
 		else if (_crud_index_service!= null){ // (super slow)
 			mutable_written = true;
-			_crud_index_service.storeObject(obj_json, doc_write_mode);
+			_crud_index_service.storeObject(obj_json, _doc_write_mode);
 		}
 		if (_batch_doc_service!= null) {
 			mutable_written = true;
-			_batch_doc_service.storeObject(obj_json, doc_write_mode);
+			_batch_doc_service.storeObject(obj_json, _doc_write_mode);
 		}
 		else if (_crud_doc_service!= null){ // (super slow)
 			mutable_written = true;
-			_crud_doc_service.storeObject(obj_json, doc_write_mode);
+			_crud_doc_service.storeObject(obj_json, _doc_write_mode);
 		}		
 		if (_batch_columnar_service!= null) {
 			mutable_written = true;
-			_batch_columnar_service.storeObject(obj_json, doc_write_mode);
+			_batch_columnar_service.storeObject(obj_json, _doc_write_mode);
 		}
 		else if (_crud_columnar_service!= null){ // (super slow)
 			mutable_written = true;
-			_crud_columnar_service.storeObject(obj_json, doc_write_mode);
+			_crud_columnar_service.storeObject(obj_json, _doc_write_mode);
 		}		
 		if (_batch_temporal_service!= null) {
 			mutable_written = true;
-			_batch_temporal_service.storeObject(obj_json, doc_write_mode);
+			_batch_temporal_service.storeObject(obj_json, _doc_write_mode);
 		}
 		else if (_crud_temporal_service!= null){ // (super slow)
 			mutable_written = true;
-			_crud_temporal_service.storeObject(obj_json, doc_write_mode);
+			_crud_temporal_service.storeObject(obj_json, _doc_write_mode);
 		}		
 		
 		if (_batch_storage_service!= null) {

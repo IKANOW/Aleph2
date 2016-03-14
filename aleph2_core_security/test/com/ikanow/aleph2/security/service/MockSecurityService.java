@@ -42,7 +42,9 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	protected static Map<String, Set<String>> rolesMap = new HashMap<String, Set<String>>();
 	protected static Map<String, Set<String>> permissionsMap = new HashMap<String, Set<String>>();
 	protected static Map<String, AuthorizationBean> authMap = new HashMap<String, AuthorizationBean>();
-	
+	protected static MockRoleProvider roleProvider =  new MockRoleProvider(rolesMap, permissionsMap);
+	protected static MockAuthProvider authProvider = new MockAuthProvider(authMap);
+			
 	static{
 		System.setProperty(IKANOW_SYSTEM_LOGIN, "system");
 		System.setProperty(IKANOW_SYSTEM_PASSWORD, "system123");
@@ -81,10 +83,8 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 				protected void bindRoleProviders() {				
 					//calling  super to increase junit coverage
 					super.bindRoleProviders();
-					Multibinder<IRoleProvider> uriBinder = Multibinder.newSetBinder(binder(), IRoleProvider.class);
-					
-					MockRoleProvider mrp = new MockRoleProvider(rolesMap, permissionsMap);
-				    uriBinder.addBinding().toInstance(mrp);
+					Multibinder<IRoleProvider> uriBinder = Multibinder.newSetBinder(binder(), IRoleProvider.class);					
+				    uriBinder.addBinding().toInstance(roleProvider);
 				}
 				
 				@Override
@@ -100,7 +100,6 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 					//calling super to increase junit coverage
 					super.bindAuthProviders();
 
-					MockAuthProvider authProvider = new MockAuthProvider(authMap);
 			 		bind(IAuthProvider.class).toInstance(authProvider);
 				
 				}
@@ -115,6 +114,5 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 		Injector injector = Guice.createInjector(getExtraDependencyModules().get(0));
 		return injector;
 	}
-
 
 }

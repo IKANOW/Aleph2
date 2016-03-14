@@ -38,7 +38,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
 

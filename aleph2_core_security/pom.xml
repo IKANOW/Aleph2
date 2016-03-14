@@ -6,7 +6,7 @@
 	<version>${aleph2.version}</version>
 	<properties>
 		<aleph2.scope>compile</aleph2.scope>
-		<aleph2.version>2.6.0-SNAPSHOT</aleph2.version>
+		<aleph2.version>2.8.0-SNAPSHOT</aleph2.version>
 		<!-- Overridden in test_depdendencies profile that is activated if skip 
 			tests is true -->
 		<maven.test.skip>true</maven.test.skip>
@@ -173,10 +173,17 @@
 		</dependency>
 		<!-- Shiro uses SLF4J for logging. We'll use the 'simple' binding in this 
 			example app. See http://www.slf4j.org for more info. -->
-		<dependency>
+<!-- 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<version>1.6.1</version>
+			<scope>test</scope>
+		</dependency>
+		-->
+		<dependency>
+    		<groupId>org.apache.logging.log4j</groupId>
+		    <artifactId>log4j-slf4j-impl</artifactId>
+    		<version>2.0.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

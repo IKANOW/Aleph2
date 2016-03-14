@@ -286,11 +286,12 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @param size_batch_kb - When converting from streaming data to batch data, the max size of each batch in KBytes of record JSON string
 		 * @param test_record_limit_request - in test mode lets users request a different input limit to the designated output limit 
 		 */
-		public AnalyticThreadJobInputConfigBean(final Boolean new_data_only,  
+		public AnalyticThreadJobInputConfigBean(final Boolean new_data_only, final Boolean high_granularity_filter,  
 				final String time_min, final String time_max,
 				final Long timed_batch_ms, final Long size_batch_records, final Long size_batch_kb, final Long test_record_limit_request)
 		{
 			this.new_data_only = new_data_only;
+			this.high_granularity_filter = high_granularity_filter;
 			this.time_min = time_min;
 			this.time_max = time_max;
 			this.timed_batch_ms = timed_batch_ms;
@@ -303,6 +304,13 @@ public class AnalyticThreadJobBean implements Serializable {
 		 * @return Whether only new data is served to the job each time it runs
 		 */
 		public Boolean new_data_only() { return new_data_only; }
+				
+		/** If true then will try to apply a high granularity to the filter requests, which will eliminate false positives but might also be expensive computationally
+		 *  If false then will never apply high granularity, there might be false positives if that is the more efficient (therefore a secondary test in sw might be required)
+		 *  If not specified then you should assume low granularity
+		 * @return Whether the filter is applied with high granularity
+		 */
+		public Boolean high_granularity_filter() { return high_granularity_filter; }
 		
 		/** An optional human readable string that applies a time filter (lower bound) to the input data
 		 * @return - human readable string that applies an "oldest" time filter to the input data
@@ -336,6 +344,7 @@ public class AnalyticThreadJobBean implements Serializable {
 		public Long test_record_limit_request() { return test_record_limit_request; }
 		
 		private Boolean new_data_only;
+		private Boolean high_granularity_filter;
 		private String time_min;
 		private String time_max;
 		private Long timed_batch_ms;

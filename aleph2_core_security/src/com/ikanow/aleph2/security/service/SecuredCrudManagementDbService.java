@@ -33,7 +33,6 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISubject;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.ProjectBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -49,9 +48,7 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	protected AuthorizationBean authBean = null;
 	protected IServiceContext serviceContext = null;
 	protected ISecurityService securityService;
-	
-	private ISubject subject; // system user's subject
-	
+		
 	protected PermissionExtractor permissionExtractor = new PermissionExtractor(); // default permission extractor;
 	//BiConsumer<? super Optional<T>, ? super Throwable> action = new
 	protected BiConsumer<? super Optional<T>, ? super Throwable> readCheckOne = (o, t) -> {
@@ -66,6 +63,8 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		Function<? super com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>,? extends com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor<T>> convertCursor = (c)->{
 			return new SecuredCursor(c);
 		};
+
+		protected String principalName;
 		
 	    public PermissionExtractor getPermissionExtractor() {
 		return permissionExtractor;
@@ -82,7 +81,13 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		this.serviceContext  = serviceContext;
 		this.authBean = authBean;
 		this.securityService = serviceContext.getSecurityService();
-		this.subject = login();
+		this.principalName = getPrincipal(authBean);
+	}
+	
+
+
+	protected String getPrincipal(AuthorizationBean authBean2) {
+		return authBean2.getPrincipalName();
 	}
 
 
@@ -371,12 +376,12 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	
 	protected void checkWritePermissions(T new_object) {
 		
-		//boolean permitted = securityService.hasRole(subject,ROLE_ADMIN);
-		boolean permitted = securityService.isUserPermitted(subject ,new_object,Optional.of(ISecurityService.ACTION_WRITE)); 
+		//boolean permitted = securityService.hasRole(principalName,ROLE_ADMIN);
+		boolean permitted = securityService.isUserPermitted(principalName ,new_object,Optional.of(ISecurityService.ACTION_WRITE)); 
 		//still not permitted, we are out of luck
 		if(!permitted){
-			//String msg = "Subject "+subject.getSubject()+" has no write permissions ("+permissions+")for "+new_object.getClass();
-			String msg = "Subject "+subject.getSubject()+" has no write permissions for "+new_object.getClass();
+			//String msg = "principalName "+principalName+" has no write permissions ("+permissions+")for "+new_object.getClass();
+			String msg = "Subject "+principalName+" has no write permissions for "+new_object.getClass();
 			logger.error(msg);
 			throw new SecurityException(msg);					
 		}
@@ -384,9 +389,9 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 	}
 	protected void checkDeletePermission() {
 		
-		boolean permitted = securityService.hasRole(subject,ISecurityService.ROLE_ADMIN); 
+		boolean permitted = securityService.hasUserRole(principalName,ISecurityService.ROLE_ADMIN); 
 		if(!permitted){
-			String msg = "Subject "+subject.getSubject()+" has no write permissions for deletions";
+			String msg = "Subject "+principalName+" has no write permissions for deletions";
 			logger.error(msg);
 			throw new SecurityException(msg);					
 		}
@@ -408,13 +413,13 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		boolean permitted = false;
 		if(permissions!=null && permissions.size()>0){
 			for (String permission : permissions) {
-				permitted = securityService.isPermitted(subject,permission);
+				permitted = securityService.isUserPermitted(principalName,permission);
 				if(permitted){
 					break;
 				}
 			}
 			if(!permitted && throwOrReturn){
-				String msg = "Subject '"+subject.getName()+"' has no read permissions ("+permissions+")for "+new_object.getClass();
+				String msg = "Subject '"+principalName+"' has no read permissions ("+permissions+")for "+new_object.getClass();
 				logger.error(msg);
 				throw new SecurityException(msg);					
 			}
@@ -431,27 +436,18 @@ public class SecuredCrudManagementDbService<T> implements IManagementCrudService
 		boolean permitted = false;
 		if(permissions!=null && permissions.size()>0){
 			for (String permission : permissions) {
-				permitted = securityService.isPermitted(subject,permission);
+				permitted = securityService.isUserPermitted(principalName,permission);
 				if(permitted){
 					break;
 				}
 			}
 			if(!permitted && throwOrReturn){
-				String msg = "Subject '"+subject.getName()+"' has no  permissions ("+permissions+")for "+oAction+" on "+new_object.getClass();
+				String msg = "Subject '"+principalName+"' has no  permissions ("+permissions+")for "+oAction+" on "+new_object.getClass();
 				logger.error(msg);
 				throw new SecurityException(msg);					
 			}
 		}
 		return permitted;
-	}
-
-	/**
-	 * Login in as admin role,e.g. tomcat user
-	 * @return
-	 */
-	protected ISubject login() {
-		ISubject subject = securityService.getUserContext(authBean.getPrincipalName());			
-		return subject;
 	}
 
 	
