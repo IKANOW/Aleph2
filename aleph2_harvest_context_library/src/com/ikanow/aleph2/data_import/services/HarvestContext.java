@@ -318,7 +318,7 @@ public class HarvestContext implements IHarvestContext {
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		synchronized (this) {
 			_mutable_state.initialized_direct_output.trySet(true);
-			_multi_writer.set(new MultiDataService(my_bucket, _service_context, Optional.empty()));
+			_multi_writer.set(MultiDataService.getMultiWriter(my_bucket, _service_context));
 		}
 	}
 	

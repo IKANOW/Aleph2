@@ -38,7 +38,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,6 +56,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
+import com.ikanow.aleph2.core.shared.services.MultiDataService;
+import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
 import com.ikanow.aleph2.core.shared.utils.JarCacheUtils;
 import com.ikanow.aleph2.core.shared.utils.LiveInjector;
 import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
@@ -68,6 +69,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
@@ -79,6 +81,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean.AnalyticThreadJobOutputBean;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
@@ -135,7 +138,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	
 	protected static class MutableState {
 		final SetOnce<DataBucketBean> bucket = new SetOnce<>();
-		final SetOnce<Boolean> doc_write_mode = new SetOnce<>();
 		final SetOnce<AnalyticThreadJobBean> job = new SetOnce<>();
 		final SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		final SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
@@ -155,24 +157,14 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	@Inject protected transient IServiceContext _service_context;	
 	protected transient IManagementDbService _core_management_db;
 	protected transient ICoreDistributedServices _distributed_services; 	
-	protected transient Optional<ISearchIndexService> _index_service;
-	protected transient Optional<IDocumentService> _doc_service;
 	protected transient IStorageService _storage_service;
 	protected transient ISecurityService _security_service;
 	protected transient GlobalPropertiesBean _globals;
 
 	protected transient final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());	
 	
-	//TODO (ALEPH-12): need to only load services requested from the schema (eg currently always loading search index/doc) - and apply the service_name
-	
 	// For writing objects out
-	// TODO (ALEPH-12): this needs to get moved into the object output library
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_index_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_index_service;
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_doc_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_doc_service;
-	protected transient Optional<IDataWriteService<JsonNode>> _crud_storage_service;
-	protected transient Optional<IDataWriteService.IBatchSubservice<JsonNode>> _batch_storage_service;				
+	protected transient SetOnce<MultiDataService> _multi_writer = new SetOnce<>();
 	
 	private static ConcurrentHashMap<String, AnalyticsContext> static_instances = new ConcurrentHashMap<>();
 	
@@ -185,10 +177,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		_service_context = service_context;
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-		
-		//(need to set these up here in the technology so can do secondary buffer switching)
-		_index_service = service_context.getService(ISearchIndexService.class, Optional.empty());
-		_doc_service = service_context.getService(IDocumentService.class, Optional.empty());
 		
 		_storage_service = service_context.getStorageService();
 		_security_service = service_context.getSecurityService();
@@ -247,38 +235,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	public boolean setBucket(final DataBucketBean this_bucket) {
 		// (also check if we're in "document mode" (ie can overwrite existing docs))
 		
-		_mutable_state.doc_write_mode.set(
-				Optionals.of(() -> this_bucket.data_schema().document_schema())
-					.filter(ds -> Optional.ofNullable(ds.enabled()).orElse(true))
-					.filter(ds -> (null != ds.deduplication_policy()) 
-									|| !Optionals.ofNullable(ds.deduplication_fields()).isEmpty()
-									|| !Optionals.ofNullable(ds.deduplication_contexts()).isEmpty()
-							) // (ie dedup fields set)
-					.isPresent()
-				)
-				;
-		
-		tidyUpDataServices(this_bucket);
-		
 		return _mutable_state.bucket.set(this_bucket);
-	}
-	
-	/** SIDE EFFECTS: removes services that perform the same role and are implemented by the same object
-	 * @param The bucket 
-	 */
-	protected void tidyUpDataServices(final DataBucketBean bucket) {
-		boolean doc_schema_enabled = Optionals.of(() -> bucket.data_schema().document_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
-		boolean search_schema_enabled = Optionals.of(() -> bucket.data_schema().search_index_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
-		
-		if (doc_schema_enabled) {
-			_index_service = Optional.empty();
-		}
-		else {
-			_doc_service = Optional.empty();
-		}
-		if (!search_schema_enabled) {
-			_index_service = Optional.empty();
-		}
 	}
 	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the technology library bean for this context instance
@@ -351,8 +308,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				_core_management_db = to_clone._core_management_db;
 				_security_service = to_clone._security_service;
 				_distributed_services = to_clone._distributed_services;	
-				_index_service = to_clone._index_service;
-				_doc_service = to_clone._doc_service;
 				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
@@ -362,8 +317,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
-				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty());
-				_doc_service = _service_context.getService(IDocumentService.class, Optional.empty());
 				_storage_service = _service_context.getStorageService();
 				_security_service = _service_context.getSecurityService();
 				_globals = _service_context.getGlobalProperties();
@@ -725,7 +678,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		
 		return Optional.of(job_input)
 				.filter(i -> null != i.data_service())
-				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || "storage_service".equalsIgnoreCase(i.data_service()))
+				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || DataSchemaBean.StorageSchemaBean.name.equalsIgnoreCase(i.data_service()))
 				.map(Lambdas.wrap_u(i -> {					
 					if ("batch".equalsIgnoreCase(i.data_service())) {
 						if (null != i.filter()) {
@@ -1187,15 +1140,16 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final String[] other_service = data_service.split("[.]");
 			
 		final Optional<T> ret_val =
-				getDataService(_service_context, other_service[0], Optionals.of(() -> other_service[1]))
+				getUnderlyingService(_service_context, other_service[0], Optionals.of(() -> other_service[1]))
 				.flatMap(service -> service.getUnderlyingPlatformDriver(clazz, job_config));
 		
 		// Add to list of extra services to add automatically
 		if (ret_val.isPresent()) { // only if we managed to load the analytics access context
-			getDataService(other_service[0]).ifPresent(ds -> 
-				_mutable_state.extra_auto_context_libs.add(
-						Tuples._2T(ds, Optionals.of(() -> other_service[1]).filter(s->!s.isEmpty()))
-						));
+			DataServiceUtils.getUnderlyingServiceInterface(other_service[0])
+					.ifPresent(ds -> 
+						_mutable_state.extra_auto_context_libs.add(
+								Tuples._2T(ds, Optionals.of(() -> other_service[1]).filter(s->!s.isEmpty()))
+								));
 		}
 		
 		return ret_val;
@@ -1214,20 +1168,8 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		if (_mutable_state.service_manifest_override.isSet()) { // Can't call getServiceInput after getContextSignature/getContextLibraries
 			throw new RuntimeException(ErrorUtils.get(ErrorUtils.SERVICE_RESTRICTIONS));
 		}
-		
 		final Optional<String> job_config = Optional.of(BeanTemplateUtils.toJson(job).toString());
-		if ("storage_service".equalsIgnoreCase(data_service)) {
-			return _storage_service.getUnderlyingPlatformDriver(clazz, job_config);
-		}
-		else if ("search_index_service".equalsIgnoreCase(data_service)) {			
-			return _index_service.flatMap(s -> s.getUnderlyingPlatformDriver(clazz, job_config));
-		}
-		else if ("document_service".equalsIgnoreCase(data_service)) {			
-			return _doc_service.flatMap(s -> s.getUnderlyingPlatformDriver(clazz, job_config));
-		}
-		else { // (currently no other  
-			return Optional.empty();
-		}
+		return getUnderlyingService(_service_context, data_service, Optional.empty()).flatMap(ds -> ds.getUnderlyingPlatformDriver(clazz, job_config));
 	}
 
 	/* (non-Javadoc)
@@ -1249,31 +1191,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		if (!this_bucket.full_name().equals(_mutable_state.bucket.get().full_name())) {
 			return externalEmit(this_bucket, job, obj_json);
 		}
-		
-		if (_batch_index_service.isPresent()) {
-			_mutable_state.has_unflushed_data = true;
-			_batch_index_service.get().storeObject(obj_json);
-		}
-		else if (_crud_index_service.isPresent()){ // (super slow)
-			_mutable_state.has_unflushed_data = true;
-			_crud_index_service.get().storeObject(obj_json);
-		}
-		if (_batch_doc_service.isPresent()) {
-			_mutable_state.has_unflushed_data = true;
-			_batch_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
-		}
-		else if (_crud_doc_service.isPresent()){ // (super slow)
-			_mutable_state.has_unflushed_data = true;
-			_crud_doc_service.get().storeObject(obj_json, _mutable_state.doc_write_mode.get());
-		}
-		if (_batch_storage_service.isPresent()) {
-			_mutable_state.has_unflushed_data = true;
-			_batch_storage_service.get().storeObject(obj_json);
-		}
-		else if (_crud_storage_service.isPresent()){ // (super slow)
-			_mutable_state.has_unflushed_data = true;
-			_crud_storage_service.get().storeObject(obj_json);
-		}
+		_mutable_state.has_unflushed_data = this._multi_writer.get().batchWrite(obj_json);
 		
 		final String topic = _distributed_services.generateTopicName(this_bucket.full_name(), ICoreDistributedServices.QUEUE_END_NAME);
 		if (_distributed_services.doesTopicExist(topic)) {
@@ -1483,16 +1401,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		
 		_logger.info(ErrorUtils.get("Flushing output for bucket:job {0}:{1}", my_bucket.full_name(), job.name()));
 		
-		@SuppressWarnings("unchecked")
-		Function<Optional<IBatchSubservice<JsonNode>>, CompletableFuture<Object>> flusher = opt -> {
-			return Optional.ofNullable(opt).flatMap(__->__).map(s -> (CompletableFuture<Object>)s.flushOutput())
-						.orElseGet(() -> CompletableFuture.completedFuture((Object)Unit.unit()));			
-		};
-		
-		final CompletableFuture<Object> cf1 = flusher.apply(_batch_index_service);
-		final CompletableFuture<Object> cf2 = flusher.apply(_batch_storage_service);
-		final CompletableFuture<Object> cf3 = flusher.apply(_batch_doc_service);
-
 		// Flush external and sub-buckets:
 		_mutable_state.external_buckets.values().stream().forEach(e -> {
 			e.either(ee -> ee.either(batch -> {
@@ -1511,7 +1419,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		});
 		_mutable_state.sub_buckets.values().stream().forEach(sub_context -> sub_context.flushBatchOutput(bucket, job));
 		
-		return CompletableFuture.allOf(cf1, cf2, cf3);
+		return _multi_writer.optional().map(writer -> writer.flushBatchOutput()).orElseGet(() -> CompletableFuture.completedFuture(Unit.unit()));
 	}
 	
 	/** For ping/pong output will switch the ping/pong buffers over
@@ -1554,46 +1462,11 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final boolean output_is_transient = Optionals.of(() -> job.output().is_transient()).orElse(false);
 		
 		if (output_is_transient) { // no index output if batch disabled
-			_batch_index_service = Optional.empty();
-			_crud_index_service = Optional.empty();
-			_batch_doc_service = Optional.empty();
-			_crud_doc_service = Optional.empty();
+			_multi_writer.set(MultiDataService.getTransientMultiWriter(bucket, _service_context, IStorageService.StorageStage.transient_output.toString() + ":" + job.name(), Optional.of(s -> getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s))));
 		}
 		else { // normal case
-			_batch_doc_service = 
-					(_crud_doc_service = _doc_service
-												.flatMap(s -> s.getDataService())
-												.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-														getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
-					)
-					.flatMap(IDataWriteService::getBatchWriteSubservice)
-					;
-				
-			_batch_index_service = 
-						(_crud_index_service = _index_service
-													.flatMap(s -> s.getDataService())
-													.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-															getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
-						)
-						.flatMap(IDataWriteService::getBatchWriteSubservice)
-						;
+			_multi_writer.set(MultiDataService.getMultiWriter(bucket, _service_context, Optional.empty(), Optional.of(s -> getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s))));
 		}
-				
-		// Transient output always results in file output regardless of schema
-		final String storage_output_type = output_is_transient
-				? IStorageService.StorageStage.transient_output.toString() + ":" + job.name()
-				: IStorageService.StorageStage.processed.toString()
-				;
-		
-		_batch_storage_service = 
-				(_crud_storage_service = _storage_service.getDataService()
-											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
-															Optional.of(storage_output_type), 
-																getSecondaryBuffer(bucket, Optional.of(job), need_ping_pong_buffer, s)))
-				)
-				.flatMap(IDataWriteService::getBatchWriteSubservice)
-				;
-		
 	}
 	
 	/** Handles ping/pong buffer set up for transient jobs' outputs, called once per job on startup
@@ -1612,9 +1485,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			// If it's transient then delete the transient buffer
 			// (for non transient jobs - ie that share the bucket's output, then we do it centrally below)
 			if (Optionals.of(() -> job.output().is_transient()).orElse(false)) {
-				_crud_storage_service.ifPresent(outputter -> {
-					outputter.deleteDatastore().join();
-				});				
+				_multi_writer.get().getCrudWriters().stream().forEach(crud -> crud.deleteDatastore().join());
 			}
 		};		
 	}
@@ -1637,7 +1508,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				
 				// (only do anything if the bucket globally has a ping/pong buffer)
 				if (need_ping_pong_buffer) {
-					this.getBucketGlobalOutputs(state_bucket).forEach(s -> s.deleteDatastore().join()); 
+					_multi_writer.get().getCrudWriters().forEach(s -> s.deleteDatastore().join());
 				}
 			});
 	}	
@@ -1703,11 +1574,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			});
 		}
 		;							
-		if (!job_name.isPresent()) { // else we're transient so there's no index service
-			_index_service.flatMap(s -> s.getDataService()).ifPresent(s -> switchPrimary.accept(s));
-			_doc_service.flatMap(s -> s.getDataService()).ifPresent(s -> switchPrimary.accept(s));
-		}
-		_storage_service.getDataService().ifPresent(s -> switchPrimary.accept(s));		
+		_multi_writer.get().getDataServices().forEach(s -> s.getDataService().ifPresent(ss -> switchPrimary.accept(ss)));
 	}
 	
 	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
@@ -1777,53 +1644,25 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		else return Optional.empty();						
 	};
 	
-	/** Returns a stream of outputters that always apply to the global bucket
-	 * @param bucket
-	 * @return
-	 */
-	protected Stream<IDataWriteService<JsonNode>> getBucketGlobalOutputs(final DataBucketBean bucket) {
-		final boolean need_ping_pong_buffer = needPingPongBuffer(bucket, Optional.empty());
-		
-		return Stream.of(
-				_doc_service.flatMap(s -> s.getDataService())
-					.<IDataWriteService<JsonNode>>flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-							getSecondaryBuffer(bucket, Optional.empty(), need_ping_pong_buffer, s)))
-				,
-				_index_service.flatMap(s -> s.getDataService())
-						.<IDataWriteService<JsonNode>>flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), 
-								getSecondaryBuffer(bucket, Optional.empty(), need_ping_pong_buffer, s)))
-				,
-				_storage_service.getDataService()
-					.<IDataWriteService<JsonNode>>flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
-								Optional.of(IStorageService.StorageStage.processed.toString()), 
-									getSecondaryBuffer(bucket, Optional.empty(), need_ping_pong_buffer, s)))				
-				)
-				.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
-				;
-				
-	}	
-
-	/** Utility to grab a generic data service (top level)
+	/** Utility to grab a generic data service (top level) - underlying version
 	 * @param context
 	 * @param service_type
 	 * @param service_name
 	 * @return
 	 */
-	protected static Optional<? extends IUnderlyingService> getDataService(final IServiceContext context, final String service_type, final Optional<String> service_name) {
-		return getDataService(service_type).flatMap(ds -> context.getService(ds, service_name.filter(s -> !s.isEmpty())));
+	protected static Optional<? extends IUnderlyingService> getUnderlyingService(final IServiceContext context, final String service_type, final Optional<String> service_name) {
+		return DataServiceUtils.getUnderlyingServiceInterface(service_type)								
+								.flatMap(ds -> context.getService(ds, service_name.filter(s -> !s.isEmpty())));
 	}
 	
-	/** Utility to grab a generic data service (part 2)
+	/** Utility to grab a generic data service (top level) - data service version
+	 * @param context
+	 * @param service_type
 	 * @param service_name
 	 * @return
 	 */
-	protected static Optional<Class<? extends IUnderlyingService>> getDataService(final String service_type) {
-		return Optional.ofNullable(Patterns.match(service_type).<Class<? extends IUnderlyingService>>andReturn()
-				.when(sn -> "storage_service".equals(sn), __ -> IStorageService.class)
-				.when(sn -> "search_index_service".equals(sn), __ -> ISearchIndexService.class)
-				.when(sn -> "document_service".equals(sn), __ -> IDocumentService.class)
-				.otherwise(__ -> null))
-				;
-	}	
+	protected static Optional<? extends IDataServiceProvider> getDataService(final IServiceContext context, final String service_type, final Optional<String> service_name) {
+		return getUnderlyingService(context, service_type, service_name).map(s -> (IDataServiceProvider)s);
+	}
 	
 }

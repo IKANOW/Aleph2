@@ -16,6 +16,7 @@
 
 package com.ikanow.aleph2.core.shared.services;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
@@ -26,7 +27,11 @@ import java.util.stream.Collectors;
 
 
 
+
+
 import scala.Tuple2;
+
+
 
 
 
@@ -34,6 +39,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
@@ -53,6 +59,7 @@ public class MultiDataService {
 	final protected Multimap<IDataServiceProvider, String> _services;
 	final protected Multimap<IDataWriteService.IBatchSubservice<JsonNode>, String> _batches = LinkedHashMultimap.create();
 	final protected Multimap<IDataWriteService<JsonNode>, String> _crud_onlys = LinkedHashMultimap.create();
+	final protected Multimap<IDataWriteService<JsonNode>, String> _all_cruds = LinkedHashMultimap.create();
 	
 	final protected boolean _doc_write_mode;
 	
@@ -69,14 +76,68 @@ public class MultiDataService {
 	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_temporal_service;
 	protected IDataWriteService<JsonNode> _crud_storage_service;
 	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_storage_service;				
+
+	/** Wrapper for standard user c'tor - full version
+	 * @param bucket
+	 * @param context
+	 * @param maybe_get_storage_type - maps data service to an options string
+	 * @param maybe_get_buffer_name - maps data service to a secondary buffer name
+	 * @return
+	 */
+	public static MultiDataService getMultiWriter(final DataBucketBean bucket, final IServiceContext context, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_storage_type, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name)
+	{
+		return new MultiDataService(bucket, context, maybe_get_storage_type, maybe_get_buffer_name);
+	}
+	/** Wrapper for standard user c'tor - minimal version
+	 * @param bucket
+	 * @param context
+	 * @return
+	 */
+	public static MultiDataService getMultiWriter(final DataBucketBean bucket, final IServiceContext context)
+	{
+		return new MultiDataService(bucket, context, Optional.empty(), Optional.empty());
+	}
 	
-	/** User c'tor 
+	/** Wrapper for transient user c'tor
+	 * @param bucket
+	 * @param context
+	 * @param maybe_get_buffer_name - maps data service to a secondary buffer name
+	 * @return
+	 */
+	public static MultiDataService getTransientMultiWriter(final DataBucketBean bucket, final IServiceContext context, final String transient_storage_name, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name)
+	{
+		return new MultiDataService(bucket, context, transient_storage_name, maybe_get_buffer_name);
+	}
+	
+	
+	/** User c'tor - transient case, which is much simpler
 	 * @param bucket
 	 * @param context
 	 * @param maybe_get_buffer_name
 	 */
-	public MultiDataService(final DataBucketBean bucket, final IServiceContext context, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name) {
+	protected MultiDataService(final DataBucketBean bucket, final IServiceContext context, final String transient_storage_name, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name)
+	{
+		final String transient_storage_service = DataSchemaBean.StorageSchemaBean.name;
+		_services = LinkedHashMultimap.create();
+		_services.put(context.getStorageService(), transient_storage_service);
+		_doc_write_mode = false;
 
+		Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(
+				bucket, context.getStorageService(), 
+				Optional.of(__ -> Optional.of(transient_storage_name)), 
+				maybe_get_buffer_name);
+		_crud_storage_service = t2._1();
+		_batch_storage_service = t2._2();
+		storeWriters(t2, Arrays.asList(transient_storage_service));
+	}	
+	
+	/** User c'tor - standard case
+	 * @param bucket
+	 * @param context
+	 * @param maybe_get_buffer_name
+	 */
+	protected MultiDataService(final DataBucketBean bucket, final IServiceContext context, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_storage_type, final Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name)
+	{
 		// Insert or overwrite mode:
 		_doc_write_mode = getWriteMode(bucket);
 		
@@ -86,37 +147,40 @@ public class MultiDataService {
 			final Set<String> vals = kv.getValue().stream().collect(Collectors.toSet());
 			// (the order doesn't really matter here, so just to "look" sensible:)
 			if (vals.contains(DataSchemaBean.SearchIndexSchemaBean.name)) {				
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_index_service = t2._1();
 				_batch_index_service = t2._2();
 				storeWriters(t2, vals);
 			}
 			else if (vals.contains(DataSchemaBean.DocumentSchemaBean.name)) {
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_doc_service = t2._1();
 				_batch_doc_service = t2._2();
 				storeWriters(t2, vals);
 			}
 			else if (vals.contains(DataSchemaBean.DataWarehouseSchemaBean.name)) {
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_data_warehouse_service = t2._1();
 				_batch_data_warehouse_service = t2._2();
 				storeWriters(t2, vals);
 			}
 			else if (vals.contains(DataSchemaBean.ColumnarSchemaBean.name)) {
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_columnar_service = t2._1();
 				_batch_columnar_service = t2._2();
 				storeWriters(t2, vals);
 			}
 			else if (vals.contains(DataSchemaBean.TemporalSchemaBean.name)) {
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_temporal_service = t2._1();
 				_batch_temporal_service = t2._2();
 				storeWriters(t2, vals);
 			}
-			else if (vals.contains(DataSchemaBean.StorageSchemaBean.name)) {
-				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_buffer_name);
+			if (vals.contains(DataSchemaBean.StorageSchemaBean.name)) { // (note storage is a bit different, fix the "processed mode")
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(
+						bucket, kv.getKey(), 
+						maybe_get_storage_type.map(Optional::of).orElseGet(() -> { return Optional.of(__ -> Optional.of(IStorageService.StorageStage.processed.toString())); }), 
+						maybe_get_buffer_name);
 				_crud_storage_service = t2._1();
 				_batch_storage_service = t2._2();
 				storeWriters(t2, vals);
@@ -146,6 +210,7 @@ public class MultiDataService {
 	private void storeWriters(final Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2, Collection<String> vals) {
 		if (null != t2._2()) _batches.putAll(t2._2(), vals);		
 		else if (null != t2._1()) _crud_onlys.putAll(t2._1(), vals);
+		if (null != t2._1()) _all_cruds.putAll(t2._1(), vals);
 	}
 
 	/** Returns a list of batch data writers
@@ -155,18 +220,25 @@ public class MultiDataService {
 		return Collections.unmodifiableCollection(_batches.keySet());
 	}
 	
-	/** Returns a list of CRUD data writers
+	/** Returns a list of CRUD data writers that don't have a batch writer
 	 * @return
 	 */
 	public Collection<IDataWriteService<JsonNode>> getCrudOnlyWriters() {
 		return Collections.unmodifiableCollection(_crud_onlys.keySet());
 	}
 	
+	/** Returns a list of CRUD data writers that don't have a batch writer
+	 * @return
+	 */
+	public Collection<IDataWriteService<JsonNode>> getCrudWriters() {
+		return Collections.unmodifiableCollection(_all_cruds.keySet());
+	}
+	
 	/** Returns a list of data providers
 	 * @return
 	 */
 	public Collection<IDataServiceProvider> getDataServices() {
-		return Collections.unmodifiableCollection(_services.keys());
+		return Collections.unmodifiableCollection(_services.keySet());
 	}
 
 	/** Returns a completable future for when all batches are flushed
@@ -245,6 +317,7 @@ public class MultiDataService {
 	protected static Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> getWriters(
 			final DataBucketBean bucket,			
 			IDataServiceProvider service_provider,
+			Optional<Function<IGenericDataService, Optional<String>>> maybe_get_storage_type,
 			Optional<Function<IGenericDataService, Optional<String>>> maybe_get_buffer_name)
 	{
 		final IDataWriteService<JsonNode> crud_service;
@@ -253,7 +326,9 @@ public class MultiDataService {
 		batch_storage_service = Optional.ofNullable(
 				crud_service = Optional.of(service_provider)
 											.flatMap(s -> s.getDataService())
-											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, Optional.empty(), maybe_get_buffer_name.<String>flatMap(f -> f.apply(s))))
+											.flatMap(s -> s.getWritableDataService(JsonNode.class, bucket, 
+														maybe_get_storage_type.<String>flatMap(f -> f.apply(s)), 
+														maybe_get_buffer_name.<String>flatMap(f -> f.apply(s))))
 											.orElse(null)
 				)
 				.flatMap(IDataWriteService::getBatchWriteSubservice)
