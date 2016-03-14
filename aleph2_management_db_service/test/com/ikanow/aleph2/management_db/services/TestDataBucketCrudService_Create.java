@@ -1868,7 +1868,7 @@ public class TestDataBucketCrudService_Create {
 				
 				//(just quickly check node affinity didn't change)
 				final DataBucketStatusBean status_after = _bucket_status_crud.getObjectById("id1").get().get();
-				assertEquals(2, status_after.node_affinity().size());
+				assertEquals(0, Optionals.ofNullable(status_after.node_affinity()).size());
 				
 				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 				assertEquals(true, status_after.confirmed_suspended());
@@ -1900,7 +1900,7 @@ public class TestDataBucketCrudService_Create {
 			//(Check that node affinity was set)
 			update_future4.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 			final DataBucketStatusBean status_after3 = _bucket_status_crud.getObjectById("id1").get().get();
-			assertEquals(2, status_after3.node_affinity().size());
+			assertEquals(0, Optionals.ofNullable(status_after3.node_affinity()).size());
 			
 			// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 			assertEquals(true, status_after3.confirmed_suspended());
@@ -1958,14 +1958,40 @@ public class TestDataBucketCrudService_Create {
 				//(Check that node affinity was set to 1)
 				update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 				final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
-				assertEquals(1, status_after4.node_affinity().size());
+				assertEquals(0, Optionals.ofNullable(status_after4.node_affinity()).size());
 				
 				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
 				assertEquals(true, status_after4.confirmed_suspended());
 				assertEquals(false, status_after4.confirmed_multi_node_enabled());
-				assertEquals(MasterEnrichmentType.batch, status_after4.confirmed_master_enrichment_type());					
-				
+				assertEquals(MasterEnrichmentType.batch, status_after4.confirmed_master_enrichment_type());									
 			}		
+			// NOW UNSUSPEND: SUCCESS AND ADDS NODE AFFINITY
+			{
+				assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+						CrudUtils.update(DataBucketStatusBean.class).set("suspended", false)
+																	.set("confirmed_suspended", false)
+						).get());
+				
+				final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
+				
+				assertEquals("id1", update_future5.get().get());
+				
+				final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+				assertEquals("Something else", bucket5.display_name());
+				
+				//(wait for completion)
+				update_future5.getManagementResults().get();			
+								
+				//(Check that node affinity was set to 1)
+				update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+				final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+				assertEquals(1, Optionals.ofNullable(status_after4.node_affinity()).size());
+				
+				// Check the "Confirmed" bucket fields match the bucket now (only confirmed_suspended is set)
+				assertEquals(false, status_after4.confirmed_suspended());
+				assertEquals(false, status_after4.confirmed_multi_node_enabled());
+				assertEquals(MasterEnrichmentType.batch, status_after4.confirmed_master_enrichment_type());									
+			}
 		}
 		// And check that moves back to 2 when set back to multi node
 		final DataBucketBean mod_bucket4 = BeanTemplateUtils.clone(bucket)
@@ -1973,7 +1999,13 @@ public class TestDataBucketCrudService_Create {
 				.with(DataBucketBean::multi_node_enabled, true)
 				.done();
 		
-		{
+		{			
+			assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+					CrudUtils.update(DataBucketStatusBean.class).set("suspended", true)
+																.set("confirmed_suspended", true)
+					).get());
+			
+			
 			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
 			
 			assertEquals("id1", update_future5.get().get());
@@ -1981,11 +2013,31 @@ public class TestDataBucketCrudService_Create {
 			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
 			assertEquals("Something else", bucket5.display_name());
 			
-			//(Check that node affinity was set to 1)
+			//(Check that node affinity was set to unset)
 			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
 			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
-			assertEquals(2, status_after4.node_affinity().size());
-		}		
+			assertEquals(0, Optionals.ofNullable(status_after4.node_affinity()).size());
+		}	
+		//UNSUSPEND AND CHECK THAT NODE AFFINITY IS SET
+		{
+			assertEquals(true, _underlying_bucket_status_crud.updateObjectById("id1", 
+					CrudUtils.update(DataBucketStatusBean.class).set("suspended", false)
+																.set("confirmed_suspended", false)
+					).get());
+			
+			
+			final ManagementFuture<Supplier<Object>> update_future5 = _bucket_crud.storeObject(mod_bucket4, true);
+			
+			assertEquals("id1", update_future5.get().get());
+	
+			final DataBucketBean bucket5 = _bucket_crud.getObjectById("id1").get().get();
+			assertEquals("Something else", bucket5.display_name());
+			
+			//(Check that node affinity was set to unset)
+			update_future5.getManagementResults().get(); // (wait for management results - until then node affinity may not be set)
+			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
+			assertEquals(2, Optionals.ofNullable(status_after4.node_affinity()).size());			
+		}
 		// Convert to lock_to_nodes: false and check that the node affinity is not updated
 		{
 			CompletableFuture<Boolean> updated = _underlying_bucket_status_crud.updateObjectById("id1", 
@@ -2061,7 +2113,7 @@ public class TestDataBucketCrudService_Create {
 			final DataBucketStatusBean status_after4 = _bucket_status_crud.getObjectById("id1").get().get();
 			assertEquals(null, status_after4.node_affinity());			
 		}
-		//TODO: do some testing of data service registration
+		// Some testing of data service registration
 		{
 			final DataBucketBean mod_bucket6 = BeanTemplateUtils.clone(mod_bucket4)
 					.with(DataBucketBean::data_schema, 

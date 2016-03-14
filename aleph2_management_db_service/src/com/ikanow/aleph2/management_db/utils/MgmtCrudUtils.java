@@ -239,6 +239,11 @@ public class MgmtCrudUtils {
 									? Tuples._2T(true, change_update._2().set(DataBucketStatusBean::confirmed_suspended, is_suspended))
 									: Tuples._2T(change_update._1(), change_update._2());
 						})
+						.map(change_update -> { // If it's suspended then reset node affinity
+							return is_suspended 
+									? Tuples._2T(true, change_update._2().unset(DataBucketStatusBean::node_affinity))
+									: Tuples._2T(change_update._1(), change_update._2());							
+						})
 						// If we weren't confirmed multi-node before, then change that
 						.map(change_update -> {
 							final boolean multi_node_enabled = Optional.ofNullable(bucket.multi_node_enabled()).orElse(false);
