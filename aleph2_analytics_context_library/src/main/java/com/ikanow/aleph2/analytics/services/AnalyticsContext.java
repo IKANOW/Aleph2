@@ -1419,7 +1419,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		});
 		_mutable_state.sub_buckets.values().stream().forEach(sub_context -> sub_context.flushBatchOutput(bucket, job));
 		
-		return _multi_writer.optional().map(writer -> writer.flushBatchOutput()).orElseGet(() -> (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit()));
+		return _multi_writer.optional().<CompletableFuture<?>>map(writer -> writer.flushBatchOutput()).orElseGet(() -> (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit()));
 	}
 	
 	/** For ping/pong output will switch the ping/pong buffers over
