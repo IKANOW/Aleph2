@@ -129,11 +129,12 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(0);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.empty());
 			
 			assertEquals("All services", 6, mds.getDataServices().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudWriters().size());
 			assertEquals(false, mds._doc_write_mode);
 			
 			assertEquals("No data services", false, mds.batchWrite(_mapper.createObjectNode()));
@@ -144,11 +145,12 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(1);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.empty());
 			
 			assertEquals("All services", 6, mds.getDataServices().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
-			assertEquals("No cruds", 6, mds.getCrudOnlyWriters().size());
+			assertEquals("All cruds", 6, mds.getCrudOnlyWriters().size());
+			assertEquals("All cruds", 6, mds.getCrudWriters().size());
 			assertEquals(false, mds._doc_write_mode);
 			assertEquals(0, _apply_count);
 			
@@ -165,12 +167,13 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(2);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
 			assertEquals(false, mds._doc_write_mode);
 			
 			assertEquals("All services", 6, mds.getDataServices().size());
-			assertEquals("No batches", 6, mds.getBatchWriters().size());
+			assertEquals("All batches", 6, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals("No cruds", 6, mds.getCrudWriters().size());
 			assertEquals(6, _apply_count);
 			
 			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
@@ -188,8 +191,7 @@ public class TestMultiDataService {
 	
 	
 	@Test
-	public void test_MultiDataService_commonServices() {
-	
+	public void test_MultiDataService_commonServices() {	
 
 		final DataBucketBean bucket =
 				BeanTemplateUtils.build(DataBucketBean.class)
@@ -222,11 +224,12 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(0);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			final MultiDataService mds = MultiDataService.getMultiWriter(bucket, mock_service_context);
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("All services: " + mds.getDataServices(), 3, mds.getDataServices().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudWriters().size());
 			assertEquals(true, mds._doc_write_mode);
 			
 			assertEquals("No data services", false, mds.batchWrite(_mapper.createObjectNode()));
@@ -237,11 +240,13 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(1);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty());
+			final MultiDataService mds = MultiDataService.getMultiWriter(bucket, mock_service_context, Optional.empty(), Optional.empty());
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("All services", 3, mds.getDataServices().size());
+			assertEquals("All services", 6, mds._services.keys().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
-			assertEquals("No cruds", 3, mds.getCrudOnlyWriters().size());
+			assertEquals("All cruds", 3, mds.getCrudOnlyWriters().size());
+			assertEquals("All cruds", 3, mds.getCrudWriters().size());
 			assertEquals(true, mds._doc_write_mode);
 			assertEquals(0, _apply_count);
 			
@@ -255,12 +260,14 @@ public class TestMultiDataService {
 		{
 			final MockServiceContext mock_service_context = getPopulatedServiceContext(2);
 			
-			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
+			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
 			assertEquals(true, mds._doc_write_mode);
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("All services", 3, mds.getDataServices().size());
+			assertEquals("All services", 6, mds._services.keys().size());
 			assertEquals("No batches", 3, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals("No cruds", 3, mds.getCrudWriters().size());
 			assertEquals(3, _apply_count);
 			
 			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
@@ -273,6 +280,54 @@ public class TestMultiDataService {
 			assertTrue(mds.flushBatchOutput().isDone());
 			assertEquals("batch responses: " + _batch_responses.keySet(), 3, _batch_responses.size());			
 			_batch_responses.clear();
+		}
+	}
+	
+	@Test
+	public void test_transientWriteMode() {
+		
+		final DataBucketBean bucket =
+				BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::data_schema,
+							BeanTemplateUtils.build(DataSchemaBean.class)
+								.with(DataSchemaBean::search_index_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::document_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+											.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+										.done().get())
+								.with(DataSchemaBean::temporal_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::columnar_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::data_warehouse_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class)
+										.done().get())
+								.with(DataSchemaBean::storage_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
+										.done().get())
+							.done().get()
+							)
+				.done().get();
+				
+		// All services present, but configured to not write
+		{
+			final MockServiceContext mock_service_context = getPopulatedServiceContext(2);
+			
+			final MultiDataService mds = MultiDataService.getTransientMultiWriter(bucket, mock_service_context, "test:alex", Optional.empty());
+			
+			assertEquals("All services", 1, mds.getDataServices().size());
+			assertEquals("No batches", 1, mds.getBatchWriters().size());
+			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
+			assertEquals("No cruds", 1, mds.getCrudWriters().size());
+			assertEquals(false, mds._doc_write_mode);
+			
+			assertEquals("Wrote", true, mds.batchWrite(_mapper.createObjectNode()));
+			assertEquals("No batch responses: " + _batch_responses.keySet(), 1, _batch_responses.size());
+			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
 		}
 	}
 	

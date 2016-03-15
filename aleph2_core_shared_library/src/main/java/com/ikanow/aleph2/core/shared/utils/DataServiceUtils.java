@@ -83,6 +83,15 @@ public class DataServiceUtils {
 	}
 	
 
+	/** Simple map of data service provider name to interface (underlying service mode)
+	 * @param data_service
+	 * @return
+	 */	
+	@SuppressWarnings("unchecked")
+	public static Optional<Class<? extends IUnderlyingService>> getUnderlyingServiceInterface(final String data_service) {
+		return getDataServiceInterface(data_service).map(s -> (Class<? extends IUnderlyingService>)(Class<?>)s);
+	}
+	
 	/** Simple map of data service provider name to interface
 	 * @param data_service
 	 * @return

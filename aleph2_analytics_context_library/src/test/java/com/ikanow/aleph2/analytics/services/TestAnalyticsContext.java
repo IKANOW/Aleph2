@@ -55,7 +55,6 @@ import com.ikanow.aleph2.analytics.services.AnalyticsContext.State;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -73,7 +72,6 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
-import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -138,8 +136,6 @@ public class TestAnalyticsContext {
 			assertTrue("AnalyticsContext dependencies", test_context._core_management_db != null);
 			assertTrue("AnalyticsContext dependencies", test_context._distributed_services != null);
 			assertTrue("AnalyticsContext dependencies", test_context._storage_service != null);
-			assertTrue("AnalyticsContext dependencies", test_context._index_service.isPresent());
-			assertTrue("AnalyticsContext dependencies", test_context._doc_service.isPresent());
 			assertTrue("AnalyticsContext dependencies", test_context._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_context._service_context != null);
 			
@@ -172,9 +168,6 @@ public class TestAnalyticsContext {
 			
 			test_context.setBucket(test_bucket);
 			assertEquals(test_bucket, test_context.getBucket().get());
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-			assertFalse(test_context._doc_service.isPresent());
-			assertTrue(test_context._index_service.isPresent());
 			
 			test_context2.setBucket(test_bucket);
 			assertEquals(test_bucket, test_context2.getBucket().get());
@@ -278,7 +271,6 @@ public class TestAnalyticsContext {
 			
 			assertTrue("AnalyticsContext dependencies", test_external1b._core_management_db != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._distributed_services != null);
-			assertTrue("AnalyticsContext dependencies", test_context._index_service != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._service_context != null);
 			
@@ -308,7 +300,6 @@ public class TestAnalyticsContext {
 			
 			assertTrue("AnalyticsContext dependencies", test_external2b._core_management_db != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._distributed_services != null);
-			assertTrue("AnalyticsContext dependencies", test_context._index_service != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._service_context != null);
 			
@@ -358,134 +349,6 @@ public class TestAnalyticsContext {
 		catch (Exception e) {
 			System.out.println(ErrorUtils.getLongForm("{1}: {0}", e, e.getClass()));
 			fail("Threw exception");
-		}
-	}
-
-	@Test
-	public void test_docWriteMode() {
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-			assertFalse(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
-		}
-		// (also check if search index is present, it's still removed)
-		{
-			final AnalyticsContext test_context = _app_injector.getInstance(AnalyticsContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class)
-									.done().get())
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-			assertTrue(test_context._doc_service.isPresent());
-			assertFalse(test_context._index_service.isPresent());
 		}
 	}
 	
@@ -821,20 +684,12 @@ public class TestAnalyticsContext {
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.empty(), analytic_job1, "storage_service"));
 		assertEquals(Optional.empty(), test_context.getServiceOutput(StringAnalyticsAccessContext.class, Optional.of(test_bucket), analytic_job1, "random_string"));
 		
-		// Check some non trivial cases:
-		assertEquals(Optional.of(ISearchIndexService.class), AnalyticsContext.getDataService("search_index_service"));
-		assertEquals(Optional.of(IStorageService.class), AnalyticsContext.getDataService("storage_service"));
-		assertEquals(Optional.of(IDocumentService.class), AnalyticsContext.getDataService("document_service"));
-		assertEquals(Optional.empty(), AnalyticsContext.getDataService("banana"));
-		
 		final MockServiceContext mock_service_context = new MockServiceContext();
 		mock_service_context.addService(IStorageService.class, Optional.of("other_name"), test_context._storage_service);
-		mock_service_context.addService(ISearchIndexService.class, Optional.of("alternate"), test_context._index_service.get());
-		assertEquals(Optional.of(test_context._storage_service), AnalyticsContext.getDataService(mock_service_context, "storage_service", Optional.of("other_name")));
-		assertEquals(Optional.of(test_context._index_service.get()), AnalyticsContext.getDataService(mock_service_context, "search_index_service", Optional.of("alternate")));
+		assertEquals(Optional.of(test_context._storage_service), AnalyticsContext.getUnderlyingService(mock_service_context, "storage_service", Optional.of("other_name")));
 
+		mock_service_context.addService(ISearchIndexService.class, Optional.of("alternate"), test_context._service_context.getSearchIndexService().get());
 		mock_service_context.addService(ISecurityService.class, Optional.empty(), test_context._security_service);
-		mock_service_context.addService(ISearchIndexService.class, Optional.empty(), test_context._index_service.get());
 		mock_service_context.addService(IStorageService.class, Optional.empty(), test_context._storage_service);
 		mock_service_context.addService(IManagementDbService.class, Optional.empty(), test_context._core_management_db);
 		mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, test_context._core_management_db);
@@ -1383,7 +1238,8 @@ public class TestAnalyticsContext {
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
 				
-		test_context.flushBatchOutput(Optional.of(test_bucket), analytic_job1);
+		test_context.flushBatchOutput(Optional.of(test_bucket), analytic_job1); //(this needs to just not die)
+		test_external1a.flushBatchOutput(Optional.of(test_bucket), analytic_job1); //(this actually flushes the buffer)
 		
 		for (int i = 0; i < 60; ++i) {
 			Thread.sleep(1000L);
