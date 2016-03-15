@@ -27,4 +27,5 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  */
 public interface IBucketLogger {
 	public CompletableFuture<?> log(final Level level, final BasicMessageBean message);
+	public CompletableFuture<?> flush();
 }
