@@ -22,6 +22,7 @@ import java.util.Arrays;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.CustomPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationTiming;
 
@@ -100,10 +101,12 @@ public class TestDataSchemaBean {
 						"service_name",
 						DeduplicationTiming.end,
 						DeduplicationPolicy.leave,
+						CustomPolicy.lax,
 						Arrays.asList("deduplication_fields"),
 						Arrays.asList("deduplication_contexts"),
 						Arrays.<EnrichmentControlMetadataBean>asList(),
 						true,
+						false,
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 		
@@ -111,10 +114,12 @@ public class TestDataSchemaBean {
 		assertEquals("Document bean service_name", document_bean.service_name(), "service_name");
 		assertEquals("Document bean deduplicate", document_bean.deduplication_policy(), DeduplicationPolicy.leave);
 		assertEquals("Document bean deduplicate", document_bean.deduplication_timing(), DeduplicationTiming.end);
+		assertEquals("Document bean custom", document_bean.custom_policy(), CustomPolicy.lax);
 		assertEquals("Document bean deduplication_fields", document_bean.deduplication_fields(), Arrays.asList("deduplication_fields"));
 		assertEquals("Document bean deduplication_contexts", document_bean.deduplication_contexts(), Arrays.asList("deduplication_contexts"));
 		assertEquals("Doc bean dedup custom config", document_bean.custom_deduplication_configs(), Arrays.asList());
 		assertEquals("Doc bean dedup custom finalze", document_bean.custom_finalize_all_objects(), true);
+		assertEquals("Doc bean dedup custom finalze", document_bean.custom_delete_unhandled_duplicates(), false);
 		assertEquals("Document bean technology_override_schema", document_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// WriteSettings (shared across schemas - currenly only search_index_bean though)

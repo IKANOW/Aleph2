@@ -289,26 +289,42 @@ public class DataSchemaBean implements Serializable {
 			custom_update 
 		};
 		
+		public enum CustomPolicy {
+			/** Can emit anything from the custom enrichment module
+			 */
+			lax,
+			/** If emitting an object without a matching _id, then must have a different grouping key
+			 */
+			strict,
+			/** As strict, plus can only emit once per grouping key (and "custom_delete_unhandled_duplicates" defaults to true)  
+			 */
+			very_strict
+		}
+		
 		/** User constructor
 		 */
 		public DocumentSchemaBean(final Boolean enabled, 
 				final String service_name,
 				final DeduplicationTiming deduplication_timing,
 				final DeduplicationPolicy deduplication_policy,
+				final CustomPolicy custom_policy,
 				final List<String> deduplication_fields,
 				final List<String> deduplication_contexts,
 				final List<EnrichmentControlMetadataBean> custom_deduplication_configs,
 				final Boolean custom_finalize_all_objects,
+				final Boolean custom_delete_unhandled_duplicates,
 				final Map<String, Object> technology_override_schema)
 		{
 			this.enabled = enabled;
 			this.service_name = service_name;
 			this.deduplication_timing = deduplication_timing;
 			this.deduplication_policy = deduplication_policy;
+			this.custom_policy = custom_policy;
 			this.deduplication_fields = deduplication_fields;
 			this.deduplication_contexts = deduplication_contexts;
 			this.custom_deduplication_configs = custom_deduplication_configs;
 			this.custom_finalize_all_objects = custom_finalize_all_objects;
+			this.custom_delete_unhandled_duplicates = custom_delete_unhandled_duplicates;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -339,6 +355,15 @@ public class DataSchemaBean implements Serializable {
 		public DeduplicationPolicy deduplication_policy() {
 			return deduplication_policy;
 		}		
+		/** Manages what user code is allowed to do inside the custom enrichment stage, if specified
+		 * - if in "strict" mode (default) then only allow emitting an object without a matching _id if it has a different grouping key
+		 *   (ensures don't generate more duplicates)
+		 * - if in "very strict" mode, then only allow one emission per call (and custom_delete_unhandled_duplicates defaults to true)
+		 * @return
+		 */
+		public CustomPolicy custom_policy() {
+			return custom_policy;
+		}		
 		/** If deduplication is enabled then this ordered list of fields is the deduplication key (together with bucket)
 		 *  If this is disabled
 		 * @return the deduplication_fields
@@ -365,6 +390,11 @@ public class DataSchemaBean implements Serializable {
 		public Boolean custom_finalize_all_objects() {
 			return custom_finalize_all_objects;
 		}
+		/** If true (default: false unless custom_policy:"very_strict") then any DB-side duplicates that aren't emitted from the custom enrichment stage are deleted
+		 */
+		public Boolean custom_delete_unhandled_duplicates() {
+			return custom_delete_unhandled_duplicates;
+		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -376,10 +406,12 @@ public class DataSchemaBean implements Serializable {
 		private String service_name;
 		private DeduplicationTiming deduplication_timing;
 		private DeduplicationPolicy deduplication_policy;
+		private CustomPolicy custom_policy;
 		private List<String> deduplication_fields;
 		private List<String> deduplication_contexts;
 		private List<EnrichmentControlMetadataBean> custom_deduplication_configs;
 		private Boolean custom_finalize_all_objects;
+		private Boolean custom_delete_unhandled_duplicates;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service
