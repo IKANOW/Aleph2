@@ -522,8 +522,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		try {
 			// Also delete the file paths (currently, just add ".deleted" to top level path) 
 			deleteFilePath(to_delete, _storage_service.get());
-			//delete the logging path as well if it exists
-			deleteFilePath(BucketUtils.convertDataBucketBeanToLogging(to_delete), _storage_service.get());
+			//delete the logging path as well if it exists (it's okay if it fails, should mean it doesn't exist)
+			try {
+				deleteFilePath(BucketUtils.convertDataBucketBeanToLogging(to_delete), _storage_service.get());
+			} catch (Exception ex) {}
 			
 			// Add to the deletion queue (do it before trying to delete the bucket in case this bucket deletion fails - if so then delete queue will retry every hour)
 			final Date to_delete_date = Timestamp.from(Instant.now().plus(1L, ChronoUnit.MINUTES));
@@ -576,7 +578,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		}
 		catch (Exception e) {
 			// This is a serious enough exception that we'll just leave here
-			return FutureUtils.createManagementFuture(
+			return FutureUtils.createManagementFuture(					
 					FutureUtils.returnError(e));			
 		}
 	}
