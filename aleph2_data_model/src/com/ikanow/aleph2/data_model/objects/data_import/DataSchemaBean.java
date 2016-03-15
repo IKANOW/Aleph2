@@ -18,11 +18,6 @@ package com.ikanow.aleph2.data_model.objects.data_import;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.logging.log4j.Level;
-
-import com.google.common.collect.ImmutableMap;
 
 
 /**
@@ -786,45 +781,6 @@ public class DataSchemaBean implements Serializable {
 			private String sql_query;
 			private Map<String, Object> table_format;
 		}		
-	}
-	
-	public static class LoggingSchemaBean implements Serializable {
-
-		private static final long serialVersionUID = -1750400948595976387L;
-		public static final String name = "logging_service";
-		
-		/** Describes if the columnar db service is used for this bucket
-		 * @return the enabled
-		 */
-		public Boolean enabled() {
-			return enabled;
-		}
-		/** (OPTIONAL) Enables a non-default service to be used for this schema
-		 * @return the overriding service_name
-		 */
-		public String service_name() {
-			return service_name;
-		}
-		/**
-		 * Sets the default log level, defaults to ERROR if not specified
-		 * @return
-		 */
-		public Level log_level() {
-			return Optional.ofNullable(this.log_level).orElse(Level.ERROR);
-		}
-		/**
-		 * (OPTIONAL) Set of service names and the log level you want them to output at
-		 * @return
-		 */
-		public Map<String, Level> log_level_overrides() {
-			return Optional.ofNullable(this.log_level_overrides).orElse(ImmutableMap.of());
-		}
-		
-		private Boolean enabled;
-		private String service_name;
-		private Level log_level;
-		private Map<String, Level> log_level_overrides;
-		
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////
