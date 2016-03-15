@@ -1574,7 +1574,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			});
 		}
 		;							
-		_multi_writer.get().getDataServices().forEach(s -> s.getDataService().ifPresent(ss -> switchPrimary.accept(ss)));
+		_multi_writer.optional().ifPresent(w -> w.getDataServices().forEach(s -> s.getDataService().ifPresent(ss -> switchPrimary.accept(ss))));
 	}
 	
 	/** Gets the secondary buffer (deletes any existing data, and switches to "ping" on an uninitialized index)
