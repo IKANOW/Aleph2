@@ -17,6 +17,7 @@ package com.ikanow.aleph2.data_model.utils;
 
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -32,8 +33,15 @@ import java.util.stream.Stream;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.ColumnarSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.StorageSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.TemporalSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.StorageSchemaBean.StorageSubSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 
@@ -46,8 +54,9 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 public class BucketUtils {
 	public static final String RESERVED_BUCKET_PREFIX = "/aleph2_";
 	public static final String TEST_BUCKET_PREFIX = "/aleph2_testing/";
-	public static final String LOG_BUCKET_PREFIX = "/aleph2_logging/";
+	public static final String LOG_BUCKET_PREFIX = "/aleph2_logging";
 	public static final String EXTERNAL_BUCKET_PREFIX = "/aleph2_external/";
+	private static final String BUCKETS_PREFIX = "/buckets";
 	
 	/**
 	 * Returns a clone of the bean and modifies the full_name field to provide a
@@ -70,6 +79,55 @@ public class BucketUtils {
 	 */
 	public static boolean isTestBucket(final DataBucketBean bucket) {
 		return bucket.full_name().startsWith(TEST_BUCKET_PREFIX);
+	}
+	
+	/**
+	 * Returns back a DataBucketBean w/ the full_name changed to reflect the logging path.
+	 * i.e. just prefixes the bucket.full_name with LOGGING_PREFIX (/alelph2_logging)
+	 * 
+	 * @param bucket
+	 * @return
+	 */
+	public static DataBucketBean convertDataBucketBeanToLogging(final DataBucketBean bucket) {
+		return BeanTemplateUtils.clone(bucket)
+				.with(DataBucketBean::full_name, LOG_BUCKET_PREFIX + BUCKETS_PREFIX + bucket.full_name())
+				.with(DataBucketBean::data_schema, getLoggingDataSchema(bucket.management_schema()))
+				.done();
+	}
+	
+	/** Check if a bucket is a test bucket (trivial)
+	 * @param bucket - the bucket to check
+	 * @return
+	 */
+	public static boolean isLoggingBucket(final DataBucketBean bucket) {
+		return bucket.full_name().startsWith(LOG_BUCKET_PREFIX);
+	}
+	
+	/**
+	 * Returns a DataSchemaBean with the passed in mgmt schema schemas copied over or defaults inserted
+	 * 
+	 * @param mgmt_schema
+	 * @return
+	 */
+	private static DataSchemaBean getLoggingDataSchema(final ManagementSchemaBean mgmt_schema) {
+		return BeanTemplateUtils.build(DataSchemaBean.class)
+				.with(DataSchemaBean::columnar_schema, Optionals.of(() -> mgmt_schema.columnar_schema()).orElse(BeanTemplateUtils.build(ColumnarSchemaBean.class)
+							.with(ColumnarSchemaBean::field_type_include_list, Arrays.asList("number", "string", "date"))
+						.done().get()))
+				.with(DataSchemaBean::storage_schema, Optionals.of(() -> mgmt_schema.storage_schema()).orElse(BeanTemplateUtils.build(StorageSchemaBean.class)
+							.with(StorageSchemaBean::enabled, true)
+							.with(StorageSchemaBean::processed, BeanTemplateUtils.build(StorageSubSchemaBean.class)
+										.with(StorageSubSchemaBean::exist_age_max, "3 months")
+										.with(StorageSubSchemaBean::grouping_time_period, "1 week")
+									.done().get())
+						.done().get()))
+				.with(DataSchemaBean::search_index_schema, Optionals.of(() -> mgmt_schema.search_index_schema()).orElse(BeanTemplateUtils.build(SearchIndexSchemaBean.class)
+						.done().get()))
+				.with(DataSchemaBean::temporal_schema, Optionals.of(() -> mgmt_schema.temporal_schema()).orElse(BeanTemplateUtils.build(TemporalSchemaBean.class)
+							.with(TemporalSchemaBean::exist_age_max, "1 month")
+							.with(TemporalSchemaBean::grouping_time_period, "1 week")
+						.done().get()))
+			.done().get();	
 	}
 	
 	//////////////////////////////////////////////////////////////////////////
