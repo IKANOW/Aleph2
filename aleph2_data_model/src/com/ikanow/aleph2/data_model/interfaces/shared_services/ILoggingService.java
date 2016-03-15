@@ -15,8 +15,6 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 
 /**
@@ -31,21 +29,21 @@ public interface ILoggingService {
 	 * @param bucket
 	 * @return
 	 */
-	public CompletableFuture<IBucketLogger> getLogger(final DataBucketBean bucket);
+	public IBucketLogger getLogger(final DataBucketBean bucket);
 	/**
 	 * Logging entry point for system generated log messages.  Returns a logger pointed to the passed in bucket.
 	 * All log messages will be appended with a "generated_by":"system" field:value.
 	 * @param bucket
 	 * @return
 	 */
-	public CompletableFuture<IBucketLogger> getSystemLogger(final DataBucketBean bucket);
+	public IBucketLogger getSystemLogger(final DataBucketBean bucket);
 	/**
 	 * Entrypoint for external services not related to a bucket.  Returns a logger pointed to an external space and
 	 * referencing the subsystem passed in (name of the service).
 	 * @param subsystem
 	 * @return
 	 */
-	public CompletableFuture<IBucketLogger> getExternalLogger(final String subsystem);		
+	public IBucketLogger getExternalLogger(final String subsystem);		
 }
 
 
