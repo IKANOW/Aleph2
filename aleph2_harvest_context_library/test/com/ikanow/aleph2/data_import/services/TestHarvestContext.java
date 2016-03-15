@@ -53,7 +53,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean.MasterEnrichmentType;
-import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -132,7 +131,6 @@ public class TestHarvestContext {
 			
 			test_context.setBucket(test_bucket);
 			assertEquals(test_bucket, test_context.getBucket().get());
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
 			
 		}
 		catch (Exception e) {
@@ -140,120 +138,7 @@ public class TestHarvestContext {
 			fail("Threw exception");
 		}
 	}
-	
-	@Test
-	public void test_docWriteMode() {
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-		}
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(false), test_context._mutable_state.doc_write_mode.optional());
-		}
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-		}
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-		}
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-		}
-		{
-			final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
-			
-			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
-					.with(DataBucketBean::_id, "test")
-					.with(DataBucketBean::full_name, "/test/basicContextCreation")
-					.with(DataBucketBean::modified, new Date())
-					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
-							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
-									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
-									.done().get())
-							.done().get())
-					.done().get();
-			
-			test_context.setBucket(test_bucket);
-			
-			assertEquals(Optional.of(true), test_context._mutable_state.doc_write_mode.optional());
-		}
-	}
-	
+		
 	@Test
 	public void test_externalContextCreation() throws InstantiationException, IllegalAccessException, ClassNotFoundException, InterruptedException, ExecutionException {
 		_logger.info("running test_externalContextCreation");

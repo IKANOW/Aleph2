@@ -106,7 +106,6 @@ public class HarvestContext implements IHarvestContext {
 	
 	protected static class MutableState {
 		final SetOnce<DataBucketBean> bucket = new SetOnce<>();
-		final SetOnce<Boolean> doc_write_mode = new SetOnce<>();
 		final SetOnce<SharedLibraryBean> technology_config = new SetOnce<>();
 		final SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
@@ -119,8 +118,6 @@ public class HarvestContext implements IHarvestContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected IStorageService _storage_service;
-	protected Optional<ISearchIndexService> _index_service; //(only need this sometimes)
-	protected Optional<IDocumentService> _doc_service; //(only need this sometimes)
 	protected GlobalPropertiesBean _globals;
 	
 	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service = Optional.empty();
@@ -162,40 +159,7 @@ public class HarvestContext implements IHarvestContext {
 	 * @returns whether the bucket has been updated (ie fails if it's already been set)
 	 */
 	public boolean setBucket(DataBucketBean this_bucket) {
-		// (also check if we're in "document mode" (ie can overwrite existing docs))
-		
-		_mutable_state.doc_write_mode.set(
-				Optionals.of(() -> this_bucket.data_schema().document_schema())
-					.filter(ds -> Optional.ofNullable(ds.enabled()).orElse(true))
-					.filter(ds -> (null != ds.deduplication_policy()) 
-									|| !Optionals.ofNullable(ds.deduplication_fields()).isEmpty()
-									|| !Optionals.ofNullable(ds.deduplication_contexts()).isEmpty()
-							) // (ie dedup fields set)
-					.isPresent()
-				)
-				;
-		
-		tidyUpDataServices(this_bucket);
-		
 		return _mutable_state.bucket.set(this_bucket);
-	}
-	
-	/** SIDE EFFECTS: removes services that perform the same role and are implemented by the same object
-	 * @param The bucket 
-	 */
-	protected void tidyUpDataServices(final DataBucketBean bucket) {
-		boolean doc_schema_enabled = Optionals.of(() -> bucket.data_schema().document_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
-		boolean search_schema_enabled = Optionals.of(() -> bucket.data_schema().search_index_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
-		
-		if (doc_schema_enabled) {
-			_index_service = Optional.empty();
-		}
-		else {
-			_doc_service = Optional.empty();
-		}
-		if (!search_schema_enabled) {
-			_index_service = Optional.empty();
-		}
 	}
 	
 	/** (FOR INTERNAL DATA MANAGER USE ONLY) Sets the library bean for this harvest context instance
@@ -240,10 +204,6 @@ public class HarvestContext implements IHarvestContext {
 				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
 				// (apart from bucket, which is handled below, rest of mutable state is not needed)
-				
-				// Only sometimes need these: (note they can be set different by setBucket)
-				_index_service = to_clone._index_service;
-				_doc_service = to_clone._doc_service;
 			}
 			else {							
 				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
@@ -251,10 +211,6 @@ public class HarvestContext implements IHarvestContext {
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_storage_service = _service_context.getStorageService();
 				_globals = _service_context.getGlobalProperties();
-
-				// Only sometimes need these: (note they can be set different by setBucket)
-				_index_service = _service_context.getService(ISearchIndexService.class, Optional.empty());
-				_doc_service = _service_context.getService(IDocumentService.class, Optional.empty());
 			}			
 			// Get bucket 
 			

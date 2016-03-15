@@ -18,6 +18,8 @@ package com.ikanow.aleph2.core.shared.services;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -40,10 +42,12 @@ import java.util.stream.Stream;
 
 
 
+
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 
 
 
@@ -390,6 +394,99 @@ public class TestMultiDataService {
 		assertEquals(true, MultiDataService.getWriteMode(bucket1));
 		assertEquals(true, MultiDataService.getWriteMode(bucket2));
 		assertEquals(true, MultiDataService.getWriteMode(bucket3));
+	}
+	
+	
+	/** Found this more comprehensive test after writing the one above so keeping them both
+	 */
+	@Test
+	public void test_docWriteMode_copiedFromContext() {
+		{
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::enabled, false)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(false, MultiDataService.getWriteMode(test_bucket));
+		}
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::enabled, true)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(false, MultiDataService.getWriteMode(test_bucket));
+		}
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(true, MultiDataService.getWriteMode(test_bucket));
+		}
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(true, MultiDataService.getWriteMode(test_bucket));
+		}
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(true, MultiDataService.getWriteMode(test_bucket));
+		}
+		{
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::_id, "test")
+					.with(DataBucketBean::full_name, "/test/basicContextCreation")
+					.with(DataBucketBean::modified, new Date())
+					.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+							.with("document_schema", BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+									.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("test"))
+									.done().get())
+							.done().get())
+					.done().get();
+			
+			assertEquals(true, MultiDataService.getWriteMode(test_bucket));
+		}
 	}
 	
 	
