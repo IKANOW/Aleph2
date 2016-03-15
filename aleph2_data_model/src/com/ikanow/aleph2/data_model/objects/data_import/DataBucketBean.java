@@ -303,6 +303,18 @@ public class DataBucketBean implements Serializable {
 	private Map<String, String> data_locations;
 	
 	////////////////////////////////////////
+		
+	// Management schema
+	
+	/** The management schema applied to services used in this bucket
+	* @return the management_schema
+	*/
+	public ManagementSchemaBean management_schema() {
+		return management_schema;
+	}
+	private ManagementSchemaBean management_schema;	
+	
+	////////////////////////////////////////
 	
 	// Templating
 

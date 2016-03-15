@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -33,8 +34,12 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.Operator;
@@ -75,6 +80,41 @@ public class TestBucketUtils {
 		
 		assertTrue(BucketUtils.isTestBucket(test_bean));
 		assertFalse(BucketUtils.isTestBucket(original_bean));		
+	}
+	
+	@Test
+	public void test_ConvertDataBucketBeanToLogging() {
+		String original_full_name = "/my_bean/sample_path";
+		String original_id = "id12345";
+		DataBucketBean original_bean = BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::_id, "id12345")
+				.with(DataBucketBean::full_name, original_full_name)
+				.with(DataBucketBean::data_schema, BeanTemplateUtils.build(DataSchemaBean.class)
+					.with(DataSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
+						.with(SearchIndexSchemaBean::target_index_size_mb, 10L) //set some arbitrary field so we can check its changed
+						.done().get())
+					.done().get())	
+				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
+					.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
+						.with(LoggingSchemaBean::log_level, Level.DEBUG)
+						.done().get())
+					.with(ManagementSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
+						.with(SearchIndexSchemaBean::target_index_size_mb, 50L) //set some arbitrary field so we can check its changed	
+						.done().get())
+					.done().get())
+				.done().get();
+		
+		DataBucketBean logging_bean = BucketUtils.convertDataBucketBeanToLogging(original_bean);
+		
+		assertTrue(logging_bean._id().equals(original_id));
+		assertTrue("Name is wrong: " + logging_bean.full_name(), logging_bean.full_name().equals("/aleph2_logging/buckets" + original_full_name));
+		
+		assertTrue(BucketUtils.isLoggingBucket(logging_bean));
+		assertFalse(BucketUtils.isLoggingBucket(original_bean));	
+		
+		//validate management_schema was moved over data_schema
+		assertEquals(logging_bean.data_schema().search_index_schema().target_index_size_mb().longValue(), 50L);
+		assertNotEquals(original_bean.data_schema().search_index_schema().target_index_size_mb().longValue(), 50L);
 	}
 
 	@Test
