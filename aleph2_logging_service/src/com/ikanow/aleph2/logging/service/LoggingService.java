@@ -121,13 +121,6 @@ public class LoggingService implements ILoggingService {
 	 */
 	private IBucketLogger getBucketLogger(DataBucketBean bucket,
 			MultiDataService writable, boolean isSystem) {
-		//initialize the logging bucket path in case it hasn't been created yet
-//		try {
-//			DataBucketCrudService.createFilePaths(bucket, storage_service);
-//		} catch (Exception e) {
-//			_logger.error("Error creating logging bucket file path: " + bucket.full_name(), e);			
-//			return new BucketLogger(LoggingUtils.getEmptyBucket(), getWritable(bucket), isSystem);
-//		}
 		return new BucketLogger(bucket, getWritable(bucket), isSystem);
 	}
 	
