@@ -6,13 +6,16 @@
   <properties>
 	<aleph2.version>2.8.0-SNAPSHOT</aleph2.version>
 	<aleph2.scope>compile</aleph2.scope>
+	<!-- Overridden in test_depdendencies profile that is activated if skip 
+        tests is true -->
+    <maven.test.skip>true</maven.test.skip>
   </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
    <testSourceDirectory>test</testSourceDirectory>    
     <testResources>
       <testResource>
-        <directory>resources</directory>
+        <directory>test</directory>
         <excludes>
           <exclude>**/*.java</exclude>
         </excludes>
@@ -128,24 +131,6 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
 	</dependency>
-<!--   <dependency> -->
-<!--   		<groupId>com.ikanow.aleph2</groupId> -->
-<!--   		<artifactId>aleph2_search_index_service_elasticsearch</artifactId> -->
-<!--   		<version>${aleph2.version}</version> -->
-<!-- 		<scope>test</scope>  		  		 -->
-<!--   	</dependency> -->
-<!--   	<dependency> -->
-<!--   		<groupId>com.ikanow.aleph2</groupId> -->
-<!--   		<artifactId>aleph2_storage_service_hdfs</artifactId> -->
-<!--   		<version>${aleph2.version}</version> -->
-<!-- 		<scope>test</scope>  		  		 -->
-<!--   	</dependency> -->
-<!--   	<dependency> -->
-<!--   		<groupId>com.ikanow.aleph2</groupId> -->
-<!--   		<artifactId>aleph2_management_db_service</artifactId> -->
-<!--   		<version>${aleph2.version}</version> -->
-<!-- 		<scope>${aleph2.scope}</scope>  		  		 -->
-<!--   	</dependency> -->
   </dependencies>
   	<!-- Test dependencies -->
   <profiles>
