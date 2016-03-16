@@ -41,7 +41,6 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
-import com.ikanow.aleph2.management_db.services.DataBucketCrudService;
 
 /**
  * Implementation of ILoggingService that reads the management schema of a data bucket and writes out
@@ -122,13 +121,13 @@ public class LoggingService implements ILoggingService {
 	 */
 	private IBucketLogger getBucketLogger(DataBucketBean bucket,
 			MultiDataService writable, boolean isSystem) {
-		//initial the logging bucket path in case it hasn't been created yet
-		try {
-			DataBucketCrudService.createFilePaths(bucket, storage_service);
-		} catch (Exception e) {
-			_logger.error("Error creating logging bucket file path: " + bucket.full_name(), e);			
-			return new BucketLogger(LoggingUtils.getEmptyBucket(), getWritable(bucket), isSystem);
-		}
+		//initialize the logging bucket path in case it hasn't been created yet
+//		try {
+//			DataBucketCrudService.createFilePaths(bucket, storage_service);
+//		} catch (Exception e) {
+//			_logger.error("Error creating logging bucket file path: " + bucket.full_name(), e);			
+//			return new BucketLogger(LoggingUtils.getEmptyBucket(), getWritable(bucket), isSystem);
+//		}
 		return new BucketLogger(bucket, getWritable(bucket), isSystem);
 	}
 	

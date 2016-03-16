@@ -77,6 +77,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.FutureUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.TimeUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -282,6 +283,10 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		
 		try {
 			createFilePaths(new_object, _storage_service.get());
+			//if logging is enabled, create the logging filepath also
+			if ( Optionals.of( () -> new_object.management_schema().logging_schema().enabled() ).orElse(false) ) {
+				createFilePaths(BucketUtils.convertDataBucketBeanToLogging(new_object), _storage_service.get());
+			}
 		}
 		catch (Exception e) { // Error creating directory, haven't created object yet so just back out now
 			
