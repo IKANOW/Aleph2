@@ -268,7 +268,7 @@ public class TestLoggingService {
 	}
 	
 	/**
-	 * Creates a sample bucket without a mangement schema.
+	 * Creates a sample bucket without a management schema.
 	 * 
 	 * @param name
 	 * @return

@@ -9,6 +9,15 @@
   </properties>
   <build>
     <sourceDirectory>src</sourceDirectory>
+   <testSourceDirectory>test</testSourceDirectory>    
+    <testResources>
+      <testResource>
+        <directory>resources</directory>
+        <excludes>
+          <exclude>**/*.java</exclude>
+        </excludes>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
