@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 import scala.Tuple2;
 
@@ -56,11 +57,15 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 
 	// INITIALIZATION
 	
-	protected final Multimap<JsonNode, JsonNode> _id_duplicate_map;
-	protected final HashSet<JsonNode> _emitted_id_map = new HashSet<>();
-	protected final JsonNode _grouping_key;
-	protected final DataSchemaBean.DocumentSchemaBean.CustomPolicy _policy;
-	protected final Boolean _custom_delete_unhandled_duplicates;
+	protected final DataSchemaBean.DocumentSchemaBean _config; 
+	
+	protected static class MutableState {
+		Multimap<JsonNode, JsonNode> _id_duplicate_map;
+		JsonNode _grouping_key;
+		final HashSet<JsonNode> _emitted_id_map = new HashSet<>();
+		//TODO: list of things to delete
+	}
+	protected final MutableState _mutable_state = new MutableState();
 	
 	/** User c'tor
 	 * @param delegate
@@ -70,21 +75,21 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	 */
 	public DeduplicationEnrichmentContext(
 			final IEnrichmentModuleContext delegate,
-			final Multimap<JsonNode, JsonNode> id_duplicate_map,
-			final JsonNode grouping_key,
 			final DataSchemaBean.DocumentSchemaBean config
 			)
 	{
 		_delegate = delegate;
-		_id_duplicate_map = id_duplicate_map;
-		_grouping_key = grouping_key;
-		
-		_policy = Optional.ofNullable(config.custom_policy()).orElse(DataSchemaBean.DocumentSchemaBean.CustomPolicy.strict);
-		_custom_delete_unhandled_duplicates = Optional.ofNullable(config.custom_delete_unhandled_duplicates())
-												.orElse(DataSchemaBean.DocumentSchemaBean.CustomPolicy.very_strict == _policy
-														? true
-														: false
-												);
+		_config = config;
+	}
+	
+	public void resetMutableState(
+			final Multimap<JsonNode, JsonNode> id_duplicate_map,
+			final JsonNode grouping_key
+			)
+	{
+		_mutable_state._id_duplicate_map = id_duplicate_map;
+		_mutable_state._grouping_key = grouping_key;
+		_mutable_state._emitted_id_map.clear();
 	}
 	
 	//////////////////////////////////////////////////////////////////////
@@ -98,6 +103,8 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	// Separately:
 	// - if "custom_delete_unhandled_duplicates" is true (false by default in "strict" mode, true by default in "very_strict" mode) then
 	//   will issue deletes to any objects that aren't emitted by the user
+	
+	//TODO: if emit a null object then simply stick it on the list of things to delete...
 	
 	protected Validation<BasicMessageBean, Unit> checkObjectLogic(final JsonNode to_emit) {
 		//TODO
@@ -133,8 +140,9 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	
 	// FINALIZATION
 
-	public void finalizeGroupingKey() {
+	public Stream<JsonNode> getObjectsToDelete() {
 		//TODO
+		return Stream.empty();
 	}
 	
 	//////////////////////////////////////////////////////////////////////

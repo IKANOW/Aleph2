@@ -108,6 +108,7 @@ public class TestDeduplicationService {
 			{
 				final DataBucketBean test_bucket = getDocBucket("/test/simple",
 						BeanTemplateUtils.build(DocumentSchemaBean.class)
+							.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
 						.done().get()
 						);
 				
@@ -115,7 +116,8 @@ public class TestDeduplicationService {
 				
 				test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
 				
-				assertEquals(test_module._doc_schema.get(), test_bucket.data_schema().document_schema());
+				assertEquals(test_module._doc_schema.get().deduplication_policy(), test_bucket.data_schema().document_schema().deduplication_policy());
+				assertEquals(test_module._doc_schema.get().custom_finalize_all_objects(), false);
 				assertEquals(test_module._timestamp_field.get(), "__a.tp");
 				assertTrue("Should have built dedup context", test_module._dedup_context.optional().isPresent());
 				assertFalse("There shouldn't be a custom handler", test_module._custom_handler.optional().isPresent());
@@ -391,6 +393,11 @@ public class TestDeduplicationService {
 	
 		TestDedupEnrichmentModule test_module = new TestDedupEnrichmentModule();
 		
+		// dummy context
+		DeduplicationEnrichmentContext test_context = Mockito.mock(DeduplicationEnrichmentContext.class);
+		Mockito.doNothing().when(test_context).resetMutableState(Mockito.any(), Mockito.any());
+		Mockito.when(test_context.getObjectsToDelete()).thenReturn(Stream.empty());
+		
 		_called_batch.set(0);
 		assertEquals(0L, _called_batch.get());
 
@@ -409,11 +416,11 @@ public class TestDeduplicationService {
 						.collect(Collectors.toList());
 		
 		
-		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().collect(Collectors.toList()), Optional.of(test2), _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.empty(), batch.stream().collect(Collectors.toList()), Arrays.asList(test2), _mapper.createObjectNode());
 		
 		assertEquals(0L, _called_batch.get());
 
-		DeduplicationService.handleCustomDeduplication(Optional.of(test_module), batch.stream().collect(Collectors.toList()), Optional.of(test2), _mapper.createObjectNode());
+		DeduplicationService.handleCustomDeduplication(Optional.of(Tuples._2T(test_module, test_context)), batch.stream().collect(Collectors.toList()), Arrays.asList(test2), _mapper.createObjectNode());
 		
 		assertEquals(3L, _called_batch.get());
 	}
@@ -444,7 +451,7 @@ public class TestDeduplicationService {
 		
 		Mockito.when(enrich_context.emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class)))
 					.thenReturn(Validation.success(_mapper.createObjectNode()));
-		
+				
 		TestDedupEnrichmentModule test_module = new TestDedupEnrichmentModule();
 		
 		final String ts_field = "@timestamp";
@@ -485,8 +492,14 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.leave,
-					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.leave)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -509,8 +522,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
-					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -532,8 +552,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.update,
-					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -556,8 +583,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
-					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -580,8 +614,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.overwrite,
-					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -604,8 +645,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
-					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -628,8 +676,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom,
-					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -652,8 +707,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
-					enrich_context, Optional.of(test_module), ts_field, new_records, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -676,8 +738,15 @@ public class TestDeduplicationService {
 			new_record_but_same_time._3().removeAll();
 			_called_batch.set(0);
 			
-			DeduplicationService.handleDuplicateRecord(DeduplicationPolicy.custom_update,
-					enrich_context, Optional.of(test_module), ts_field, new_records_but_same_time, old_json, key, mutable_obj_map
+			DocumentSchemaBean config = 
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+					.done().get();
+			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
+			
+			DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
 			
 			// Nothing emitted
@@ -1329,7 +1398,7 @@ public class TestDeduplicationService {
 		
 		// 2) Fill with 50% duplicates, 50% random records
 		
-		List<JsonNode> objs_for_context1 = IntStream.range(0, num_write_records).boxed().map(i -> {
+		List<JsonNode> objs_for_context1 = IntStream.rangeClosed(1, num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
 			obj.put("_id", "id" + i);
 			obj.put("dup", true);
@@ -1339,7 +1408,7 @@ public class TestDeduplicationService {
 			return (JsonNode) obj;
 		}).collect(Collectors.toList());
 		
-		List<JsonNode> objs_for_context2 = IntStream.range(0, num_write_records).boxed().map(i -> {
+		List<JsonNode> objs_for_context2 = IntStream.rangeClosed(1, num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
 			obj.put("_id", "id" + i);
 			obj.put("dup", false);
@@ -1383,7 +1452,7 @@ public class TestDeduplicationService {
 	public void test_puttingItAllTogether_runTest(final DataBucketBean write_bucket, final IEnrichmentModuleContext enrich_context) {
 		// OK now create a new batch of objects
 		
-		List<Tuple2<Long, IBatchRecord>> imcoming_objects = IntStream.range(0, 2*num_write_records).boxed().map(i -> {
+		List<Tuple2<Long, IBatchRecord>> imcoming_objects = IntStream.rangeClosed(1, 2*num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
 			obj.put("_id", "id" + i);
 			obj.put("dup", true);
@@ -1473,9 +1542,10 @@ public class TestDeduplicationService {
 		public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
 				Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {
 			
-			long n = batch.count();
+			List<Tuple2<Long, IBatchRecord>> l = batch.collect(Collectors.toList());
+			long n = l.stream().filter(b -> !b._2().injected()).count();
 			assertEquals(n, batch_size.get().longValue());
-			_called_batch.addAndGet((int) n);
+			_called_batch.addAndGet(l.size());
 		}
 
 		@Override

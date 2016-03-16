@@ -16,6 +16,7 @@
 package com.ikanow.aleph2.analytics.services;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -47,7 +49,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.CustomPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationTiming;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -82,8 +86,10 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected final SetOnce<IEnrichmentModuleContext> _context = new SetOnce<>();
 	protected final SetOnce<DocumentSchemaBean> _doc_schema = new SetOnce<>();
 	protected final SetOnce<String> _timestamp_field = new SetOnce<>();
+	protected final SetOnce<Boolean> _deduplication_is_disabled = new SetOnce<>();
 	
 	protected final SetOnce<IEnrichmentBatchModule> _custom_handler = new SetOnce<>();
+	protected final SetOnce<DeduplicationEnrichmentContext> _custom_context = new SetOnce<>();
 	
 	//TODO (ALEPH-20): move this into the ES service
 	public static class ElasticsearchTechnologyOverride {
@@ -114,7 +120,26 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(dedup_control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
 		
 		final DocumentSchemaBean doc_schema = Optional.ofNullable(dedup_config.doc_schema_override()).orElse(bucket.data_schema().document_schema()); //(exists by construction)
-		_doc_schema.set(doc_schema);
+		
+		_deduplication_is_disabled.set(
+				(null == doc_schema.deduplication_policy())
+					&& Optionals.ofNullable(doc_schema.deduplication_fields()).isEmpty()
+					&& Optionals.ofNullable(doc_schema.deduplication_contexts()).isEmpty()
+				);
+		
+		// override defaults:
+		_doc_schema.set( 
+				BeanTemplateUtils.clone(doc_schema)
+					.with(DocumentSchemaBean::enabled, Optional.ofNullable(doc_schema.enabled()).orElse(true))
+					.with(DocumentSchemaBean::deduplication_timing, Optional.ofNullable(doc_schema.deduplication_timing()).orElse(DeduplicationTiming.custom))
+					.with(DocumentSchemaBean::deduplication_policy, Optional.ofNullable(doc_schema.deduplication_policy()).orElse(DeduplicationPolicy.leave))
+					.with(DocumentSchemaBean::custom_policy, Optional.ofNullable(doc_schema.custom_policy()).orElse(CustomPolicy.strict))
+					.with(DocumentSchemaBean::custom_finalize_all_objects, Optional.ofNullable(doc_schema.custom_finalize_all_objects()).orElse(false))
+					.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, 
+							Optional.ofNullable(doc_schema.custom_delete_unhandled_duplicates()).orElse(
+									CustomPolicy.very_strict == Optional.ofNullable(doc_schema.custom_policy()).orElse(CustomPolicy.strict)))
+				.done()
+				);
 		
 		final String timestamp_field = Optionals.of(() -> bucket.data_schema().temporal_schema().time_field())
 											.orElseGet(() -> AnnotationBean.ROOT_PATH + ".tp");
@@ -142,7 +167,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		//TODO: handle :s -> .s in the key
 		final ElasticsearchTechnologyOverride tech_override = 
 				BeanTemplateUtils.from(
-						Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get();		
+						Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get();	
+		
 		_db_mapper.set(f -> {
 				return JsonUtils._ID.equals(f)
 					   ? f
@@ -150,11 +176,11 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					   ;
 				});											
 		
-		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
+		final DeduplicationPolicy policy =  _doc_schema.get().deduplication_policy();
 		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
 			//TODO (ALEPH-20): for now only support one dedup enrichment config (really the "multi-enrichment" pipeline code should be in core shared vs the technology I think?)
 			
-			Optional<EnrichmentControlMetadataBean> custom_config =  doc_schema.custom_deduplication_configs().stream().findFirst();
+			Optional<EnrichmentControlMetadataBean> custom_config =  Optionals.ofNullable(_doc_schema.get().custom_deduplication_configs()).stream().findFirst();
 			custom_config.ifPresent(cfg -> {
 				final Optional<String> entry_point = Optional.ofNullable(cfg.entry_point())
 						.map(Optional::of)
@@ -177,7 +203,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				entry_point.ifPresent(Lambdas.wrap_consumer_u(ep -> 
 					_custom_handler.set((IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance())));
 
-				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(context, bucket, cfg, previous_next, next_grouping_fields));
+				_custom_context.set(new DeduplicationEnrichmentContext(context, _doc_schema.get()));
+				
+				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(_custom_context.get(), bucket, cfg, previous_next, next_grouping_fields));
 			});
 		}
 	}
@@ -190,11 +218,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final Optional<Integer> batch_size, 
 			final Optional<JsonNode> grouping_key)
 	{
-		if ((null == _doc_schema.get().deduplication_policy())
-				&& Optionals.ofNullable(_doc_schema.get().deduplication_fields()).isEmpty()
-				&& Optionals.ofNullable(_doc_schema.get().deduplication_contexts()).isEmpty()
-				)
-		{ 
+		if (_deduplication_is_disabled.get()) { 
 			// no deduplication, generally shouldn't be here...
 			//.. but if we are, make do the best we can
 			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), Optional.empty()));
@@ -247,27 +271,59 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		//TODO (ALEPH-20): various options for inserting _ids
 		//TODO (ALEPH-20): add timestamps to annotation
 		//TODO (ALEPH-20): support different timestamp fields for the different buckets
-		//TODO (ALEPH-20): really need to support >1 current job (Really really longer term you should be able to decide what objects you want and what you don't) <- don't remember what i meant here
+		//TODO (ALEPH-20): really need to support >1 current enrichment job 
+		//                 ^^(Really really longer term you should be able to decide what objects you want and what you don't  <- NOTE: don't remember what i meant here)
 				
 		final Iterator<JsonNode> cursor = dedup_res.join();
 		
 		// Handle the results
 		
-		Optionals.streamOf(cursor, true)
-					.forEach(ret_obj -> {
-						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
-						final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
-
-						//DEBUG
-						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
-						
-						matching_records.ifPresent(records -> 
-							handleDuplicateRecord(policy, _context.get(), _custom_handler.optional(), _timestamp_field.get(), records, ret_obj, maybe_key.get(), mutable_obj_map));
-					});
+		//TODO (ALEPH-20): handle > 1 custom object ... options:
+		// 1) add a sort term that sorts by grouping key (is a bit tricky cos my sorts are flat i think) but may just work
+		///   then just maintain a mutable state in the cursor
+		// (need to make the length be the number of actual records)
+		// hmm i don't like any other options but could ofc do it all in memory		
+		
+		if (isCustom(_doc_schema.get().deduplication_policy()) || _doc_schema.get().custom_delete_unhandled_duplicates()) {
+			Optionals.streamOf(cursor, true)
+						.collect(Collectors.groupingBy(ret_obj -> getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3())))
+						.entrySet()
+						.stream()
+						.forEach(kv -> {
+							final Optional<JsonNode> maybe_key = kv.getKey();
+							final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key));
+							
+							//DEBUG
+							//System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
+							
+							matching_records.ifPresent(records -> 
+								handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
+														_timestamp_field.get(), records, kv.getValue(), maybe_key.get(), mutable_obj_map));
+							
+							//TODO: handle deletion results
+						})
+						;
+		}
+		else {
+			Optionals.streamOf(cursor, true)
+				.forEach(ret_obj -> {
+					final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
+					final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
+	
+					//DEBUG
+					//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
+					
+					matching_records.ifPresent(records -> 
+						handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
+												_timestamp_field.get(), records, Arrays.asList(ret_obj), maybe_key.get(), mutable_obj_map));
+				});			
+		}
+					;
 		
 		if (Optional.ofNullable(_doc_schema.get().custom_finalize_all_objects()).orElse(false)) {
 			mutable_obj_map.entrySet().stream()
-				.forEach(kv -> handleCustomDeduplication(_custom_handler.optional(), kv.getValue(), Optional.empty(), kv.getKey()))
+				.forEach(kv -> handleCustomDeduplication(_custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())), 
+															kv.getValue(), Collections.emptyList(), kv.getKey()))
 				;			
 		}
 		else { // Just emit the last element of each grouped object set
@@ -276,8 +332,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				.forEach(t -> _context.get().emitImmutableObject(t._1(), t._2().getJson(), Optional.of(t._3()), Optional.empty(), Optional.empty()))
 				;
 		}
+		//TODO: if have anything to delete then delete in bulk now
 	}
 
+	/** Tidiness util
+	 * @param policy
+	 * @return
+	 */
+	private static boolean isCustom(final DeduplicationPolicy policy) {
+		return (DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy);
+	}
+	
 	/** The heart of the dedup logic
 	 *  (everything gets ordered in the correct order except if policy is custom, in which case the ordering is a
 	 *   bit arbitrary anyway)
@@ -288,46 +353,56 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 * @param old_record
 	 * @param key
 	 * @param mutable_obj_map
+	 * @returns a stream of objects to delete efficiently
 	 */
-	protected static void handleDuplicateRecord(final DeduplicationPolicy policy,
-			final IEnrichmentModuleContext context, Optional<IEnrichmentBatchModule> custom_handler,
+	protected static Stream<JsonNode> handleDuplicateRecord(final DocumentSchemaBean config,
+			Optional<Tuple2<IEnrichmentBatchModule, DeduplicationEnrichmentContext>> custom_handler,
 			final String timestamp_field,
-			final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final JsonNode old_record,
+			final LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, 
+			final List<JsonNode> old_records,
 			final JsonNode key,
 			final Map<JsonNode, LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> mutable_obj_map
 			)
 	{
-		Patterns.match(policy).andAct()
+		return Patterns.match(config.deduplication_policy()).<Stream<JsonNode>>andReturn()
 				.when(p -> p == DeduplicationPolicy.leave, __ -> {
 					mutable_obj_map.remove(key); //(drop new record)
+					return Stream.empty();
 				})
 				.when(p -> p == DeduplicationPolicy.update, __ -> {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
+					final JsonNode old_record = old_records.stream().findFirst().get();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
 						last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+						return config.custom_delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 					}
 					else {
 						mutable_obj_map.remove(key); //(drop new record)				
+						return Stream.empty();
 					}
 				})
 				.when(p -> p == DeduplicationPolicy.overwrite, __ -> {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					// Just update the new record's "_id" field
+					final JsonNode old_record = old_records.stream().findFirst().get();
 					last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+					return config.custom_delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
+					final JsonNode old_record = old_records.stream().findFirst().get();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
 						mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)
-						handleCustomDeduplication(custom_handler, new_records, Optional.of(old_record), key);
+						return handleCustomDeduplication(custom_handler, new_records, old_records, key);
 					}
 					else {
 						mutable_obj_map.remove(key); //(drop new record)
+						return Stream.empty();
 					}
 				})
 				.otherwise(__ -> {
 					mutable_obj_map.remove(key); // (since the "final step" logic is responsible for calling the update code)		
-					handleCustomDeduplication(custom_handler, new_records, Optional.of(old_record), key);
+					return handleCustomDeduplication(custom_handler, new_records, old_records, key);
 				});
 	}
 	
@@ -355,32 +430,41 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	}
 	
 	/** Logic to perform the custom deduplication with the current and new versions
-	 * @param custom_handler
+	 * @param maybe_custom_handler
 	 * @param new_record
 	 * @param old_record
+	 * @returns list of Json objects to delete
 	 */
-	protected static void handleCustomDeduplication(
-			final Optional<IEnrichmentBatchModule> custom_handler,
-			final List<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final Optional<JsonNode> maybe_old_record, final JsonNode key)
+	protected static Stream<JsonNode> handleCustomDeduplication(
+			Optional<Tuple2<IEnrichmentBatchModule, DeduplicationEnrichmentContext>> maybe_custom_handler,
+			final List<Tuple3<Long, IBatchRecord, ObjectNode>> new_records, final Collection<JsonNode> old_records, final JsonNode key)
 	{
-		custom_handler
-			.map(base_module -> base_module.cloneForNewGrouping())
-			.ifPresent(new_module -> {
+		return maybe_custom_handler.map(handler_context -> {
+			//TODO create mulitmap of old objects in here indexed by _id
+			handler_context._2().resetMutableState(null, key);
+			
+			final Consumer<IEnrichmentBatchModule> handler = new_module -> {
 				final Stream<Tuple2<Long, IBatchRecord>> dedup_stream =
 						Stream.concat(
 								new_records.stream().map(t3 -> Tuples._2T(t3._1(), t3._2())),
-								maybe_old_record.<Stream<Tuple2<Long, IBatchRecord>>>
-									map(old_record -> Stream.of(Tuples._2T(-1L, (IBatchRecord)(new BatchRecordUtils.InjectedJsonBatchRecord(old_record))))).orElse(Stream.empty())
+								old_records.stream().map(old_record -> Tuples._2T(-1L, (IBatchRecord)(new BatchRecordUtils.InjectedJsonBatchRecord(old_record))))
 								);
 				
 				final int batch_size = new_records.size();
 				
 				new_module.onObjectBatch(dedup_stream, 
-						maybe_old_record.map(__ -> 1 + batch_size), // (ie leave batch size blank if there's no dedup) 
+						Optional.of(batch_size).filter(__ -> !old_records.isEmpty()), // (ie leave batch size blank if there's no dedup) 
 						Optional.of(key));
 				
 				new_module.onStageComplete(false);
-			});		
+			};
+			
+			handler.accept(handler_context._1());
+			
+			return handler_context._2().getObjectsToDelete();
+		})
+		.orElse(Stream.empty())
+		;
 	}
 	
 	/** Compares the old and new records' timestamps (if either doesn't exist then assume we're leaving)
@@ -433,7 +517,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final List<String> dedup_fields,
 			final Function<String, String> db_field_mapper
 	)
-	{		
+	{
 		if (1 == dedup_fields.size()) { // this is a simpler case
 			final String key_field = dedup_fields.stream().findFirst().get();
 			final List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>> field_info = extractKeyField(batch, key_field);
@@ -460,7 +544,13 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					})
 					;
 			
-			final QueryComponent<JsonNode> query_dedup = CrudUtils.anyOf(elements).limit(Integer.MAX_VALUE);
+			final QueryComponent<JsonNode> query_dedup = 
+					Optional.of(CrudUtils.anyOf(elements).limit(Integer.MAX_VALUE))
+							//(consider putting a sort in here? I haven't so far because it seems like a lot of work when mostly there will just be a single object
+							// for each batch so we're doing a lot of sorting completely unnecessarily
+							// ... the downside is that if there are a large number of duplicates then the memory usage could get painful if they're not sorted...)
+							.get()
+							;
 			
 			return Tuples._3T(query_dedup, field_info, Either.right(dedup_fields));
 		}		

@@ -38,7 +38,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import com.google.common.collect.ImmutableMap;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,6 +63,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -413,20 +416,20 @@ public class TestAnalyticsContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
 		}
-		try {
-			test_context.logStatusForThreadOwner(null, null);
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-		}
-		try {
-			test_context.logStatusForThreadOwner(null, null, false);
-			fail("Should have thrown exception");
-		}
-		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-		}
+//		try {
+//			test_context.logStatusForThreadOwner(null, null);
+//			fail("Should have thrown exception");
+//		}
+//		catch (Exception e) {
+//			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+//		}
+//		try {
+//			test_context.logStatusForThreadOwner(null, null, false);
+//			fail("Should have thrown exception");
+//		}
+//		catch (Exception e) {
+//			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+//		}
 		// (This has now been implemented, though not ready to test yet)
 //		try {
 //			test_context.getBucketStatus(null);
@@ -694,6 +697,7 @@ public class TestAnalyticsContext {
 		mock_service_context.addService(IManagementDbService.class, Optional.empty(), test_context._core_management_db);
 		mock_service_context.addService(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB, test_context._core_management_db);
 		mock_service_context.addService(ICoreDistributedServices.class, Optional.empty(), test_context._distributed_services);
+		mock_service_context.addService(ILoggingService.class, Optional.empty(), test_context._logging_service);
 		mock_service_context.addGlobals(BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get());
 		final AnalyticsContext mock_to_test = new AnalyticsContext(mock_service_context);
 		assertEquals(0, mock_to_test._mutable_state.extra_auto_context_libs.size());
