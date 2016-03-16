@@ -27,18 +27,18 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>
 	</dependency>
-  <dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>test</scope>  		  		
-  	</dependency>
-  	<dependency>
-  		<groupId>com.ikanow.aleph2</groupId>
-  		<artifactId>aleph2_storage_service_hdfs</artifactId>
-  		<version>${aleph2.version}</version>
-		<scope>test</scope>  		  		
-  	</dependency>
+<!--   <dependency> -->
+<!--   		<groupId>com.ikanow.aleph2</groupId> -->
+<!--   		<artifactId>aleph2_search_index_service_elasticsearch</artifactId> -->
+<!--   		<version>${aleph2.version}</version> -->
+<!-- 		<scope>test</scope>  		  		 -->
+<!--   	</dependency> -->
+<!--   	<dependency> -->
+<!--   		<groupId>com.ikanow.aleph2</groupId> -->
+<!--   		<artifactId>aleph2_storage_service_hdfs</artifactId> -->
+<!--   		<version>${aleph2.version}</version> -->
+<!-- 		<scope>test</scope>  		  		 -->
+<!--   	</dependency> -->
   	<dependency>
   		<groupId>com.ikanow.aleph2</groupId>
   		<artifactId>aleph2_management_db_service</artifactId>
@@ -46,4 +46,39 @@
 		<scope>${aleph2.scope}</scope>  		  		
   	</dependency>
   </dependencies>
+  	<!-- Test dependencies -->
+  <profiles>
+	<profile>
+	    <id>test_dependencies</id>
+		<activation>
+			<property>
+				<name>skipTests</name>
+				<value>!true</value>
+			</property>
+		</activation>
+		<properties>
+			<maven.test.skip>false</maven.test.skip>
+		</properties>
+		<dependencies>
+		   	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_storage_service_hdfs</artifactId>
+		  		<version>${aleph2.version}</version>
+			    <scope>test</scope>
+		  	</dependency>  	
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_search_index_service_elasticsearch</artifactId>
+		  		<version>${aleph2.version}</version>
+				<scope>test</scope>  		  		
+		  	</dependency>
+		  	 <dependency>
+		  		<groupId>junit</groupId>
+		  		<artifactId>junit</artifactId>
+		  		<version>4.12</version>
+		  		<scope>test</scope>
+		  	</dependency>
+		</dependencies>
+	</profile>	
+  </profiles>
 </project>
