@@ -278,47 +278,45 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		
 		// Handle the results
 		
-		//TODO (ALEPH-20): handle > 1 custom object ... options:
-		// 1) add a sort term that sorts by grouping key (is a bit tricky cos my sorts are flat i think) but may just work
-		///   then just maintain a mutable state in the cursor
-		// (need to make the length be the number of actual records)
-		// hmm i don't like any other options but could ofc do it all in memory		
+		final Stream<JsonNode> records_to_delete = Lambdas.get(() -> {
+			if (isCustom(_doc_schema.get().deduplication_policy()) || _doc_schema.get().custom_delete_unhandled_duplicates()) {
+				return Optionals.streamOf(cursor, true)
+							.collect(Collectors.groupingBy(ret_obj -> getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3())))
+							.entrySet()
+							.stream()
+							.<JsonNode>flatMap(kv -> {
+								final Optional<JsonNode> maybe_key = kv.getKey();
+								final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key));
+								
+								//DEBUG
+								//System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
+								
+								return matching_records.<Stream<JsonNode>>map(records -> 
+									handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
+															_timestamp_field.get(), records, kv.getValue(), maybe_key.get(), mutable_obj_map))
+															.orElse(Stream.empty());
+							})
+							;
+			}
+			else {
+				Optionals.streamOf(cursor, true)
+					.forEach(ret_obj -> {
+						final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
+						final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
 		
-		if (isCustom(_doc_schema.get().deduplication_policy()) || _doc_schema.get().custom_delete_unhandled_duplicates()) {
-			Optionals.streamOf(cursor, true)
-						.collect(Collectors.groupingBy(ret_obj -> getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3())))
-						.entrySet()
-						.stream()
-						.forEach(kv -> {
-							final Optional<JsonNode> maybe_key = kv.getKey();
-							final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key));
-							
-							//DEBUG
-							//System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
-							
-							matching_records.ifPresent(records -> 
-								handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
-														_timestamp_field.get(), records, kv.getValue(), maybe_key.get(), mutable_obj_map));
-							
-							//TODO: handle deletion results
-						})
-						;
-		}
-		else {
-			Optionals.streamOf(cursor, true)
-				.forEach(ret_obj -> {
-					final Optional<JsonNode> maybe_key = getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3());
-					final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key)); 
-	
-					//DEBUG
-					//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
-					
-					matching_records.ifPresent(records -> 
-						handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
-												_timestamp_field.get(), records, Arrays.asList(ret_obj), maybe_key.get(), mutable_obj_map));
-				});			
-		}
-					;
+						//DEBUG
+						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
+						
+						matching_records.ifPresent(records -> 
+							handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
+													_timestamp_field.get(), records, Arrays.asList(ret_obj), maybe_key.get(), mutable_obj_map));
+					});		
+				return Stream.<JsonNode>empty();
+			}
+		});
+		
+		//TODO: if have anything to delete then delete in bulk now
+		records_to_delete.count(); //(else just terminate the stream)
 		
 		if (Optional.ofNullable(_doc_schema.get().custom_finalize_all_objects()).orElse(false)) {
 			mutable_obj_map.entrySet().stream()
@@ -332,7 +330,6 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				.forEach(t -> _context.get().emitImmutableObject(t._1(), t._2().getJson(), Optional.of(t._3()), Optional.empty(), Optional.empty()))
 				;
 		}
-		//TODO: if have anything to delete then delete in bulk now
 	}
 
 	/** Tidiness util
