@@ -101,7 +101,7 @@ public class ModuleUtils {
 	private static Set<Class<?>> interfaceHasDefault = null;
 	private static Set<String> serviceDefaults = new HashSet<String>(Arrays.asList("SecurityService", "ColumnarService", 
 			"DataWarehouseService", "DocumentService", "GeospatialService", "GraphService", "ManagementDbService", "ManagementDbService",
-			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices"));
+			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices", "CoreLoggingService"));
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
 	private static Injector parent_injector = null;

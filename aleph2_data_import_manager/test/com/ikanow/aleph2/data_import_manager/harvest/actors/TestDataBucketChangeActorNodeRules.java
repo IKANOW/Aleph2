@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
 import org.junit.Test;
 
 import com.google.inject.Inject;
@@ -35,6 +36,7 @@ import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_import_manager.services.GeneralInformationService;
 import com.ikanow.aleph2.core.shared.utils.ClassloaderUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -63,6 +65,7 @@ public class TestDataBucketChangeActorNodeRules {
 	protected IServiceContext _service_context = null;
 	
 	protected DataImportActorContext _actor_context;
+	protected ILoggingService _logging_service;
 	
 	@SuppressWarnings("deprecation")
 	public IHarvestTechnologyModule setupDependencies(final Set<String> node_rules) throws Exception {
@@ -94,6 +97,8 @@ public class TestDataBucketChangeActorNodeRules {
 		// Have to do this in order for the underlying management db to live...		
 		_service_context.getCoreManagementDbService();
 		
+		_logging_service = _service_context.getService(ILoggingService.class, Optional.empty()).get();
+		
 		// Get the harvest tech module standalone ("in app" way is covered above)		
 		final Validation<BasicMessageBean, IHarvestTechnologyModule> ret_val = 
 				ClassloaderUtils.getFromCustomClasspath(IHarvestTechnologyModule.class, 
@@ -121,7 +126,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -136,7 +141,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -150,7 +155,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -164,7 +169,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -178,7 +183,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -192,7 +197,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -207,7 +212,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(), _actor_context, 
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -222,7 +227,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test1.get().getClass());
 		}
@@ -236,7 +241,7 @@ public class TestDataBucketChangeActorNodeRules {
 			
 			final CompletableFuture<BucketActionReplyMessage> test1 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, offer, "test1", _actor_context.getNewHarvestContext(),  _actor_context,
-					Validation.success(harvest_tech));		
+					Validation.success(harvest_tech), _logging_service.getLogger(bucket));		
 			
 			assertEquals(BucketActionReplyMessage.BucketActionIgnoredMessage.class, test1.get().getClass());
 		}

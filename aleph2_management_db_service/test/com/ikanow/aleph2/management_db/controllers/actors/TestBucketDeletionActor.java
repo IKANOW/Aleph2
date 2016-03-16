@@ -462,6 +462,10 @@ public class TestBucketDeletionActor {
 			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + path));
 		}
 		catch (Exception e) {} // (fine, dir prob dones't delete)
+		try {
+			FileUtils.deleteDirectory(new File(System.getProperty("java.io.tmpdir") + File.separator + "data" + File.separator + "aleph2_logging" + File.separator + "buckets" + File.separator + path));
+		}
+		catch (Exception e) {} // (fine, dir prob dones't delete)
 		
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
 										.with("full_name", path)

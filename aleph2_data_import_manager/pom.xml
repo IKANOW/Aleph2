@@ -217,7 +217,13 @@
 		  		<artifactId>aleph2_analytic_services_hadoop</artifactId>
 		  		<version>${aleph2.version}</version>
 				<scope>test</scope>
-		  	</dependency>  	
+		  	</dependency>  
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_logging_service</artifactId>
+		  		<version>${aleph2.version}</version>
+				<scope>test</scope>
+		  	</dependency> 	
 			<dependency>
 			    <groupId>jdk.tools</groupId>
 			    <artifactId>jdk.tools</artifactId>

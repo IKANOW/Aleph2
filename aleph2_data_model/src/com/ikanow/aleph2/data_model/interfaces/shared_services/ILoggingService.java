@@ -21,7 +21,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
  * @author Burch
  *
  */
-public interface ILoggingService {
+public interface ILoggingService extends IUnderlyingService {
 	
 	/**
 	 * Typical entry point for user generated log messages.  Returns a logger pointed to the passed in bucket.

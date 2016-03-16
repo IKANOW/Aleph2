@@ -78,6 +78,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsTechnologyService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
@@ -121,6 +122,7 @@ public class TestDataBucketChangeActor {
 	
 	protected DataImportActorContext _actor_context;
 	protected ManagementDbActorContext _db_actor_context;
+	protected ILoggingService _logging_service;
 	
 	@SuppressWarnings("deprecation")
 	@Before
@@ -152,6 +154,7 @@ public class TestDataBucketChangeActor {
 		_service_context.getCoreManagementDbService();
 		
 		_db_actor_context = ManagementDbActorContext.get();
+		_logging_service = _service_context.getService(ILoggingService.class, Optional.empty()).get();
 	}
 	
 	@Test
@@ -855,7 +858,7 @@ public class TestDataBucketChangeActor {
 					"test1", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test.get();
@@ -961,7 +964,7 @@ public class TestDataBucketChangeActor {
 					"test1", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.fail(error));
+					Validation.fail(error), _logging_service);
 	
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test1.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test1err = (BucketActionReplyMessage.BucketActionHandlerMessage) test1.get();
@@ -994,7 +997,7 @@ public class TestDataBucketChangeActor {
 					"test2", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null,
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 			
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test2.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test2.get();					
@@ -1009,7 +1012,7 @@ public class TestDataBucketChangeActor {
 					"test2", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null,
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 			
 			assertEquals(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, test2.get().getClass());
 			final BucketActionReplyMessage.BucketActionWillAcceptMessage test2_reply = (BucketActionReplyMessage.BucketActionWillAcceptMessage) test2.get();
@@ -1024,7 +1027,7 @@ public class TestDataBucketChangeActor {
 					"test3", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test3.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test3.get();
@@ -1046,7 +1049,7 @@ public class TestDataBucketChangeActor {
 					"test4", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test4.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test4.get();
@@ -1068,7 +1071,7 @@ public class TestDataBucketChangeActor {
 					"test4b", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test4b.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test4b.get();					
@@ -1087,7 +1090,7 @@ public class TestDataBucketChangeActor {
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 						//(send sibling to check does nothing with sibling if not batch)
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1123,7 +1126,7 @@ public class TestDataBucketChangeActor {
 					"test5a", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1146,7 +1149,7 @@ public class TestDataBucketChangeActor {
 					"test5b", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1170,7 +1173,7 @@ public class TestDataBucketChangeActor {
 					"test5c", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1200,7 +1203,7 @@ public class TestDataBucketChangeActor {
 					"test5d", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1240,7 +1243,7 @@ public class TestDataBucketChangeActor {
 					"test5e.1", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test5.get();					
@@ -1269,7 +1272,7 @@ public class TestDataBucketChangeActor {
 					"test5e.2", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1302,7 +1305,7 @@ public class TestDataBucketChangeActor {
 					"test5e.3", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test5.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test5.get();
@@ -1329,7 +1332,7 @@ public class TestDataBucketChangeActor {
 					"test7", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test7.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test7_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test7.get();		
@@ -1347,7 +1350,7 @@ public class TestDataBucketChangeActor {
 					"test8", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 									
 			assertEquals(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, test8.get().getClass());
 			final BucketActionReplyMessage.BucketActionCollectedRepliesMessage test_reply = (BucketActionReplyMessage.BucketActionCollectedRepliesMessage) test8.get();
@@ -1381,7 +1384,7 @@ public class TestDataBucketChangeActor {
 					"test8b", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 									
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test8.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test8.get();
@@ -1400,7 +1403,7 @@ public class TestDataBucketChangeActor {
 					"test9", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, test9.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage test9_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) test9.get();		
@@ -1421,7 +1424,7 @@ public class TestDataBucketChangeActor {
 					"testX", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, null, 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 									
 			assertEquals(BucketActionReplyMessage.BucketActionHandlerMessage.class, testX.get().getClass());
 			final BucketActionReplyMessage.BucketActionHandlerMessage testX_reply = (BucketActionReplyMessage.BucketActionHandlerMessage) testX.get();
@@ -1488,7 +1491,7 @@ public class TestDataBucketChangeActor {
 					"test1", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
@@ -1513,7 +1516,7 @@ public class TestDataBucketChangeActor {
 					"test2", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());
@@ -1538,7 +1541,7 @@ public class TestDataBucketChangeActor {
 					"test3", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			//(these come from sibling so not replying there with anything)
 			Thread.sleep(100L);
@@ -1563,7 +1566,7 @@ public class TestDataBucketChangeActor {
 					"test4", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			Thread.sleep(100L);
 			
@@ -1591,7 +1594,7 @@ public class TestDataBucketChangeActor {
 					"test5", 
 					_actor_context.getNewAnalyticsContext(), _actor_context, Tuples._2T(test_counter, test_counter_selection), 
 					Collections.emptyMap(), 
-					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())));
+					Validation.success(Tuples._2T(analytics_tech, analytics_tech.getClass().getClassLoader())), _logging_service);
 						
 			Thread.sleep(100L);
 			assertEquals(BucketActionReplyMessage.BucketActionNullReplyMessage.class, test.get().getClass());

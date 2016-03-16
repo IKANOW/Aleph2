@@ -68,11 +68,13 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService.IBatchSubservice;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -159,6 +161,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	protected transient ICoreDistributedServices _distributed_services; 	
 	protected transient IStorageService _storage_service;
 	protected transient ISecurityService _security_service;
+	protected transient ILoggingService _logging_service;
 	protected transient GlobalPropertiesBean _globals;
 
 	protected transient final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());	
@@ -180,6 +183,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		
 		_storage_service = service_context.getStorageService();
 		_security_service = service_context.getSecurityService();
+		_logging_service = service_context.getService(ILoggingService.class, Optional.empty()).get();
 		_globals = service_context.getGlobalProperties();
 	}
 
@@ -1023,22 +1027,30 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		// (ie will exception if not present)
 	}
 
-	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
-	 */
-	@Override
-	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
-			final BasicMessageBean message, final boolean roll_up_duplicates) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-	}
+//	/* (non-Javadoc)
+//	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
+//	 */
+//	@Override
+//	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
+//			final BasicMessageBean message, final boolean roll_up_duplicates) {
+//		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+//	}
+//
+//	/* (non-Javadoc)
+//	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+//	 */
+//	@Override
+//	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
+//			final BasicMessageBean message) {
+//		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+//	}
 
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLogger(java.util.Optional)
 	 */
 	@Override
-	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
-			final BasicMessageBean message) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+	public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
+		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
 	}
 
 	/* (non-Javadoc)

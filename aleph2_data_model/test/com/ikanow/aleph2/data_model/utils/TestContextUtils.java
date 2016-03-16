@@ -37,6 +37,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessCo
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -174,16 +175,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message, boolean roll_up_duplicates) {
-		}
-
-		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message) {
-		}
-
-		@Override
 		public String getTempOutputLocation(Optional<DataBucketBean> bucket) {
 			return null;
 		}
@@ -265,6 +256,15 @@ public class TestContextUtils {
 				Optional<DataBucketBean> bucket) {
 			return null;
 		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLogger(java.util.Optional)
+		 */
+		@Override
+		public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
+			// TODO Auto-generated method stub
+			return null;
+		}
 	}
 	public static class MockAnalyticsContext implements IAnalyticsContext {
 		
@@ -327,18 +327,6 @@ public class TestContextUtils {
 		public CompletableFuture<DataBucketStatusBean> getBucketStatus(
 				Optional<DataBucketBean> bucket) {
 			return null;
-		}
-
-		@Override
-		public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message, boolean roll_up_duplicates) {
-			
-		}
-
-		@Override
-		public void logStatusForThreadOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message) {
-			
 		}
 
 		@Override
@@ -443,6 +431,15 @@ public class TestContextUtils {
 		@Override
 		public CompletableFuture<?> flushBatchOutput(
 				Optional<DataBucketBean> bucket, AnalyticThreadJobBean job) {
+			return null;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLogger(java.util.Optional)
+		 */
+		@Override
+		public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
+			// TODO Auto-generated method stub
 			return null;
 		}
 	}

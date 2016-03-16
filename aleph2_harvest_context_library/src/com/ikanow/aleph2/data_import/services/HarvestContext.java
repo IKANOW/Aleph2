@@ -57,8 +57,10 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
@@ -118,6 +120,7 @@ public class HarvestContext implements IHarvestContext {
 	protected IManagementDbService _core_management_db;
 	protected ICoreDistributedServices _distributed_services; 	
 	protected IStorageService _storage_service;
+	protected ILoggingService _logging_service;
 	protected GlobalPropertiesBean _globals;
 	
 	protected Optional<IDataWriteService<String>> _crud_intermed_storage_service = Optional.empty();
@@ -140,6 +143,7 @@ public class HarvestContext implements IHarvestContext {
 		_core_management_db = service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 		_distributed_services = service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 		_storage_service = service_context.getStorageService();
+		_logging_service = service_context.getService(ILoggingService.class, Optional.empty()).get();
 		
 		//(currently don't need to initialize any other data services - unlike in analytics context which has various set up requirements)
 		
@@ -650,23 +654,31 @@ public class HarvestContext implements IHarvestContext {
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#logStatusForBucketOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
 	 */
-	@Override
-	public void logStatusForBucketOwner(
-			Optional<DataBucketBean> bucket,
-			BasicMessageBean message, boolean roll_up_duplicates) 
-	{
-		//TODO (ALEPH-19): Fill this in later
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-	}
-
+//	@Override
+//	public void logStatusForBucketOwner(
+//			Optional<DataBucketBean> bucket,
+//			BasicMessageBean message, boolean roll_up_duplicates) 
+//	{
+//		//TODO (ALEPH-19): Fill this in later
+//		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+//	}
+//
+//	/* (non-Javadoc)
+//	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#logStatusForBucketOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+//	 */
+//	@Override
+//	public void logStatusForBucketOwner(
+//			Optional<DataBucketBean> bucket,
+//			BasicMessageBean message) {
+//		logStatusForBucketOwner(bucket, message, true);		
+//	}
+	
 	/* (non-Javadoc)
-	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#logStatusForBucketOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLogger(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean)
 	 */
 	@Override
-	public void logStatusForBucketOwner(
-			Optional<DataBucketBean> bucket,
-			BasicMessageBean message) {
-		logStatusForBucketOwner(bucket, message, true);		
+	public IBucketLogger getLogger(final Optional<DataBucketBean> bucket) {
+		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
 	}
 
 	/* (non-Javadoc)

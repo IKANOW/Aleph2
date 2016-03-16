@@ -145,6 +145,12 @@
   		<version>${aleph2.version}</version>
 		<scope>${aleph2.scope}</scope>  		
   	</dependency>
+  	<dependency>
+  		<groupId>com.ikanow.aleph2</groupId>
+  		<artifactId>aleph2_logging_service</artifactId>
+  		<version>${aleph2.version}</version>
+		<scope>test</scope>  		
+  	</dependency>
 	<dependency>
 		<groupId>commons-io</groupId>
 		<artifactId>commons-io</artifactId>
