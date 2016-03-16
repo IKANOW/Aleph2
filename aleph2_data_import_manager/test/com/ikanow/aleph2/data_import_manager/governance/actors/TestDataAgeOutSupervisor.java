@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import com.google.common.collect.ImmutableMap;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,6 +51,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchInd
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.TemporalSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
@@ -123,32 +125,35 @@ public class TestDataAgeOutSupervisor {
 			@Override
 			public CompletableFuture<BasicMessageBean> handleAgeOutRequest(
 					DataBucketBean bucket) {
-				
-				final String test_name = bucket.full_name();
-				if (test_name.equals("/test/1")) {
-					final BasicMessageBean msg = ErrorUtils.buildErrorMessage("test1", "test1", "test1");
-					handled1 = true;
-					return CompletableFuture.completedFuture(msg);
-				}
-				else if (test_name.equals("/test/2")) {
-					final BasicMessageBean msg = ErrorUtils.buildSuccessMessage("test2", "test2", "test2");
-					handled2 = true;
-					return CompletableFuture.completedFuture(msg);
-				}
-				else if (test_name.equals("/test/3")) {
-					final BasicMessageBean msg = ErrorUtils.buildSuccessMessage("test3", "test3", "test3");
-					
-					final BasicMessageBean loggable = BeanTemplateUtils.clone(msg).with(BasicMessageBean::details,
-							ImmutableMap.builder().put("loggable", "anything").build()
-							).done();
-					
-					handled3 = true;
-					return CompletableFuture.completedFuture(loggable);
-				}
-				else { //if (test_name.equals("/test/4")) {
-					handled4 = true;
-					final BasicMessageBean msg = ErrorUtils.buildErrorMessage("test4", "test4", "test4");
-					return CompletableFuture.completedFuture(msg);
+				if ( !BucketUtils.isLoggingBucket(bucket) ) {					
+					final String test_name = bucket.full_name();
+					if (test_name.equals("/test/1")) {
+						final BasicMessageBean msg = ErrorUtils.buildErrorMessage("test1", "test1", "test1");
+						handled1 = true;
+						return CompletableFuture.completedFuture(msg);
+					}
+					else if (test_name.equals("/test/2")) {
+						final BasicMessageBean msg = ErrorUtils.buildSuccessMessage("test2", "test2", "test2");
+						handled2 = true;
+						return CompletableFuture.completedFuture(msg);
+					}
+					else if (test_name.equals("/test/3")) {
+						final BasicMessageBean msg = ErrorUtils.buildSuccessMessage("test3", "test3", "test3");
+						
+						final BasicMessageBean loggable = BeanTemplateUtils.clone(msg).with(BasicMessageBean::details,
+								ImmutableMap.builder().put("loggable", "anything").build()
+								).done();
+						
+						handled3 = true;
+						return CompletableFuture.completedFuture(loggable);
+					}
+					else { //if (test_name.equals("/test/4")) {
+						handled4 = true;
+						final BasicMessageBean msg = ErrorUtils.buildErrorMessage("test4", "test4", "test4");
+						return CompletableFuture.completedFuture(msg);
+					}
+				} else {
+					return CompletableFuture.completedFuture(ErrorUtils.buildErrorMessage("logging", "ignore", "ignore"));
 				}
 			}
 
@@ -272,10 +277,9 @@ public class TestDataAgeOutSupervisor {
 				Props.create(DataAgeOutSupervisor.class));		
 		
 		// Wait for it to run
-		Thread.sleep(3000L);
+		Thread.sleep(5000L);
 		
 		// Check results
-		
 		assertEquals(true, _test_results.handled1);
 		assertEquals(true, _test_results.handled2);
 		assertEquals(true, _test_results.handled3);

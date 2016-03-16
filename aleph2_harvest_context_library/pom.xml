@@ -184,6 +184,12 @@
 		  		<version>${aleph2.version}</version>
 			    <scope>test</scope>
 		  	</dependency>
+		  	<dependency>
+		  		<groupId>com.ikanow.aleph2</groupId>
+		  		<artifactId>aleph2_logging_service</artifactId>
+		  		<version>${aleph2.version}</version>
+				<scope>test</scope>  		
+		  	</dependency>
 		  	 <dependency>
 		  		<groupId>junit</groupId>
 		  		<artifactId>junit</artifactId>

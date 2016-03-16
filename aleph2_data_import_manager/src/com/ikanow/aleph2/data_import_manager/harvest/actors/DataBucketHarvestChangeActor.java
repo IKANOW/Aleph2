@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,6 +39,8 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
@@ -82,6 +85,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	protected final ActorSystem _actor_system;
 	protected final GlobalPropertiesBean _globals;
 	protected final IStorageService _fs;
+	protected final ILoggingService _logging_service;
 	
 	/** The actor constructor - at some point all these things should be inserted by injection
 	 */
@@ -92,6 +96,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		_management_db = _context.getServiceContext().getCoreManagementDbService().readOnlyVersion();
 		_globals = _context.getGlobalProperties();
 		_fs = _context.getServiceContext().getStorageService();
+		_logging_service = _context.getServiceContext().getService(ILoggingService.class, Optional.empty()).get();
 	}
 	
 	/** Handy utility for deciding when to log
@@ -127,6 +132,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
+		    			_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ""));
 	    				if (shouldLog(m))
 	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
@@ -163,7 +169,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 									h_context.setLibraryConfigs(module_configs);
 								});
 								
-								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, _context, err_or_tech_module);
+								final CompletableFuture<BucketActionReplyMessage> ret = talkToHarvester(m.bucket(), m, hostname, h_context, _context, err_or_tech_module, _logging_service.getLogger(m.bucket()));
 								return handleTechnologyErrors(m.bucket(), m, hostname, err_or_tech_module, ret);
 								
 	    					})
@@ -172,30 +178,43 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    						Patterns.match(reply).andAct()
 	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage,
 	    									// (always log these)
-	    									msg -> _logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
-	    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())))
+	    									msg -> {
+	    										_logging_service.getLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
+		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message()), ""));
+	    										_logger.warn(ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
+	    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message()));
+	    									})
 	    							.when(BucketActionHandlerMessage.class, msg -> {
-	    								if (shouldLog(m) || !msg.reply().success()) //(always error on failures)
+	    								if (shouldLog(m) || !msg.reply().success()){ //(always error on failures)
+	    									_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+		    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
+		    										msg.reply().success() ? "(no error)": msg.reply().message()), ""));
 	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
 	    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
 	    										msg.reply().success() ? "(no error)": msg.reply().message())
 	    									);
+	    								}
 	    							})
 	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> { 
+	    								_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
 	    								if (shouldLog(m))
 	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()));
 	    							})
 	    							.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> { 
+	    								_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
 	    								if (shouldLog(m))
 	    									_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()));
 	    							})
-	    							.otherwise(msg ->  //(always log)
-	    								_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
+	    							.otherwise(msg ->  { //(always log)
+	    								_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName()), ""));
+	    								_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName()));
+	    							});
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
 	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 	    						// Some information logging:
+	    						_logging_service.getLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name()), ""));
 	    						_logger.warn(ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name()));
 	    						
 			    				final BasicMessageBean error_bean = 
@@ -296,6 +315,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	 * @param tech_module
 	 * @param m
 	 * @param context 
+	 * @param _bucket_logger 
 	 * @return - a future containing the reply or an error (they're the same type at this point hence can discard the Validation finally)
 	 */
 	protected static CompletableFuture<BucketActionReplyMessage> talkToHarvester(
@@ -305,7 +325,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 			final IHarvestContext context,
 			final DataImportActorContext dim_context,
 			final Validation<BasicMessageBean, 
-			IHarvestTechnologyModule> err_or_tech_module // "pipeline element"
+			IHarvestTechnologyModule> err_or_tech_module, //pipeline element 
+			IBucketLogger _bucket_logger
 			)
 	{
 		final ClassLoader saved_current_classloader = Thread.currentThread().getContextClassLoader();		
@@ -316,6 +337,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 				,
 				// Normal
 				tech_module -> {
+					_bucket_logger.log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class, "Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ""));
     				if (shouldLog(m))
 						_logger.info("Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());					
 										Thread.currentThread().setContextClassLoader(tech_module.getClass().getClassLoader());

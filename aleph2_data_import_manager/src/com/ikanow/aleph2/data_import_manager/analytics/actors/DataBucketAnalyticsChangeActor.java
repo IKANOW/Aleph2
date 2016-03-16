@@ -86,8 +86,13 @@ import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 
 
+
+
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+
 
 
 
@@ -190,6 +195,8 @@ import akka.japi.pf.ReceiveBuilder;
 
 
 
+
+
 import com.codepoetics.protonpack.StreamUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -215,6 +222,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestTechnologyModule;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -270,6 +278,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	protected final ActorSystem _actor_system;
 	protected final GlobalPropertiesBean _globals;
 	protected final IStorageService _fs;
+	protected final ILoggingService _logging_service;
 	protected final Optional<IAnalyticsTechnologyService> _stream_analytics_tech;
 	protected final Optional<IAnalyticsTechnologyService> _batch_analytics_tech;
 	protected final SetOnce<AnalyticsContext> _stream_analytics_context = new SetOnce<>();
@@ -291,7 +300,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		_management_db = _context.getServiceContext().getCoreManagementDbService().readOnlyVersion();
 		_globals = _context.getGlobalProperties();
 		_fs = _context.getServiceContext().getStorageService();
-		
+		_logging_service = _context.getServiceContext().getService(ILoggingService.class, Optional.empty()).get();
 		_stream_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, STREAMING_ENRICHMENT_DEFAULT);
 		_batch_analytics_tech = _context.getServiceContext().getService(IAnalyticsTechnologyService.class, BATCH_ENRICHMENT_DEFAULT);
 		
@@ -321,6 +330,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    					_batch_analytics_context.trySet(_stream_analytics_context.get());
 	    				}	    				
 	    				
+	    				_logging_service.getLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ""));
 	    				if (shouldLog(m))
 	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 
@@ -341,6 +351,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    									return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _stream_analytics_context.get());
 	    								})
 	    								.orElseGet(() -> { // (shouldn't ever happen because shouldn't register itself on the listen bus unless available to handle requests)
+	    									_logging_service.getLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()), ""));
     				    					_logger.warn(ErrorUtils.get("Actor {0} received streaming enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
 	    									return false;
 	    								})
@@ -353,6 +364,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    	    							return tech.canRunOnThisNode(m.bucket(), Collections.emptyList(), _batch_analytics_context.get());		    					 
 	    	    						})
 	    								.orElseGet(() -> { // (shouldn't ever happen because shouldn't register itself on the listen bus unless available to handle requests)
+	    									_logging_service.getLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received batch enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()), ""));
     				    					_logger.warn(ErrorUtils.get("Actor {0} received batch enrichment offer for {1} but it is not configured on this node", this.self(), m.bucket().full_name()));
 	    	    							return false;
 	    	    						})
@@ -369,6 +381,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
 		    			
+		    			_logging_service.getLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ""));
 	    				if (shouldLog(m))
 	    					_logger.info(ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()));
 		    			
@@ -471,7 +484,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				
 				final CompletableFuture<BucketActionReplyMessage> ret = talkToAnalytics(final_bucket, message, hostname, a_context, _context, Tuples._2T(closing_self, _trigger_sibling), 
 																			err_or_map.toOption().orSome(Collections.emptyMap()), 
-																			err_or_tech_module);
+																			err_or_tech_module, _logging_service);
 				
 				return handleTechnologyErrors(final_bucket, message, hostname, err_or_tech_module, ret);
 				
@@ -483,28 +496,38 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					// Some information logging:
 					Patterns.match(reply).andAct()
 						.when(BucketActionReplyMessage.BucketActionCollectedRepliesMessage.class, msg -> {
+							_logging_service.getLogger(message.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
+									message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count()), ""));
 							if (shouldLog(message))
 								_logger.info(ErrorUtils.get("Standard aggregated reply to message={0} bucket={1} num_replies={2} num_failed={3}",
 										message.getClass().getSimpleName(), message.bucket().full_name(), msg.replies().size(), msg.replies().stream().filter(r -> !r.success()).count())
 								);
 						})
 						.when(BucketActionHandlerMessage.class, msg -> {
-							if (shouldLog(message) || !msg.reply().success()) //(always error on failures)
+							if (shouldLog(message) || !msg.reply().success()) { //(always error on failures)
+								_logging_service.getLogger(message.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+										message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success(), 
+										msg.reply().success() ? "(no error)": msg.reply().message()), ""));
 								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
 									message.getClass().getSimpleName(), message.bucket().full_name(), msg.reply().success(), 
 									msg.reply().success() ? "(no error)": msg.reply().message())
 								);
+							}
 						})
 						.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> {
+							_logging_service.getLogger(message.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()), ""));
 							if (shouldLog(message))
 								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()));	
 						})
 						.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> {
+							_logging_service.getLogger(message.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()), ""));							
 							if (shouldLog(message))
 								_logger.info(ErrorUtils.get("Standard reply to message={0}, bucket={1}", message.getClass().getSimpleName(), message.bucket().full_name()));	
 						})
 						.otherwise(msg -> {
 							//(always log errors)
+							_logging_service.getLogger(message.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", 
+									message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName()), ""));
 							_logger.info(ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", 
 									message.getClass().getSimpleName(), message.bucket().full_name(), msg.getClass().getSimpleName()));
 						});
@@ -525,6 +548,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			})
 			.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 				// Some information logging:
+				_logging_service.getLogger(message.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name()), ""));
 				_logger.warn(ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(message).toString(), ErrorUtils.getLongForm("{0}", e), message.bucket().full_name()));
 				
 				final BasicMessageBean error_bean = 
@@ -984,7 +1008,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 			final DataImportActorContext dim_context,
 			final Tuple2<ActorRef, ActorSelection> me_sibling,
 			final Map<String, Tuple2<SharedLibraryBean, String>> libs, // (if we're here then must be valid)
-			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module // "pipeline element"
+			final Validation<BasicMessageBean, Tuple2<IAnalyticsTechnologyModule, ClassLoader>> err_or_tech_module, // "pipeline element"
+			final ILoggingService _logging_service
 			)
 	{
 		final List<AnalyticThreadJobBean> jobs = bucket.analytic_thread().jobs();
@@ -1007,6 +1032,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 				techmodule_classloader -> {
 					final IAnalyticsTechnologyModule tech_module = techmodule_classloader._1();
 					
+					_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, "Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ""));
 					if (shouldLog(m))
 						_logger.info("Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name());
 										Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
@@ -1045,7 +1071,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 														.collect(Collectors.toList());
 							
 							//(no need to call the context.completeJobOutput since we're deleting the bucket)
-							sendOnTriggerEventMessages(job_results, msg.bucket(), __ -> Optional.of(JobMessageType.stopping), me_sibling);									
+							sendOnTriggerEventMessages(job_results, msg.bucket(), __ -> Optional.of(JobMessageType.stopping), me_sibling, _logging_service);									
 							
 							return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
 						})
@@ -1069,6 +1095,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									if (starting_thread) {
 										BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
+										_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, "Executing thread for bucket {0}, success={1} (error={2})",
+												bucket.full_name(), thread_start_result.success(),
+												thread_start_result.success() ? "none" : thread_start_result.message(), ""));
 										_logger.info("Executing thread for bucket {0}, success={1} (error={2})",
 												bucket.full_name(), thread_start_result.success(),
 												thread_start_result.success() ? "none" : thread_start_result.message());
@@ -1085,13 +1114,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									// Only send on trigger events for messages that started
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
 																j_r -> {
+																	_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																			j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																			), ""));
 																	_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
 																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
 																			j_r._2().success() ? "" : (" error = " + j_r._2().message())
 																			));																
 																	return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(); 
 																},
-																me_sibling);									
+																me_sibling, _logging_service);									
 											
 									return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
 								}
@@ -1118,6 +1151,9 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									if (starting_thread) {
 										BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
+										_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Executing thread for bucket {0}, success={1} (error={2})",
+												bucket.full_name(), thread_start_result.success(),
+												thread_start_result.success() ? "none" : thread_start_result.message()), ""));
 										_logger.info(ErrorUtils.get("Executing thread for bucket {0}, success={1} (error={2})",
 												bucket.full_name(), thread_start_result.success(),
 												thread_start_result.success() ? "none" : thread_start_result.message()));
@@ -1137,6 +1173,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
 																j_r -> {
 																	if (msg.is_enabled() && Optional.ofNullable(j_r._1().enabled()).orElse(true)) {
+																		_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																				bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																				j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																				), ""));
 																		_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
 																				bucket.full_name(), j_r._1().name(), j_r._2().success(),
 																				j_r._2().success() ? "" : (" error = " + j_r._2().message())
@@ -1144,6 +1184,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 																		return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();
 																	}
 																	else { // either stopping all, or have disabled certain jobs
+																		_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), j_r._1().name()), ""));
 																		_logger.info(ErrorUtils.get("Stopping bucket:job {0}:{1}", bucket.full_name(), j_r._1().name()));																
 																		if (msg.is_enabled()) { //(else stopping the entire bucket)
 																			context.completeJobOutput(msg.bucket(), j_r._1());																	
@@ -1151,7 +1192,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 																		return Optional.of(JobMessageType.stopping);
 																	}
 																},
-																me_sibling);									
+																me_sibling, _logging_service);									
 									
 									return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
 								}
@@ -1182,13 +1223,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									// Only send on trigger events for messages that started
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
 																j_r -> {
+																	_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Starting test bucket:job {0}:{1} success={2}{3}", 
+																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																			j_r._2().success() ? "" : (" error = " + j_r._2().message())																	
+																			), ""));
 																	_logger.info(ErrorUtils.get("Starting test bucket:job {0}:{1} success={2}{3}", 
 																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
 																			j_r._2().success() ? "" : (" error = " + j_r._2().message())																	
 																			));
 																	return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty(); 
 																},
-																me_sibling);																		
+																me_sibling, _logging_service);																		
 									
 									return combineResults(top_level_result, job_results.stream().map(jf -> jf._2()).collect(Collectors.toList()), source);
 								}
@@ -1223,10 +1268,14 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 													if (result) {
 														jr2.getManagementResults().thenAccept(mgmt_results -> {
 															List<String> errs = mgmt_results.stream().filter(res -> !res.success()).map(res -> res.message()).collect(Collectors.toList());
-															if (!errs.isEmpty()) 
+															if (!errs.isEmpty()) {
+																_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Completed bucket:job {0}:{1} had errors: {2}",
+																		bucket.full_name(), jr._1().name(), errs.stream().collect(Collectors.joining(";"))
+																		), ""));
 																_logger.info(ErrorUtils.get("Completed bucket:job {0}:{1} had errors: {2}",
 																	bucket.full_name(), jr._1().name(), errs.stream().collect(Collectors.joining(";"))
 																	));
+															}
 														});
 													}
 												});
@@ -1236,11 +1285,12 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									sendOnTriggerEventMessages(job_results, msg.bucket(), t2 -> {
 										if (t2._2()) {
+											_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Completed: bucket:job {0}:{1}", bucket.full_name(), t2._1().name()), ""));
 											_logger.info(ErrorUtils.get("Completed: bucket:job {0}:{1}", bucket.full_name(), t2._1().name()));
 											context.completeJobOutput(msg.bucket(), t2._1());
 										}
 										return t2._2() ? Optional.of(JobMessageType.stopping) : Optional.empty();
-									}, me_sibling);									
+									}, me_sibling, _logging_service);									
 									
 									// Send a status message (Which will be ignored)
 									
@@ -1257,9 +1307,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									//(ignore the reply apart from logging - failures will be identified by triggers)
 									top_level_result.thenAccept(reply -> {
 										if (!reply.success()) {
+											_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()), ""));
 											_logger.warn(ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
 										}
 										else {
+											_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Started analytic thread {0}", bucket.full_name()), ""));
 											_logger.info(ErrorUtils.get("Started analytic thread {0}", bucket.full_name()));											
 										}
 									}); 
@@ -1277,13 +1329,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									// Only send on trigger events for messages that started
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
 																j_r -> {
+																	_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
+																			j_r._2().success() ? "" : (" error = " + j_r._2().message())
+																		), ""));
 																	_logger.info(ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
 																				bucket.full_name(), j_r._1().name(), j_r._2().success(),
 																				j_r._2().success() ? "" : (" error = " + j_r._2().message())
 																			));
 																	return j_r._2().success() ? Optional.of(JobMessageType.starting) : Optional.empty();																		
 																}, 
-																me_sibling);									
+																me_sibling, _logging_service);									
 									
 									// Send a status message (Which will be ignored)
 									
@@ -1306,9 +1362,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									job_results.forEach(job_res -> {
 										job_res._2().thenAccept(res -> {
 											if (!res.success()) {
+												_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Error starting analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()), ""));
 												_logger.warn(ErrorUtils.get("Error starting analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()));
 											}
 											else {
+												_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Started analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ""));
 												_logger.info(ErrorUtils.get("Started analytic job {0}:{1}", bucket.full_name(), job_res._1().name()));											
 											}											
 										});
@@ -1331,9 +1389,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									//(ignore the reply apart from logging - failures will be identified by triggers)
 									top_level_result.thenAccept(reply -> {
 										if (!reply.success()) {
+											_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Error stopping analytic thread {0}: message={1}", bucket.full_name(), reply.message()), ""));
 											_logger.warn(ErrorUtils.get("Error stopping analytic thread {0}: message={1}", bucket.full_name(), reply.message()));
 										}
 										else {
+											_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Stopping analytic thread {0}", bucket.full_name()), ""));
 											_logger.info(ErrorUtils.get("Stopping analytic thread {0}", bucket.full_name()));											
 										}
 									}); 
@@ -1356,9 +1416,11 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									job_results.forEach(job_res -> {
 										job_res._2().thenAccept(res -> {
 											if (!res.success()) {
+												_logging_service.getLogger(bucket).log(Level.WARN, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Error stopping analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()), ""));
 												_logger.warn(ErrorUtils.get("Error stopping analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()));
 											}
 											else {
+												_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Stopping analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ""));
 												_logger.info(ErrorUtils.get("Stopping analytic job {0}:{1}", bucket.full_name(), job_res._1().name()));											
 											}											
 										});
@@ -1556,16 +1618,17 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	protected static <T> void sendOnTriggerEventMessages(final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<T>>> job_results,
 												final DataBucketBean bucket,
 												final Function<Tuple2<AnalyticThreadJobBean, T>, Optional<JobMessageType>> grouping_lambda,
-												final Tuple2<ActorRef, ActorSelection> me_sibling)
+												final Tuple2<ActorRef, ActorSelection> me_sibling,
+												final ILoggingService _logging_service)
 	{
 		if (null == me_sibling) return; // (just keeps bw compatibility with the various test cases we currently have - won't get encountered in practice)
 
 		// Perform the processing even if 1+ if the jobs fails - that job will just be flat wrapped out
 		CompletableFuture.allOf(job_results.stream().map(j_f -> j_f._2()).toArray(CompletableFuture<?>[]::new)).thenAccept(__ -> {			
-			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
+			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling, _logging_service);
 		})
 		.exceptionally(__ -> {			
-			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling);
+			sendOnTriggerEventMessages_phase2(job_results, bucket, grouping_lambda, me_sibling, _logging_service);
 			return null;
 		})
 		;
@@ -1580,7 +1643,8 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	protected static <T> void sendOnTriggerEventMessages_phase2(final List<Tuple2<AnalyticThreadJobBean, CompletableFuture<T>>> job_results,
 			final DataBucketBean bucket,
 			final Function<Tuple2<AnalyticThreadJobBean, T>, Optional<JobMessageType>> grouping_lambda,
-			final Tuple2<ActorRef, ActorSelection> me_sibling)
+			final Tuple2<ActorRef, ActorSelection> me_sibling,
+			final ILoggingService _logging_service)
 	{
 		final Map<Optional<JobMessageType>, List<Tuple2<AnalyticThreadJobBean, T>>> completed_jobs = 
 				job_results.stream()
@@ -1593,7 +1657,10 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 		completed_jobs.entrySet().stream()
 					.filter(kv -> kv.getKey().isPresent())
 					.forEach(kv -> {
-						if (!kv.getValue().isEmpty()) {								
+						if (!kv.getValue().isEmpty()) {		
+							_logging_service.getLogger(bucket).log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketAnalyticsChangeActor.class, ErrorUtils.get("Forwarding bucket information to {0}: bucket {1} event {2}",
+									me_sibling._2(), bucket.full_name(), kv.getKey().get()
+									), ""));
 							_logger.info(ErrorUtils.get("Forwarding bucket information to {0}: bucket {1} event {2}",
 									me_sibling._2(), bucket.full_name(), kv.getKey().get()
 									));

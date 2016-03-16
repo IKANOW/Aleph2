@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -239,21 +240,28 @@ public interface IAnalyticsContext extends IUnderlyingService {
 	 */
 	CompletableFuture<DataBucketStatusBean> getBucketStatus(final Optional<DataBucketBean> bucket);
 	
-	/** (AnalyticsTechnology/Analytics Module) Calling this function logs a status message into he AnalyticThreadStatusBean (within the DataBucketStatusBean) that is visible to the user
-	 * Note that the behavior of the context if called on another bucket than the one
-	 * currently being processed is undefined
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param message The message to log
-	 * @param roll_up_duplicates if set (default: true) then identical messages are not logged separately 
-	 */
-	void logStatusForThreadOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message, final boolean roll_up_duplicates);
-	
-	/** (AnalyticsTechnology/Analytics Module) Calling this function logs a status message into he AnalyticThreadStatusBean (within the DataBucketStatusBean) that is visible to the user
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param The message to log (duplicates are "rolled up")
-	 */
-	void logStatusForThreadOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message);
+//	/** (AnalyticsTechnology/Analytics Module) Calling this function logs a status message into he AnalyticThreadStatusBean (within the DataBucketStatusBean) that is visible to the user
+//	 * Note that the behavior of the context if called on another bucket than the one
+//	 * currently being processed is undefined
+//	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+//	 * @param message The message to log
+//	 * @param roll_up_duplicates if set (default: true) then identical messages are not logged separately 
+//	 */
+//	void logStatusForThreadOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message, final boolean roll_up_duplicates);
+//	
+//	/** (AnalyticsTechnology/Analytics Module) Calling this function logs a status message into he AnalyticThreadStatusBean (within the DataBucketStatusBean) that is visible to the user
+//	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
+//	 * @param The message to log (duplicates are "rolled up")
+//	 */
+//	void logStatusForThreadOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message);
 		
+	/**
+	 * (AnalyticsTechnology/Analytics Module) Returns a logger configured for the given DataBucketBean.
+	 * @param bucket 
+	 * @return
+	 */
+	IBucketLogger getLogger(final Optional<DataBucketBean> bucket);
+	
 	/** (AnalyticsTechnology/Analytics Module) Requests that the analytic thread be suspended - in addition to changing the analytic thread state, this will result in a call to IAnalyticsTechnologyModule.onSuspend
 	 * @param bucket - An optional bucket containing the analytic thread - if there is no ambiguity in the analytic thread then Optional.empty() can be passed (Note that the behavior of the context if called on another analytic thread than the one currently being processed is undefined) 
 	 */
