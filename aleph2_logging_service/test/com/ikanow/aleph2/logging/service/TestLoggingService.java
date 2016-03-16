@@ -112,7 +112,7 @@ public class TestLoggingService {
 	 * @throws ExecutionException
 	 */
 	@Test
-	public void testLogBucket() throws InterruptedException, ExecutionException {
+	public void test_logBucket() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test1";
 		final long num_messages_to_log = 50;
 		final DataBucketBean test_bucket = getTestBucket("test1", Level.ALL); 
@@ -149,7 +149,7 @@ public class TestLoggingService {
 	 * @throws ExecutionException
 	 */
 	@Test
-	public void testLogFilter() throws InterruptedException, ExecutionException {
+	public void test_logFilter() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test2";
 		final long num_messages_to_log_each_type = 5;
 		final List<Level> levels = Arrays.asList(Level.DEBUG, Level.INFO, Level.ERROR);
@@ -188,7 +188,7 @@ public class TestLoggingService {
 	 * @throws ExecutionException
 	 */
 	@Test
-	public void testLogEmptyManagement() throws InterruptedException, ExecutionException {
+	public void test_logEmptyManagement() throws InterruptedException, ExecutionException {
 		//if no logging schema is supplied, falls back to defaults in config file (if any)
 		//config file is set to:
 		//SYSTEM: DEBUG
