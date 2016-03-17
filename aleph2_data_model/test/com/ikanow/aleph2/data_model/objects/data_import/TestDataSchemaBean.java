@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.CustomPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationTiming;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
 public class TestDataSchemaBean {
 
@@ -119,7 +120,7 @@ public class TestDataSchemaBean {
 		assertEquals("Document bean deduplication_contexts", document_bean.deduplication_contexts(), Arrays.asList("deduplication_contexts"));
 		assertEquals("Doc bean dedup custom config", document_bean.custom_deduplication_configs(), Arrays.asList());
 		assertEquals("Doc bean dedup custom finalze", document_bean.custom_finalize_all_objects(), true);
-		assertEquals("Doc bean dedup custom finalze", document_bean.custom_delete_unhandled_duplicates(), false);
+		assertEquals("Doc bean dedup custom finalze", document_bean.delete_unhandled_duplicates(), false);
 		assertEquals("Document bean technology_override_schema", document_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// WriteSettings (shared across schemas - currenly only search_index_bean though)
@@ -138,11 +139,15 @@ public class TestDataSchemaBean {
 		DataSchemaBean.SearchIndexSchemaBean empty_search_index_bean = new DataSchemaBean.SearchIndexSchemaBean();
 		assertEquals("Empty Search Index Bean", empty_search_index_bean.service_name(), null);		
 		
+		final DataSchemaBean.ColumnarSchemaBean test = BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).done().get();
 		DataSchemaBean.SearchIndexSchemaBean search_index_bean =
 				new DataSchemaBean.SearchIndexSchemaBean(
 						true,
 						write_settings, 100L,
 						"service_name",
+						false,
+						ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("_default_", 
+								test).build(),
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 
@@ -150,7 +155,13 @@ public class TestDataSchemaBean {
 		assertEquals("Search Index bean service_name", search_index_bean.service_name(), "service_name");
 		assertEquals("Search Index bean concurrency", 1000, (int)search_index_bean.target_write_settings().target_write_concurrency());
 		assertEquals("Search Index bean max size", 100, (long)search_index_bean.target_index_size_mb());
-		assertEquals("Search Index bean technology_override_schema", search_index_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
+		assertEquals("Search Index tokenization disabled", search_index_bean.tokenize_by_default(), false);
+		assertEquals("Search Index bean technology_override_schema", search_index_bean.tokenization_override(), 
+				ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("_default_", 
+						test
+						).build());
+		assertEquals("Search Index bean technology_override_schema", search_index_bean.technology_override_schema(), 
+				ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// Columnar Bean:
 		

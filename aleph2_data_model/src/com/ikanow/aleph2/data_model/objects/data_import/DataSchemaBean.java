@@ -307,7 +307,7 @@ public class DataSchemaBean implements Serializable {
 				final List<String> deduplication_contexts,
 				final List<EnrichmentControlMetadataBean> custom_deduplication_configs,
 				final Boolean custom_finalize_all_objects,
-				final Boolean custom_delete_unhandled_duplicates,
+				final Boolean delete_unhandled_duplicates,
 				final Map<String, Object> technology_override_schema)
 		{
 			this.enabled = enabled;
@@ -319,7 +319,7 @@ public class DataSchemaBean implements Serializable {
 			this.deduplication_contexts = deduplication_contexts;
 			this.custom_deduplication_configs = custom_deduplication_configs;
 			this.custom_finalize_all_objects = custom_finalize_all_objects;
-			this.custom_delete_unhandled_duplicates = custom_delete_unhandled_duplicates;
+			this.delete_unhandled_duplicates = delete_unhandled_duplicates;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -387,8 +387,8 @@ public class DataSchemaBean implements Serializable {
 		}
 		/** If true (default: false unless custom_policy:"very_strict") then any DB-side duplicates that aren't emitted from the custom enrichment stage are deleted
 		 */
-		public Boolean custom_delete_unhandled_duplicates() {
-			return custom_delete_unhandled_duplicates;
+		public Boolean delete_unhandled_duplicates() {
+			return delete_unhandled_duplicates;
 		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
@@ -406,7 +406,7 @@ public class DataSchemaBean implements Serializable {
 		private List<String> deduplication_contexts;
 		private List<EnrichmentControlMetadataBean> custom_deduplication_configs;
 		private Boolean custom_finalize_all_objects;
-		private Boolean custom_delete_unhandled_duplicates;
+		private Boolean delete_unhandled_duplicates;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service
@@ -424,12 +424,16 @@ public class DataSchemaBean implements Serializable {
 				final WriteSettings target_write_settings,
 				final Long target_index_size_mb,
 				final String service_name,				
+				Boolean tokenize_by_default,
+				Map<String, ColumnarSchemaBean> tokenization_override,
 				final Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
 			this.target_write_settings = target_write_settings;
 			this.target_index_size_mb = target_index_size_mb;
 			this.service_name = service_name;
+			this.tokenize_by_default = tokenize_by_default;
+			this.tokenization_override = tokenization_override;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the search index service is used for this bucket
@@ -459,6 +463,23 @@ public class DataSchemaBean implements Serializable {
 		public String service_name() {
 			return service_name;
 		}
+		
+		/** Search indexes normally support tokenization (eg "the word" -> "the","word"), by default this is enabled
+		 *  use this field to override that, ie set to false to treat each field like a single token/value.
+		 * @return the tokenize_by_default
+		 */
+		public Boolean tokenize_by_default() {
+			return tokenize_by_default;
+		}
+		
+		/** Allows field specific overrides to tokenization - the key is the system (technology specific) name of the tokenization sequence, or 
+		 * "_default" (whatever the system default is), or "none" (to turn tokenization off) 
+		 * @return the technology_override_schema
+		 */
+		public Map<String, ColumnarSchemaBean> tokenization_override() {
+			return tokenization_override;
+		}
+		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -470,6 +491,8 @@ public class DataSchemaBean implements Serializable {
 		private WriteSettings target_write_settings;
 		private Long target_index_size_mb;
 		private String service_name;
+		private Boolean tokenize_by_default;
+		private Map<String, ColumnarSchemaBean> tokenization_override;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Columnar Service

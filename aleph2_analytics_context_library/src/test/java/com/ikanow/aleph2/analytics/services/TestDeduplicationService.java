@@ -525,7 +525,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -555,7 +555,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -586,7 +586,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -617,7 +617,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -648,7 +648,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -679,7 +679,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -710,7 +710,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			
@@ -741,7 +741,7 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
-						.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config);
 			

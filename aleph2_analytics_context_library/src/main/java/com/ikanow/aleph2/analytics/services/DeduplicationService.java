@@ -135,8 +135,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					.with(DocumentSchemaBean::deduplication_policy, Optional.ofNullable(doc_schema.deduplication_policy()).orElse(DeduplicationPolicy.leave))
 					.with(DocumentSchemaBean::custom_policy, Optional.ofNullable(doc_schema.custom_policy()).orElse(CustomPolicy.strict))
 					.with(DocumentSchemaBean::custom_finalize_all_objects, Optional.ofNullable(doc_schema.custom_finalize_all_objects()).orElse(false))
-					.with(DocumentSchemaBean::custom_delete_unhandled_duplicates, 
-							Optional.ofNullable(doc_schema.custom_delete_unhandled_duplicates()).orElse(
+					.with(DocumentSchemaBean::delete_unhandled_duplicates, 
+							Optional.ofNullable(doc_schema.delete_unhandled_duplicates()).orElse(
 									CustomPolicy.very_strict == Optional.ofNullable(doc_schema.custom_policy()).orElse(CustomPolicy.strict)))
 				.done()
 				);
@@ -279,7 +279,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		// Handle the results
 		
 		final Stream<JsonNode> records_to_delete = Lambdas.get(() -> {
-			if (isCustom(_doc_schema.get().deduplication_policy()) || _doc_schema.get().custom_delete_unhandled_duplicates()) {
+			if (isCustom(_doc_schema.get().deduplication_policy()) || _doc_schema.get().delete_unhandled_duplicates()) {
 				return Optionals.streamOf(cursor, true)
 							.collect(Collectors.groupingBy(ret_obj -> getKeyFieldsAgain(ret_obj, fieldinfo_dedupquery_keyfields._3())))
 							.entrySet()
@@ -371,7 +371,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final JsonNode old_record = old_records.stream().findFirst().get();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
 						last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
-						return config.custom_delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
+						return config.delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 					}
 					else {
 						mutable_obj_map.remove(key); //(drop new record)				
@@ -383,7 +383,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					// Just update the new record's "_id" field
 					final JsonNode old_record = old_records.stream().findFirst().get();
 					last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
-					return config.custom_delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
+					return config.delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
