@@ -28,13 +28,15 @@ public class LoggingServiceConfigBean {
 	private String default_time_field;
 	private Level default_system_log_level;
 	private Level default_user_log_level;
+	private boolean output_to_log4j;
 	
 	protected LoggingServiceConfigBean() {}
 	
-	public LoggingServiceConfigBean(final String default_time_field, final Level default_system_log_level, final Level default_user_log_level) {
+	public LoggingServiceConfigBean(final String default_time_field, final Level default_system_log_level, final Level default_user_log_level, final boolean output_to_log4j) {
 		this.default_time_field = default_time_field;
 		this.default_system_log_level = default_system_log_level;
 		this.default_user_log_level = default_user_log_level;
+		this.output_to_log4j = output_to_log4j;
 	}
 	
 	/**
@@ -52,4 +54,9 @@ public class LoggingServiceConfigBean {
 	 * @return
 	 */
 	public Level default_user_log_level() { return this.default_user_log_level; }
+	/**
+	 * If true, sends an additional message to log4j, false does nothing.
+	 * @return
+	 */
+	public boolean output_to_log4j() { return this.output_to_log4j; }
 }
