@@ -1581,7 +1581,10 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				});
 			});
 		}
-		;							
+		;						
+		if (!_multi_writer.isSet()) {
+			setupOutputs(bucket, job);
+		}
 		_multi_writer.optional().ifPresent(w -> w.getDataServices().forEach(s -> s.getDataService().ifPresent(ss -> switchPrimary.accept(ss))));
 	}
 	
