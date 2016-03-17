@@ -372,6 +372,17 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 		}
 		DataBucketBean validated_test_bucket = validation._1();
 		
+		// Create full set of file paths for the test bucket
+		try {
+			DataBucketCrudService.createFilePaths(test_bucket, this._service_context.getStorageService());
+		}
+		catch (Exception e) {
+			//return error
+			_logger.error("Error creating file paths", e);
+			return FutureUtils.createManagementFuture(CompletableFuture.completedFuture(false), 
+					CompletableFuture.completedFuture(Arrays.asList(ErrorUtils.buildErrorMessage("CoreManagementDbService", "testBucket", "Error launching job: {0}", e.getMessage()))));
+		}
+				
 		// - is there any test data already present for this user, delete if so (?)
 		final CompletableFuture<BasicMessageBean> base_future = Lambdas.get(() -> {
 			if ( Optional.ofNullable(test_spec.overwrite_existing_data()).orElse(true) ) {

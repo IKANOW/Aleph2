@@ -744,10 +744,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						});
 					}
 					else { // storage service ... 3 options :raw, :json, :processed (defaults to :processed)
-						if (null != i.filter()) {
-							//(actually not sure if i ever plan to implement this?)
-							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
-						}								
 						if (Optional.of(true).equals(Optional.ofNullable(i.config()).map(cfg -> cfg.high_granularity_filter()))) {
 							throw new RuntimeException(ErrorUtils.get(ErrorUtils.HIGH_GRANULARITY_FILTER_NOT_SUPPORTED, my_bucket.full_name(), job.name(), Optional.ofNullable(i.name()).orElse("(no name)")));
 						}
