@@ -142,6 +142,7 @@ public class LoggingService implements ILoggingService {
 	private class BucketLogger implements IBucketLogger {		
 		final MultiDataService logging_writable;
 		final boolean isSystem;
+		final boolean output_to_log4j;
 		final DataBucketBean bucket;
 		final String date_field;
 		final Level default_log_level;  //holds the default log level for quick matching
@@ -151,6 +152,7 @@ public class LoggingService implements ILoggingService {
 			this.bucket = bucket;
 			this.logging_writable = logging_writable;
 			this.isSystem = isSystem;
+			this.output_to_log4j = properties.output_to_log4j();
 			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket);
 			this.date_field = Optional.ofNullable(properties.default_time_field()).orElse("date");
 			this.default_log_level = isSystem ? Optional.ofNullable(properties.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties.default_user_log_level()).orElse(Level.OFF);			
@@ -165,8 +167,9 @@ public class LoggingService implements ILoggingService {
 				//create log message to output:				
 				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);
 				
-				//send message to output log file
-				_logger.debug("LOGGING MSG: " + logObject.toString());		
+				//send message to output log file (should we do this here (filtered) or always output and let log4j settings handle it (waste time building json object)?)
+				if ( output_to_log4j )
+					_logger.log(level, logObject.toString());
 				return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));
 			} else {
 				return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);
