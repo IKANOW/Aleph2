@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.services;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -95,7 +96,8 @@ public class TestCoreManagementDbModule {
 		_mock_service_context = new MockServiceContext();		
 		_crud_factory = new MockMongoDbCrudServiceFactory();
 		_underlying_db_service = new MockMongoDbManagementDbService(_crud_factory, new MongoDbManagementDbConfigBean(false), null, null, null, null);
-		_mock_service_context.addGlobals(new GlobalPropertiesBean(null, null, null, null));
+		final String tmpdir = System.getProperty("java.io.tmpdir") + File.separator;
+		_mock_service_context.addGlobals(new GlobalPropertiesBean(tmpdir, tmpdir, tmpdir, tmpdir));
 		_mock_storage_service = new MockHdfsStorageService(_mock_service_context.getGlobalProperties());
 		_mock_service_context.addService(IStorageService.class, Optional.empty(), _mock_storage_service);		
 		_mock_service_context.addService(IManagementDbService.class, Optional.empty(), _underlying_db_service);
@@ -116,7 +118,7 @@ public class TestCoreManagementDbModule {
 		_bucket_status_crud.initialize();		
 	}
 	
-protected static String _check_actor_called = null;
+	protected static String _check_actor_called = null;
 	
 	// This one always accepts, and returns a message
 	public static class TestActor_Accepter extends UntypedActor {
