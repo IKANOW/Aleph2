@@ -728,10 +728,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				.filter(i -> "batch".equalsIgnoreCase(i.data_service()) || "storage_service".equalsIgnoreCase(i.data_service()))
 				.map(Lambdas.wrap_u(i -> {					
 					if ("batch".equalsIgnoreCase(i.data_service())) {
-						if (null != i.filter()) {
-							//(actually not sure if i ever plan to implement this?)
-							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
-						}								
 						final String[] bucket_subchannel = Lambdas.<String, String[]> wrap_u(s -> {
 							
 							// 1) If the resource starts with "/" then must point to an intermediate batch result of an external bucket
@@ -791,6 +787,10 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						});
 					}
 					else { // storage service ... 3 options :raw, :json, :processed (defaults to :processed)
+						if (null != i.filter()) {
+							//(actually not sure if i ever plan to implement this?)
+							throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED) + ": input.filter");
+						}								
 						if (Optional.of(true).equals(Optional.ofNullable(i.config()).map(cfg -> cfg.high_granularity_filter()))) {
 							throw new RuntimeException(ErrorUtils.get(ErrorUtils.HIGH_GRANULARITY_FILTER_NOT_SUPPORTED, my_bucket.full_name(), job.name(), Optional.ofNullable(i.name()).orElse("(no name)")));
 						}
