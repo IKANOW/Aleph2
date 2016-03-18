@@ -473,7 +473,7 @@ public class DataSchemaBean implements Serializable {
 		}
 		
 		/** Allows field specific overrides to tokenization - the key is the system (technology specific) name of the tokenization sequence, or 
-		 * "_default" (whatever the system default is), or "none" (to turn tokenization off) 
+		 * "_default_" (whatever the system default is), or "none" (to turn tokenization off) 
 		 * @return the technology_override_schema
 		 */
 		public Map<String, ColumnarSchemaBean> tokenization_override() {

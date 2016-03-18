@@ -140,6 +140,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 												.stream()
 												.filter(hcfg -> null != hcfg.module_name_or_id())
 												.map(hcfg -> Tuples._2T(hcfg.module_name_or_id(), map.get(hcfg.module_name_or_id())))
+												.filter(t2 -> null != t2._2())
 												.collect(Collectors.toMap(t2 -> t2._1(), t2 -> t2._2()._1()));
 									
 									h_context.setLibraryConfigs(module_configs);
