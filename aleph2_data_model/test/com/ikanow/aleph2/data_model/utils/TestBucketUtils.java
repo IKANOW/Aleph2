@@ -96,7 +96,7 @@ public class TestBucketUtils {
 					.done().get())	
 				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
 					.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
-						.with(LoggingSchemaBean::log_level, Level.DEBUG)
+						.with(LoggingSchemaBean::log_level, Level.DEBUG.toString())
 						.done().get())
 					.with(ManagementSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
 						.with(SearchIndexSchemaBean::target_index_size_mb, 50L) //set some arbitrary field so we can check its changed	
