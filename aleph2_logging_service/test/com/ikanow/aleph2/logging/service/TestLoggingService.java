@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
@@ -33,6 +34,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
@@ -104,6 +106,41 @@ public class TestLoggingService {
 	@After
 	public void tearDown() throws Exception {
 	}
+	
+	@Test
+	public void test_validateSchema() {
+		final Map<String, String> override_good_single = ImmutableMap.of("a",Level.ALL.toString());
+		final Map<String, String> override_bad_single = ImmutableMap.of("a","fork");
+		final Map<String, String> override_bad_with_good = ImmutableMap.of("a",Level.ALL.toString(), "b", "fork");
+		
+		//test with good log_level
+		final DataBucketBean test_bucket1 = getTestBucket("test", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		assertTrue(logging_service.validateSchema(test_bucket1.management_schema().logging_schema(), test_bucket1)._2.isEmpty());
+		
+		//test with good log_level_override		
+		final DataBucketBean test_bucket2 = getTestBucket("test", Optional.empty(), Optional.of(override_good_single)); 
+		assertTrue(logging_service.validateSchema(test_bucket2.management_schema().logging_schema(), test_bucket2)._2.isEmpty());
+		
+		//test with good log_level and log_level override
+		final DataBucketBean test_bucket3 = getTestBucket("test", Optional.of(Level.ALL.toString()), Optional.of(override_good_single)); 
+		assertTrue(logging_service.validateSchema(test_bucket3.management_schema().logging_schema(), test_bucket3)._2.isEmpty());
+		
+		//test with bad log_level
+		final DataBucketBean test_bucket4 = getTestBucket("test", Optional.of("fork"), Optional.empty()); 
+		assertFalse(logging_service.validateSchema(test_bucket4.management_schema().logging_schema(), test_bucket4)._2.isEmpty());
+		
+		//test with bad log_level_override
+		final DataBucketBean test_bucket5 = getTestBucket("test", Optional.empty(), Optional.of(override_bad_single)); 
+		assertFalse(logging_service.validateSchema(test_bucket5.management_schema().logging_schema(), test_bucket5)._2.isEmpty());
+		
+		//test with good + bad log_level override
+		final DataBucketBean test_bucket6 = getTestBucket("test", Optional.empty(), Optional.of(override_bad_with_good)); 
+		assertFalse(logging_service.validateSchema(test_bucket6.management_schema().logging_schema(), test_bucket6)._2.isEmpty());
+		
+		//test with bad log level + bad log_level override
+		final DataBucketBean test_bucket7 = getTestBucket("test", Optional.of("fork"), Optional.of(override_bad_single)); 
+		assertFalse(logging_service.validateSchema(test_bucket7.management_schema().logging_schema(), test_bucket7)._2.isEmpty());
+	}
 
 	/**
 	 * Tests writing messages as user, system, external and checks all the messages were stored.
@@ -115,7 +152,7 @@ public class TestLoggingService {
 	public void test_logBucket() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test1";
 		final long num_messages_to_log = 50;
-		final DataBucketBean test_bucket = getTestBucket("test1", Level.ALL); 
+		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
@@ -153,7 +190,7 @@ public class TestLoggingService {
 		final String subsystem_name = "logging_test2";
 		final long num_messages_to_log_each_type = 5;
 		final List<Level> levels = Arrays.asList(Level.DEBUG, Level.INFO, Level.ERROR);
-		final DataBucketBean test_bucket = getTestBucket("test2", Level.ERROR); 
+		final DataBucketBean test_bucket = getTestBucket("test2", Optional.of(Level.ERROR.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
@@ -251,7 +288,28 @@ public class TestLoggingService {
 	 * @param min_log_level 
 	 * @return
 	 */
-	private DataBucketBean getTestBucket(final String name, Level min_log_level) {
+//	private DataBucketBean getTestBucket(final String name, Level min_log_level) {
+//		return BeanTemplateUtils.build(DataBucketBean.class)
+//				.with(DataBucketBean::full_name, "/test/logtest/" + name + "/")
+//				.with(DataBucketBean::data_schema, BeanTemplateUtils.build(DataSchemaBean.class)
+//						.with(DataSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
+//								.with(SearchIndexSchemaBean::enabled, true)
+//								.done().get())
+//						.done().get())	
+//				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
+//						.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
+//								.with(LoggingSchemaBean::log_level, min_log_level.toString())
+//								.done().get())
+//						.done().get())
+//				.done().get();
+//	}
+	
+	/**
+	 * @param name
+	 * @param override_good_single
+	 * @return
+	 */
+	private DataBucketBean getTestBucket(final String name, final Optional<String> min_log_level, final Optional<Map<String, String>> overrides) {
 		return BeanTemplateUtils.build(DataBucketBean.class)
 				.with(DataBucketBean::full_name, "/test/logtest/" + name + "/")
 				.with(DataBucketBean::data_schema, BeanTemplateUtils.build(DataSchemaBean.class)
@@ -261,7 +319,8 @@ public class TestLoggingService {
 						.done().get())	
 				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
 						.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
-								.with(LoggingSchemaBean::log_level, min_log_level)
+								.with(LoggingSchemaBean::log_level, min_log_level.orElse(Level.OFF.toString()))
+								.with(LoggingSchemaBean::log_level_overrides, overrides.orElse(ImmutableMap.of()))
 								.done().get())
 						.done().get())
 				.done().get();

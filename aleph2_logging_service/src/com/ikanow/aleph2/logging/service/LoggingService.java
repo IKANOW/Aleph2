@@ -17,6 +17,8 @@ package com.ikanow.aleph2.logging.service;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -25,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
@@ -37,8 +41,11 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
@@ -90,6 +97,25 @@ public class LoggingService implements ILoggingService {
 	public IBucketLogger getExternalLogger(final String subsystem) {
 		final DataBucketBean bucket = LoggingUtils.getExternalBucket(subsystem, Optional.ofNullable(properties.default_system_log_level()).orElse(Level.OFF));		
 		return getBucketLogger(bucket, getWritable(bucket), true);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService#validateSchema(com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean)
+	 */
+	@Override
+	public Tuple2<String, List<BasicMessageBean>> validateSchema(final LoggingSchemaBean schema, final DataBucketBean bucket) {
+		final LinkedList<BasicMessageBean> errors = new LinkedList<>();
+		
+		//check the fields are actually log4j levels and kick back any errors
+		if ( schema.log_level() != null )
+			try { Level.valueOf(schema.log_level()); } catch ( Exception ex ) { errors.add(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "log_level '" + schema.log_level() + " is not a log4j.Levels enum value", ex.getMessage())); }
+		if ( schema.log_level_overrides() != null ) {
+			schema.log_level_overrides().forEach((k,v) -> { try { Level.valueOf(v); } catch ( Exception ex ) { errors.add(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "log_level_override ["+k+"] '" + v + " is not a log4j.Levels enum value", ex.getMessage())); } });
+		}
+		return errors.isEmpty()
+				? Tuples._2T(BucketUtils.getUniqueSignature(BucketUtils.convertDataBucketBeanToLogging(bucket).full_name(), Optional.empty()),  Collections.emptyList())
+				: Tuples._2T("",  errors)
+				;
 	}
 	
 	/**

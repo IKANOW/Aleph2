@@ -38,6 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -191,6 +192,70 @@ public class BucketValidationUtils {
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "graph_schema")));
+			}
+		}
+		
+		//ManagementService
+		if ( null != bucket.management_schema() ) {
+			// Columnar
+			if ((null != bucket.management_schema().columnar_schema()) && Optional.ofNullable(bucket.management_schema().columnar_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IColumnarService.class, Optional.ofNullable(bucket.management_schema().columnar_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.management_schema().columnar_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("columnar_schema", s._1());
+									return s._2(); 
+								})
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "mgmt schema - columnar_schema")))));
+			}
+			// Search Index
+			if ((null != bucket.management_schema().search_index_schema()) && Optional.ofNullable(bucket.management_schema().search_index_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(ISearchIndexService.class, Optional.ofNullable(bucket.management_schema().search_index_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.management_schema().search_index_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("search_index_schema", s._1());
+									return s._2(); 
+								})
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "mgmt schema - search_index_schema")))));
+			}
+			// Storage
+			if ((null != bucket.management_schema().storage_schema()) && Optional.ofNullable(bucket.management_schema().storage_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IStorageService.class, Optional.ofNullable(bucket.management_schema().storage_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.management_schema().storage_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("storage_schema", s._1());
+									return s._2(); 
+								})
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "mgmt schema - storage_schema")))));
+			}
+			// Temporal
+			if ((null != bucket.management_schema().temporal_schema()) && Optional.ofNullable(bucket.management_schema().temporal_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(ITemporalService.class, Optional.ofNullable(bucket.management_schema().temporal_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.management_schema().temporal_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("temporal_schema", s._1());
+									return s._2(); 
+								})
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "mgmt schema - temporal_schema")))));
+			}
+			// Logging
+			if ((null != bucket.management_schema().logging_schema()) && Optional.ofNullable(bucket.management_schema().logging_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(ILoggingService.class, Optional.ofNullable(bucket.management_schema().logging_schema().service_name()))
+								.map(s -> s.validateSchema(bucket.management_schema().logging_schema(), bucket))
+								.map(s -> { 
+									if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("logging_schema", s._1());
+									return s._2(); 
+								})
+								.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+										ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "mgmt schema - logging_schema")))));
 			}
 		}
 		return Tuples._2T(data_locations, errors);

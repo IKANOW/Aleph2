@@ -19,8 +19,6 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.logging.log4j.Level;
-
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.ColumnarSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
@@ -90,21 +88,21 @@ public class ManagementSchemaBean implements Serializable {
 		 * Sets the default log level, defaults to ERROR if not specified
 		 * @return
 		 */
-		public Level log_level() {
-			return Optional.ofNullable(this.log_level).orElse(Level.ERROR);
+		public String log_level() {
+			return Optional.ofNullable(this.log_level).orElse("ERROR");
 		}
 		/**
 		 * (OPTIONAL) Set of service names and the log level you want them to output at
 		 * @return
 		 */
-		public Map<String, Level> log_level_overrides() {
+		public Map<String, String> log_level_overrides() {
 			return Optional.ofNullable(this.log_level_overrides).orElse(ImmutableMap.of());
 		}
 		
 		private Boolean enabled;
 		private String service_name;
-		private Level log_level;
-		private Map<String, Level> log_level_overrides;
+		private String log_level;
+		private Map<String, String> log_level_overrides;
 		
 	}
 }

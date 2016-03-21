@@ -17,6 +17,7 @@ package com.ikanow.aleph2.logging.utils;
 
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
 
@@ -54,7 +55,7 @@ public class LoggingUtils {
 	public static JsonNode createLogObject(final Level level, final DataBucketBean bucket, final BasicMessageBean message, final boolean isSystemMessage, final String date_field) {
 		final ObjectMapper _mapper = new ObjectMapper();
 		return Optional.ofNullable(message.details()).map(d -> _mapper.convertValue(d, ObjectNode.class)).orElseGet(() -> _mapper.createObjectNode())
-				.put(date_field, message.date().getTime()) //TODO can I actually pass in a date object/need to?
+				.put(date_field, message.date().getTime())
 				.put("message", ErrorUtils.show(message))
 				.put("generated_by", isSystemMessage ? "system" : "user")
 				.put("bucket", bucket.full_name())
@@ -73,7 +74,7 @@ public class LoggingUtils {
 				.with(DataBucketBean::full_name, EXTERNAL_PREFIX + "/" + subsystem + "/")	
 				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
 							.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
-										.with(LoggingSchemaBean::log_level, default_log_level)
+										.with(LoggingSchemaBean::log_level, default_log_level.toString())
 									.done().get())
 						.done().get())
 				.done().get();
@@ -107,8 +108,10 @@ public class LoggingUtils {
 		if (bucket.management_schema() != null &&
 				bucket.management_schema().logging_schema() != null ) {
 			return new ImmutableMap.Builder<String, Level>()
-		 	.put(DEFAULT_LEVEL_KEY, bucket.management_schema().logging_schema().log_level())
-		 	.putAll(Optional.ofNullable(bucket.management_schema().logging_schema().log_level_overrides()).orElse(new HashMap<String, Level>()))
+		 	.put(DEFAULT_LEVEL_KEY, Level.valueOf(bucket.management_schema().logging_schema().log_level()))
+		 	.putAll(Optional.ofNullable(bucket.management_schema().logging_schema().log_level_overrides())
+		 			.orElse(new HashMap<String, String>())
+		 			.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> Level.valueOf(e.getValue())))) //convert String Level to log4j.Level
 		 .build();
 		} else {
 			//otherwise just return an empty map

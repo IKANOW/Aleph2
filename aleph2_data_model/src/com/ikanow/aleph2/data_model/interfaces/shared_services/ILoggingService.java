@@ -15,7 +15,13 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.List;
+
+import scala.Tuple2;
+
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
+import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /**
  * @author Burch
@@ -44,6 +50,12 @@ public interface ILoggingService extends IUnderlyingService {
 	 * @return
 	 */
 	public IBucketLogger getExternalLogger(final String subsystem);		
+	
+	/** Validate the schema for this service
+	 * @param schema - the schema to validate
+	 * @return firstly the storage signature for this bucket, then a list of errors, empty if none
+	 */
+	Tuple2<String, List<BasicMessageBean>> validateSchema(final ManagementSchemaBean.LoggingSchemaBean schema, final DataBucketBean bucket);	
 }
 
 
