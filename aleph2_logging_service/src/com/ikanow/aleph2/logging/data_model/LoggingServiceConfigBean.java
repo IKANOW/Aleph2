@@ -37,7 +37,7 @@ public class LoggingServiceConfigBean {
 	}
 	
 	/**
-	 * Default field to output logigng timestamp as (defaults to 'date')
+	 * Default field to output logging timestamp as (defaults to 'date')
 	 * @return
 	 */
 	public String default_time_field() { return this.default_time_field; }
