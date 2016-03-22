@@ -21,7 +21,6 @@ package com.ikanow.aleph2.logging.data_model;
  *
  */
 public class LoggingServiceConfigBean {
-
 	public static final String PROPERTIES_ROOT = "CoreLoggingService";
 	private String default_time_field;
 	private String default_system_log_level;

@@ -16,12 +16,15 @@
 package com.ikanow.aleph2.logging.data_model;
 
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * @author Burch
  *
  */
 public class LoggingServiceConfig {
+	private static Logger _logger = LogManager.getLogger();
 	private String default_time_field;
 	private Level default_system_log_level;
 	private Level default_user_log_level;
@@ -32,6 +35,7 @@ public class LoggingServiceConfig {
 		this.default_system_log_level = convertToLevel(default_system_log_level, Level.OFF);
 		this.default_user_log_level = convertToLevel(default_user_log_level, Level.OFF);
 		this.output_to_log4j = output_to_log4j;
+		_logger.log(Level.ERROR, "LOGGER CONFIG SET TO: t-" + default_time_field + " s-" +default_system_log_level + " u-" + default_user_log_level + " l-" + output_to_log4j);
 	}
 	
 	/**
