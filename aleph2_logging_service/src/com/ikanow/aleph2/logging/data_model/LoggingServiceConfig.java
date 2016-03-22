@@ -15,28 +15,38 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.data_model;
 
+import org.apache.logging.log4j.Level;
+
 /**
- * Config options for the Logging Service.
  * @author Burch
  *
  */
-public class LoggingServiceConfigBean {
-
-	public static final String PROPERTIES_ROOT = "CoreLoggingService";
+public class LoggingServiceConfig {
 	private String default_time_field;
-	private String default_system_log_level;
-	private String default_user_log_level;
+	private Level default_system_log_level;
+	private Level default_user_log_level;
 	private boolean output_to_log4j;
 	
-	protected LoggingServiceConfigBean() {}
-	
-	public LoggingServiceConfigBean(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final boolean output_to_log4j) {
+	public LoggingServiceConfig(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final boolean output_to_log4j) {
 		this.default_time_field = default_time_field;
-		this.default_system_log_level = default_system_log_level;
-		this.default_user_log_level = default_user_log_level;
+		this.default_system_log_level = convertToLevel(default_system_log_level, Level.OFF);
+		this.default_user_log_level = convertToLevel(default_user_log_level, Level.OFF);
 		this.output_to_log4j = output_to_log4j;
 	}
 	
+	/**
+	 * @param default_system_log_level2
+	 * @param off
+	 * @return
+	 */
+	private Level convertToLevel(String string_level, Level fallback) {
+		try {
+			return Level.valueOf(string_level);
+		} catch (Exception ex) {
+			return fallback;
+		}
+	}
+
 	/**
 	 * Default field to output logigng timestamp as (defaults to 'date')
 	 * @return
@@ -46,12 +56,12 @@ public class LoggingServiceConfigBean {
 	 * Default Level to log system level messages as (defaults to 'OFF')
 	 * @return
 	 */
-	public String default_system_log_level() { return this.default_system_log_level; }
+	public Level default_system_log_level() { return this.default_system_log_level; }
 	/**
 	 * Default Level to log user level messages as (defaults to 'OFF')
 	 * @return
 	 */
-	public String default_user_log_level() { return this.default_user_log_level; }
+	public Level default_user_log_level() { return this.default_user_log_level; }
 	/**
 	 * If true, sends an additional message to log4j, false does nothing.
 	 * @return

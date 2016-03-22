@@ -46,6 +46,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.logging.data_model.LoggingServiceConfig;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
@@ -61,7 +62,8 @@ public class LoggingService implements ILoggingService {
 	protected final static Cache<String, MultiDataService> bucket_writable_cache = CacheBuilder.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).build();
 	private static final BasicMessageBean LOG_MESSAGE_BELOW_THRESHOLD = ErrorUtils.buildSuccessMessage(BucketLogger.class.getName(), "Log message dropped, below threshold", "n/a");
 	
-	protected final LoggingServiceConfigBean properties;
+//	protected final LoggingServiceConfigBean properties;
+	protected final LoggingServiceConfig properties_converted;
 	protected final IServiceContext service_context;
 	protected final IStorageService storage_service;
 	
@@ -69,7 +71,8 @@ public class LoggingService implements ILoggingService {
 	public LoggingService(
 			final LoggingServiceConfigBean properties, 
 			final IServiceContext service_context) {
-		this.properties = properties;
+//		this.properties = properties;
+		this.properties_converted = new LoggingServiceConfig(properties.default_time_field(), properties.default_system_log_level(), properties.default_user_log_level(), properties.output_to_log4j());
 		this.service_context = service_context;
 		this.storage_service = service_context.getStorageService();		
 	}	
@@ -95,7 +98,7 @@ public class LoggingService implements ILoggingService {
 	 */
 	@Override
 	public IBucketLogger getExternalLogger(final String subsystem) {
-		final DataBucketBean bucket = LoggingUtils.getExternalBucket(subsystem, Optional.ofNullable(properties.default_system_log_level()).orElse(Level.OFF));		
+		final DataBucketBean bucket = LoggingUtils.getExternalBucket(subsystem, Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF));		
 		return getBucketLogger(bucket, getWritable(bucket), true);
 	}
 
@@ -178,10 +181,10 @@ public class LoggingService implements ILoggingService {
 			this.bucket = bucket;
 			this.logging_writable = logging_writable;
 			this.isSystem = isSystem;
-			this.output_to_log4j = properties.output_to_log4j();
+			this.output_to_log4j = properties_converted.output_to_log4j();
 			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket);
-			this.date_field = Optional.ofNullable(properties.default_time_field()).orElse("date");
-			this.default_log_level = isSystem ? Optional.ofNullable(properties.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties.default_user_log_level()).orElse(Level.OFF);			
+			this.date_field = Optional.ofNullable(properties_converted.default_time_field()).orElse("date");
+			this.default_log_level = isSystem ? Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties_converted.default_user_log_level()).orElse(Level.OFF);			
 		}
 		
 		/* (non-Javadoc)
