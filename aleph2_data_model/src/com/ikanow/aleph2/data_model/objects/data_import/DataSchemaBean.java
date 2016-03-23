@@ -424,8 +424,9 @@ public class DataSchemaBean implements Serializable {
 				final WriteSettings target_write_settings,
 				final Long target_index_size_mb,
 				final String service_name,				
-				Boolean tokenize_by_default,
-				Map<String, ColumnarSchemaBean> tokenization_override,
+				final Boolean tokenize_by_default,
+				final Map<String, ColumnarSchemaBean> tokenization_override,
+				final Map<String, ColumnarSchemaBean> type_override,
 				final Map<String, Object> technology_override_schema) {
 			super();
 			this.enabled = enabled;
@@ -434,6 +435,7 @@ public class DataSchemaBean implements Serializable {
 			this.service_name = service_name;
 			this.tokenize_by_default = tokenize_by_default;
 			this.tokenization_override = tokenization_override;
+			this.type_override = type_override;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the search index service is used for this bucket
@@ -473,11 +475,18 @@ public class DataSchemaBean implements Serializable {
 		}
 		
 		/** Allows field specific overrides to tokenization - the key is the system (technology specific) name of the tokenization sequence, or 
-		 * "_default_" (whatever the system default is), or "none" (to turn tokenization off) 
+		 * "_default_" (whatever the system default is), or "_none_" (to turn tokenization off) 
 		 * @return the technology_override_schema
 		 */
 		public Map<String, ColumnarSchemaBean> tokenization_override() {
 			return tokenization_override;
+		}
+		
+		/** A mapping of the different types (string/number/date) to different field names or patterns 
+		 * @return
+		 */
+		public Map<String, ColumnarSchemaBean> type_override() {
+			return type_override;
 		}
 		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
@@ -493,6 +502,7 @@ public class DataSchemaBean implements Serializable {
 		private String service_name;
 		private Boolean tokenize_by_default;
 		private Map<String, ColumnarSchemaBean> tokenization_override;
+		private Map<String, ColumnarSchemaBean> type_override;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Columnar Service

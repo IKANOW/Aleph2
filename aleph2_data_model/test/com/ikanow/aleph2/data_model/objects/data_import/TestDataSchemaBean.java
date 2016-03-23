@@ -148,6 +148,8 @@ public class TestDataSchemaBean {
 						false,
 						ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("_default_", 
 								test).build(),
+								ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("date", 
+										test).build(),
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 
@@ -156,6 +158,10 @@ public class TestDataSchemaBean {
 		assertEquals("Search Index bean concurrency", 1000, (int)search_index_bean.target_write_settings().target_write_concurrency());
 		assertEquals("Search Index bean max size", 100, (long)search_index_bean.target_index_size_mb());
 		assertEquals("Search Index tokenization disabled", search_index_bean.tokenize_by_default(), false);
+		assertEquals("Search Index bean type_override", search_index_bean.type_override(), 
+				ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("date", 
+						test
+						).build());
 		assertEquals("Search Index bean technology_override_schema", search_index_bean.tokenization_override(), 
 				ImmutableMap.<String, DataSchemaBean.ColumnarSchemaBean>builder().put("_default_", 
 						test
