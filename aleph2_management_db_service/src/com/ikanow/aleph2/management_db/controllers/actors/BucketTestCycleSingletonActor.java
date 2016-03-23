@@ -34,6 +34,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbServic
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -155,9 +156,11 @@ public class BucketTestCycleSingletonActor extends UntypedActor {
 					});
 				}); //end for each			
 			}
-		}).exceptionally(t -> {
+		})
+		.exceptionally(t -> {
+			_logger.error(ErrorUtils.getLongForm("BucketTestCycleSingletonActor.onReceive: {0}", t));
 			return null;
-		});		
+		});
 	}
 	
 	/* (non-Javadoc)

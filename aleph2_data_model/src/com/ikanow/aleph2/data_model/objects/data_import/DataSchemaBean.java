@@ -19,7 +19,6 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
-
 /**
  * Immutable object describing the data from this bucket
  * @author acp
@@ -476,13 +475,17 @@ public class DataSchemaBean implements Serializable {
 		
 		/** Allows field specific overrides to tokenization - the key is the system (technology specific) name of the tokenization sequence, or 
 		 * "_default_" (whatever the system default is), or "_none_" (to turn tokenization off) 
+		 *  WARNING: unless the sets of fields defined (here, in the type override, any technology override lists, and the columnar overrides) are disjoint or identical
+		 *           then which properties are applied to which fields is undefined (although default implementatons will pick a sensible order in which to apply the lists) 
 		 * @return the technology_override_schema
 		 */
 		public Map<String, ColumnarSchemaBean> tokenization_override() {
 			return tokenization_override;
 		}
 		
-		/** A mapping of the different types (string/number/date) to different field names or patterns 
+		/** A mapping of the different types (string/etc/date/<technology specific types>) to different field names or patterns 
+		 *  WARNING: unless the sets of fields defined (here, in the type override, any technology override lists, and the columnar overrides) are disjoint or identical
+		 *           then which properties are applied to which fields is undefined (although default implementatons will pick a sensible order in which to apply the lists) 
 		 * @return
 		 */
 		public Map<String, ColumnarSchemaBean> type_override() {

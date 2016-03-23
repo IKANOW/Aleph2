@@ -24,6 +24,7 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,8 +33,10 @@ import org.apache.logging.log4j.Logger;
 
 
 
+
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
+
 
 
 
@@ -62,6 +65,8 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 
 
+
+import fj.Unit;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
@@ -184,6 +189,10 @@ public class DataAgeOutSupervisor extends UntypedActor {
 							})
 							;
 					});
+			})
+			.exceptionally(t -> {
+				_logger.error(ErrorUtils.getLongForm("DataAgeOutSupervisor.onReceive: {0}", t));
+				return null;
 			});
 		}		
 	}

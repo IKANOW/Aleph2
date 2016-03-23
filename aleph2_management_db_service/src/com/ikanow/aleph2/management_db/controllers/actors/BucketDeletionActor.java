@@ -153,7 +153,8 @@ public class BucketDeletionActor extends UntypedActor {
 							// failed to delete the bucket
 						}
 					}
-				});
+				})
+				;
 		}
 	}
 	

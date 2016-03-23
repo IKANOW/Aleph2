@@ -33,8 +33,10 @@ import java.util.stream.StreamSupport;
 
 
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 
 
@@ -52,6 +54,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -59,6 +62,7 @@ import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketDeletionMessage;
 import com.ikanow.aleph2.management_db.data_model.BucketMgmtMessage.BucketMgmtEventBusWrapper;
 import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
+
 
 
 
@@ -173,7 +177,12 @@ public class BucketDeletionSingletonActor extends UntypedActor {
 					});
 					_logger.info("Prepared for deletion num_buckets=" + msgs.size()); 
 				}
-			});
+			})
+			.exceptionally(t -> {
+				_logger.error(ErrorUtils.getLongForm("BucketDeletionSingletonActor.onReceive: {0}", t));
+				return null;
+			})
+			;
 		}
 		else if (BucketDeletionMessage.class.isAssignableFrom(message.getClass())) { // deletion was successful
 			final BucketDeletionMessage msg = (BucketDeletionMessage)message;
