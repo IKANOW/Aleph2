@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.service;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -35,9 +36,11 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.google.inject.Module;
 import com.ikanow.aleph2.core.shared.services.MultiDataService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -48,6 +51,7 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfig;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
+import com.ikanow.aleph2.logging.module.LoggingServiceModule;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
 /**
@@ -56,7 +60,7 @@ import com.ikanow.aleph2.logging.utils.LoggingUtils;
  * @author Burch
  *
  */
-public class LoggingService implements ILoggingService {
+public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	
 	private final static Logger _logger = LogManager.getLogger();
 	protected final static Cache<String, MultiDataService> bucket_writable_cache = CacheBuilder.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).build();
@@ -230,4 +234,20 @@ public class LoggingService implements ILoggingService {
 			Optional<String> driver_options) {
 		return Optional.empty();
 	}
+
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader#youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules()
+	 */
+	@Override
+	public void youNeedToImplementTheStaticFunctionCalled_getExtraDependencyModules() {
+		//done see getExtraDependencyModules
+	}
+	
+	/**
+	 * Load the extra services (aka the config bean)
+	 * @return
+	 */
+	public static List<Module> getExtraDependencyModules() {
+        return Arrays.asList((Module)new LoggingServiceModule());
+    }
 }
