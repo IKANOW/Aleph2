@@ -95,6 +95,21 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 		_logging_service = _context.getServiceContext().getService(ILoggingService.class, Optional.empty()).get();
 	}
 	
+	/** Handy utility for deciding when to log
+	 * @param message
+	 * @return
+	 */
+	private static boolean shouldLog(final BucketActionMessage message) {
+		return 	Patterns.match(message).<Boolean>andReturn()
+					.when(BucketActionMessage.BucketActionOfferMessage.class, 
+							msg -> Patterns.match(Optional.ofNullable(msg.message_type()).orElse("")).<Boolean>andReturn()
+										.when(type -> BucketActionMessage.PollFreqBucketActionMessage.class.toString().equals(type), __ -> false)
+										.when(type -> type.isEmpty(), __ -> false) // (leave "" as a catch all for "don't log")
+										.otherwise(__ -> true))
+					.when(BucketActionMessage.PollFreqBucketActionMessage.class, __ -> false)
+					.otherwise(__ -> true);		
+	}
+	
 	///////////////////////////////////////////
 
 	// Stateless actor
@@ -110,7 +125,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    				__ -> {}) // (do nothing if it's not for me)
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
-		    			_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ""));
+		    			if ( shouldLog(m) )
+		    				_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ""));
 	    				
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -159,16 +175,19 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    										_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
 		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message()), ""));
 	    									})
-	    							.when(BucketActionHandlerMessage.class, msg -> {	    								
-    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+	    							.when(BucketActionHandlerMessage.class, msg -> {	    
+	    								if ( shouldLog(m) | !msg.reply().success() )
+	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
 	    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
 	    										msg.reply().success() ? "(no error)": msg.reply().message()), ""));	    									
 	    							})
 	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> { 
-	    								_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
+	    								if ( shouldLog(m) )
+	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
 	    							})
-	    							.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> { 
-	    								_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
+	    							.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> {
+	    								if ( shouldLog(m) )
+	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ""));
 	    							})
 	    							.otherwise(msg ->  { //(always log)
 	    								_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName()), ""));
@@ -300,7 +319,8 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 				,
 				// Normal
 				tech_module -> {
-					_bucket_logger.log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class, "Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ""));
+					if ( shouldLog(m) )
+						_bucket_logger.log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class, "Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ""));
 										
 					tech_module.onInit(context);
 					
