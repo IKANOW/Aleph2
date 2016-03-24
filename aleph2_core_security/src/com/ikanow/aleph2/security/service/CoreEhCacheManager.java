@@ -53,15 +53,4 @@ public class CoreEhCacheManager {
     }
     
 
-/*	public void bindCacheManager(PrivateBinder binder) {
-		if(ehCacheManagerInstance==null){
-	    	System.setProperty("ehcache.disk.store.dir", System.getProperty("java.io.tmpdir") +"/shiro-cache-" + System.getProperty("user.name"));
-			ehCacheManagerInstance = new EhCacheManager();
-			ehCacheManagerInstance.setCacheManagerConfigFile("classpath:ehcache.xml");
-
-			binder.bind(CacheManager.class).toInstance(ehCacheManagerInstance);		
-	    	binder.expose(CacheManager.class);
-		}		
-	}
-*/
 }
