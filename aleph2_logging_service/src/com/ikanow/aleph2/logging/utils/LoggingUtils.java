@@ -33,7 +33,6 @@ import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.Log
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 
 /**
  * @author Burch
@@ -56,7 +55,7 @@ public class LoggingUtils {
 		final ObjectMapper _mapper = new ObjectMapper();
 		return Optional.ofNullable(message.details()).map(d -> _mapper.convertValue(d, ObjectNode.class)).orElseGet(() -> _mapper.createObjectNode())
 				.put(date_field, message.date().getTime())
-				.put("message", ErrorUtils.show(message))
+				.put("message", message.message())
 				.put("generated_by", isSystemMessage ? "system" : "user")
 				.put("bucket", bucket.full_name())
 				.put("subsystem", message.source())
