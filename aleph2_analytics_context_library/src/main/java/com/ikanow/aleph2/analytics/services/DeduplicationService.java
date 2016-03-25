@@ -91,6 +91,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected final SetOnce<IEnrichmentBatchModule> _custom_handler = new SetOnce<>();
 	protected final SetOnce<DeduplicationEnrichmentContext> _custom_context = new SetOnce<>();
 	
+	protected final SetOnce<List<String>> _dedup_fields = new SetOnce<>();
+	protected final SetOnce<DeduplicationPolicy> _policy = new SetOnce<>();	
+	
 	//TODO (ALEPH-20): move this into the ES service
 	public static class ElasticsearchTechnologyOverride {
 		protected ElasticsearchTechnologyOverride() {}
@@ -175,9 +178,11 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					   :tech_override.field_override().getOrDefault(f.replace(".", ":"), f + tech_override.default_modifier())
 					   ;
 				});											
+
+		_dedup_fields.set(Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(JsonUtils._ID)));
+		_policy.set(Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave));
 		
-		final DeduplicationPolicy policy =  _doc_schema.get().deduplication_policy();
-		if ((DeduplicationPolicy.custom == policy) || (DeduplicationPolicy.custom_update == policy)) {
+		if ((DeduplicationPolicy.custom == _policy.get()) || (DeduplicationPolicy.custom_update == _policy.get())) {
 			//TODO (ALEPH-20): for now only support one dedup enrichment config (really the "multi-enrichment" pipeline code should be in core shared vs the technology I think?)
 			
 			Optional<EnrichmentControlMetadataBean> custom_config =  Optionals.ofNullable(_doc_schema.get().custom_deduplication_configs()).stream().findFirst();
@@ -203,7 +208,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				entry_point.ifPresent(Lambdas.wrap_consumer_u(ep -> 
 					_custom_handler.set((IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance())));
 
-				_custom_context.set(new DeduplicationEnrichmentContext(context, _doc_schema.get()));
+				_custom_context.set(new DeduplicationEnrichmentContext(context, _doc_schema.get(), j -> getKeyFieldsAgain(j, getKeyFields(_dedup_fields.get()))));
 				
 				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(_custom_context.get(), bucket, cfg, previous_next, next_grouping_fields));
 			});
@@ -224,17 +229,15 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), Optional.empty()));
 			return;
 		}		
-		final List<String> dedup_fields = Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(JsonUtils._ID));
-		final DeduplicationPolicy policy = Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave);
 		
 		// Create big query
 		
 		final Tuple3<QueryComponent<JsonNode>, List<Tuple2<JsonNode, Tuple2<Long, IBatchRecord>>>, Either<String, List<String>>> fieldinfo_dedupquery_keyfields = 
-				getDedupQuery(batch, dedup_fields, _db_mapper.get());
+				getDedupQuery(batch, _dedup_fields.get(), _db_mapper.get());
 
 		// Get duplicate results
 		
-		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(policy, dedup_fields, _timestamp_field.get());
+		final Tuple2<List<String>, Boolean> fields_include = getIncludeFields(_policy.get(), _dedup_fields.get(), _timestamp_field.get());
 
 		//TODO: go back to removing fields
 		final CompletableFuture<Iterator<JsonNode>> dedup_res =
@@ -438,7 +441,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	{
 		return maybe_custom_handler.map(handler_context -> {
 			//TODO create mulitmap of old objects in here indexed by _id
-			handler_context._2().resetMutableState(null, key);
+			handler_context._2().resetMutableState(old_records, key);
 			
 			final Consumer<IEnrichmentBatchModule> handler = new_module -> {
 				final Stream<Tuple2<Long, IBatchRecord>> dedup_stream =
@@ -458,7 +461,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			
 			handler.accept(handler_context._1());
 			
-			return handler_context._2().getObjectsToDelete();
+			return handler_context._2().getObjectIdsToDelete();
 		})
 		.orElse(Stream.empty())
 		;
@@ -503,7 +506,21 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		}
 	}
 	
-	/** Creates the query and some associated metadata
+	/** Utility that performs a cheap part of getDedupQuery
+	 * @param dedup_fields
+	 * @return
+	 */
+	protected static Either<String, List<String>> getKeyFields(final List<String> dedup_fields) {
+		if (1 == dedup_fields.size()) { // this is a simpler case
+			final String key_field = dedup_fields.stream().findFirst().get();
+			return Either.left(key_field);
+		}
+		else {
+			return Either.right(dedup_fields);
+		}
+	}
+	
+	/** Creates the query and some associated metadata (see also getKeyFields)
 	 * @param batch
 	 * @param dedup_fields
 	 * @param db_field_mapper - allows the fields to be transformed (initial workaround for some ES issues, can just leave and pass f->f in once no longer needed)
@@ -523,7 +540,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					,
 					field_info
 					,
-					Either.left(key_field)
+					getKeyFields(dedup_fields)
 					);
 		}
 		else {
@@ -549,7 +566,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 							.get()
 							;
 			
-			return Tuples._3T(query_dedup, field_info, Either.right(dedup_fields));
+			return Tuples._3T(query_dedup, field_info, getKeyFields(dedup_fields));
 		}		
 	}
 	

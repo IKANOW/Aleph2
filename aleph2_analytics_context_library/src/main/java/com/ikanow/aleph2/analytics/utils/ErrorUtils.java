@@ -29,4 +29,5 @@ public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 	final public static String BUCKET_NOT_FOUND_OR_NOT_READABLE = "Bucket {0} does not exist or is not readable";
 	final public static String INPUT_PATH_NOT_A_TRANSIENT_BATCH = "Bucket {0} job {1} pointing to bucket {2} job {3}: not a batch transient_output (or bucket doesn't exist/not readable)";
 	final public static String HIGH_GRANULARITY_FILTER_NOT_SUPPORTED = "Bucket {0} job {1} input {2}: requested high granularity filter on input paths, not supported";
+	final public static String BREAK_DEDUPLICATION_POLICY = "In very_strict mode, trying to emit > 1 object; in strict mode, trying to output a new _id with an existing grouping_key";
 }
