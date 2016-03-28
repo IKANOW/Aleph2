@@ -95,6 +95,7 @@ import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.JsonUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.data_model.utils.Optionals;
@@ -924,7 +925,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			
 			// Get the names or ids, get the shared libraries, get the cached ids (must be present)
 			
-			return this._core_management_db.readOnlyVersion().getSharedLibraryStore().getObjectsBySpec(spec, Arrays.asList("_id", "path_name"), true)
+			return this._core_management_db.readOnlyVersion().getSharedLibraryStore().getObjectsBySpec(spec, Arrays.asList(JsonUtils._ID, "path_name"), true)
 				.thenApply(cursor -> {
 					return StreamSupport.stream(cursor.spliterator(), false)
 						.collect(Collectors.<SharedLibraryBean, String, String>toMap(

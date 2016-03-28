@@ -173,13 +173,13 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 						Optional.ofNullable(_doc_schema.get().technology_override_schema()).orElse(Collections.emptyMap()), ElasticsearchTechnologyOverride.class).get();	
 		
 		_db_mapper.set(f -> {
-				return JsonUtils._ID.equals(f)
+				return AnnotationBean._ID.equals(f)
 					   ? f
 					   :tech_override.field_override().getOrDefault(f.replace(".", ":"), f + tech_override.default_modifier())
 					   ;
 				});											
 
-		_dedup_fields.set(Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(JsonUtils._ID)));
+		_dedup_fields.set(Optional.ofNullable(_doc_schema.get().deduplication_fields()).orElse(Arrays.asList(AnnotationBean._ID)));
 		_policy.set(Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave));
 		
 		if ((DeduplicationPolicy.custom == _policy.get()) || (DeduplicationPolicy.custom_update == _policy.get())) {
@@ -373,7 +373,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					final JsonNode old_record = old_records.stream().findFirst().get();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
-						last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+						last_record._3().put(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
 						return config.delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 					}
 					else {
@@ -385,7 +385,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					// Just update the new record's "_id" field
 					final JsonNode old_record = old_records.stream().findFirst().get();
-					last_record._3().put(JsonUtils._ID, old_record.get(JsonUtils._ID));
+					last_record._3().put(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
 					return config.delete_unhandled_duplicates() ? old_records.stream().skip(1) : Stream.empty();
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
@@ -414,9 +414,9 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	 */
 	protected static Tuple2<List<String>, Boolean> getIncludeFields(final DeduplicationPolicy policy, final List<String> dedup_fields, String timestamp_field) {
 		final Tuple2<List<String>, Boolean> fields_include = Optional.of(Patterns.match(policy).<Tuple2<List<String>, Boolean>>andReturn()
-				.when(p -> p == DeduplicationPolicy.leave, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
-				.when(p -> p == DeduplicationPolicy.update, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID, timestamp_field), true))
-				.when(p -> p == DeduplicationPolicy.overwrite, __ -> Tuples._2T(Arrays.asList(JsonUtils._ID), true))
+				.when(p -> p == DeduplicationPolicy.leave, __ -> Tuples._2T(Arrays.asList(AnnotationBean._ID), true))
+				.when(p -> p == DeduplicationPolicy.update, __ -> Tuples._2T(Arrays.asList(AnnotationBean._ID, timestamp_field), true))
+				.when(p -> p == DeduplicationPolicy.overwrite, __ -> Tuples._2T(Arrays.asList(AnnotationBean._ID), true))
 				.otherwise(__ -> Tuples._2T(Arrays.asList(), false))
 			)
 			.map(t2 -> t2._2() 

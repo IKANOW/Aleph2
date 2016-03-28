@@ -27,6 +27,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.utils.JsonUtils;
 
 public class PermissionExtractor {
 	
@@ -120,7 +121,7 @@ public class PermissionExtractor {
 			} else {
 				// try using reflection getting id or _id() or getId()
 				try {
-					Method m = object.getClass().getMethod("_id");					
+					Method m = object.getClass().getMethod(JsonUtils._ID);					
 					Object retVal = m.invoke(object);
 					permIds.add(createPermission(object, oAction,""+retVal));
 				} catch (Exception e) {
@@ -141,7 +142,7 @@ public class PermissionExtractor {
 					// Ignore by default
 				}
 				try {
-					Field f = object.getClass().getDeclaredField("_id");
+					Field f = object.getClass().getDeclaredField(JsonUtils._ID);
 					f.setAccessible(true);
 					Object retVal = f.get(object);
 					permIds.add(createPermission(object, oAction,""+retVal));

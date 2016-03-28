@@ -47,6 +47,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.JsonUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
@@ -218,7 +219,7 @@ public class LocalHarvestTestModule {
 	private static DataBucketBean createBucketFromSource(JsonNode src_json) throws Exception {
 		
 		@SuppressWarnings("unused")
-		final String _id = safeJsonGet("_id", src_json).asText(); // (think we'll use key instead of _id?)
+		final String _id = safeJsonGet(JsonUtils._ID, src_json).asText(); // (think we'll use key instead of _id?)
 		final String key = safeJsonGet("key", src_json).asText();
 		final String created = safeJsonGet("created", src_json).asText();
 		final String modified = safeJsonGet("modified", src_json).asText();
