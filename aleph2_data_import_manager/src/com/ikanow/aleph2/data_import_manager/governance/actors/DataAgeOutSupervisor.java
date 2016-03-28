@@ -66,7 +66,6 @@ import com.ikanow.aleph2.management_db.services.ManagementDbActorContext;
 
 
 
-import fj.Unit;
 import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 
