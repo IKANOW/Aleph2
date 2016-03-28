@@ -487,8 +487,8 @@ public class SecurityServiceTest {
 //		try{
 			
 		MockSecurityService ms = ((MockSecurityService)securityService);
-		MockAuthProvider authProvider = MockSecurityService.authProvider; 
-		MockRoleProvider roleProvider = MockSecurityService.roleProvider;
+		MapAuthProvider authProvider = MockSecurityService.authProvider; 
+		MapRoleProvider roleProvider = MockSecurityService.roleProvider;
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
 		Subject s = ms.loginAsSystem();

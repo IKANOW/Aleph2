@@ -26,20 +26,21 @@ import scala.Tuple2;
 
 import com.ikanow.aleph2.security.interfaces.IRoleProvider;
 
-public class MockRoleProvider implements IRoleProvider{
+public class MapRoleProvider implements IRoleProvider{
 
-	protected static final Logger logger = LogManager.getLogger(MockRoleProvider.class);
+	protected static final Logger logger = LogManager.getLogger(MapRoleProvider.class);
 
 	protected Map<String, Set<String>> rolesMap;
 	protected Map<String, Set<String>> permissionsMap;
-    private ThreadLocal<Long> tlCallCount =
+	// internal variable used for testing only
+   private ThreadLocal<Long> tlCallCount =
         new ThreadLocal<Long>() {
             @Override protected Long initialValue() {
                 return 0L;
         }
     };
     
-	public MockRoleProvider(Map<String,Set<String>> rolesMap, Map<String,Set<String>> permissionsMap){
+	public MapRoleProvider(Map<String,Set<String>> rolesMap, Map<String,Set<String>> permissionsMap){
 		this.rolesMap = rolesMap;
 		this.permissionsMap = permissionsMap;
 	}
@@ -57,7 +58,7 @@ public class MockRoleProvider implements IRoleProvider{
 		count++;
 		tlCallCount.set(count);
 		Tuple2<Set<String>, Set<String>> t2 = new Tuple2<Set<String>, Set<String>>(roles,permissions);
-		logger.debug("MockRoleProvider.getRolesAndPermissions:"+t2);
+		logger.debug("MapRoleProvider.getRolesAndPermissions:"+t2);
 		return t2;
 	}
 	public long getCallCount() {

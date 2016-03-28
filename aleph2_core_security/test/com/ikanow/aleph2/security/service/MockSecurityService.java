@@ -42,8 +42,8 @@ public class MockSecurityService extends SecurityService implements ISecuritySer
 	protected static Map<String, Set<String>> rolesMap = new HashMap<String, Set<String>>();
 	protected static Map<String, Set<String>> permissionsMap = new HashMap<String, Set<String>>();
 	protected static Map<String, AuthorizationBean> authMap = new HashMap<String, AuthorizationBean>();
-	protected static MockRoleProvider roleProvider =  new MockRoleProvider(rolesMap, permissionsMap);
-	protected static MockAuthProvider authProvider = new MockAuthProvider(authMap);
+	protected static MapRoleProvider roleProvider =  new MapRoleProvider(rolesMap, permissionsMap);
+	protected static MapAuthProvider authProvider = new MapAuthProvider(authMap);
 			
 	static{
 		System.setProperty(IKANOW_SYSTEM_LOGIN, "system");

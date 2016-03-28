@@ -23,10 +23,11 @@ import org.apache.logging.log4j.Logger;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.security.interfaces.IAuthProvider;
 
-public class MockAuthProvider implements IAuthProvider{
+public class MapAuthProvider implements IAuthProvider{
 
-	protected static final Logger logger = LogManager.getLogger(MockAuthProvider.class);
+	protected static final Logger logger = LogManager.getLogger(MapAuthProvider.class);
 	protected Map<String, AuthorizationBean> authMap;
+	// internal variable used for testing only
     private ThreadLocal<Long> tlCallCount =
             new ThreadLocal<Long>() {
                 @Override protected Long initialValue() {
@@ -34,7 +35,7 @@ public class MockAuthProvider implements IAuthProvider{
             }
         };
 	
-	public MockAuthProvider(Map<String,AuthorizationBean> authMap){
+	public MapAuthProvider(Map<String,AuthorizationBean> authMap){
 		this.authMap = authMap;
 	}
 
@@ -44,7 +45,7 @@ public class MockAuthProvider implements IAuthProvider{
 		count++;
 		tlCallCount.set(count);
 		AuthorizationBean a = authMap.get(principalName); 
-		logger.debug("MockRoleProvider.getAuthBean:"+a);
+		logger.debug("MapAuthProvider.getAuthBean:"+a);
 		return a;
 	}
 
