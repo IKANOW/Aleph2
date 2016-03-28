@@ -19,7 +19,6 @@ package com.ikanow.aleph2.analytics.services;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -43,6 +42,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.CustomPolicy;
 import com.ikanow.aleph2.data_model.objects.shared.AssetStateDirectoryBean.StateDirectoryType;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
@@ -60,34 +60,70 @@ public class TestDeduplicationEnrichmentContext {
 
 	@Test
 	public void test_laxPolicy_noDelete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, false)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.lax)
+				.done().get();
+				
+		test_common(config);
 	}
 	@Test
 	public void test_laxPolicy_delete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.lax)
+				.done().get();
+				
+		test_common(config);		
 	}
 	@Test
 	public void test_strictPolicy_noDelete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, false)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.strict)
+				.done().get();
+				
+		test_common(config);		
 	}
 	@Test
 	public void test_strictPolicy_delete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.strict)
+				.done().get();
+				
+		test_common(config);		
 	}
 	@Test
 	public void test_veryStrictPolicy_noDelete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, false)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.very_strict)
+				.done().get();
+				
+		test_common(config);		
 	}
 	@Test
 	public void test_veryStrictPolicy_delete() {
-		
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.very_strict)
+				.done().get();
+				
+		test_common(config);				
 	}
 	
-	public Collection<JsonNode> test_common(DataSchemaBean.DocumentSchemaBean config) {
+	public void test_common(DataSchemaBean.DocumentSchemaBean config) {
 		
 		final TestEnrichmentContext delegate = new TestEnrichmentContext();
 		
-		final DeduplicationEnrichmentContext dedup_context = new DeduplicationEnrichmentContext(delegate, config, j -> Optional.of(j.get("grouping_key")));
+		final DeduplicationEnrichmentContext dedup_context = new DeduplicationEnrichmentContext(delegate, config, j -> Optional.ofNullable(j.get("grouping_key")));
 		
 		final Collection<JsonNode> dups = 
 				Arrays.asList(
@@ -106,24 +142,94 @@ public class TestDeduplicationEnrichmentContext {
 
 		JsonNode in3a = _mapper.createObjectNode().put("grouping_key", "test_group");
 		JsonNode in3b = _mapper.createObjectNode().put("grouping_key", "test_group_diff");
-		JsonNode in4 = _mapper.createObjectNode().put("_id", "test4").put("grouping_key", "test_group_diff");
-		//final Validation<BasicMessageBean, JsonNode> res2 = dedup_context.emitMutableObject(0L, (ObjectNode) in2, Optional.empty(), Optional.empty());
+		JsonNode in4a = _mapper.createObjectNode().put("_id", "test4").put("grouping_key", "test_group");
+		JsonNode in4b = _mapper.createObjectNode().put("_id", "test4").put("grouping_key", "test_group_diff");
 		
-		final Collection<JsonNode> ret_val = dedup_context.getObjectIdsToDelete().collect(Collectors.toList());
+		final Validation<BasicMessageBean, JsonNode> res3a = dedup_context.emitMutableObject(0L, (ObjectNode) in3a, Optional.empty(), Optional.empty());
+		final Validation<BasicMessageBean, JsonNode> res3b = dedup_context.emitMutableObject(0L, (ObjectNode) in3b, Optional.empty(), Optional.empty());
+		final Validation<BasicMessageBean, JsonNode> res4a = dedup_context.emitMutableObject(0L, (ObjectNode) in4a, Optional.empty(), Optional.empty());
+		final Validation<BasicMessageBean, JsonNode> res4b = dedup_context.emitMutableObject(0L, (ObjectNode) in4b, Optional.empty(), Optional.empty());
+		
+		JsonNode delete = _mapper.createObjectNode().put("_id", "delete_me");
+		final Validation<BasicMessageBean, JsonNode> res_del = dedup_context.emitMutableObject(0L, (ObjectNode) delete, Optional.empty(), Optional.empty());
+		
+		//TODO: send a delete message for an _id
+		
+		final Collection<String> ret_val = dedup_context.getObjectIdsToDelete().map(j -> j.asText()).collect(Collectors.toList());
+		
+		// OK lots of asserting depending on what mode we're in
+		if (config.custom_policy().equals(CustomPolicy.lax)) {
+			org.junit.Assert.assertEquals(in1, res1.success());
+			org.junit.Assert.assertEquals(in2, res2.success());
+			org.junit.Assert.assertEquals(in3a, res3a.success());
+			org.junit.Assert.assertEquals(in3b, res3b.success());
+			org.junit.Assert.assertEquals(in4a, res4a.success());
+			org.junit.Assert.assertEquals(in4b, res4b.success());
+			org.junit.Assert.assertEquals(delete, res_del.success());
+			
+			org.junit.Assert.assertEquals(config.delete_unhandled_duplicates() ? Arrays.asList("delete_me", "test3") : Arrays.asList("delete_me"), ret_val);
+		}
+		else if (config.custom_policy().equals(CustomPolicy.strict)) {
+			org.junit.Assert.assertEquals(in1, res1.success());
+			org.junit.Assert.assertEquals(in2, res2.success());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res3a.fail());
+			org.junit.Assert.assertEquals(in3b, res3b.success());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res4a.fail());
+			org.junit.Assert.assertEquals(in4b, res4b.success());
+			org.junit.Assert.assertEquals(delete, res_del.success());
+			
+			org.junit.Assert.assertEquals(config.delete_unhandled_duplicates() ? Arrays.asList("delete_me", "test3") : Arrays.asList("delete_me"), ret_val);
+		}
+		else if (config.custom_policy().equals(CustomPolicy.very_strict)) {
+			org.junit.Assert.assertEquals(in1, res1.success());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res2.fail());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res3a.fail());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res3b.fail());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res4a.fail());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res4b.fail());
+			org.junit.Assert.assertEquals(DeduplicationEnrichmentContext._ERROR_BEAN, res_del.fail());
+			
+			org.junit.Assert.assertEquals(config.delete_unhandled_duplicates() ? Arrays.asList("test2", "test3") : Arrays.asList(), ret_val);
+		}
 		
 		dedup_context.resetMutableState(Collections.emptyList(), _mapper.createObjectNode());
 		
 		org.junit.Assert.assertEquals(Collections.<JsonNode>emptyList(), dedup_context.getObjectIdsToDelete().collect(Collectors.toList()));
-		
-		return ret_val;
-		
 	}
 	
 	//////////////////////////////////////////////////////////////
 	
 	@Test
-	public void test_miscCoverage() {
-		
+	public void test_miscCoverage() 
+	{
+		final DataSchemaBean.DocumentSchemaBean config =
+				BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+					.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+					.with(DataSchemaBean.DocumentSchemaBean::custom_policy, CustomPolicy.lax)
+				.done().get();
+		final TestEnrichmentContext delegate = new TestEnrichmentContext();
+		final DeduplicationEnrichmentContext dedup_context = new DeduplicationEnrichmentContext(delegate, config, j -> Optional.empty());
+		dedup_context.getUnderlyingArtefacts();
+		dedup_context.getUnderlyingPlatformDriver(null, null);
+		dedup_context.getEnrichmentContextSignature(null, null);
+		dedup_context.getTopologyEntryPoints(null, null);
+		dedup_context.getTopologyStorageEndpoint(null, null);
+		dedup_context.getTopologyErrorEndpoint(null, null);
+		dedup_context.getNextUnusedId();
+		dedup_context.convertToMutable(null);
+		dedup_context.storeErroredObject(0L, null);
+		dedup_context.externalEmit(null, null, null);
+		dedup_context.flushBatchOutput(null);
+		dedup_context.getServiceContext();
+		dedup_context.getGlobalEnrichmentModuleObjectStore(null, null);
+		dedup_context.getBucketObjectStore(null, null, null, null);
+		dedup_context.getBucket();
+		dedup_context.getModuleConfig();
+		dedup_context.getBucketStatus(null);
+		dedup_context.emergencyDisableBucket(null);
+		dedup_context.emergencyQuarantineBucket(null, null);
+		dedup_context.initializeNewContext(null);
+		dedup_context.getLogger(null);
 	}
 	
 	//////////////////////////////////////////////////////////////
@@ -208,7 +314,7 @@ public class TestDeduplicationEnrichmentContext {
 				long id, ObjectNode mutated_json,
 				Optional<AnnotationBean> annotations,
 				Optional<JsonNode> grouping_key) {
-			return null;
+			return Validation.success(mutated_json);
 		}
 
 		/* (non-Javadoc)
@@ -220,7 +326,7 @@ public class TestDeduplicationEnrichmentContext {
 				Optional<ObjectNode> mutations,
 				Optional<AnnotationBean> annotations,
 				Optional<JsonNode> grouping_key) {
-			return null;
+			return Validation.success(original_json);
 		}
 
 		/* (non-Javadoc)
@@ -241,7 +347,6 @@ public class TestDeduplicationEnrichmentContext {
 				Optional<AnnotationBean> annotations) {
 			return null;
 		}
-
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#flushBatchOutput(java.util.Optional)
 		 */
@@ -267,7 +372,7 @@ public class TestDeduplicationEnrichmentContext {
 				Class<S> clazz, Optional<String> collection) {
 			return null;
 		}
-
+		
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getBucketObjectStore(java.lang.Class, java.util.Optional, java.util.Optional, java.util.Optional)
 		 */

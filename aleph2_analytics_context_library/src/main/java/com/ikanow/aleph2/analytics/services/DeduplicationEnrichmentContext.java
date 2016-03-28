@@ -18,7 +18,6 @@ package com.ikanow.aleph2.analytics.services;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -66,8 +66,8 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	
 	protected static class MutableState {
 		Set<JsonNode> _id_set;
-		JsonNode _grouping_key;
-		HashSet<JsonNode> _emitted_id_map = new HashSet<>();
+		Optional<JsonNode> _grouping_key;
+		int _num_emitted = 0;
 		LinkedList<JsonNode> _manual_ids_to_delete = new LinkedList<>();
 	}
 	protected final MutableState _mutable_state = new MutableState();
@@ -108,8 +108,9 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 			)
 	{
 		_mutable_state._id_set = dups.stream().map(j -> j.get(AnnotationBean._ID)).filter(id -> null != id).collect(Collectors.toSet());
-		_mutable_state._grouping_key = grouping_key;
-		_mutable_state._emitted_id_map = new HashSet<JsonNode>();		
+		
+		_mutable_state._grouping_key = _json_to_grouping_key.apply(grouping_key);
+		_mutable_state._num_emitted = 0;
 		_mutable_state._manual_ids_to_delete = new LinkedList<JsonNode>();
 	}
 	
@@ -131,53 +132,56 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	protected Validation<BasicMessageBean, JsonNode> checkObjectLogic(final JsonNode to_emit) {		
 		if (CustomPolicy.strict == _custom_policy) {
 			final JsonNode _id = to_emit.get(AnnotationBean._ID);
-			if (!_mutable_state._id_set.contains(_id)) { // (even if null) if "an object without a matching _id"
-				if (_json_to_grouping_key.apply(to_emit).map(j -> j.equals(_mutable_state._grouping_key)).orElse(false)) { // only .. if it has a different grouping key
+			if (!_mutable_state._id_set.contains(_id)) { // (even if null) if "an object without a matching _id"				
+				if (_json_to_grouping_key.apply(to_emit).equals(_mutable_state._grouping_key)) { // only .. if it has a different grouping key
 					return Validation.fail(_ERROR_BEAN);					
 				}
 			}
 		}
 		else if (CustomPolicy.very_strict == _custom_policy) {
-			if (!_mutable_state._emitted_id_map.isEmpty()) {
+			if (_mutable_state._num_emitted > 0) {
 				return Validation.fail(_ERROR_BEAN);
 			}
 		}
 		return Validation.success(to_emit);			
 	}
 	
+	/** Common emit logic
+	 * @param json
+	 * @param supplier
+	 * @return
+	 */
+	public Validation<BasicMessageBean, JsonNode> emitObjectCommon(final JsonNode json, final Supplier<Validation<BasicMessageBean, JsonNode>> supplier) {
+		return checkObjectLogic(json).bind(j -> {
+			final boolean is_manual_delete = (1 == json.size());			
+			final JsonNode _id = (_delete_unhandled_duplicates || is_manual_delete) ? json.get(AnnotationBean._ID) : null; 		
+			if (is_manual_delete && (null != _id)) {
+				_mutable_state._manual_ids_to_delete.add(_id);
+				return Validation.success(json);
+			}
+			else {
+				if (_delete_unhandled_duplicates || (CustomPolicy.very_strict == _custom_policy)) _mutable_state._id_set.remove(_id);
+				_mutable_state._num_emitted++;
+				return supplier.get();
+			}
+		});
+		
+	}	
+	
 	@Override
 	public Validation<BasicMessageBean, JsonNode> emitMutableObject(long id,
 			ObjectNode mutated_json, Optional<AnnotationBean> annotations,
 			Optional<JsonNode> grouping_key) {	
-		return checkObjectLogic(mutated_json).bind(j -> {
-			final JsonNode _id = (1 == mutated_json.size()) ? mutated_json.get(AnnotationBean._ID) : null; 		
-			if (null == _id) {
-				_mutable_state._manual_ids_to_delete.add(_id);
-				return Validation.success(mutated_json);
-			}
-			else {
-				if (_delete_unhandled_duplicates) _mutable_state._id_set.remove(_id);
-				return _delegate.emitMutableObject(id, mutated_json, annotations, grouping_key);
-			}
-		});
+		return emitObjectCommon(mutated_json, () -> _delegate.emitMutableObject(id, mutated_json, annotations, grouping_key));
 	}
+
 
 	@Override
 	public Validation<BasicMessageBean, JsonNode> emitImmutableObject(long id,
 			JsonNode original_json, Optional<ObjectNode> mutations,
 			Optional<AnnotationBean> annotations,
 			Optional<JsonNode> grouping_key) {
-		return checkObjectLogic(original_json).bind(j -> {
-			final JsonNode _id = (1 == original_json.size()) ? original_json.get(AnnotationBean._ID) : null; 		
-			if (null == _id) {
-				_mutable_state._manual_ids_to_delete.add(_id);
-				return Validation.success(original_json);
-			}
-			else {
-				if (_delete_unhandled_duplicates) _mutable_state._id_set.remove(_id);
-				return _delegate.emitImmutableObject(id, original_json, mutations, annotations, grouping_key);
-			}
-		});
+		return emitObjectCommon(original_json, () -> _delegate.emitImmutableObject(id, original_json, mutations, annotations, grouping_key));
 	}
 
 	// (EXTERNAL EMIT HAS NO RESTRICTIONS)
