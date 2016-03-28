@@ -20,8 +20,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,7 +41,6 @@ import com.ikanow.aleph2.data_model.utils.BucketUtils;
 public class LoggingUtils {
 	private static final String EXTERNAL_PREFIX = "/external";
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
-	private static final Logger _logger = LogManager.getLogger();
 	
 	/**
 	 * Builds a JsonNode log message object, contains fields for date, message, generated_by, bucket, subsystem, and severity
@@ -92,9 +89,7 @@ public class LoggingUtils {
 	public static MultiDataService getLoggingServiceForBucket(final IServiceContext service_context, final DataBucketBean bucket) {
 		//change the bucket.full_name to point to a logging location
 		final DataBucketBean bucket_logging = BucketUtils.convertDataBucketBeanToLogging(bucket);
-		//DEBUG
-		_logger.error(BeanTemplateUtils.toJson(bucket_logging).toString());
-		//DEBUG
+
 		//return crudservice pointing to this path
 		return MultiDataService.getMultiWriter(bucket_logging, service_context); 
 	}
