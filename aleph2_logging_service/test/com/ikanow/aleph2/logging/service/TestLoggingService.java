@@ -18,15 +18,27 @@ package com.ikanow.aleph2.logging.service;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.IntStream;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.AbstractConfiguration;
+import org.apache.logging.log4j.core.config.AppenderRef;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -60,6 +72,8 @@ public class TestLoggingService {
 	private static final Logger _logger = LogManager.getLogger();
 	private static ISearchIndexService search_index_service;
 	private static LoggingService logging_service;
+	private static NoLoggingService logging_service_no;
+	private static Log4JLoggingService logging_service_log4j;
 	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
 	
@@ -101,6 +115,8 @@ public class TestLoggingService {
 	public void setUp() throws Exception {
 		getServices();		
 		logging_service = new LoggingService(_config, _service_context);
+		logging_service_no = new NoLoggingService();
+		logging_service_log4j = new Log4JLoggingService();
 	}
 
 	@After
@@ -151,17 +167,17 @@ public class TestLoggingService {
 	@Test
 	public void test_logBucket() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test1";
-		final long num_messages_to_log = 50;
+		final int num_messages_to_log = 50;
 		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
 		//log a few messages
-		for ( int i = 0; i < num_messages_to_log; i++ ) {
-			user_logger.log(Level.ERROR, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-			system_logger.log(Level.ERROR, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-			external_logger.log(Level.ERROR, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-		}
+		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {		
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+		});
 		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
@@ -188,20 +204,20 @@ public class TestLoggingService {
 	@Test
 	public void test_logFilter() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test2";
-		final long num_messages_to_log_each_type = 5;
+		final int num_messages_to_log_each_type = 5;
 		final List<Level> levels = Arrays.asList(Level.DEBUG, Level.INFO, Level.ERROR);
 		final DataBucketBean test_bucket = getTestBucket("test2", Optional.of(Level.ERROR.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
 		//log a few messages
-		for ( int i = 0; i < num_messages_to_log_each_type; i++ ) {
-			for ( Level level : levels) {
-				user_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-				system_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-				external_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-			}
-		}
+		IntStream.rangeClosed(1, num_messages_to_log_each_type).boxed().forEach(i -> {	
+			levels.stream().forEach(level -> {
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			});
+		});
 		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
@@ -235,20 +251,20 @@ public class TestLoggingService {
 		//5 messages of DEBUG making it through via user calls (5)
 		//5 messages of each type to make it through via the external calls (15)
 		final String subsystem_name = "logging_test3";
-		final long num_messages_to_log_each_type = 5;
+		final int num_messages_to_log_each_type = 5;
 		final List<Level> levels = Arrays.asList(Level.DEBUG, Level.INFO, Level.ERROR);
 		final DataBucketBean test_bucket = getEmptyTestBucket("test3"); 
 		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
 		//log a few messages
-		for ( int i = 0; i < num_messages_to_log_each_type; i++ ) {
-			for ( Level level : levels) {
-				user_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-				system_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-				external_logger.log(level, ErrorUtils.buildMessage(true, subsystem_name, "test_message " + i, "no error")).get();
-			}
-		}
+		IntStream.rangeClosed(1, num_messages_to_log_each_type).boxed().forEach(i -> {	
+			levels.stream().forEach(level -> {
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			});
+		});
 		
 		//check its in ES, wait 10s max for the index to refresh
 		//USER + SYSTEM
@@ -267,6 +283,92 @@ public class TestLoggingService {
 		logging_crud.deleteDatastore().get();
 	}
 	
+	@Test
+	public void test_NoLoggingService() throws InterruptedException, ExecutionException {
+		final String subsystem_name = "logging_test4";
+		final int num_messages_to_log = 50;
+		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final IBucketLogger user_logger = logging_service_no.getLogger(test_bucket);
+		final IBucketLogger system_logger = logging_service_no.getSystemLogger(test_bucket);
+		final IBucketLogger external_logger = logging_service_no.getExternalLogger(subsystem_name);
+		//log a few messages
+		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {		
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+		});
+		
+		//check its in ES, wait 10s max for the index to refresh
+		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
+		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();		
+		assertEquals(0, logging_crud.countObjects().get().longValue());
+		
+		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
+		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();		
+		assertEquals(0, logging_crud_external.countObjects().get().longValue());
+
+		//cleanup
+		logging_crud.deleteDatastore().get();
+	}
+	
+	@Test
+	public void test_Log4JLoggingService() throws InterruptedException, ExecutionException {
+		//add in our appender so we can count messages
+		final TestAppender appender = new TestAppender("test", null, PatternLayout.createDefaultLayout());
+		appender.start();
+		final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+		final AbstractConfiguration config = (AbstractConfiguration) ctx.getConfiguration();
+		config.addAppender(appender);
+		AppenderRef ref = AppenderRef.createAppenderRef("test", null, null);
+        AppenderRef[] refs = new AppenderRef[] {ref};
+        LoggerConfig loggerConfig = LoggerConfig.createLogger("false", Level.ALL, "test", "true", refs, null, config, null);
+        loggerConfig.addAppender(appender, null, null);
+        config.addLogger("test", loggerConfig);
+        ctx.updateLoggers();
+        config.getRootLogger().addAppender(appender, Level.ALL, null);
+        
+        //run a normal test
+		final String subsystem_name = "logging_test5";
+		final int num_messages_to_log = 50;
+		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final IBucketLogger user_logger = logging_service_log4j.getLogger(test_bucket);
+		final IBucketLogger system_logger = logging_service_log4j.getSystemLogger(test_bucket);
+		final IBucketLogger external_logger = logging_service_log4j.getExternalLogger(subsystem_name);
+		//log a few messages
+		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {		
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
+		});
+		
+		//check in our appender for how many messages we received		
+		assertEquals(num_messages_to_log*3, appender.message_count);
+
+		//cleanup
+		config.removeAppender("test");
+		ctx.updateLoggers();
+	}
+	
+	private class TestAppender extends AbstractAppender {
+		static final long serialVersionUID = 3427100436050801263L;
+		public long message_count = 0;
+		/**
+		 * @param name
+		 * @param filter
+		 * @param layout
+		 */
+		protected TestAppender(String name, Filter filter,
+				Layout<? extends Serializable> layout) {
+			super(name, filter, layout);
+		}
+		
+		@Override
+		public void append(LogEvent arg0) {
+			message_count++;
+		}
+		
+	}
+	
 	/**
 	 * Waits for the crud service count objects to return some amount of objects w/in the given
 	 * timeframe, returns as soon as we find any results.  Useful for waiting for ES to flush/update the index. 
@@ -280,29 +382,6 @@ public class TestLoggingService {
 			if (crud_service.countObjects().join().intValue() > 0) break;
 		}
 	}
-
-	/**
-	 * Creates a sample bucket with search index enabled and the given full_name located at /test/logtest/<name>/
-	 * 
-	 * @param name
-	 * @param min_log_level 
-	 * @return
-	 */
-//	private DataBucketBean getTestBucket(final String name, Level min_log_level) {
-//		return BeanTemplateUtils.build(DataBucketBean.class)
-//				.with(DataBucketBean::full_name, "/test/logtest/" + name + "/")
-//				.with(DataBucketBean::data_schema, BeanTemplateUtils.build(DataSchemaBean.class)
-//						.with(DataSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
-//								.with(SearchIndexSchemaBean::enabled, true)
-//								.done().get())
-//						.done().get())	
-//				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
-//						.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
-//								.with(LoggingSchemaBean::log_level, min_log_level.toString())
-//								.done().get())
-//						.done().get())
-//				.done().get();
-//	}
 	
 	/**
 	 * @param name

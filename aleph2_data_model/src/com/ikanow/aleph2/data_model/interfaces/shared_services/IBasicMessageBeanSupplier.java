@@ -15,18 +15,13 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.apache.logging.log4j.Level;
-
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
 /**
  * @author Burch
  *
  */
-public interface IBucketLogger {
-	public CompletableFuture<?> inefficientLog(final Level level, final BasicMessageBean message);
-	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message);
-	public CompletableFuture<?> flush();
+public interface IBasicMessageBeanSupplier {
+	public BasicMessageBean getBasicMessageBean();
+	public String getSubsystem();
 }

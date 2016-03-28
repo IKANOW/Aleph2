@@ -28,14 +28,14 @@ public class LoggingServiceConfig {
 	private String default_time_field;
 	private Level default_system_log_level;
 	private Level default_user_log_level;
-	private boolean output_to_log4j;
+	private Level system_mirror_to_log4j_level;
 	
-	public LoggingServiceConfig(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final boolean output_to_log4j) {
+	public LoggingServiceConfig(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final String system_mirror_to_log4j_level) {
 		this.default_time_field = default_time_field;
 		this.default_system_log_level = convertToLevel(default_system_log_level, Level.OFF);
 		this.default_user_log_level = convertToLevel(default_user_log_level, Level.OFF);
-		this.output_to_log4j = output_to_log4j;
-		_logger.log(Level.DEBUG, "CoreLoggingService config set to: t-" + default_time_field + " s-" +default_system_log_level + " u-" + default_user_log_level + " l-" + output_to_log4j);
+		this.system_mirror_to_log4j_level = convertToLevel(system_mirror_to_log4j_level, Level.OFF);;
+		_logger.log(Level.DEBUG, "CoreLoggingService config set to: t-" + default_time_field + " s-" +default_system_log_level + " u-" + default_user_log_level + " l-" + system_mirror_to_log4j_level);
 	}
 	
 	/**
@@ -70,5 +70,5 @@ public class LoggingServiceConfig {
 	 * If true, sends an additional message to log4j, false does nothing.
 	 * @return
 	 */
-	public boolean output_to_log4j() { return this.output_to_log4j; }
+	public Level system_mirror_to_log4j_level() { return this.system_mirror_to_log4j_level; }
 }

@@ -24,6 +24,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +41,7 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.ikanow.aleph2.core.shared.services.MultiDataService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
@@ -52,6 +55,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfig;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.module.LoggingServiceModule;
+import com.ikanow.aleph2.logging.utils.Log4JUtils;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
 /**
@@ -76,7 +80,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			final LoggingServiceConfigBean properties, 
 			final IServiceContext service_context) {
 //		this.properties = properties;
-		this.properties_converted = new LoggingServiceConfig(properties.default_time_field(), properties.default_system_log_level(), properties.default_user_log_level(), properties.output_to_log4j());
+		this.properties_converted = new LoggingServiceConfig(properties.default_time_field(), properties.default_system_log_level(), properties.default_user_log_level(), properties.system_mirror_to_log4j_level());
 		this.service_context = service_context;
 		this.storage_service = service_context.getStorageService();		
 	}	
@@ -175,38 +179,20 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	private class BucketLogger implements IBucketLogger {		
 		final MultiDataService logging_writable;
 		final boolean isSystem;
-		final boolean output_to_log4j;
 		final DataBucketBean bucket;
 		final String date_field;
 		final Level default_log_level;  //holds the default log level for quick matching
+		final Level log4j_level;
 		final ImmutableMap<String, Level> bucket_logging_thresholds; //holds bucket logging overrides for quick matching
 		
 		public BucketLogger(final DataBucketBean bucket, final MultiDataService logging_writable, final boolean isSystem) {
 			this.bucket = bucket;
 			this.logging_writable = logging_writable;
 			this.isSystem = isSystem;
-			this.output_to_log4j = properties_converted.output_to_log4j();
+			this.log4j_level = isSystem ? properties_converted.system_mirror_to_log4j_level() : Level.OFF;
 			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket);
 			this.date_field = Optional.ofNullable(properties_converted.default_time_field()).orElse("date");
 			this.default_log_level = isSystem ? Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties_converted.default_user_log_level()).orElse(Level.OFF);			
-		}
-		
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public CompletableFuture<?> log(final Level level, final BasicMessageBean message) {		
-			if ( LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.source(), default_log_level)) {
-				//create log message to output:				
-				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);
-				
-				//send message to output log file (should we do this here (filtered) or always output and let log4j settings handle it (waste time building json object)?)
-				if ( output_to_log4j )
-					_logger.log(level, logObject.toString());
-				return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));
-			} else {
-				return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);
-			}			
 		}
 
 		/* (non-Javadoc)
@@ -215,6 +201,43 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 		@Override
 		public CompletableFuture<?> flush() {
 			return logging_writable.flushBatchOutput();
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+		 */
+		@Override
+		public CompletableFuture<?> inefficientLog(Level level, BasicMessageBean message) {
+			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.source(), default_log_level); //need to log to multiwriter
+			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
+			if ( log_out || log_log4j ) {
+				//create log message to output:				
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);				
+				if ( log_log4j )					
+					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, message.details()));
+				if ( log_out )
+					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
+			}
+			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);		
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, IBasicMessageBeanSupplier message) {
+			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
+			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
+			if ( log_out || log_log4j ) {
+				//create log message to output:			
+				final BasicMessageBean bmb = message.getBasicMessageBean();
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, bmb, isSystem, date_field);				
+				if ( log_log4j )					
+					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, bmb.details()));
+				if ( log_out )
+					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
+			}
+			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
 		}		
 	}
 
@@ -223,7 +246,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Collections.emptyList();
+		return service_context.getSearchIndexService().map(Stream::of).orElse(Stream.empty()).collect(Collectors.toList());
 	}
 
 	/* (non-Javadoc)

@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Level;
 
 import scala.Tuple2;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -93,18 +94,28 @@ public class NoLoggingService implements ILoggingService {
 	public class NoBucketLogger implements IBucketLogger {
 
 		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public CompletableFuture<?> log(Level level, BasicMessageBean message) {
-			return CompletableFuture.completedFuture(true);
-		}
-
-		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#flush()
 		 */
 		@Override
 		public CompletableFuture<?> flush() {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+		 */
+		@Override
+		public CompletableFuture<?> inefficientLog(Level level,
+				BasicMessageBean message) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level,
+				IBasicMessageBeanSupplier message) {
 			return CompletableFuture.completedFuture(true);
 		}
 		

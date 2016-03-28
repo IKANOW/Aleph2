@@ -19,13 +19,17 @@ import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.Logger;
 
 import com.google.common.collect.ObjectArrays;
 import com.google.inject.spi.Message;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.utils.FutureUtils.ManagementFuture;
 
 public class ErrorUtils {
@@ -299,5 +303,9 @@ public class ErrorUtils {
 					params.length == 0 ? error : ErrorUtils.get(error, params), // error message, with optional formatting
 					null // details
 					);
+	}
+	
+	public static IBasicMessageBeanSupplier lazyBuildMessage(boolean success, final Supplier<String> source, final Supplier<String> command, final Supplier<Integer> message_code, final Supplier<String> message, final Supplier<Map<String, String>> details) {
+		return new BasicMessageBeanSupplier(success, source, command, message_code, message, details);
 	}
 }

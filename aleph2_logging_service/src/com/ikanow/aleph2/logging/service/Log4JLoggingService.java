@@ -27,6 +27,8 @@ import org.apache.logging.log4j.Logger;
 
 import scala.Tuple2;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -34,6 +36,8 @@ import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.Log
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
+import com.ikanow.aleph2.logging.utils.Log4JUtils;
+import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
 /**
  * This logger is just a passthrough for log4j messages.
@@ -41,7 +45,7 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
  *
  */
 public class Log4JLoggingService implements ILoggingService {
-
+	final static String date_field = "date";
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
 	 */
@@ -64,7 +68,7 @@ public class Log4JLoggingService implements ILoggingService {
 	 */
 	@Override
 	public IBucketLogger getLogger(DataBucketBean bucket) {
-		return new Log4JBucketLogger();
+		return new Log4JBucketLogger(bucket, false);
 	}
 
 	/* (non-Javadoc)
@@ -72,7 +76,7 @@ public class Log4JLoggingService implements ILoggingService {
 	 */
 	@Override
 	public IBucketLogger getSystemLogger(DataBucketBean bucket) {
-		return new Log4JBucketLogger();
+		return new Log4JBucketLogger(bucket, true);
 	}
 
 	/* (non-Javadoc)
@@ -80,7 +84,7 @@ public class Log4JLoggingService implements ILoggingService {
 	 */
 	@Override
 	public IBucketLogger getExternalLogger(String subsystem) {
-		return new Log4JBucketLogger();
+		return new Log4JBucketLogger(LoggingUtils.getExternalBucket(subsystem, Level.ERROR), true);
 	}
 
 	/* (non-Javadoc)
@@ -94,14 +98,12 @@ public class Log4JLoggingService implements ILoggingService {
 
 	public class Log4JBucketLogger implements IBucketLogger {
 		private final Logger logger = LogManager.getLogger();
+		private final DataBucketBean bucket;
+		private final boolean isSystem;
 		
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public CompletableFuture<?> log(Level level, BasicMessageBean message) {
-			logger.log(level, message.toString());
-			return CompletableFuture.completedFuture(true);
+		public Log4JBucketLogger(final DataBucketBean bucket, final boolean isSystem) {
+			this.bucket = bucket;
+			this.isSystem = isSystem;
 		}
 
 		/* (non-Javadoc)
@@ -109,6 +111,28 @@ public class Log4JLoggingService implements ILoggingService {
 		 */
 		@Override
 		public CompletableFuture<?> flush() {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+		 */
+		@Override
+		public CompletableFuture<?> inefficientLog(Level level,
+				BasicMessageBean message) {
+			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);
+			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level,
+				IBasicMessageBeanSupplier message) {
+			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message.getBasicMessageBean(), isSystem, date_field);
+			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));
 			return CompletableFuture.completedFuture(true);
 		}
 		

@@ -400,6 +400,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						.add(Tuples._2T(IDocumentService.class, Optional.empty()))
 						.add(Tuples._2T(IStorageService.class, Optional.empty()))
 						.add(Tuples._2T(ISecurityService.class, Optional.empty()))
+						.add(Tuples._2T(ILoggingService.class, Optional.empty()))
 						.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 						.addAll(_mutable_state.extra_auto_context_libs)
 						.build();

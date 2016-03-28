@@ -126,7 +126,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
 		    			if ( shouldLog(m) )
-		    				_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name())));
+		    				_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ()->Collections.emptyMap()));		    				
 	    				
 		    			final ActorRef closing_sender = this.sender();
 		    			final ActorRef closing_self = this.self();
@@ -172,32 +172,32 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 	    							.when(BucketActionHandlerMessage.class, __ -> m instanceof BucketActionOfferMessage,
 	    									// (always log these)
 	    									msg -> {
-	    										_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
-		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message())));
+	    										_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Unusual reply to BucketActionOfferMessage: bucket={0}, success={1} error={2}", 
+		    	    									m.bucket().full_name(), msg.reply().success(), msg.reply().message()), ()->Collections.emptyMap()));
 	    									})
 	    							.when(BucketActionHandlerMessage.class, msg -> {	    
 	    								if ( shouldLog(m) | !msg.reply().success() )
-	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
-	    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
-	    										msg.reply().success() ? "(no error)": msg.reply().message())));	    									
+    										_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Standard reply to message={0}, bucket={1}, success={2} error={3}", 
+    	    										m.getClass().getSimpleName(), m.bucket().full_name(), msg.reply().success(), 
+    	    										msg.reply().success() ? "(no error)": msg.reply().message()), ()->Collections.emptyMap())); 									
 	    							})
 	    							.when(BucketActionReplyMessage.BucketActionWillAcceptMessage.class, msg -> { 
 	    								if ( shouldLog(m) )
-	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())));
+    										_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ()->Collections.emptyMap()));
 	    							})
 	    							.when(BucketActionReplyMessage.BucketActionIgnoredMessage.class, msg -> {
 	    								if ( shouldLog(m) )
-	    									_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name())));
+    										_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Standard reply to message={0}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name()), ()->Collections.emptyMap()));
 	    							})
 	    							.otherwise(msg ->  { //(always log)
-	    								_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName())));
+										_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Unusual reply to message={0}, type={2}, bucket={1}", m.getClass().getSimpleName(), m.bucket().full_name(), msg.getClass().getSimpleName()), ()->Collections.emptyMap()));
 	    							});
 	    						
 								closing_sender.tell(reply,  closing_self);		    						
 	    					})
 	    					.exceptionally(e -> { // another bit of error handling that shouldn't ever be called but is a useful backstop
 	    						// Some information logging:
-	    						_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.buildErrorMessage(this.self(), "receive", ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name())));
+								_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Unexpected error replying to {0}: error = {1}, bucket={2}", BeanTemplateUtils.toJson(m).toString(), ErrorUtils.getLongForm("{0}", e), m.bucket().full_name()), ()->Collections.emptyMap()));
 	    						
 			    				final BasicMessageBean error_bean = 
 			    						SharedErrorUtils.buildErrorMessage(hostname, m,
@@ -320,7 +320,7 @@ public class DataBucketHarvestChangeActor extends AbstractActor {
 				// Normal
 				tech_module -> {
 					if ( shouldLog(m) )
-						_bucket_logger.log(Level.INFO, ErrorUtils.buildErrorMessage(DataBucketHarvestChangeActor.class, "talkToHarvester", "Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name()));
+						_bucket_logger.log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketHarvestChangeActor.class.getSimpleName(), ()->"talkToHarvester", ()->null, ()->"Set active classloader=" + tech_module.getClass().getClassLoader() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ()->Collections.emptyMap()));
 										
 					tech_module.onInit(context);
 					

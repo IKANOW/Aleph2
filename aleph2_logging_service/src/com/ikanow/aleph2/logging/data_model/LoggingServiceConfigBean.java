@@ -25,15 +25,15 @@ public class LoggingServiceConfigBean {
 	private String default_time_field;
 	private String default_system_log_level;
 	private String default_user_log_level;
-	private boolean output_to_log4j;
+	private String system_mirror_to_log4j_level;
 	
 	protected LoggingServiceConfigBean() {}
 	
-	public LoggingServiceConfigBean(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final boolean output_to_log4j) {
+	public LoggingServiceConfigBean(final String default_time_field, final String default_system_log_level, final String default_user_log_level, final String system_mirror_to_log4j_level) {
 		this.default_time_field = default_time_field;
 		this.default_system_log_level = default_system_log_level;
 		this.default_user_log_level = default_user_log_level;
-		this.output_to_log4j = output_to_log4j;
+		this.system_mirror_to_log4j_level = system_mirror_to_log4j_level;
 	}
 	
 	/**
@@ -52,8 +52,8 @@ public class LoggingServiceConfigBean {
 	 */
 	public String default_user_log_level() { return this.default_user_log_level; }
 	/**
-	 * If true, sends an additional message to log4j, false does nothing.
+	 * Level to log log4j messages at (OFF to not log to log4j)
 	 * @return
 	 */
-	public boolean output_to_log4j() { return this.output_to_log4j; }
+	public String system_mirror_to_log4j_level() { return this.system_mirror_to_log4j_level; }
 }

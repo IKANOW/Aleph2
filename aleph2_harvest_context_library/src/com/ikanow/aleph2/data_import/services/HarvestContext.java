@@ -450,6 +450,7 @@ public class HarvestContext implements IHarvestContext {
 								.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
 								.add(Tuples._2T(IStorageService.class, Optional.empty()))
 								.add(Tuples._2T(ISecurityService.class, Optional.empty()))
+								.add(Tuples._2T(ILoggingService.class, Optional.empty())) //doesn't pull in ES via getUnderlyingArtefacts, relies on the one here
 								.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 					)
 					// Optional services:
