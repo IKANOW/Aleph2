@@ -524,16 +524,6 @@ public class TestContextUtils {
 		}
 
 		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message, boolean roll_up_duplicates) {
-		}
-
-		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message) {
-		}
-
-		@Override
 		public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
 			
 		}
@@ -582,6 +572,10 @@ public class TestContextUtils {
 				DataBucketBean bucket,
 				Either<JsonNode, Map<String, Object>> object,
 				Optional<AnnotationBean> annotations) {
+			return null;
+		}
+		@Override
+		public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
 			return null;
 		}
 		

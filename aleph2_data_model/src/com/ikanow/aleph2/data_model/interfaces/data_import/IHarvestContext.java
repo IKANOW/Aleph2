@@ -171,21 +171,6 @@ public interface IHarvestContext extends IUnderlyingService {
 	 */
 	CompletableFuture<DataBucketStatusBean> getBucketStatus(final Optional<DataBucketBean> bucket);
 	
-	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
-	 * Note that the behavior of the context if called on another bucket than the one
-	 * currently being processed is undefined
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param message The message to log
-	 * @param roll_up_duplicates if set (default: true) then identical messages are not logged separately 
-	 */
-//	void logStatusForBucketOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message, final boolean roll_up_duplicates);
-	
-	/** (HarvestTechnology/HarvestModule) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param The message to log (duplicates are "rolled up")
-	 */
-//	void logStatusForBucketOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message);
-	
 	/**
 	 * (HarvestTechnology/HarvestModule) Returns a logger configured for the given DataBucketBean.
 	 * @param bucket 

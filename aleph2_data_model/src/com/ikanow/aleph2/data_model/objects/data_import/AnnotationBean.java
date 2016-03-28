@@ -30,6 +30,7 @@ import java.util.Set;
 public class AnnotationBean implements Serializable {
 	private static final long serialVersionUID = 5347218352527147640L;
 
+	public static final String _ID = "_id";
 	public static final String ROOT_PATH = "__a";
 	
 	// Standard metadata

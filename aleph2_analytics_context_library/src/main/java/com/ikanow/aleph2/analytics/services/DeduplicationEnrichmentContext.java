@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -106,7 +107,7 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 			final JsonNode grouping_key
 			)
 	{
-		_mutable_state._id_set = dups.stream().map(j -> j.get("_id")).filter(id -> null != id).collect(Collectors.toSet());
+		_mutable_state._id_set = dups.stream().map(j -> j.get(AnnotationBean._ID)).filter(id -> null != id).collect(Collectors.toSet());
 		_mutable_state._grouping_key = grouping_key;
 		_mutable_state._emitted_id_map = new HashSet<JsonNode>();		
 		_mutable_state._manual_ids_to_delete = new LinkedList<JsonNode>();
@@ -129,7 +130,7 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	 */
 	protected Validation<BasicMessageBean, JsonNode> checkObjectLogic(final JsonNode to_emit) {		
 		if (CustomPolicy.strict == _custom_policy) {
-			final JsonNode _id = to_emit.get("_id");
+			final JsonNode _id = to_emit.get(AnnotationBean._ID);
 			if (!_mutable_state._id_set.contains(_id)) { // (even if null) if "an object without a matching _id"
 				if (_json_to_grouping_key.apply(to_emit).map(j -> j.equals(_mutable_state._grouping_key)).orElse(false)) { // only .. if it has a different grouping key
 					return Validation.fail(_ERROR_BEAN);					
@@ -149,7 +150,7 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 			ObjectNode mutated_json, Optional<AnnotationBean> annotations,
 			Optional<JsonNode> grouping_key) {	
 		return checkObjectLogic(mutated_json).bind(j -> {
-			final JsonNode _id = (1 == mutated_json.size()) ? mutated_json.get("_id") : null; 		
+			final JsonNode _id = (1 == mutated_json.size()) ? mutated_json.get(AnnotationBean._ID) : null; 		
 			if (null == _id) {
 				_mutable_state._manual_ids_to_delete.add(_id);
 				return Validation.success(mutated_json);
@@ -167,7 +168,7 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 			Optional<AnnotationBean> annotations,
 			Optional<JsonNode> grouping_key) {
 		return checkObjectLogic(original_json).bind(j -> {
-			final JsonNode _id = (1 == original_json.size()) ? original_json.get("_id") : null; 		
+			final JsonNode _id = (1 == original_json.size()) ? original_json.get(AnnotationBean._ID) : null; 		
 			if (null == _id) {
 				_mutable_state._manual_ids_to_delete.add(_id);
 				return Validation.success(original_json);
@@ -308,19 +309,6 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	}
 
 	@Override
-	public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-			BasicMessageBean message, boolean roll_up_duplicates) {
-		_delegate
-				.logStatusForBucketOwner(bucket, message, roll_up_duplicates);
-	}
-
-	@Override
-	public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-			BasicMessageBean message) {
-		_delegate.logStatusForBucketOwner(bucket, message);
-	}
-
-	@Override
 	public void emergencyDisableBucket(Optional<DataBucketBean> bucket) {
 		_delegate.emergencyDisableBucket(bucket);
 	}
@@ -334,5 +322,10 @@ public class DeduplicationEnrichmentContext implements IEnrichmentModuleContext 
 	@Override
 	public void initializeNewContext(String signature) {
 		_delegate.initializeNewContext(signature);
+	}
+
+	@Override
+	public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
+		return _delegate.getLogger(bucket);
 	}
 }

@@ -16,13 +16,16 @@
 
 package com.ikanow.aleph2.analytics.services;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 
@@ -32,6 +35,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -79,13 +83,40 @@ public class TestDeduplicationEnrichmentContext {
 		
 	}
 	
-	public void test_common(DataSchemaBean.DocumentSchemaBean config) {
+	public Collection<JsonNode> test_common(DataSchemaBean.DocumentSchemaBean config) {
 		
 		final TestEnrichmentContext delegate = new TestEnrichmentContext();
 		
 		final DeduplicationEnrichmentContext dedup_context = new DeduplicationEnrichmentContext(delegate, config, j -> Optional.of(j.get("grouping_key")));
 		
-		dedup_context.resetMutableState(Collections.emptyList(), _mapper.createObjectNode().put("grouping_key", "test_group"));
+		final Collection<JsonNode> dups = 
+				Arrays.asList(
+						_mapper.createObjectNode().put("_id", "test1").put("grouping_key", "test_group"),
+						_mapper.createObjectNode().put("_id", "test2").put("grouping_key", "test_group"),
+						_mapper.createObjectNode().put("_id", "test3").put("grouping_key", "test_group")
+						);
+		
+		dedup_context.resetMutableState(dups, _mapper.createObjectNode().put("grouping_key", "test_group"));
+		
+		JsonNode in1 = _mapper.createObjectNode().put("_id", "test1").put("grouping_key", "test_group");
+		final Validation<BasicMessageBean, JsonNode> res1 = dedup_context.emitImmutableObject(0L, in1, Optional.empty(), Optional.empty(), Optional.empty());
+		
+		JsonNode in2 = _mapper.createObjectNode().put("_id", "test2").put("grouping_key", "test_group");
+		final Validation<BasicMessageBean, JsonNode> res2 = dedup_context.emitMutableObject(0L, (ObjectNode) in2, Optional.empty(), Optional.empty());
+
+		JsonNode in3a = _mapper.createObjectNode().put("grouping_key", "test_group");
+		JsonNode in3b = _mapper.createObjectNode().put("grouping_key", "test_group_diff");
+		JsonNode in4 = _mapper.createObjectNode().put("_id", "test4").put("grouping_key", "test_group_diff");
+		//final Validation<BasicMessageBean, JsonNode> res2 = dedup_context.emitMutableObject(0L, (ObjectNode) in2, Optional.empty(), Optional.empty());
+		
+		final Collection<JsonNode> ret_val = dedup_context.getObjectIdsToDelete().collect(Collectors.toList());
+		
+		dedup_context.resetMutableState(Collections.emptyList(), _mapper.createObjectNode());
+		
+		org.junit.Assert.assertEquals(Collections.<JsonNode>emptyList(), dedup_context.getObjectIdsToDelete().collect(Collectors.toList()));
+		
+		return ret_val;
+		
 	}
 	
 	//////////////////////////////////////////////////////////////
@@ -273,23 +304,6 @@ public class TestDeduplicationEnrichmentContext {
 		}
 
 		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#logStatusForBucketOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
-		 */
-		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message, boolean roll_up_duplicates) {
-			
-		}
-
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#logStatusForBucketOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public void logStatusForBucketOwner(Optional<DataBucketBean> bucket,
-				BasicMessageBean message) {
-		}
-
-		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#emergencyDisableBucket(java.util.Optional)
 		 */
 		@Override
@@ -311,6 +325,13 @@ public class TestDeduplicationEnrichmentContext {
 		public void initializeNewContext(String signature) {
 		}
 		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext#getLogger(java.util.Optional)
+		 */
+		@Override
+		public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
+			return null;
+		}
 	}
 	
 }

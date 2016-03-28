@@ -26,6 +26,7 @@ import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
@@ -202,20 +203,12 @@ public interface IEnrichmentModuleContext extends IUnderlyingService {
 	 */
 	Future<DataBucketStatusBean> getBucketStatus(final Optional<DataBucketBean> bucket);
 	
-	/** (All Enrichment Types) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
-	 * Note that the behavior of the context if called on another bucket than the one
-	 * currently being processed is undefined
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param The message to log
-	 * @param roll_up_duplicates if set (default: true) then identical messages are not logged separately 
+	/**
+	 * (AnalyticsTechnology/Analytics Module) Returns a logger configured for the given DataBucketBean.
+	 * @param bucket 
+	 * @return
 	 */
-	void logStatusForBucketOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message, boolean roll_up_duplicates);
-	
-	/** (All Enrichment Types) Calling this function logs a status message into he DataBucketStatusBean that is visible to the user
-	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
-	 * @param The message to log (duplicates are "rolled up")
-	 */
-	void logStatusForBucketOwner(final Optional<DataBucketBean> bucket, final BasicMessageBean message);
+	IBucketLogger getLogger(final Optional<DataBucketBean> bucket);
 	
 	/** (All Enrichment Types) Requests that the bucket be suspended - in addition to changing the bucket state, this will result in a call to IHarvestTechnologyModule.onSuspend
 	 * @param bucket An optional bucket - if there is no ambiguity in the bucket then Optional.empty() can be passed (Note that the behavior of the context if called on another bucket than the one currently being processed is undefined) 
