@@ -83,7 +83,8 @@ public class BucketUtils {
 	
 	/**
 	 * Returns back a DataBucketBean w/ the full_name changed to reflect the logging path.
-	 * i.e. just prefixes the bucket.full_name with LOGGING_PREFIX (/alelph2_logging)
+	 * i.e. just prefixes the bucket.full_name with LOGGING_PREFIX (/alelph2_logging) and
+	 * copies the management_data_schema overtop of data_schema
 	 * 
 	 * @param bucket
 	 * @return

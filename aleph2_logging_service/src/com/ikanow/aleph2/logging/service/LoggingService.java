@@ -90,7 +90,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 */
 	@Override
 	public IBucketLogger getLogger(DataBucketBean bucket) {
-		return getBucketLogger(bucket, getWritable(bucket), false);		
+		return getBucketLogger(bucket, false);		
 	}
 
 	/* (non-Javadoc)
@@ -98,7 +98,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 */
 	@Override
 	public IBucketLogger getSystemLogger(DataBucketBean bucket) {
-		return getBucketLogger(bucket, getWritable(bucket), true);
+		return getBucketLogger(bucket, true);
 	}
 	
 	/* (non-Javadoc)
@@ -107,7 +107,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	@Override
 	public IBucketLogger getExternalLogger(final String subsystem) {
 		final DataBucketBean bucket = LoggingUtils.getExternalBucket(subsystem, Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF));		
-		return getBucketLogger(bucket, getWritable(bucket), true);
+		return getBucketLogger(bucket, true);
 	}
 
 	/* (non-Javadoc)
@@ -156,8 +156,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 * @param writable
 	 * @param b
 	 */
-	private IBucketLogger getBucketLogger(DataBucketBean bucket,
-			MultiDataService writable, boolean isSystem) {
+	private IBucketLogger getBucketLogger(final DataBucketBean bucket, final boolean isSystem) {
 		return new BucketLogger(bucket, getWritable(bucket), isSystem);
 	}
 	

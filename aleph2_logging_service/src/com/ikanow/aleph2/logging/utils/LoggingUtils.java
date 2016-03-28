@@ -89,6 +89,7 @@ public class LoggingUtils {
 	public static MultiDataService getLoggingServiceForBucket(final IServiceContext service_context, final DataBucketBean bucket) {
 		//change the bucket.full_name to point to a logging location
 		final DataBucketBean bucket_logging = BucketUtils.convertDataBucketBeanToLogging(bucket);
+
 		//return crudservice pointing to this path
 		return MultiDataService.getMultiWriter(bucket_logging, service_context); 
 	}
