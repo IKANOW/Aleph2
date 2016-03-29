@@ -28,6 +28,7 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.IReadOnlyCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -67,7 +68,14 @@ public class MockSearchIndexService implements ISearchIndexService {
 		}
 
 		@Override
-		public <O> Optional<ICrudService<O>> getReadableCrudService(
+		public <O> Optional<IReadOnlyCrudService<O>> getReadableCrudService(
+				Class<O> clazz, Collection<DataBucketBean> buckets,
+				Optional<String> options) {
+			return null;
+		}
+
+		@Override
+		public <O> Optional<ICrudService<O>> getUpdatableCrudService(
 				Class<O> clazz, Collection<DataBucketBean> buckets,
 				Optional<String> options) {
 			return null;

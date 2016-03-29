@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.IReadOnlyCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -95,8 +96,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkWritePermission(final DataBucketBean bucket) {
-			//TODO (ALEPH-41): this needs some test coverage
-			return _security_service.isUserPermitted(principalName, bucket, Optional.of(ISecurityService.ACTION_READ_WRITE));
+			return checkPermission(bucket, SecurityService.ACTION_READ_WRITE);
 		}
 		
 		/** Checks the bucket path for read permission
@@ -112,7 +112,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 		 * @return
 		 */
 		public boolean checkReadPermission(final DataBucketBean bucket) {
-			return _security_service.isUserPermitted(principalName, bucket, Optional.of(ISecurityService.ACTION_READ));
+			return checkPermission(bucket, SecurityService.ACTION_READ);
 		}
 		
 		/* (non-Javadoc)
@@ -128,21 +128,56 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 					;
 		}
 
+		/**Checks the bucket for read permission
+		 * @param bucket
+		 * @return
+		 */
+		public boolean checkPermission(final DataBucketBean bucket, final String permission) {
+			return _security_service.isUserPermitted(principalName, bucket, Optional.of(permission));
+		}
+		
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService#getReadableCrudService(java.lang.Class, java.util.Collection, java.util.Optional)
 		 */
 		@Override
-		public <O> Optional<ICrudService<O>> getReadableCrudService(
+		public <O> Optional<IReadOnlyCrudService<O>> getReadableCrudService(
 				final Class<O> clazz, 
 				final Collection<DataBucketBean> buckets,
 				final Optional<String> options)
+		{
+			final Collection<DataBucketBean> verified_buckets = getVerifiedBuckets(SecurityService.ACTION_READ, buckets);
+			return _delegate.getReadableCrudService(clazz, verified_buckets, options);
+			
+		}
+		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider.IGenericDataService#getReadableCrudService(java.lang.Class, java.util.Collection, java.util.Optional)
+		 */
+		@Override
+		public <O> Optional<ICrudService<O>> getUpdatableCrudService(
+				final Class<O> clazz, 
+				final Collection<DataBucketBean> buckets,
+				final Optional<String> options)
+		{
+			final Collection<DataBucketBean> verified_buckets = getVerifiedBuckets(SecurityService.ACTION_READ_WRITE, buckets);
+			return _delegate.getUpdatableCrudService(clazz, verified_buckets, options);			
+		}
+		
+		/** Common utility for read or read-write CRUD service
+		 * @param associated_permission
+		 * @param buckets
+		 * @return
+		 */
+		public <O> Collection<DataBucketBean> getVerifiedBuckets(
+				final String associated_permission,
+				final Collection<DataBucketBean> buckets)
 		{
 			// This is the most complicated case - we're going to check for multi-buckets and only pass validated multi-buckets through
 			// This also involves expanding the wildcard
 
 			final Collection<DataBucketBean> verified_buckets =			
 				buckets.stream()
-					.filter(b -> (null == b.full_name()) || checkReadPermission(b)) // (if full_name == null then it's just a container for the paths...)
+					.filter(b -> (null == b.full_name()) || checkPermission(b, associated_permission)) // (if full_name == null then it's just a container for the paths...)
 					.map(b -> {
 						return Optional.ofNullable(b.multi_bucket_children())
 									.filter(m -> !m.isEmpty())
@@ -165,7 +200,7 @@ public class SecuredDataServiceProvider implements IDataServiceProvider {
 					.collect(Collectors.toList())
 					;
 			
-			return _delegate.getReadableCrudService(clazz, verified_buckets, options);
+			return verified_buckets;
 		}
 
 		/* (non-Javadoc)

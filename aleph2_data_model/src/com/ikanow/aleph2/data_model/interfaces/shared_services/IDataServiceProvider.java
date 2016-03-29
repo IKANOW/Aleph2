@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.IReadOnlyCrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
@@ -52,13 +53,21 @@ public interface IDataServiceProvider {
 		 */
 		<O> Optional<IDataWriteService<O>> getWritableDataService(final Class<O> clazz, final DataBucketBean bucket, final Optional<String> options, final Optional<String> secondary_buffer);
 		
+		/** Returns a read only CRUD service (though may be functionally read-only, or maybe update-only) for the specified buckets 
+		 * @param clazz - the class of the bean to use, or JsonNode.class for schema-less writes
+		 * @param buckets - the buckets across which the CRUD operations will be applied
+		 * @param options - an arbitrary string whose function depends on the particular data service (eg "entity" or "association" to get a CRUD store from a graph DB)
+		 * @return optionally, a CRUD service pointing at the collection of buckets 
+		 */
+		<O> Optional<IReadOnlyCrudService<O>> getReadableCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets, final Optional<String> options);
+		
 		/** Returns a full CRUD service (though may be functionally read-only, or maybe update-only) for the specified buckets 
 		 * @param clazz - the class of the bean to use, or JsonNode.class for schema-less writes
 		 * @param buckets - the buckets across which the CRUD operations will be applied
 		 * @param options - an arbitrary string whose function depends on the particular data service (eg "entity" or "association" to get a CRUD store from a graph DB)
 		 * @return optionally, a CRUD service pointing at the collection of buckets 
 		 */
-		<O> Optional<ICrudService<O>> getReadableCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets, final Optional<String> options);
+		<O> Optional<ICrudService<O>> getUpdatableCrudService(final Class<O> clazz, final Collection<DataBucketBean> buckets, final Optional<String> options);
 		
 		/** Returns the list of secondary buffers used with this bucket (so that they can be deleted)
 		 *  By default does list the secdonary for transient analytic jobs, only that of the final output buffer (other jobs are locked together)  

@@ -61,7 +61,14 @@ public class SampleSearchIndexService implements ISearchIndexService {
 		}
 
 		@Override
-		public <O> Optional<ICrudService<O>> getReadableCrudService(
+		public <O> Optional<ICrudService.IReadOnlyCrudService<O>> getReadableCrudService(
+				Class<O> clazz, Collection<DataBucketBean> buckets,
+				Optional<String> options) {
+			return null;
+		}
+
+		@Override
+		public <O> Optional<ICrudService<O>> getUpdatableCrudService(
 				Class<O> clazz, Collection<DataBucketBean> buckets,
 				Optional<String> options) {
 			return null;

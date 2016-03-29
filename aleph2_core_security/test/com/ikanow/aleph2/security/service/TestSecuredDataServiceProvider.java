@@ -34,6 +34,7 @@ import org.mockito.Mockito;
 
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.IReadOnlyCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
@@ -324,7 +325,21 @@ public class TestSecuredDataServiceProvider {
 		}
 
 		@Override
-		public <O> Optional<ICrudService<O>> getReadableCrudService(
+		public <O> Optional<IReadOnlyCrudService<O>> getReadableCrudService(
+				Class<O> clazz, Collection<DataBucketBean> buckets,
+				Optional<String> options) {
+			
+			normal_buckets.clear();
+			multi_buckets.clear();
+			
+			normal_buckets.addAll(buckets.stream().map(b -> b.full_name()).collect(Collectors.toList()));
+			multi_buckets.addAll(buckets.stream().flatMap(b -> Optionals.ofNullable(b.multi_bucket_children()).stream()).collect(Collectors.toList()));
+			
+			return null;
+		}
+
+		@Override
+		public <O> Optional<ICrudService<O>> getUpdatableCrudService(
 				Class<O> clazz, Collection<DataBucketBean> buckets,
 				Optional<String> options) {
 			

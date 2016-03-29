@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -396,7 +397,7 @@ public class TestDeduplicationService {
 		// dummy context
 		DeduplicationEnrichmentContext test_context = Mockito.mock(DeduplicationEnrichmentContext.class);
 		Mockito.doNothing().when(test_context).resetMutableState(Mockito.any(), Mockito.any());
-		Mockito.when(test_context.getObjectIdsToDelete()).thenReturn(Stream.empty());
+		Mockito.when(test_context.getObjectIdsToDelete()).thenReturn(Arrays.asList((JsonNode)new TextNode("a")).stream());
 		
 		_called_batch.set(0);
 		assertEquals(0L, _called_batch.get());
@@ -420,9 +421,11 @@ public class TestDeduplicationService {
 		
 		assertEquals(0L, _called_batch.get());
 
-		DeduplicationService.handleCustomDeduplication(Optional.of(Tuples._2T(test_module, test_context)), batch.stream().collect(Collectors.toList()), Arrays.asList(test2), _mapper.createObjectNode());
+		final Stream<JsonNode> ret_val = DeduplicationService.handleCustomDeduplication(Optional.of(Tuples._2T(test_module, test_context)), batch.stream().collect(Collectors.toList()), Arrays.asList(test2), _mapper.createObjectNode());
 		
 		assertEquals(3L, _called_batch.get());
+		
+		assertEquals(1L, ret_val.count());
 	}
 	
 	@Test
@@ -498,9 +501,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
-					);
+					);			
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -512,7 +516,7 @@ public class TestDeduplicationService {
 			assertEquals(1, mutable_obj_map.size());
 		}
 		// Simple case update policy - time updates
-		{
+		final Consumer<Boolean> test_time_updates = delete_unhandled -> {
 			//(reset)
 			mutable_obj_map.clear();
 			mutable_obj_map.put(new TextNode("never_changed"), new_records);
@@ -525,13 +529,20 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.update)
-						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, delete_unhandled)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
-					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
+			// (add the same object twice to test the "return ids to delete" functionality)
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json, old_json), key, mutable_obj_map
 					);
+			if (delete_unhandled) {
+				assertEquals(Arrays.asList("old_record"), ret_val.sorted().map(j -> DeduplicationService.jsonToObject(j)).collect(Collectors.toList()));				
+			}
+			else {
+				assertEquals(0L, ret_val.count());
+			}
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -541,7 +552,10 @@ public class TestDeduplicationService {
 			assertEquals("{\"_id\":\"old_record\"}", new_record._3().toString());
 			// Object removed from mutable map
 			assertEquals(2, mutable_obj_map.size());
-		}
+		};
+		test_time_updates.accept(true);
+		test_time_updates.accept(false);
+		
 		// Simple case update policy - times the same
 		{
 			//(reset)
@@ -559,9 +573,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -573,7 +588,7 @@ public class TestDeduplicationService {
 			assertEquals(1, mutable_obj_map.size());
 		}
 		// overwrite
-		{
+		final Consumer<Boolean> test_overwrites = delete_unhandled -> {
 			//(reset)
 			mutable_obj_map.clear();
 			mutable_obj_map.put(new TextNode("never_changed"), new_records);
@@ -586,13 +601,19 @@ public class TestDeduplicationService {
 			DocumentSchemaBean config = 
 					BeanTemplateUtils.build(DocumentSchemaBean.class)
 						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
-						.with(DocumentSchemaBean::delete_unhandled_duplicates, false)
+						.with(DocumentSchemaBean::delete_unhandled_duplicates, delete_unhandled)
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
-					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
+					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json, old_json), key, mutable_obj_map
 					);
+			if (delete_unhandled) {
+				assertEquals(Arrays.asList("old_record"), ret_val.sorted().map(j -> DeduplicationService.jsonToObject(j)).collect(Collectors.toList()));				
+			}
+			else {
+				assertEquals(0L, ret_val.count());
+			}
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -602,7 +623,10 @@ public class TestDeduplicationService {
 			assertEquals("{\"_id\":\"old_record\"}", new_record._3().toString());
 			// Object removed from mutable map
 			assertEquals(2, mutable_obj_map.size());			
-		}
+		};
+		test_overwrites.accept(true);
+		test_overwrites.accept(false);
+		
 		//(check ignores times)
 		{
 			//(reset)
@@ -621,10 +645,11 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
-			
+			assertEquals(0L, ret_val.count());
+
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
 			// No custom processing performed
@@ -652,9 +677,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -683,9 +709,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -714,9 +741,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records, Arrays.asList(old_json), key, mutable_obj_map
 					);
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -745,9 +773,10 @@ public class TestDeduplicationService {
 					.done().get();
 			DeduplicationEnrichmentContext test_context = new DeduplicationEnrichmentContext(enrich_context, config, j -> Optional.empty());
 			
-			DeduplicationService.handleDuplicateRecord(config,
+			final Stream<JsonNode> ret_val = DeduplicationService.handleDuplicateRecord(config,
 					Optional.of(Tuples._2T(test_module, test_context)), ts_field, new_records_but_same_time, Arrays.asList(old_json), key, mutable_obj_map
 					);
+			assertEquals(0L, ret_val.count());
 			
 			// Nothing emitted
 			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
@@ -758,6 +787,7 @@ public class TestDeduplicationService {
 			// Object removed from mutable map
 			assertEquals(1, mutable_obj_map.size());
 		}
+		
 	}
 
 	////////////////////////////////////////////////////
@@ -1364,6 +1394,81 @@ public class TestDeduplicationService {
 		System.out.println("COMPLETING DEDUP TEST NOW: " + new Date());
 	}
 	
+	/** 2 Things
+	 *  1) Check that the 
+	 * @throws InterruptedException 
+	 */
+	@SuppressWarnings("unchecked")
+	@Test
+	public void test_puttingItAllTogether_complexTests() throws InterruptedException {
+		
+		test_puttingItAllTogether_genericPhase();
+		
+		// Generic intialization:
+		
+		final String ts_field = "@timestamp";
+		
+		System.out.println("STARTING COMPLEX DEDUP TEST NOW: " + new Date());
+
+		// Test 1) All the duplicates get through the overwrite dedup module - will also delete lots of the dups
+		{			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/multiple/overwrite/",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field"))
+						.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Should have called emit 2*"num_write_records" times (50% of them are duplicates but they get overwritten)
+			Mockito.verify(enrich_context, Mockito.times(2*num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+	
+			// Check deleted all the extra duplicates
+			final IDataWriteService<JsonNode> store1 = getDataStore("/dedup/context1");
+			final IDataWriteService<JsonNode> store2 = getDataStore("/dedup/context2");
+			
+			for (int i = 0; i < 40; ++i) {
+				Thread.sleep(250L);
+				if ((store1.countObjects().join() +
+						store2.countObjects().join()) <= num_write_records)
+				{
+					break;
+				}
+				//System.out.println("?? " + store1.countObjects().join() + "..." + store2.countObjects().join());
+			}
+			assertEquals(num_write_records, store1.countObjects().join() + store2.countObjects().join());			
+		}
+		
+		//TODO refill and do custom test?
+	}
+	
+	private IDataWriteService<JsonNode> getDataStore(final String bucket_name) {
+		final DataBucketBean context_bucket =
+				BeanTemplateUtils.build(DataBucketBean.class)
+				.with(DataBucketBean::full_name, bucket_name)
+				.with(DataBucketBean::data_schema,
+						BeanTemplateUtils.build(DataSchemaBean.class)
+							.with(DataSchemaBean::document_schema, 
+									BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+									.done().get()
+							)
+						.done().get()
+						)
+			.done().get();
+		
+		final IDocumentService doc_service = _service_context.getDocumentService().get();
+		return doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket, Optional.empty(), Optional.empty()).get();
+	}
+	
 	public void test_puttingItAllTogether_genericPhase() throws InterruptedException {
 		
 		// 1) Create 2 "context" buckets
@@ -1400,7 +1505,7 @@ public class TestDeduplicationService {
 		
 		List<JsonNode> objs_for_context1 = IntStream.rangeClosed(1, num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
-			obj.put("_id", "id" + i);
+			obj.put("_id", "id1_" + i);
 			obj.put("dup", true);
 			obj.put("dup_field", i);
 			obj.put("alt_dup_field", i);
@@ -1410,7 +1515,7 @@ public class TestDeduplicationService {
 		
 		List<JsonNode> objs_for_context2 = IntStream.rangeClosed(1, num_write_records).boxed().map(i -> {
 			final ObjectNode obj = _mapper.createObjectNode();
-			obj.put("_id", "id" + i);
+			obj.put("_id", "id2_" + i);
 			obj.put("dup", false);
 			obj.put("dup_field", i);
 			obj.put("alt_dup_field", -i);
