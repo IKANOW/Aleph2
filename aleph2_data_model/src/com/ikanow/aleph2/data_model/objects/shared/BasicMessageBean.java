@@ -36,7 +36,7 @@ public class BasicMessageBean implements Serializable {
 			final String command,
 			final Integer message_code,
 			final String message,
-			final Map<String, String> details
+			final Map<String, Object> details
 								)
 	{
 		this.date = date;
@@ -86,7 +86,7 @@ public class BasicMessageBean implements Serializable {
 	/**
 	 * @return the details (optional, for display purposes)
 	 */
-	public Map<String, String> details() {
+	public Map<String, Object> details() {
 		return details == null ? null : Collections.unmodifiableMap(details);
 	}
 	
@@ -96,5 +96,5 @@ public class BasicMessageBean implements Serializable {
 	private String command;
 	private Integer message_code;
 	private String message;
-	private Map<String, String> details;	
+	private Map<String, Object> details;	
 }

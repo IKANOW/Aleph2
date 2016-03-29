@@ -31,7 +31,7 @@ public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
 	final Supplier<String> command;
 	final Supplier<Integer> message_code;
 	final Supplier<String> message;
-	final Supplier<Map<String, String>> details;
+	final Supplier<Map<String, Object>> details;
 	/**
 	 * @param success
 	 * @param source
@@ -43,7 +43,7 @@ public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
 			Supplier<String> command,
 			Supplier<Integer> message_code,
 			Supplier<String> message,
-			Supplier<Map<String, String>> details) {
+			Supplier<Map<String, Object>> details) {
 		this.success = success;
 		this.source = source;
 		this.command = command;

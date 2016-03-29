@@ -305,7 +305,7 @@ public class ErrorUtils {
 					);
 	}
 	
-	public static IBasicMessageBeanSupplier lazyBuildMessage(boolean success, final Supplier<String> source, final Supplier<String> command, final Supplier<Integer> message_code, final Supplier<String> message, final Supplier<Map<String, String>> details) {
+	public static IBasicMessageBeanSupplier lazyBuildMessage(boolean success, final Supplier<String> source, final Supplier<String> command, final Supplier<Integer> message_code, final Supplier<String> message, final Supplier<Map<String, Object>> details) {
 		return new BasicMessageBeanSupplier(success, source, command, message_code, message, details);
 	}
 }

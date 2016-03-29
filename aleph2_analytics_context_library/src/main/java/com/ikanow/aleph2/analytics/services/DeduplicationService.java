@@ -25,11 +25,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.logging.log4j.Level;
 
 import scala.Tuple2;
 import scala.Tuple3;
@@ -45,6 +48,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -59,6 +63,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Patterns;
@@ -89,6 +94,19 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected final SetOnce<List<String>> _dedup_fields = new SetOnce<>();
 	protected final SetOnce<DeduplicationPolicy> _policy = new SetOnce<>();	
 		
+	protected final SetOnce<IBucketLogger> _logger = new SetOnce<>();
+	
+	public static class MutableStats {
+		int nonduplicate_keys = 0;		
+		int duplicates_incoming = 0;
+		int duplicates_existing = 0;
+		int duplicate_keys = 0;
+		int deleted = 0;
+	}
+	protected final MutableStats _mutable_stats = new MutableStats();
+	
+	protected final LinkedList<CompletableFuture<Long>> mutable_uncompleted_deletes = new LinkedList<>();
+	
 	//TODO (ALEPH-20): move this into the ES service
 	public static class ElasticsearchTechnologyOverride {
 		protected ElasticsearchTechnologyOverride() {}
@@ -115,6 +133,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	{
 		_context.set(context);
 
+		_logger.set(context.getLogger(Optional.of(bucket)));
+		
 		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(dedup_control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
 		
 		final DocumentSchemaBean doc_schema = Optional.ofNullable(dedup_config.doc_schema_override()).orElse(bucket.data_schema().document_schema()); //(exists by construction)
@@ -285,8 +305,14 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 							.entrySet()
 							.stream()
 							.<JsonNode>flatMap(kv -> {
+								
 								final Optional<JsonNode> maybe_key = kv.getKey();
 								final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key));
+								
+								// Stats:
+								_mutable_stats.duplicate_keys++;
+								_mutable_stats.duplicates_existing = kv.getValue().size();
+								_mutable_stats.duplicates_incoming += matching_records.map(l -> l.size()).orElse(0);
 								
 								//DEBUG
 								//System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_records.map(x -> Integer.toString(x.size())).orElse("(no match)"));
@@ -307,6 +333,11 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 						//DEBUG
 						//System.out.println("?? " + ret_obj + " vs " + maybe_key + " vs " + matching_record.map(x -> x._2().getJson().toString()).orElse("(no match)"));
 						
+						// Stats:
+						_mutable_stats.duplicate_keys++;
+						_mutable_stats.duplicates_existing++;
+						_mutable_stats.duplicates_incoming += matching_records.map(l -> l.size()).orElse(0);
+						
 						matching_records.ifPresent(records -> 
 							handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
 													_timestamp_field.get(), records, Arrays.asList(ret_obj), maybe_key.get(), mutable_obj_map));
@@ -321,10 +352,23 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				.collect(Collectors.toList())
 				;
 		
-		if (!ids.isEmpty()) { // fire and forget a bulk deletion request
-			_dedup_context.get().deleteObjectsBySpec(CrudUtils.allOf().withAny(AnnotationBean._ID, ids));
-			;
+		if (!ids.isEmpty()) { // fire a bulk deletion request
+			mutable_uncompleted_deletes.add(_dedup_context.get().deleteObjectsBySpec(CrudUtils.allOf().withAny(AnnotationBean._ID, ids)));
+			
+			_mutable_stats.deleted += ids.size();
+			
+			//(quickly see if we can reduce the number of outstanding requests)
+			final Iterator<CompletableFuture<Long>> it = mutable_uncompleted_deletes.iterator();
+			while (it.hasNext()) {
+				final CompletableFuture<Long> cf = it.next();
+				if (cf.isDone()) {
+					it.remove();
+				}
+				else break; // ie stop as soon as we hit one that isn't complete)
+			}
 		}
+		
+		_mutable_stats.nonduplicate_keys += mutable_obj_map.size();			
 		
 		if (Optional.ofNullable(_doc_schema.get().custom_finalize_all_objects()).orElse(false)) {
 			mutable_obj_map.entrySet().stream()
@@ -663,9 +707,31 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#onStageComplete(boolean)
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
 	public void onStageComplete(final boolean is_original) {
 		_custom_handler.optional().ifPresent(handler -> handler.onStageComplete(true));
+		
+		_logger.get().log(Level.DEBUG,
+				ErrorUtils.lazyBuildMessage(true, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
+						() -> ErrorUtils.get("completed deduplication: nondup_keys={0}, dup_keys={1}, dups_inc={2}, dups_db={3}, del={4}", 
+								_mutable_stats.nonduplicate_keys, _mutable_stats.duplicate_keys, _mutable_stats.duplicates_incoming, _mutable_stats.duplicates_existing,
+								_mutable_stats.deleted), 
+						() -> (Map<String, Object>)_mapper.convertValue(_mutable_stats, Map.class))
+						);
+		
+		if (!mutable_uncompleted_deletes.isEmpty()) {
+			try {
+				CompletableFuture.allOf(mutable_uncompleted_deletes.stream().toArray(CompletableFuture[]::new)).get(60, TimeUnit.SECONDS);
+			}
+			catch (Exception e) {
+				_logger.get().log(Level.ERROR, 
+						ErrorUtils.lazyBuildMessage(false, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
+								() -> "Error completing deleted ids: " + e.getMessage(), 
+								() -> null)
+								);
+			}
+		}
 	}
 
 }

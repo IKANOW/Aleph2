@@ -30,7 +30,7 @@ public class Log4JUtils {
 	
 	private static String message_format = "[%s] %s %s %s"; // <date> <level> <message> <class:line> <other_fields=other_values>
 	private static String field_format = " %s=%s";
-	public static String getLog4JMessage(final JsonNode logObject, final Level level, final StackTraceElement stack, final String date_field, Map<String, String> map) {
+	public static String getLog4JMessage(final JsonNode logObject, final Level level, final StackTraceElement stack, final String date_field, Map<String, Object> map) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(String.format(message_format, new Date(logObject.get(date_field).asLong()), level.name(), logObject.get("message").asText(), stack));
 		sb.append(String.format(field_format, "subsystem", logObject.get("subsystem").asText()));
