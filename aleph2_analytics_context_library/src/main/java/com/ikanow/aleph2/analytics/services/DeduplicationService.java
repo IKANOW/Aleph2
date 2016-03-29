@@ -46,7 +46,6 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
-import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
@@ -54,6 +53,7 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentS
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationTiming;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
@@ -153,14 +153,17 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					)
 					.orElse(bucket);
 		
-		//TODO (ALEPH-20): needs to be secure
-		final ISecurityService security_context = context.getServiceContext().getSecurityService();
-		
-		final Optional<ICrudService<JsonNode>> maybe_read_crud = 
+		// Get secured data service -> CRUD for id checking and deletion
+		final Optional<ICrudService<JsonNode>> maybe_read_crud =				
 			context.getServiceContext().getService(IDocumentService.class, Optional.ofNullable(doc_schema.service_name()))
+					.map(ds -> ds.secured(context.getServiceContext(), new AuthorizationBean(bucket.owner_id())))
 					.flatMap(ds -> ds.getDataService())
-					.flatMap(ds -> ds.getReadableCrudService(JsonNode.class, Arrays.asList(context_holder), Optional.empty()))
-					.map(crud -> (ICrudService<JsonNode>)crud) //(just ensure it has a read/write interface even though the write might not be used)
+					.flatMap(ds -> 
+						_doc_schema.get().delete_unhandled_duplicates()
+							? ds.getUpdatableCrudService(JsonNode.class, Arrays.asList(context_holder), Optional.empty())
+							: ds.getReadableCrudService(JsonNode.class, Arrays.asList(context_holder), Optional.empty()).map(crud -> (ICrudService<JsonNode>)crud)
+					)
+					//(just ensure it has a read/update interface even though the update might not be used)
 			;
 		
 		maybe_read_crud.ifPresent(read_crud -> _dedup_context.set(read_crud));
@@ -285,9 +288,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 								final Optional<JsonNode> maybe_key = kv.getKey();
 								final Optional<LinkedList<Tuple3<Long, IBatchRecord, ObjectNode>>> matching_records = maybe_key.map(key -> mutable_obj_map.get(key));
 								
-								/**/
 								//DEBUG
-								System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_records.map(x -> Integer.toString(x.size())).orElse("(no match)"));
+								//System.out.println("?? " + kv.getValue().size() + " vs " + maybe_key + " vs " + matching_records.map(x -> Integer.toString(x.size())).orElse("(no match)"));
 								
 								return matching_records.<Stream<JsonNode>>map(records -> 
 									handleDuplicateRecord(_doc_schema.get(), _custom_handler.optional().map(handler -> Tuples._2T(handler, this._custom_context.get())),
@@ -318,9 +320,6 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 				.filter(j -> null != j)
 				.collect(Collectors.toList())
 				;
-		
-		/**/
-		System.out.println("?? " + ids.size() + " eg " + ids.stream().findFirst());
 		
 		if (!ids.isEmpty()) { // fire and forget a bulk deletion request
 			_dedup_context.get().deleteObjectsBySpec(CrudUtils.allOf().withAny(AnnotationBean._ID, ids));

@@ -1345,6 +1345,39 @@ public class TestDeduplicationService {
 			// Of the other 50%, the 50% newer ones get passed to the batch (*2, 1 for new + 1 for old) - but no dups because they are always timestamp==0
 			assertEquals(num_write_records, _called_batch.get());
 		}
+		// TEST 5e: CUSTOM UPDATE, MULTI-FIELD, SINGLE-BUCKET CONTEXT
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/dedup/context1",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("alt_dup_field"))
+						.with(DataSchemaBean.DocumentSchemaBean::custom_finalize_all_objects, true)
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// Nothing is emitted
+			Mockito.verify(enrich_context, Mockito.times(0)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// 50% + will go through the deduplication (context1, but _not_ dups, see above) - the other 50% (context2) + 10% dups will go through finalize 
+			assertEquals(num_write_records + 11*num_write_records/10, _called_batch.get());
+		}
 		
 		// Final error case:
 		
@@ -1400,7 +1433,7 @@ public class TestDeduplicationService {
 	 */
 	@SuppressWarnings("unchecked")
 	@Test
-	public void test_puttingItAllTogether_complexTests() throws InterruptedException {
+	public void test_puttingItAllTogether_deletionTests() throws InterruptedException {
 		
 		test_puttingItAllTogether_genericPhase();
 		
@@ -1414,7 +1447,7 @@ public class TestDeduplicationService {
 		{			
 			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
 			
-			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/multiple/overwrite/",
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/multiple/overwrite/delete",
 					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
 						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.overwrite)
 						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
@@ -1439,16 +1472,60 @@ public class TestDeduplicationService {
 			for (int i = 0; i < 40; ++i) {
 				Thread.sleep(250L);
 				if ((store1.countObjects().join() +
-						store2.countObjects().join()) <= num_write_records)
-				{
+						store2.countObjects().join()) <= num_write_records) {
 					break;
 				}
-				//System.out.println("?? " + store1.countObjects().join() + "..." + store2.countObjects().join());
 			}
 			assertEquals(num_write_records, store1.countObjects().join() + store2.countObjects().join());			
 		}
 		
-		//TODO refill and do custom test?
+		System.out.println("(replenishing dedup contexts)");
+		test_puttingItAllTogether_genericPhase();
+		{
+			_called_batch.set(0);
+			
+			final IEnrichmentModuleContext enrich_context = getMockEnrichmentContext();
+			
+			final DataBucketBean write_bucket = addTimestampField(ts_field, getDocBucket("/test/dedup/multiple/overwrite/custom",
+					BeanTemplateUtils.build(DataSchemaBean.DocumentSchemaBean.class)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_fields, Arrays.asList("dup_field"))
+						.with(DataSchemaBean.DocumentSchemaBean::deduplication_contexts, Arrays.asList("/dedup/*"))
+						.with(DataSchemaBean.DocumentSchemaBean::delete_unhandled_duplicates, true)
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
+											.with(EnrichmentControlMetadataBean::module_name_or_id, "/app/aleph2/library/test.jar")
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			// Test
+			
+			test_puttingItAllTogether_runTest(write_bucket, enrich_context);			
+			
+			// Things to check:
+			
+			// The 50% of non-matching data objects are emitted
+			Mockito.verify(enrich_context, Mockito.times(num_write_records)).emitImmutableObject(Mockito.any(Long.class), Mockito.any(JsonNode.class), Mockito.any(Optional.class), Mockito.any(Optional.class), Mockito.any(Optional.class));
+			// The other 50% get passed to the batch (*3, 1 for new + 2 for old) + 10% dups, ie *2 + *11/10 total
+			assertEquals(2*num_write_records + 11*num_write_records/10, _called_batch.get());
+
+			// Check deleted all the extra duplicates
+			final IDataWriteService<JsonNode> store1 = getDataStore("/dedup/context1");
+			final IDataWriteService<JsonNode> store2 = getDataStore("/dedup/context2");
+			
+			for (int i = 0; i < 40; ++i) {
+				Thread.sleep(250L);
+				if ((store1.countObjects().join() + store2.countObjects().join()) <= num_write_records) {
+					break;
+				}
+			}
+			assertEquals(num_write_records, store1.countObjects().join() + store2.countObjects().join());
+		}
 	}
 	
 	private IDataWriteService<JsonNode> getDataStore(final String bucket_name) {
@@ -1500,6 +1577,18 @@ public class TestDeduplicationService {
 		
 		IDataWriteService<JsonNode> write_context1 = doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket1, Optional.empty(), Optional.empty()).get();
 		IDataWriteService<JsonNode> write_context2 = doc_service.getDataService().get().getWritableDataService(JsonNode.class, context_bucket2, Optional.empty(), Optional.empty()).get();
+		
+		write_context1.deleteDatastore();
+		write_context2.deleteDatastore();
+		for (int i = 0; i < 40; ++i) {
+			Thread.sleep(250L);
+			if ((write_context1.countObjects().join() + write_context2.countObjects().join()) <= 0)
+			{
+				break;
+			}
+			//System.out.println("?? " + store1.countObjects().join() + "..." + store2.countObjects().join());
+		}
+		assertEquals(0, write_context1.countObjects().join() + write_context2.countObjects().join());			
 		
 		// 2) Fill with 50% duplicates, 50% random records
 		
@@ -1649,7 +1738,7 @@ public class TestDeduplicationService {
 			
 			List<Tuple2<Long, IBatchRecord>> l = batch.collect(Collectors.toList());
 			long n = l.stream().filter(b -> !b._2().injected()).count();
-			assertEquals(n, batch_size.get().longValue());
+			batch_size.ifPresent(bs -> assertEquals(n, bs.longValue())); //(in finalize cases this is not filled in)
 			_called_batch.addAndGet(l.size());
 		}
 
