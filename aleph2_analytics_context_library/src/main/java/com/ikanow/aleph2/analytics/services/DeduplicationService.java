@@ -50,6 +50,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleCont
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
@@ -133,7 +134,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	{
 		_context.set(context);
 
-		_logger.set(context.getLogger(Optional.of(bucket)));
+		context.getServiceContext().getService(ILoggingService.class, Optional.empty()).map(s -> s.getSystemLogger(bucket)).ifPresent(logger -> _logger.set(logger));
 		
 		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(dedup_control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
 		
@@ -732,6 +733,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 								);
 			}
 		}
+		_logger.get().flush();
 	}
 
 }
