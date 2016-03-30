@@ -713,27 +713,27 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	public void onStageComplete(final boolean is_original) {
 		_custom_handler.optional().ifPresent(handler -> handler.onStageComplete(true));
 		
-		_logger.get().log(Level.DEBUG,
+		_logger.optional().ifPresent(l -> l.log(Level.DEBUG,
 				ErrorUtils.lazyBuildMessage(true, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
 						() -> ErrorUtils.get("completed deduplication: nondup_keys={0}, dup_keys={1}, dups_inc={2}, dups_db={3}, del={4}", 
 								_mutable_stats.nonduplicate_keys, _mutable_stats.duplicate_keys, _mutable_stats.duplicates_incoming, _mutable_stats.duplicates_existing,
 								_mutable_stats.deleted), 
 						() -> (Map<String, Object>)_mapper.convertValue(_mutable_stats, Map.class))
-						);
+						));
 		
 		if (!mutable_uncompleted_deletes.isEmpty()) {
 			try {
 				CompletableFuture.allOf(mutable_uncompleted_deletes.stream().toArray(CompletableFuture[]::new)).get(60, TimeUnit.SECONDS);
 			}
 			catch (Exception e) {
-				_logger.get().log(Level.ERROR, 
+				_logger.optional().ifPresent(l -> l.log(Level.ERROR, 
 						ErrorUtils.lazyBuildMessage(false, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
 								() -> "Error completing deleted ids: " + e.getMessage(), 
 								() -> null)
-								);
+								));
 			}
 		}
-		_logger.get().flush();
+		_logger.optional().ifPresent(l -> l.flush());
 	}
 
 }
