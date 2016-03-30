@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
@@ -103,7 +104,8 @@ public class TestDeduplicationService {
 					.done().get();
 			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
 			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
-			
+			final IBucketLogger mock_logger = Mockito.mock(IBucketLogger.class);
+			Mockito.when(enrich_context.getLogger(Mockito.any())).thenReturn(mock_logger);			
 			
 			// simple version (default temporal field)
 			{
@@ -1520,11 +1522,11 @@ public class TestDeduplicationService {
 			
 			for (int i = 0; i < 40; ++i) {
 				Thread.sleep(250L);
-				if ((store1.countObjects().join() + store2.countObjects().join()) <= num_write_records) {
+				if ((store1.countObjects().join() + store2.countObjects().join()) <= 0) {
 					break;
 				}
 			}
-			assertEquals(num_write_records, store1.countObjects().join() + store2.countObjects().join());
+			assertEquals(0, store1.countObjects().join() + store2.countObjects().join());
 		}
 	}
 	
@@ -1676,6 +1678,9 @@ public class TestDeduplicationService {
 		// Run
 		
 		test_module.onObjectBatch(imcoming_objects.stream(), Optional.empty(), Optional.empty());
+		
+		// (Finish)
+		test_module.onStageComplete(true);
 	}
 	
 	////////////////////////////////////////////////////
@@ -1684,6 +1689,8 @@ public class TestDeduplicationService {
 	public IEnrichmentModuleContext getMockEnrichmentContext() {
 		
 		final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+		final IBucketLogger mock_logger = Mockito.mock(IBucketLogger.class);
+		Mockito.when(enrich_context.getLogger(Mockito.any())).thenReturn(mock_logger);			
 		
 		Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
 		
