@@ -231,7 +231,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 	    		.match(BucketActionMessage.class, 
 		    		m -> {
 		    			if ( shouldLog(m))
-		    				_logging_service.getSystemLogger(m.bucket()).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ()->Collections.emptyMap()));
+		    				_logging_service.getSystemLogger(m.bucket()).log(Level.INFO, ErrorUtils.lazyBuildMessage(true, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"receive", ()->null, ()->ErrorUtils.get("Actor {0} received message {1} from {2} bucket {3}", this.self(), m.getClass().getSimpleName(), this.sender(), m.bucket().full_name()), ()->Collections.emptyMap()));
 
 		    			final ActorRef closing_self = this.self();		    			
 		    			
@@ -866,7 +866,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 					final IAnalyticsTechnologyModule tech_module = techmodule_classloader._1();
 					
 					if ( shouldLog(m) )
-						_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->"Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ()->Collections.emptyMap()));
+						_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->"Set active classloader=" + techmodule_classloader._2() + " class=" + tech_module.getClass() + " message=" + m.getClass().getSimpleName() + " bucket=" + bucket.full_name(), ()->Collections.emptyMap()));
 					Thread.currentThread().setContextClassLoader(techmodule_classloader._2());
 										
 					tech_module.onInit(context);
@@ -927,7 +927,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									
 									if (starting_thread) {
 										BasicMessageBean thread_start_result = tech_module.onThreadExecute(bucket, jobs, Collections.emptyList(), context).join(); // (wait for completion before doing anything else)
-										_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Executing thread for bucket {0}, success={1} (error={2})",bucket.full_name(), thread_start_result.success(),
+										_logging_service.getSystemLogger(bucket).log(thread_start_result.success() ? Level.INFO : Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Executing thread for bucket {0}, success={1} (error={2})",bucket.full_name(), thread_start_result.success(),
 												thread_start_result.success() ? "none" : thread_start_result.message()), ()->Collections.emptyMap()));
 									}
 									
@@ -942,7 +942,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 									// Only send on trigger events for messages that started
 									sendOnTriggerEventMessages(job_results, msg.bucket(), 
 																j_r -> {
-																	_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
+																	_logging_service.getSystemLogger(bucket).log(j_r._2().success() ? Level.INFO : Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Starting bucket:job {0}:{1} success={2}{3}", 
 																			bucket.full_name(), j_r._1().name(), j_r._2().success(),
 																			j_r._2().success() ? "" : (" error = " + j_r._2().message())
 																			), ()->Collections.emptyMap()));
@@ -1118,7 +1118,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 											_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Error starting analytic thread {0}: message={1}", bucket.full_name(), reply.message()), ()->Collections.emptyMap()));
 										}
 										else {
-											_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Started analytic thread {0}", bucket.full_name()), ()->Collections.emptyMap()));
+											_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(true, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Started analytic thread {0}", bucket.full_name()), ()->Collections.emptyMap()));
 										}
 									}); 
 																		
@@ -1165,7 +1165,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 											if (!res.success()) {
 												_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Error starting analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()), ()->Collections.emptyMap()));
 											} else {
-												_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Started analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ()->Collections.emptyMap()));
+												_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(true, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Started analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ()->Collections.emptyMap()));
 											}											
 										});
 									});
@@ -1189,7 +1189,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 										if (!reply.success()) {
 											_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Error stopping analytic thread {0}: message={1}", bucket.full_name(), reply.message()), ()->Collections.emptyMap()));
 										} else {
-											_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Stopping analytic thread {0}", bucket.full_name()), ()->Collections.emptyMap()));
+											_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(true, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Stopping analytic thread {0}", bucket.full_name()), ()->Collections.emptyMap()));
 										}
 									}); 
 									
@@ -1214,7 +1214,7 @@ public class DataBucketAnalyticsChangeActor extends AbstractActor {
 												_logging_service.getSystemLogger(bucket).log(Level.WARN, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Error stopping analytic job {0}:{1}: message={2}", bucket.full_name(), job_res._1().name(), res.message()), ()->Collections.emptyMap()));
 											}
 											else {
-												_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(false, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Stopping analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ()->Collections.emptyMap()));
+												_logging_service.getSystemLogger(bucket).log(Level.INFO, ErrorUtils.lazyBuildMessage(true, ()->DataBucketAnalyticsChangeActor.class.getSimpleName(), ()->"talkToAnalytics", ()->null, ()->ErrorUtils.get("Stopping analytic job {0}:{1}", bucket.full_name(), job_res._1().name()), ()->Collections.emptyMap()));
 											}											
 										});
 									});

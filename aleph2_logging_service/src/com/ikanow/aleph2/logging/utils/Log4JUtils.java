@@ -15,8 +15,10 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.utils;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.logging.log4j.Level;
 
@@ -35,7 +37,7 @@ public class Log4JUtils {
 		sb.append(String.format(message_format, new Date(logObject.get(date_field).asLong()), level.name(), logObject.get("message").asText(), stack));
 		sb.append(String.format(field_format, "subsystem", logObject.get("subsystem").asText()));
 		sb.append(String.format(field_format, "bucket", logObject.get("bucket").asText()));
-		map.entrySet().stream().forEach(e -> sb.append(String.format(field_format, e.getKey(), e.getValue())));
+		Optional.ofNullable(map).orElse(Collections.emptyMap()).entrySet().stream().forEach(e -> sb.append(String.format(field_format, e.getKey(), e.getValue())));
 		return sb.toString();
 	}
 }
