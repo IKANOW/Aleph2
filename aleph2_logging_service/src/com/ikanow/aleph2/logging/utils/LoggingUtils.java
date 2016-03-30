@@ -16,10 +16,13 @@
 package com.ikanow.aleph2.logging.utils;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
+
+import scala.Tuple2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -147,5 +150,18 @@ public class LoggingUtils {
 	 */
 	public static DataBucketBean getEmptyBucket() {
 		return BeanTemplateUtils.build(DataBucketBean.class).done().get();
+	}
+
+	/**
+	 * Updates a BMBs merge info object w/ an updated count (tracking every log message of this type sent in) and
+	 * a timestamp of the last time a message was actually logged (i.e. not filtered via rule or log level).
+	 * @param bmb
+	 * @param of
+	 * @return
+	 */
+	public static Tuple2<BasicMessageBean, Map<String, Object>> updateInfo(final Tuple2<BasicMessageBean, Map<String, Object>> merge_info, final Optional<Long> timestamp) {
+		merge_info._2.merge(LoggingFunctions.LOG_COUNT_FIELD, 1L, (n,o)->(Long)n+(Long)o);
+		timestamp.ifPresent(t->merge_info._2.replace(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, t));
+		return merge_info;
 	}
 }

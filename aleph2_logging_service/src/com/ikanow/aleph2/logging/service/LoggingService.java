@@ -18,20 +18,35 @@ package com.ikanow.aleph2.logging.service;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+
+
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+
+
+
 import scala.Tuple2;
+
+
+
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
@@ -49,6 +64,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -56,6 +72,7 @@ import com.ikanow.aleph2.logging.data_model.LoggingServiceConfig;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.module.LoggingServiceModule;
 import com.ikanow.aleph2.logging.utils.Log4JUtils;
+import com.ikanow.aleph2.logging.utils.LoggingFunctions;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
 /**
@@ -68,7 +85,8 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	
 	private final static Logger _logger = LogManager.getLogger();
 	protected final static Cache<String, MultiDataService> bucket_writable_cache = CacheBuilder.newBuilder().expireAfterAccess(30, TimeUnit.MINUTES).build();
-	private static final BasicMessageBean LOG_MESSAGE_BELOW_THRESHOLD = ErrorUtils.buildSuccessMessage(BucketLogger.class.getName(), "Log message dropped, below threshold", "n/a");
+	private static final BasicMessageBean LOG_MESSAGE_BELOW_THRESHOLD = ErrorUtils.buildSuccessMessage(BucketLogger.class.getName(), "log", "Log message dropped, below threshold");
+	private static final BasicMessageBean LOG_MESSAGE_DID_NOT_MATCH_RULE = ErrorUtils.buildSuccessMessage(BucketLogger.class.getName(), "log", "Log message dropped, did not match rule");
 	
 //	protected final LoggingServiceConfigBean properties;
 	protected final LoggingServiceConfig properties_converted;
@@ -175,7 +193,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 * @author Burch
 	 *
 	 */
-	private class BucketLogger implements IBucketLogger {		
+	private class BucketLogger implements IBucketLogger {				
 		final MultiDataService logging_writable;
 		final boolean isSystem;
 		final DataBucketBean bucket;
@@ -183,6 +201,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 		final Level default_log_level;  //holds the default log level for quick matching
 		final Level log4j_level;
 		final ImmutableMap<String, Level> bucket_logging_thresholds; //holds bucket logging overrides for quick matching
+		final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs;
 		
 		public BucketLogger(final DataBucketBean bucket, final MultiDataService logging_writable, final boolean isSystem) {
 			this.bucket = bucket;
@@ -191,7 +210,8 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			this.log4j_level = isSystem ? properties_converted.system_mirror_to_log4j_level() : Level.OFF;
 			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket);
 			this.date_field = Optional.ofNullable(properties_converted.default_time_field()).orElse("date");
-			this.default_log_level = isSystem ? Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties_converted.default_user_log_level()).orElse(Level.OFF);			
+			this.default_log_level = isSystem ? Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties_converted.default_user_log_level()).orElse(Level.OFF);	
+			this.merge_logs = new HashMap<String, Tuple2<BasicMessageBean, Map<String,Object>>>();
 		}
 
 		/* (non-Javadoc)
@@ -237,6 +257,100 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
 			}
 			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
+		}
+		
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction)
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				final Level level,
+				final IBasicMessageBeanSupplier message,
+				final String merge_key,
+				final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
+			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
+			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
+			if ( log_out || log_log4j ) {				
+				//call operator and replace existing entry (if exists)
+				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = getOrCreateMergeInfo(message.getBasicMessageBean(), merge_key, merge_operation);				
+				if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
+					//we are sending a msg, update bmb w/ timestamp and count
+					merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));
+					final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, merge_info._1, isSystem, date_field);
+					if ( log_log4j )					
+						_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, merge_info._1.details()));
+					if ( log_out )
+						logging_writable.batchWrite(logObject);					
+					return CompletableFuture.completedFuture(true);
+				}
+				//even if we didn't send a bmb, update the count
+				merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.empty()));
+				return CompletableFuture.completedFuture(LOG_MESSAGE_DID_NOT_MATCH_RULE);
+			}
+			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
+		}
+
+		/**
+		 * Merges the BMB message with an existing old entry (if it exists) otherwise merges with null.  If 
+		 * an entry did not exist, creates new default Map in the tuple for storing merge info. 
+		 * @param basicMessageBean
+		 * @param merge_key
+		 * @return
+		 */
+		private Tuple2<BasicMessageBean, Map<String, Object>> getOrCreateMergeInfo(final BasicMessageBean message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation) {			
+			return merge_logs.compute(merge_key, (k, v) -> {
+				if ( v == null ) {
+					//calculate new entry
+					final BasicMessageBean bmb = merge_operation.apply(message, null);
+					Map<String, Object> info = new HashMap<String, Object>();
+					info.put(LoggingFunctions.LOG_COUNT_FIELD, 0L);
+					info.put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);
+					return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, info);
+				} else {
+					//merge with old entry
+					final BasicMessageBean bmb = merge_operation.apply(message, merge_logs.get(merge_key)._1);
+					return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, v._2);					
+				}
+			});			
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message, Supplier<String> subsystem) {
+			return this.log(level, new BasicMessageBeanSupplier(success, subsystem, ()->null, ()->null, message, ()->null));
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command) {
+			return this.log(level, new BasicMessageBeanSupplier(success, subsystem, command, ()->null, message, ()->null));
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode) {
+			return this.log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, ()->null));
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode,
+				Supplier<Map<String, Object>> details) {
+			return this.log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, details));
 		}		
 	}
 

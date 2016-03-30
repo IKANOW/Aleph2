@@ -18,8 +18,12 @@ package com.ikanow.aleph2.logging.service;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.Level;
 
@@ -117,6 +121,63 @@ public class NoLoggingService implements ILoggingService {
 		public CompletableFuture<?> log(Level level,
 				IBasicMessageBeanSupplier message) {
 			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction, java.util.Optional)
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode) {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode,
+				Supplier<Map<String, Object>> details) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 		
 	}

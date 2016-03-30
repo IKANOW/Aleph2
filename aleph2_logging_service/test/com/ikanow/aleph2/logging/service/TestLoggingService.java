@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +47,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import scala.Tuple2;
+
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -65,6 +70,8 @@ import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.module.LoggingServiceModule;
+import com.ikanow.aleph2.logging.utils.LoggingFunctions;
+import com.ikanow.aleph2.logging.utils.LoggingUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -76,6 +83,7 @@ public class TestLoggingService {
 	private static Log4JLoggingService logging_service_log4j;
 	protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	protected Injector _app_injector;
+	public static final String VALUE_FIELD = "merge_value";
 	
 	// All the services
 	@Inject IServiceContext _service_context;
@@ -287,7 +295,7 @@ public class TestLoggingService {
 	public void test_NoLoggingService() throws InterruptedException, ExecutionException {
 		final String subsystem_name = "logging_test4";
 		final int num_messages_to_log = 50;
-		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final DataBucketBean test_bucket = getTestBucket("test4", Optional.of(Level.ALL.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service_no.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service_no.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service_no.getExternalLogger(subsystem_name);
@@ -330,7 +338,7 @@ public class TestLoggingService {
         //run a normal test
 		final String subsystem_name = "logging_test5";
 		final int num_messages_to_log = 50;
-		final DataBucketBean test_bucket = getTestBucket("test1", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final DataBucketBean test_bucket = getTestBucket("test5", Optional.of(Level.ALL.toString()), Optional.empty()); 
 		final IBucketLogger user_logger = logging_service_log4j.getLogger(test_bucket);
 		final IBucketLogger system_logger = logging_service_log4j.getSystemLogger(test_bucket);
 		final IBucketLogger external_logger = logging_service_log4j.getExternalLogger(subsystem_name);
@@ -347,6 +355,280 @@ public class TestLoggingService {
 		//cleanup
 		config.removeAppender("test");
 		ctx.updateLoggers();
+	}
+	
+	@Test
+	public void test_logFunctions() throws InterruptedException, ExecutionException {
+		final String subsystem_name = "logging_test6";
+		final int num_messages_to_log_each_type = 5;
+		final List<Level> levels = Arrays.asList(Level.DEBUG, Level.INFO, Level.ERROR);
+		final DataBucketBean test_bucket = getTestBucket("test6", Optional.of(Level.ERROR.toString()), Optional.empty()); 
+		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
+		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
+		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
+		
+		//log a few messages
+		IntStream.rangeClosed(1, num_messages_to_log_each_type).boxed().forEach(i -> {	
+			levels.stream().forEach(level -> {		
+				//append
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.appendMessage(), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.appendMessage(), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.appendMessage(), Optional.empty());
+				
+				//count
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.countMessages(), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.countMessages(), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", LoggingFunctions.countMessages(), Optional.empty());
+				
+				//sum
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.sumField(VALUE_FIELD), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.sumField(VALUE_FIELD), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.sumField(VALUE_FIELD), Optional.empty());
+				
+				//min
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minField(VALUE_FIELD), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minField(VALUE_FIELD), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minField(VALUE_FIELD), Optional.empty());
+				
+				//max
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.maxField(VALUE_FIELD), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.maxField(VALUE_FIELD), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.maxField(VALUE_FIELD), Optional.empty());
+				
+				//minmax
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minMaxField(VALUE_FIELD), Optional.empty());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minMaxField(VALUE_FIELD), Optional.empty());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.minMaxField(VALUE_FIELD), Optional.empty());
+			});
+		});
+		
+		//check its in ES, wait 10s max for the index to refresh
+		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
+		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud, 10);
+		assertEquals(60, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
+
+		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
+		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud_external, 10);
+		assertEquals(90, logging_crud_external.countObjects().get().longValue());
+		
+		//cleanup
+		logging_crud.deleteDatastore().get();
+	}
+	
+	@Test
+	public void test_logRules() throws InterruptedException, ExecutionException {
+		final String subsystem_name = "logging_test7";
+		final int num_messages_to_log = 50;
+		final DataBucketBean test_bucket = getTestBucket("test7", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
+		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
+		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
+		//log a few messages
+		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {	
+			//NOTE HAVE TO DO TIME RULE FIRST, BECAUSE IT WILL GET UPDATED EVERY OTHER LOG MESSAGE
+			//rule: to log every 30s, should only log the first time, then test should finish before 2nd one is allowed
+			//should result in 1 message each
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryMilliseconds(500000));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryMilliseconds(500000));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryMilliseconds(500000));
+			
+			//rule: log every 5 messages
+			//should result in num_messages_to_log/5 each aka 10 each
+			//NOTE count field has to go on its own key, because count is being increased for every successful message in any of the tests
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryCount(5));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryCount(5));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryCount(5));						
+			
+			//rule: log if max over threshold
+			//should result in 44 message over each
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)));			
+			
+			//rule: log if min under threshold
+			//should result in 1 under each
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
+			//before now total is: 56
+			//rule: log if min/max outside thresholds
+			//should result in 1 message under, 44 over each (45 each)
+			//but its getting to 91 aka 10 short or 101 where it should be 
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));			
+		});
+		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
+		//check its in ES, wait 10s max for the index to refresh
+		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
+		final IDataWriteService<JsonNode> logging_crud = search_index_service.getDataService().get().getWritableDataService(JsonNode.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud, 10);
+		assertEquals((1+10+44+1+45)*2, logging_crud.countObjects().get().longValue());
+		
+		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
+		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud_external, 10);
+		assertEquals(1+(num_messages_to_log/5)+44+1+45, logging_crud_external.countObjects().get().longValue());
+
+		//cleanup
+		logging_crud.deleteDatastore().get();
+	}
+	
+	@SuppressWarnings("serial")
+	@Test
+	public void test_LoggingMergeFunctions() {
+		//testing LoggingMergeFunctions.getDetailsMapValue
+		assertNull(LoggingFunctions.getDetailsMapValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), "field1", String.class));
+		assertNull(LoggingFunctions.getDetailsMapValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, null).done().get(), "field1", String.class));
+		assertNull(LoggingFunctions.getDetailsMapValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of()).done().get(), "field1", String.class));
+		assertTrue(LoggingFunctions.getDetailsMapValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field1", "value1")).done().get(), "field1", String.class).equals("value1"));
+		
+		//test LoggingMergeFunctions.copyDetailsPutValue
+		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, null).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of()).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field1", "value1")).done().get(), "field1", "value1").size());
+		assertEquals(2,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field2", "value2")).done().get(), "field1", "value1").size());
+		
+		//test LoggingMergeFunctions.getMinOrNull
+		assertNull(LoggingFunctions.getMinMaxOrNull(null,null,true));
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(null,1D,true),.0001D);
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(1D,null,true),.0001D);
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(2.1D,1D,true),.0001D);
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(1D,2.1D,true),.0001D);
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(null,1D,false),.0001D);
+		assertEquals(1D,LoggingFunctions.getMinMaxOrNull(1D,null,false),.0001D);
+		assertEquals(2.1D,LoggingFunctions.getMinMaxOrNull(2.1D,1D,false),.0001D);
+		assertEquals(2.1D,LoggingFunctions.getMinMaxOrNull(1D,2.1D,false),.0001D);
+		
+		//test LoggingUtils.updateInfo
+		assertEquals(1L, LoggingUtils.updateInfo(new Tuple2<BasicMessageBean, Map<String,Object>>(BeanTemplateUtils.build(BasicMessageBean.class).done().get(),new HashMap<String,Object>()), Optional.empty())._2.get(LoggingFunctions.LOG_COUNT_FIELD));
+		assertEquals(1L, LoggingUtils.updateInfo(new Tuple2<BasicMessageBean, Map<String,Object>>(BeanTemplateUtils.build(BasicMessageBean.class).done().get(),new HashMap<String,Object>()), Optional.of(new Date().getTime()))._2.get(LoggingFunctions.LOG_COUNT_FIELD));
+		assertEquals(5L, LoggingUtils.updateInfo(new Tuple2<BasicMessageBean, Map<String,Object>>(BeanTemplateUtils.build(BasicMessageBean.class).done().get(),new HashMap<String,Object>(){{put(LoggingFunctions.LOG_COUNT_FIELD, 4L);}}), Optional.empty())._2.get(LoggingFunctions.LOG_COUNT_FIELD));
+		assertNotNull(LoggingUtils.updateInfo(new Tuple2<BasicMessageBean, Map<String,Object>>(BeanTemplateUtils.build(BasicMessageBean.class).done().get(),new HashMap<String,Object>(){{put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);}}), Optional.of(new Date().getTime()))._2.get(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD));
+		
+		//test appender
+		assertTrue(LoggingFunctions.appendMessage().apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null)
+				.message().equals("msg1"));
+		assertTrue(LoggingFunctions.appendMessage().apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg2").done().get())
+				.message().equals("msg1 msg2"));
+		
+		//test counter
+		assertEquals((long)LoggingFunctions.countMessages().apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null)
+				.details().get(LoggingFunctions.COUNT_FIELD), 1L);
+		assertEquals((long)LoggingFunctions.countMessages().apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(LoggingFunctions.COUNT_FIELD, 4L)).done().get())
+				.details().get(LoggingFunctions.COUNT_FIELD), 5L);
+		
+		//test sum
+		assertEquals((double)LoggingFunctions.sumField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null)
+				.details().get(LoggingFunctions.SUM_FIELD), 0D, 0.0001D);
+		assertEquals((double)LoggingFunctions.sumField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 4.66)).done().get())
+				.details().get(LoggingFunctions.SUM_FIELD), 9.86D, 0.0001D);
+		
+		//test min
+		assertNull(LoggingFunctions.minField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null)
+				.details().get(LoggingFunctions.MIN_FIELD));
+		assertEquals((double)LoggingFunctions.minField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				null)
+				.details().get(LoggingFunctions.MIN_FIELD), 5.2D, 0.0001D);
+		assertEquals((double)LoggingFunctions.minField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 4.66)).done().get())
+				.details().get(LoggingFunctions.MIN_FIELD), 4.66D, 0.0001D);		
+		
+		//test max
+		assertNull(LoggingFunctions.minField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null)
+				.details().get(LoggingFunctions.MAX_FIELD));
+		assertEquals((double)LoggingFunctions.maxField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				null)
+				.details().get(LoggingFunctions.MAX_FIELD), 5.2D, 0.0001D);
+		assertEquals((double)LoggingFunctions.maxField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 4.66)).done().get())
+				.details().get(LoggingFunctions.MAX_FIELD), 5.2D, 0.0001D);
+		
+		//test minmax
+		final BasicMessageBean mm1 = LoggingFunctions.minField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::message, "msg1").done().get(), 
+				null);
+		assertNull(mm1.details().get(LoggingFunctions.MIN_FIELD));
+		assertNull(mm1.details().get(LoggingFunctions.MAX_FIELD));
+		final BasicMessageBean mm2 = LoggingFunctions.minMaxField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				null);
+		assertEquals((double)mm2.details().get(LoggingFunctions.MIN_FIELD), 5.2, 0.0001D);
+		assertEquals((double)mm2.details().get(LoggingFunctions.MAX_FIELD), 5.2, 0.0001D);		
+		final BasicMessageBean mm3 = LoggingFunctions.minMaxField(VALUE_FIELD).apply(
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 4.66)).done().get());
+		assertEquals((double)mm3.details().get(LoggingFunctions.MIN_FIELD), 4.66, 0.0001D);
+		assertEquals((double)mm3.details().get(LoggingFunctions.MAX_FIELD), 5.2, 0.0001D);
+	}
+	
+	@Test
+	public void test_simpleLog() throws InterruptedException, ExecutionException {
+		final String subsystem_name = "logging_test8";
+		final int num_messages_to_log = 50;
+		final DataBucketBean test_bucket = getTestBucket("test8", Optional.of(Level.ALL.toString()), Optional.empty()); 
+		final IBucketLogger user_logger = logging_service.getLogger(test_bucket);
+		final IBucketLogger system_logger = logging_service.getSystemLogger(test_bucket);
+		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
+		//log a few messages
+		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {		
+			user_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name);
+			system_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name);
+			external_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name);
+			
+			user_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command");
+			system_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command");
+			external_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command");
+			
+			user_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32);
+			system_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32);
+			external_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32);
+			
+			user_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32, ()->ImmutableMap.of());
+			system_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32, ()->ImmutableMap.of());
+			external_logger.log(Level.ERROR, true, ()->"test message " + i, ()-> subsystem_name, ()->"command", ()->32, ()->ImmutableMap.of());
+		});
+		
+		//check its in ES, wait 10s max for the index to refresh
+		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
+		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud, 10);
+		assertEquals(num_messages_to_log*8, logging_crud.countObjects().get().longValue());
+		
+		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
+		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
+		waitForResults(logging_crud_external, 10);
+		assertEquals(num_messages_to_log*4, logging_crud_external.countObjects().get().longValue());
+
+		//cleanup
+		logging_crud.deleteDatastore().get();
 	}
 	
 	private class TestAppender extends AbstractAppender {
