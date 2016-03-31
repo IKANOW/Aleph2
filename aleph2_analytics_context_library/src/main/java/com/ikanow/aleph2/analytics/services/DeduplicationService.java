@@ -312,7 +312,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 								
 								// Stats:
 								_mutable_stats.duplicate_keys++;
-								_mutable_stats.duplicates_existing = kv.getValue().size();
+								_mutable_stats.duplicates_existing += kv.getValue().size();
 								_mutable_stats.duplicates_incoming += matching_records.map(l -> l.size()).orElse(0);
 								
 								//DEBUG
@@ -716,8 +716,8 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		_logger.optional().ifPresent(l -> l.log(Level.DEBUG,
 				ErrorUtils.lazyBuildMessage(true, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
 						() -> ErrorUtils.get("completed deduplication: nondup_keys={0}, dup_keys={1}, dups_inc={2}, dups_db={3}, del={4}", 
-								_mutable_stats.nonduplicate_keys, _mutable_stats.duplicate_keys, _mutable_stats.duplicates_incoming, _mutable_stats.duplicates_existing,
-								_mutable_stats.deleted), 
+								Integer.toString(_mutable_stats.nonduplicate_keys), Integer.toString(_mutable_stats.duplicate_keys), Integer.toString(_mutable_stats.duplicates_incoming), Integer.toString(_mutable_stats.duplicates_existing),
+								Integer.toString(_mutable_stats.deleted)), 
 						() -> (Map<String, Object>)_mapper.convertValue(_mutable_stats, Map.class))
 						));
 		
