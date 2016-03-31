@@ -132,8 +132,8 @@ public class NoLoggingService implements ILoggingService {
 				Level level,
 				IBasicMessageBeanSupplier message,
 				String merge_key,
-				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
 			return CompletableFuture.completedFuture(true);
 		}
 

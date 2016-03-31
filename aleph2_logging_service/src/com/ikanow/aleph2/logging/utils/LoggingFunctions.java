@@ -77,11 +77,14 @@ public class LoggingFunctions {
 	 * inherits all the fields of the new BasicMessageBean (e.g. does not merge any other fields). 
 	 */	
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum) {		
+		return sumField(field_to_sum, SUM_FIELD, false);		
+	}
+	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum, final String field_for_ouput, final boolean substituteMessage) {		
 		return (n,o)->{
 			Double sum = 
 				Optional.ofNullable(getDetailsMapValue(o, field_to_sum, Double.class)).orElse(0D) //old sum
 				+ Optional.ofNullable(getDetailsMapValue(n, field_to_sum, Double.class)).orElse(0D); //add new sum										
-			return BeanTemplateUtils.clone(n).with(BasicMessageBean::details, copyDetailsPutValue(n, SUM_FIELD, sum)).done();
+			return BeanTemplateUtils.clone(n).with(BasicMessageBean::details, copyDetailsPutValue(n, field_for_ouput, sum)).done();
 		};
 	}
 		
