@@ -35,7 +35,7 @@ public class LoggingServiceConfig {
 		this.default_system_log_level = convertToLevel(default_system_log_level, Level.OFF);
 		this.default_user_log_level = convertToLevel(default_user_log_level, Level.OFF);
 		this.system_mirror_to_log4j_level = convertToLevel(system_mirror_to_log4j_level, Level.OFF);;
-		_logger.log(Level.DEBUG, "CoreLoggingService config set to: t-" + default_time_field + " s-" +default_system_log_level + " u-" + default_user_log_level + " l-" + system_mirror_to_log4j_level);
+		_logger.log(Level.DEBUG, "LoggingService config set to: t-" + default_time_field + " s-" +default_system_log_level + " u-" + default_user_log_level + " l-" + system_mirror_to_log4j_level);
 	}
 	
 	/**
