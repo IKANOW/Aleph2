@@ -427,7 +427,7 @@ public class TestLoggingService {
 		final IBucketLogger external_logger = logging_service.getExternalLogger(subsystem_name);
 		//log a few messages
 		IntStream.rangeClosed(1, num_messages_to_log).boxed().forEach(i -> {	
-			//NOTE HAVE TO DO TIME RULE FIRST, BECAUSE IT WILL GET UPDATED EVERY OTHER LOG MESSAGE
+			//NOTE HAVE TO DO TIME RULE FIRST, BECAUSE IT WILL GET UPDATED EVERY OTHER SUCCESSFUL LOG MESSAGE
 			//rule: to log every 30s, should only log the first time, then test should finish before 2nd one is allowed
 			//should result in 1 message each
 			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logEveryMilliseconds(500000));
@@ -452,10 +452,9 @@ public class TestLoggingService {
 			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
 			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
 			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()));
-			//before now total is: 56
+
 			//rule: log if min/max outside thresholds
 			//should result in 1 message under, 44 over each (45 each)
-			//but its getting to 91 aka 10 short or 101 where it should be 
 			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));
 			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));
 			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.replaceMessage(), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)));			

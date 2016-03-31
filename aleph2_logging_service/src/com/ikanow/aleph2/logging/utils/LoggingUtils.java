@@ -18,6 +18,7 @@ package com.ikanow.aleph2.logging.utils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Level;
@@ -163,5 +164,29 @@ public class LoggingUtils {
 		merge_info._2.merge(LoggingFunctions.LOG_COUNT_FIELD, 1L, (n,o)->(Long)n+(Long)o);
 		timestamp.ifPresent(t->merge_info._2.replace(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, t));
 		return merge_info;
+	}
+	
+	/**
+	 * Merges the BMB message with an existing old entry (if it exists) otherwise merges with null.  If 
+	 * an entry did not exist, creates new default Map in the tuple for storing merge info. 
+	 * @param basicMessageBean
+	 * @param merge_key
+	 * @return
+	 */
+	public static Tuple2<BasicMessageBean, Map<String, Object>> getOrCreateMergeInfo(final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs, final BasicMessageBean message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation) {			
+		return merge_logs.compute(merge_key, (k, v) -> {
+			if ( v == null ) {
+				//calculate new entry
+				final BasicMessageBean bmb = merge_operation.apply(message, null);
+				Map<String, Object> info = new HashMap<String, Object>();
+				info.put(LoggingFunctions.LOG_COUNT_FIELD, 0L);
+				info.put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);
+				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, info);
+			} else {
+				//merge with old entry
+				final BasicMessageBean bmb = merge_operation.apply(message, merge_logs.get(merge_key)._1);
+				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, v._2);					
+			}
+		});			
 	}
 }

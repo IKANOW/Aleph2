@@ -133,8 +133,7 @@ public class NoLoggingService implements ILoggingService {
 				String merge_key,
 				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
 				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
-			// TODO Auto-generated method stub
-			return null;
+			return CompletableFuture.completedFuture(true);
 		}
 
 		/* (non-Javadoc)
@@ -143,8 +142,7 @@ public class NoLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem) {
-			// TODO Auto-generated method stub
-			return null;
+			return CompletableFuture.completedFuture(true);
 		}
 
 		/* (non-Javadoc)
@@ -153,8 +151,7 @@ public class NoLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem, Supplier<String> command) {
-			// TODO Auto-generated method stub
-			return null;
+			return CompletableFuture.completedFuture(true);
 		}
 
 		/* (non-Javadoc)
@@ -164,8 +161,7 @@ public class NoLoggingService implements ILoggingService {
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem, Supplier<String> command,
 				Supplier<Integer> messageCode) {
-			// TODO Auto-generated method stub
-			return null;
+			return CompletableFuture.completedFuture(true);
 		}
 
 		/* (non-Javadoc)
@@ -176,8 +172,7 @@ public class NoLoggingService implements ILoggingService {
 				Supplier<String> subsystem, Supplier<String> command,
 				Supplier<Integer> messageCode,
 				Supplier<Map<String, Object>> details) {
-			// TODO Auto-generated method stub
-			return null;
+			return CompletableFuture.completedFuture(true);
 		}
 		
 	}

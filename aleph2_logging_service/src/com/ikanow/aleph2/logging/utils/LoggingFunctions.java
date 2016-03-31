@@ -28,6 +28,7 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 
 /**
+ * Collection of merge functions and log frequency rules.
  * @author Burch
  *
  */
@@ -84,6 +85,12 @@ public class LoggingFunctions {
 		};
 	}
 		
+	/**
+	 * Copies the smaller field_to_min into the new BMB.  Expects field_to_min to be a double in bmb.details()
+	 * Copies min into LoggingFunctions.MIN_FIELD
+	 * @param field_to_min
+	 * @return
+	 */
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> minField(final String field_to_min) { 
 		return (n,o)->{	
 			Double valOld = Optional.ofNullable(getDetailsMapValue(o, field_to_min, Double.class)).orElse(null);
@@ -93,6 +100,12 @@ public class LoggingFunctions {
 		};
 	}
 	
+	/**
+	 * Copies the larger field_to_max into the new BMB.  Expects field_to_max to be a double in bmb.details()
+	 * Copies max into LoggingFunctions.MAX_FIELD
+	 * @param field_to_max
+	 * @return
+	 */
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> maxField(final String field_to_max) { 
 		return (n,o)->{
 			Double valOld = Optional.ofNullable(getDetailsMapValue(o, field_to_max, Double.class)).orElse(null);
@@ -102,6 +115,12 @@ public class LoggingFunctions {
 		};
 	}
 	
+	/**
+	 * Copies both the smaller and larger field into the new BMB.  Expects field_to_min_max to be a double in bmb.details().
+	 * Copies min and max into LoggingFunctions.MIN_FIELD and LoggingFunctions.MAX_FIELD
+	 * @param field_to_min_max
+	 * @return
+	 */
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> minMaxField(final String field_to_min_max) {
 		return (n,o)->{
 			Double valOld = Optional.ofNullable(getDetailsMapValue(o, field_to_min_max, Double.class)).orElse(null);
@@ -115,6 +134,12 @@ public class LoggingFunctions {
 		};
 	}
 	
+	/**
+	 * Rule that returns true if current count of log messages is divisible by count.  Every log message that passes the Level
+	 * filter increments the count (including log messages with different rules).
+	 * @param count
+	 * @return
+	 */
 	public static Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> logEveryCount(final long count) {
 		return Optional.of((t)->{
 			final Long c = Optional.ofNullable((long)t._2.get(LOG_COUNT_FIELD)).orElse(0L) + 1L; //add 1 to the count	 
@@ -122,6 +147,12 @@ public class LoggingFunctions {
 		});
 	}
 	
+	/**
+	 * Rule that returns true if current time minus last log time is greater than milliseconds.  Every log message that is output sets the
+	 * latest timestamp (including log messages with different rules).
+	 * @param milliseconds
+	 * @return
+	 */
 	public static Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> logEveryMilliseconds(final long milliseconds) {
 		return Optional.of((t)->{
 			final Long ms = Optional.ofNullable((long)t._2.get(LAST_LOG_TIMESTAMP_FIELD)).orElse(0L); 
@@ -129,6 +160,13 @@ public class LoggingFunctions {
 		});
 	}
 	
+	/**
+	 * Rule that returns true if double in BMB.details().value_field is greater than max_threshold or lower than min_threshold
+	 * @param value_field
+	 * @param min_threshold
+	 * @param max_threshold
+	 * @return
+	 */
 	public static Optional<Function<Tuple2<BasicMessageBean, Map<String, Object>>, Boolean>> logOutsideThreshold(final String value_field,
 			final Optional<Double> min_threshold, final Optional<Double> max_threshold) {
 		return Optional.of((t)->{
@@ -171,6 +209,15 @@ public class LoggingFunctions {
 		if ( value1 != null ) tempMap.put(key1, value1);	//add in new value
 		return ImmutableMap.copyOf(tempMap); //return an immutable map
 	}
+	/**
+	 * Copies the details from copyFrom (if it exists) and overwrites with the given keys, values.
+	 * @param copyFrom
+	 * @param key1
+	 * @param value1
+	 * @param key2
+	 * @param value2
+	 * @return
+	 */
 	public static Map<String, Object> copyDetailsPutValue(final BasicMessageBean copyFrom, final String key1, final Object value1, final String key2, final Object value2) {
 		final Map<String, Object> tempMap = new HashMap<String, Object>(Optional.ofNullable(copyFrom.details()).orElse(ImmutableMap.of())); //copy current map into modifiable map
 		if ( value1 != null ) tempMap.put(key1, value1);	//add in new value

@@ -33,20 +33,11 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
-
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
-
-
 import scala.Tuple2;
-
-
-
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.cache.Cache;
@@ -72,7 +63,6 @@ import com.ikanow.aleph2.logging.data_model.LoggingServiceConfig;
 import com.ikanow.aleph2.logging.data_model.LoggingServiceConfigBean;
 import com.ikanow.aleph2.logging.module.LoggingServiceModule;
 import com.ikanow.aleph2.logging.utils.Log4JUtils;
-import com.ikanow.aleph2.logging.utils.LoggingFunctions;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
 
 /**
@@ -273,7 +263,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {				
 				//call operator and replace existing entry (if exists)
-				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = getOrCreateMergeInfo(message.getBasicMessageBean(), merge_key, merge_operation);				
+				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operation);				
 				if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
 					//we are sending a msg, update bmb w/ timestamp and count
 					merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));
@@ -289,31 +279,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 				return CompletableFuture.completedFuture(LOG_MESSAGE_DID_NOT_MATCH_RULE);
 			}
 			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
-		}
-
-		/**
-		 * Merges the BMB message with an existing old entry (if it exists) otherwise merges with null.  If 
-		 * an entry did not exist, creates new default Map in the tuple for storing merge info. 
-		 * @param basicMessageBean
-		 * @param merge_key
-		 * @return
-		 */
-		private Tuple2<BasicMessageBean, Map<String, Object>> getOrCreateMergeInfo(final BasicMessageBean message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation) {			
-			return merge_logs.compute(merge_key, (k, v) -> {
-				if ( v == null ) {
-					//calculate new entry
-					final BasicMessageBean bmb = merge_operation.apply(message, null);
-					Map<String, Object> info = new HashMap<String, Object>();
-					info.put(LoggingFunctions.LOG_COUNT_FIELD, 0L);
-					info.put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);
-					return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, info);
-				} else {
-					//merge with old entry
-					final BasicMessageBean bmb = merge_operation.apply(message, merge_logs.get(merge_key)._1);
-					return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, v._2);					
-				}
-			});			
-		}
+		}	
 
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier)

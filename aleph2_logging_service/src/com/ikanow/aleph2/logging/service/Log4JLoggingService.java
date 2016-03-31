@@ -17,6 +17,8 @@ package com.ikanow.aleph2.logging.service;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +40,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBeanSupplier;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
+import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.logging.utils.Log4JUtils;
 import com.ikanow.aleph2.logging.utils.LoggingUtils;
@@ -50,6 +54,7 @@ import com.ikanow.aleph2.logging.utils.LoggingUtils;
  */
 public class Log4JLoggingService implements ILoggingService {
 	final static String date_field = "date";
+	private static final BasicMessageBean LOG_MESSAGE_DID_NOT_MATCH_RULE = ErrorUtils.buildSuccessMessage(Log4JBucketLogger.class.getName(), "log", "Log message dropped, did not match rule");
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
 	 */
@@ -104,10 +109,12 @@ public class Log4JLoggingService implements ILoggingService {
 		private final Logger logger = LogManager.getLogger();
 		private final DataBucketBean bucket;
 		private final boolean isSystem;
+		final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs;
 		
 		public Log4JBucketLogger(final DataBucketBean bucket, final boolean isSystem) {
 			this.bucket = bucket;
 			this.isSystem = isSystem;
+			this.merge_logs = new HashMap<String, Tuple2<BasicMessageBean, Map<String,Object>>>();
 		}
 
 		/* (non-Javadoc)
@@ -149,9 +156,19 @@ public class Log4JLoggingService implements ILoggingService {
 				IBasicMessageBeanSupplier message,
 				String merge_key,
 				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
-			// TODO Auto-generated method stub
-			return null;
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {					
+			//call operator and replace existing entry (if exists)
+			final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operation);				
+			if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
+				//we are sending a msg, update bmb w/ timestamp and count
+				merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, merge_info._1, isSystem, date_field);
+				logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));								
+				return CompletableFuture.completedFuture(true);
+			}
+			//even if we didn't send a bmb, update the count
+			merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.empty()));
+			return CompletableFuture.completedFuture(LOG_MESSAGE_DID_NOT_MATCH_RULE);
 		}
 
 		/* (non-Javadoc)
@@ -160,8 +177,7 @@ public class Log4JLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem) {
-			// TODO Auto-generated method stub
-			return null;
+			return log(level, new BasicMessageBeanSupplier(success, subsystem, ()->null, ()->null, message, ()->null));
 		}
 
 		/* (non-Javadoc)
@@ -170,8 +186,7 @@ public class Log4JLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem, Supplier<String> command) {
-			// TODO Auto-generated method stub
-			return null;
+			return log(level, new BasicMessageBeanSupplier(success, subsystem, command, ()->null, message, ()->null));
 		}
 
 		/* (non-Javadoc)
@@ -181,8 +196,7 @@ public class Log4JLoggingService implements ILoggingService {
 		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
 				Supplier<String> subsystem, Supplier<String> command,
 				Supplier<Integer> messageCode) {
-			// TODO Auto-generated method stub
-			return null;
+			return log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, ()->null));
 		}
 
 		/* (non-Javadoc)
@@ -193,8 +207,7 @@ public class Log4JLoggingService implements ILoggingService {
 				Supplier<String> subsystem, Supplier<String> command,
 				Supplier<Integer> messageCode,
 				Supplier<Map<String, Object>> details) {
-			// TODO Auto-generated method stub
-			return null;
+			return log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, details));
 		}
 		
 	}
