@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +46,7 @@ public interface IBucketLogger {
 	
 	
 	//complex interface
-	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message, final String merge_key, final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function, @SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations);
+	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message, final String merge_key, final Collection<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_functions, final Optional<Function<BasicMessageBean, BasicMessageBean>> formatter, @SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations);
 	
 	//util interface
 	public CompletableFuture<?> flush();

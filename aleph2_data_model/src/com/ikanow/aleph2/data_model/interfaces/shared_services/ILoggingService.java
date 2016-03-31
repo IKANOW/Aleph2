@@ -20,8 +20,8 @@ import java.util.List;
 import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
 
 /**
  * @author Burch

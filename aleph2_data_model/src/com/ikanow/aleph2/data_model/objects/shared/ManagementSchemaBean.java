@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *******************************************************************************/
-package com.ikanow.aleph2.data_model.objects.data_import;
+package com.ikanow.aleph2.data_model.objects.shared;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -38,34 +38,8 @@ public class ManagementSchemaBean implements Serializable {
 	 * @return the logging_schema
 	 */
 	public LoggingSchemaBean logging_schema() { return this.logging_schema; }
-	/**
-	 * Per bucket logging schema for the Temporal Service
-	 * @return the temporal_schema
-	 */
-	public TemporalSchemaBean temporal_schema() { return this.temporal_schema; }
-	/**
-	 * Per bucket logging schema for the Storage Service
-	 * @return the storage_schema
-	 */
-	public StorageSchemaBean storage_schema() { return this.storage_schema; }
-	/**
-	 * Per bucket logging schema for the Search Index Service
-	 * @return the search_index_schema
-	 */
-	public SearchIndexSchemaBean search_index_schema() { return this.search_index_schema; }
-	/**
-	 * Per bucket logging schema for the Columnar Schema
-	 * @return the columnar_schema
-	 */
-	public ColumnarSchemaBean columnar_schema() { return this.columnar_schema; }
-	
-	private LoggingSchemaBean logging_schema;
-	private TemporalSchemaBean temporal_schema;
-	private StorageSchemaBean storage_schema;
-	private SearchIndexSchemaBean search_index_schema;
-	private ColumnarSchemaBean columnar_schema;
-		
 
+	private LoggingSchemaBean logging_schema;
 	
 	public static class LoggingSchemaBean implements Serializable {
 
@@ -85,11 +59,11 @@ public class ManagementSchemaBean implements Serializable {
 			return service_name;
 		}
 		/**
-		 * Sets the default log level, defaults to ERROR if not specified
+		 * Sets the default log level, defaults to the system log level in the props file if not specified
 		 * @return
 		 */
 		public String log_level() {
-			return Optional.ofNullable(this.log_level).orElse("ERROR");
+			return this.log_level;
 		}
 		/**
 		 * (OPTIONAL) Set of service names and the log level you want them to output at
@@ -98,6 +72,32 @@ public class ManagementSchemaBean implements Serializable {
 		public Map<String, String> log_level_overrides() {
 			return Optional.ofNullable(this.log_level_overrides).orElse(ImmutableMap.of());
 		}
+		/**
+		 * Per bucket logging schema for the Temporal Service
+		 * @return the temporal_schema
+		 */
+		public TemporalSchemaBean temporal_schema() { return this.temporal_schema; }
+		/**
+		 * Per bucket logging schema for the Storage Service
+		 * @return the storage_schema
+		 */
+		public StorageSchemaBean storage_schema() { return this.storage_schema; }
+		/**
+		 * Per bucket logging schema for the Search Index Service
+		 * @return the search_index_schema
+		 */
+		public SearchIndexSchemaBean search_index_schema() { return this.search_index_schema; }
+		/**
+		 * Per bucket logging schema for the Columnar Schema
+		 * @return the columnar_schema
+		 */
+		public ColumnarSchemaBean columnar_schema() { return this.columnar_schema; }
+		
+		
+		private TemporalSchemaBean temporal_schema;
+		private StorageSchemaBean storage_schema;
+		private SearchIndexSchemaBean search_index_schema;
+		private ColumnarSchemaBean columnar_schema;
 		
 		private Boolean enabled;
 		private String service_name;

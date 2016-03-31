@@ -171,6 +171,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	protected transient SetOnce<MultiDataService> _multi_writer = new SetOnce<>();
 	
 	private static ConcurrentHashMap<String, AnalyticsContext> static_instances = new ConcurrentHashMap<>();
+	private Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -1048,7 +1049,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	 */
 	@Override
 	public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
-		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
+		final DataBucketBean b = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		return bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
+		//return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
 	}
 
 	/* (non-Javadoc)
@@ -1401,7 +1404,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	@Override
 	public CompletableFuture<?> flushBatchOutput(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job)
-	{
+	{			
 		_mutable_state.has_unflushed_data = false; 
 		
 		// (this can safely be run for multiple jobs since it only applies to the outputter we're using in this process anyway, plus multiple
@@ -1410,6 +1413,9 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 		
 		_logger.info(ErrorUtils.get("Flushing output for bucket:job {0}:{1}", my_bucket.full_name(), job.name()));
+		
+		//first flush loggers
+		bucket_loggers.values().stream().forEach(l->l.flush());
 		
 		// Flush external and sub-buckets:
 		_mutable_state.external_buckets.values().stream().forEach(e -> {

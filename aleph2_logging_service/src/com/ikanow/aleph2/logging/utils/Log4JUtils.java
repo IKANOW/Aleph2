@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.utils;
 
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
@@ -29,14 +30,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  *
  */
 public class Log4JUtils {
-	
-	private static String message_format = "[%s] %s %s %s"; // <date> <level> <message> <class:line> <other_fields=other_values>
+	private static SimpleDateFormat date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static String message_format = "%s [%s.%s] %s %s %s"; // <date> [<subsystem>.<command>] <level> <class:line> <message> <other_fields=other_values>
 	private static String field_format = " %s=%s";
-	public static String getLog4JMessage(final JsonNode logObject, final Level level, final StackTraceElement stack, final String date_field, Map<String, Object> map) {
+	public static String getLog4JMessage(final JsonNode logObject, final Level level, final StackTraceElement stack, final String date_field, final Map<String, Object> map, final String hostname) {
 		StringBuilder sb = new StringBuilder();
-		sb.append(String.format(message_format, new Date(logObject.get(date_field).asLong()), level.name(), logObject.get("message").asText(), stack));
-		sb.append(String.format(field_format, "subsystem", logObject.get("subsystem").asText()));
+		sb.append(String.format(message_format, date_format.format(new Date(logObject.get(date_field).asLong())), logObject.get("subsystem").asText(), logObject.get("command").asText(), level.name(), stack, logObject.get("message").asText()));
 		sb.append(String.format(field_format, "bucket", logObject.get("bucket").asText()));
+		sb.append(String.format(field_format, "hostname", hostname));
 		Optional.ofNullable(map).orElse(Collections.emptyMap()).entrySet().stream().forEach(e -> sb.append(String.format(field_format, e.getKey(), e.getValue())));
 		return sb.toString();
 	}

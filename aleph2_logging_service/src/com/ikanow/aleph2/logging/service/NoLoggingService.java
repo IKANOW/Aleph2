@@ -34,8 +34,8 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBean
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 
@@ -132,7 +132,8 @@ public class NoLoggingService implements ILoggingService {
 				Level level,
 				IBasicMessageBeanSupplier message,
 				String merge_key,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				final Collection<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_functions,
+				final Optional<Function<BasicMessageBean, BasicMessageBean>> formatter,
 				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
 			return CompletableFuture.completedFuture(true);
 		}

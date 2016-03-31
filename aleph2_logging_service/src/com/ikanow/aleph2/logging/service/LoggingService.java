@@ -53,9 +53,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyL
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBeanSupplier;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -192,16 +192,18 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 		final Level log4j_level;
 		final ImmutableMap<String, Level> bucket_logging_thresholds; //holds bucket logging overrides for quick matching
 		final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs;
+		final String hostname;
 		
 		public BucketLogger(final DataBucketBean bucket, final MultiDataService logging_writable, final boolean isSystem) {
 			this.bucket = bucket;
 			this.logging_writable = logging_writable;
 			this.isSystem = isSystem;
 			this.log4j_level = isSystem ? properties_converted.system_mirror_to_log4j_level() : Level.OFF;
-			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket);
+			this.bucket_logging_thresholds = LoggingUtils.getBucketLoggingThresholds(bucket, properties_converted.default_system_log_level());
 			this.date_field = Optional.ofNullable(properties_converted.default_time_field()).orElse("date");
 			this.default_log_level = isSystem ? Optional.ofNullable(properties_converted.default_system_log_level()).orElse(Level.OFF) : Optional.ofNullable(properties_converted.default_user_log_level()).orElse(Level.OFF);	
 			this.merge_logs = new HashMap<String, Tuple2<BasicMessageBean, Map<String,Object>>>();
+			this.hostname = LoggingUtils.getHostname();
 		}
 
 		/* (non-Javadoc)
@@ -221,9 +223,9 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {
 				//create log message to output:				
-				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);				
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field, hostname);				
 				if ( log_log4j )					
-					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, message.details()));
+					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, message.details(), hostname));
 				if ( log_out )
 					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
 			}
@@ -240,9 +242,9 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			if ( log_out || log_log4j ) {
 				//create log message to output:			
 				final BasicMessageBean bmb = message.getBasicMessageBean();
-				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, bmb, isSystem, date_field);				
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, bmb, isSystem, date_field, hostname);				
 				if ( log_log4j )					
-					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, bmb.details()));
+					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, bmb.details(), hostname));
 				if ( log_out )
 					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
 			}
@@ -257,19 +259,22 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 				final Level level,
 				final IBasicMessageBeanSupplier message,
 				final String merge_key,				
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				final Collection<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_functions,
+				final Optional<Function<BasicMessageBean, BasicMessageBean>> formatter,
 				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
 			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {				
 				//call operator and replace existing entry (if exists)
-				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operations);				
-				if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
+				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operations);
+				if ( rule_functions.isEmpty() || rule_functions.stream().anyMatch(r->r.apply(merge_info))) {				
 					//we are sending a msg, update bmb w/ timestamp and count
-					merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));
-					final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, merge_info._1, isSystem, date_field);
+					final Tuple2<BasicMessageBean, Map<String,Object>> info = LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime()));
+					final Tuple2<BasicMessageBean, Map<String,Object>> toWrite = new Tuple2<BasicMessageBean, Map<String,Object>>(formatter.map(f->f.apply(info._1)).orElse(info._1), info._2); //format the message if needbe
+					merge_logs.put(merge_key, toWrite);
+					final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, toWrite._1, isSystem, date_field, hostname);
 					if ( log_log4j )					
-						_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, merge_info._1.details()));
+						_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, toWrite._1.details(), hostname));
 					if ( log_out )
 						logging_writable.batchWrite(logObject);					
 					return CompletableFuture.completedFuture(true);

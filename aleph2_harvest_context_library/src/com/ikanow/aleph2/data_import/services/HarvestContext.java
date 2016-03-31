@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.LinkedList;
@@ -133,6 +134,7 @@ public class HarvestContext implements IHarvestContext {
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
 	private static ConcurrentHashMap<String, HarvestContext> static_instances = new ConcurrentHashMap<>();
+	private Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -673,14 +675,16 @@ public class HarvestContext implements IHarvestContext {
 //			Optional<DataBucketBean> bucket,
 //			BasicMessageBean message) {
 //		logStatusForBucketOwner(bucket, message, true);		
-//	}
+//	}		
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IHarvestContext#getLogger(com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean)
 	 */
 	@Override
 	public IBucketLogger getLogger(final Optional<DataBucketBean> bucket) {
-		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
+		final DataBucketBean b = bucket.orElseGet(() -> _mutable_state.bucket.get());
+		return bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
+//		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
 	}
 
 	/* (non-Javadoc)
@@ -785,6 +789,8 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
+		//first flush loggers
+		bucket_loggers.values().stream().forEach(l->l.flush());
 		return _multi_writer.get().flushBatchOutput();
 	}
 }

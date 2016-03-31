@@ -63,9 +63,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.Geospatia
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.GraphSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
@@ -420,12 +420,14 @@ public class TestDataBucketCrudService_Create {
 		
 		final DataBucketBean bucket_with_other_schema = BeanTemplateUtils.clone(valid_bucket)
 				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
-							.with(ManagementSchemaBean::columnar_schema, BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).with(DataSchemaBean.ColumnarSchemaBean::enabled, true).done().get())
-							.with(ManagementSchemaBean::search_index_schema, BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).with(DataSchemaBean.SearchIndexSchemaBean::enabled, true).done().get())
-							.with(ManagementSchemaBean::storage_schema, BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).with(DataSchemaBean.StorageSchemaBean::enabled, true).done().get())
-							.with(ManagementSchemaBean::temporal_schema, BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).with(DataSchemaBean.TemporalSchemaBean::enabled, true).done().get())
-							.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(ManagementSchemaBean.LoggingSchemaBean.class).with(ManagementSchemaBean.LoggingSchemaBean::enabled, true).done().get())
-						.done().get()).done();
+						.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(ManagementSchemaBean.LoggingSchemaBean.class)
+								.with(ManagementSchemaBean.LoggingSchemaBean::enabled, true)								
+								.with(ManagementSchemaBean.LoggingSchemaBean::columnar_schema, BeanTemplateUtils.build(DataSchemaBean.ColumnarSchemaBean.class).with(DataSchemaBean.ColumnarSchemaBean::enabled, true).done().get())
+								.with(ManagementSchemaBean.LoggingSchemaBean::search_index_schema, BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).with(DataSchemaBean.SearchIndexSchemaBean::enabled, true).done().get())
+								.with(ManagementSchemaBean.LoggingSchemaBean::storage_schema, BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).with(DataSchemaBean.StorageSchemaBean::enabled, true).done().get())
+								.with(ManagementSchemaBean.LoggingSchemaBean::temporal_schema, BeanTemplateUtils.build(DataSchemaBean.TemporalSchemaBean.class).with(DataSchemaBean.TemporalSchemaBean::enabled, true).done().get())
+						.done().get())
+				.done().get()).done();
 		
 		MockServiceContext test_context = new MockServiceContext();
 		

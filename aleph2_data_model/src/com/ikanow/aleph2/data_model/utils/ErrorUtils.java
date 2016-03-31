@@ -259,10 +259,10 @@ public class ErrorUtils {
 	 * @param message - the original message that spawned this error
 	 * @return
 	 */
-	public static <SRC, CMD> BasicMessageBean buildErrorMessage(final SRC source, final CMD message,
-			final String error, final Object... params)
+	public static <SRC, CMD> BasicMessageBean buildErrorMessage(final SRC source, final CMD command,
+			final String message, final Object... params)
 	{
-		return buildMessage(false, source, message, error, params);
+		return buildMessage(false, source, command, message, params);
 	}
 	
 	/** Builds a fairly generic success message to return 
@@ -271,20 +271,20 @@ public class ErrorUtils {
 	 * @param message - the original message that spawned this status
 	 * @return
 	 */
-	public static <SRC, CMD> BasicMessageBean buildSuccessMessage(final SRC source, final CMD message,
-			final String error, final Object... params)
+	public static <SRC, CMD> BasicMessageBean buildSuccessMessage(final SRC source, final CMD command,
+			final String message, final Object... params)
 	{
-		return buildMessage(true, source, message, error, params);
+		return buildMessage(true, source, command, message, params);
 	}
 	
 	/** Builds a fairly generic message to return 
-	 * @param error - the success.error string
+	 * @param message - the success.error string
 	 * @param handler - the actor handling this status/error
-	 * @param message - the original message that spawned this status/error
+	 * @param command - the original message that spawned this status/error
 	 * @return
 	 */
-	public static <SRC, CMD> BasicMessageBean buildMessage(boolean success, final SRC source, final CMD message,
-			final String error, final Object... params)
+	public static <SRC, CMD> BasicMessageBean buildMessage(boolean success, final SRC source, final CMD command,
+			final String message, final Object... params)
 	{
 		return new BasicMessageBean(
 					new Date(), // date
@@ -294,13 +294,13 @@ public class ErrorUtils {
 						: source instanceof Class<?>
 							? ((Class<?>)source).getSimpleName()
 							: source.getClass().getSimpleName(), // command
-					message instanceof String 
-						? message.toString() 
-						: message instanceof Class<?>
-							? ((Class<?>)message).getSimpleName()
-							: message.getClass().getSimpleName(), // command
+					command instanceof String 
+						? command.toString() 
+						: command instanceof Class<?>
+							? ((Class<?>)command).getSimpleName()
+							: command.getClass().getSimpleName(), // command
 					null, // message code
-					params.length == 0 ? error : ErrorUtils.get(error, params), // error message, with optional formatting
+					params.length == 0 ? message : ErrorUtils.get(message, params), // error message, with optional formatting
 					null // details
 					);
 	}

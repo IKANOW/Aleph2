@@ -39,9 +39,9 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBean
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBeanSupplier;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Tuples;
@@ -110,12 +110,14 @@ public class Log4JLoggingService implements ILoggingService {
 		private final Logger logger = LogManager.getLogger();
 		private final DataBucketBean bucket;
 		private final boolean isSystem;
+		private final String hostname;
 		final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs;
 		
 		public Log4JBucketLogger(final DataBucketBean bucket, final boolean isSystem) {
 			this.bucket = bucket;
 			this.isSystem = isSystem;
 			this.merge_logs = new HashMap<String, Tuple2<BasicMessageBean, Map<String,Object>>>();
+			this.hostname = LoggingUtils.getHostname();
 		}
 
 		/* (non-Javadoc)
@@ -132,8 +134,8 @@ public class Log4JLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> inefficientLog(Level level,
 				BasicMessageBean message) {
-			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field);
-			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));
+			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field, hostname);
+			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap(), hostname));
 			return CompletableFuture.completedFuture(true);
 		}
 
@@ -143,8 +145,8 @@ public class Log4JLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level,
 				IBasicMessageBeanSupplier message) {
-			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message.getBasicMessageBean(), isSystem, date_field);
-			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));
+			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message.getBasicMessageBean(), isSystem, date_field, hostname);
+			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap(), hostname));
 			return CompletableFuture.completedFuture(true);
 		}
 
@@ -156,15 +158,18 @@ public class Log4JLoggingService implements ILoggingService {
 				final Level level,
 				final IBasicMessageBeanSupplier message,
 				final String merge_key,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				final Collection<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_functions,
+				final Optional<Function<BasicMessageBean, BasicMessageBean>> formatter,
 				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {					
 			//call operator and replace existing entry (if exists)
 			final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operations);				
-			if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
+			if ( rule_functions.isEmpty() || rule_functions.stream().anyMatch(r->r.apply(merge_info))) {		
 				//we are sending a msg, update bmb w/ timestamp and count
-				merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));
-				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, merge_info._1, isSystem, date_field);
-				logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap()));								
+				final Tuple2<BasicMessageBean, Map<String,Object>> info = LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime()));
+				final Tuple2<BasicMessageBean, Map<String,Object>> toWrite = new Tuple2<BasicMessageBean, Map<String,Object>>(formatter.map(f->f.apply(info._1)).orElse(info._1), info._2); //format the message if needbe
+				merge_logs.put(merge_key, toWrite);
+				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, toWrite._1, isSystem, date_field, hostname);
+				logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap(), hostname));								
 				return CompletableFuture.completedFuture(true);
 			}
 			//even if we didn't send a bmb, update the count

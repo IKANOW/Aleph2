@@ -38,9 +38,9 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.HarvestControlMetadataBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.MultiQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.Operator;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleBeanQueryComponent;
@@ -97,9 +97,9 @@ public class TestBucketUtils {
 				.with(DataBucketBean::management_schema, BeanTemplateUtils.build(ManagementSchemaBean.class)
 					.with(ManagementSchemaBean::logging_schema, BeanTemplateUtils.build(LoggingSchemaBean.class)
 						.with(LoggingSchemaBean::log_level, Level.DEBUG.toString())
-						.done().get())
-					.with(ManagementSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
-						.with(SearchIndexSchemaBean::target_index_size_mb, 50L) //set some arbitrary field so we can check its changed	
+						.with(ManagementSchemaBean.LoggingSchemaBean::search_index_schema, BeanTemplateUtils.build(SearchIndexSchemaBean.class)
+								.with(SearchIndexSchemaBean::target_index_size_mb, 50L) //set some arbitrary field so we can check its changed	
+								.done().get())
 						.done().get())
 					.done().get())
 				.done().get();

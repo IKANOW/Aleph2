@@ -60,10 +60,10 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.SearchIndexSchemaBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
@@ -372,40 +372,38 @@ public class TestLoggingService {
 		IntStream.rangeClosed(1, num_messages_to_log_each_type).boxed().forEach(i -> {	
 			levels.stream().forEach(level -> {		
 				//append
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.appendMessage());
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.appendMessage());
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.appendMessage());
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.appendMessage());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.appendMessage());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.appendMessage());
 				
 				//count
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.countMessages());
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.countMessages());
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Optional.empty(), LoggingFunctions.countMessages());
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.countMessages());
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.countMessages());
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.countMessages());
 				
 				//sum
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD));
 				
 				//min
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));
-				
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minField(VALUE_FIELD));				
 				//max
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.maxField(VALUE_FIELD));
 				
 				//minmax
-				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
-				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
-				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.minMaxField(VALUE_FIELD));
 				
-				//TODO
 				//chaining test
-//				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField("field2", "out2", false));
-//				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField("field2", "out2", false));
-//				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField("field2", "out2", false));
+				user_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField(VALUE_FIELD, "out2", false));
+				system_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField(VALUE_FIELD, "out2", false));
+				external_logger.log(level, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Collections.emptyList(), Optional.empty(), LoggingFunctions.sumField(VALUE_FIELD, "out1", false), LoggingFunctions.sumField(VALUE_FIELD, "out2", false));
 			});
 		});
 		
@@ -413,12 +411,12 @@ public class TestLoggingService {
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
 		waitForResults(logging_crud, 10);
-		assertEquals(60, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
+		assertEquals(70, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
 
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
 		waitForResults(logging_crud_external, 10);
-		assertEquals(90, logging_crud_external.countObjects().get().longValue());
+		assertEquals(105, logging_crud_external.countObjects().get().longValue());
 		
 		//cleanup
 		logging_crud.deleteDatastore().get();
@@ -438,34 +436,51 @@ public class TestLoggingService {
 			//NOTE HAVE TO DO TIME RULE FIRST, BECAUSE IT WILL GET UPDATED EVERY OTHER SUCCESSFUL LOG MESSAGE
 			//rule: to log every 30s, should only log the first time, then test should finish before 2nd one is allowed
 			//should result in 1 message each
-			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logEveryMilliseconds(500000), LoggingFunctions.replaceMessage());
-			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logEveryMilliseconds(500000), LoggingFunctions.replaceMessage());
-			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logEveryMilliseconds(500000), LoggingFunctions.replaceMessage());
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryMilliseconds(500000)), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryMilliseconds(500000)), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message1 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryMilliseconds(500000)), Optional.empty(), LoggingFunctions.replaceMessage());
 			
 			//rule: log every 5 messages
 			//should result in num_messages_to_log/5 each aka 10 each
 			//NOTE count field has to go on its own key, because count is being increased for every successful message in any of the tests
-			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", LoggingFunctions.logEveryCount(5), LoggingFunctions.replaceMessage());
-			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", LoggingFunctions.logEveryCount(5), LoggingFunctions.replaceMessage());
-			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2",LoggingFunctions.logEveryCount(5), LoggingFunctions.replaceMessage());						
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", Arrays.asList(LoggingFunctions.logEveryCount(5)), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", Arrays.asList(LoggingFunctions.logEveryCount(5)), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message2 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key2", Arrays.asList(LoggingFunctions.logEveryCount(5)), Optional.empty(), LoggingFunctions.replaceMessage());						
 			
 			//rule: log if max over threshold
 			//should result in 44 message over each
-			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)), LoggingFunctions.replaceMessage());
-			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)), LoggingFunctions.replaceMessage());
-			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0)), LoggingFunctions.replaceMessage());			
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message3 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());			
 			
 			//rule: log if min under threshold
 			//should result in 1 under each
-			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1",  LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()), LoggingFunctions.replaceMessage());
-			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()), LoggingFunctions.replaceMessage());
-			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty()), LoggingFunctions.replaceMessage());
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1",  Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty())), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty())), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message4 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.empty())), Optional.empty(), LoggingFunctions.replaceMessage());
 
 			//rule: log if min/max outside thresholds
 			//should result in 1 message under, 44 over each (45 each)
-			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)), LoggingFunctions.replaceMessage());
-			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)), LoggingFunctions.replaceMessage());
-			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0)), LoggingFunctions.replaceMessage());			
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message5 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.of(2.0),Optional.of(6.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			
+			//test multi rules rule: log every 2 messages, or if max over threshold of 45
+			//should result in 22 messages + 5 messages (27 each) was 202 got 302
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message6 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryCount(2), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(), Optional.of(45.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message6 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryCount(2), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(), Optional.of(45.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message6 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key1", Arrays.asList(LoggingFunctions.logEveryCount(2), LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(), Optional.of(45.0))), Optional.empty(), LoggingFunctions.replaceMessage());
+			
+			//test output formatter, doesn't do anything special, adds 44 messages each
+			user_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message7 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key3", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.of((b)->{
+				return BeanTemplateUtils.clone(b).with(BasicMessageBean::message,"gestapo!").done();
+						}), LoggingFunctions.replaceMessage());
+			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message7 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key3", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.of((b)->{
+				return BeanTemplateUtils.clone(b).with(BasicMessageBean::message,"gestapo!").done();
+						}), LoggingFunctions.replaceMessage());
+			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message7 " + i, () -> null, ()->"no error", ()->ImmutableMap.of(VALUE_FIELD, (double)i)), "key3", Arrays.asList(LoggingFunctions.logOutsideThreshold(VALUE_FIELD, Optional.empty(),Optional.of(6.0))), Optional.of((b)->{
+				return BeanTemplateUtils.clone(b).with(BasicMessageBean::message,"gestapo!").done();
+						}), LoggingFunctions.replaceMessage());
 		});
 		
 		user_logger.flush();
@@ -476,12 +491,12 @@ public class TestLoggingService {
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<JsonNode> logging_crud = search_index_service.getDataService().get().getWritableDataService(JsonNode.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
 		waitForResults(logging_crud, 10);
-		assertEquals((1+10+44+1+45)*2, logging_crud.countObjects().get().longValue());
+		assertEquals((1+10+44+1+45+27+44)*2, logging_crud.countObjects().get().longValue());
 		
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
 		waitForResults(logging_crud_external, 10);
-		assertEquals(1+(num_messages_to_log/5)+44+1+45, logging_crud_external.countObjects().get().longValue());
+		assertEquals(1+(num_messages_to_log/5)+44+1+45+27+44, logging_crud_external.countObjects().get().longValue());
 
 		//cleanup
 		logging_crud.deleteDatastore().get();
@@ -497,11 +512,12 @@ public class TestLoggingService {
 		assertTrue(LoggingFunctions.getDetailsMapValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field1", "value1")).done().get(), "field1", String.class).equals("value1"));
 		
 		//test LoggingMergeFunctions.copyDetailsPutValue
-		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), "field1", "value1").size());
-		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, null).done().get(), "field1", "value1").size());
-		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of()).done().get(), "field1", "value1").size());
-		assertEquals(1,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field1", "value1")).done().get(), "field1", "value1").size());
-		assertEquals(2,LoggingFunctions.copyDetailsPutValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field2", "value2")).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, null).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of()).done().get(), "field1", "value1").size());
+		assertEquals(1,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field1", "value1")).done().get(), "field1", "value1").size());
+		assertEquals(2,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field2", "value2")).done().get(), "field1", "value1").size());
+		assertEquals(3,LoggingFunctions.mergeDetailsAddValue(BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field3", "value3")).done().get(), BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of("field2", "value2")).done().get(), "field1", "value1").size());
 		
 		//test LoggingMergeFunctions.getMinOrNull
 		assertNull(LoggingFunctions.getMinMaxOrNull(null,null,true));

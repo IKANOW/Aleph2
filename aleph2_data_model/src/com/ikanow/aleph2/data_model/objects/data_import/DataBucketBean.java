@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
 
 /** A very important bean that describes how a bucket gets and stores its data
  * @author acp

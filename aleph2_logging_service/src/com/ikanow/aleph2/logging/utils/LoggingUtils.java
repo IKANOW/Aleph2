@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.utils;
 
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,9 +34,9 @@ import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.core.shared.services.MultiDataService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean;
-import com.ikanow.aleph2.data_model.objects.data_import.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean;
+import com.ikanow.aleph2.data_model.objects.shared.ManagementSchemaBean.LoggingSchemaBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 
@@ -56,7 +57,8 @@ public class LoggingUtils {
 	 * @param isSystemMessage
 	 * @return
 	 */
-	public static JsonNode createLogObject(final Level level, final DataBucketBean bucket, final BasicMessageBean message, final boolean isSystemMessage, final String date_field) {
+	public static JsonNode createLogObject(final Level level, final DataBucketBean bucket, final BasicMessageBean message, final boolean isSystemMessage, 
+			final String date_field, final String hostname) {
 		final ObjectMapper _mapper = new ObjectMapper();
 		return Optional.ofNullable(message.details()).map(d -> _mapper.convertValue(d, ObjectNode.class)).orElseGet(() -> _mapper.createObjectNode())
 				.put(date_field, message.date().getTime())
@@ -64,8 +66,21 @@ public class LoggingUtils {
 				.put("generated_by", isSystemMessage ? "system" : "user")
 				.put("bucket", bucket.full_name())
 				.put("subsystem", message.source())
-				.put("severity", level.toString());			
+				.put("command", message.command())
+				.put("severity", level.toString())		
+				.put("hostname", hostname);
 	}
+	
+	/** Returns the hostname
+	 * @return
+	 */
+	public static String getHostname() {
+		try {
+			return InetAddress.getLocalHost().getHostName();
+		} catch (Exception e) {
+			return "UNKNOWN";
+		}
+	}		
 	
 	/**
 	 * Builds a minimal bucket pointing the full path to the external bucket/subsystem
@@ -106,14 +121,15 @@ public class LoggingUtils {
 	 * Returns an empty list if none exist there
 	 * 
 	 * @param bucket
+	 * @param default_system_level 
 	 * @return
 	 */
-	public static ImmutableMap<String, Level> getBucketLoggingThresholds(final DataBucketBean bucket) {
+	public static ImmutableMap<String, Level> getBucketLoggingThresholds(final DataBucketBean bucket, final Level default_system_level) {
 		//if overrides are set, create a map with them and the default
 		if (bucket.management_schema() != null &&
 				bucket.management_schema().logging_schema() != null ) {
 			return new ImmutableMap.Builder<String, Level>()
-		 	.put(DEFAULT_LEVEL_KEY, Level.valueOf(bucket.management_schema().logging_schema().log_level()))
+		 	.put(DEFAULT_LEVEL_KEY, Optional.ofNullable(bucket.management_schema().logging_schema().log_level()).map(l->Level.valueOf(l)).orElse(default_system_level))
 		 	.putAll(Optional.ofNullable(bucket.management_schema().logging_schema().log_level_overrides())
 		 			.orElse(new HashMap<String, String>())
 		 			.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> Level.valueOf(e.getValue())))) //convert String Level to log4j.Level
