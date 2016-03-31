@@ -45,7 +45,7 @@ public interface IBucketLogger {
 	
 	
 	//complex interface
-	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation, final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function);
+	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message, final String merge_key, final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function, @SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations);
 	
 	//util interface
 	public CompletableFuture<?> flush();

@@ -256,14 +256,14 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 		public CompletableFuture<?> log(
 				final Level level,
 				final IBasicMessageBeanSupplier message,
-				final String merge_key,
-				final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
+				final String merge_key,				
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
 			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {				
 				//call operator and replace existing entry (if exists)
-				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operation);				
+				final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operations);				
 				if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
 					//we are sending a msg, update bmb w/ timestamp and count
 					merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));

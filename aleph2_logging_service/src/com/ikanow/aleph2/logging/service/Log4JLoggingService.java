@@ -153,13 +153,13 @@ public class Log4JLoggingService implements ILoggingService {
 		 */
 		@Override
 		public CompletableFuture<?> log(
-				Level level,
-				IBasicMessageBeanSupplier message,
-				String merge_key,
-				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
-				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {					
+				final Level level,
+				final IBasicMessageBeanSupplier message,
+				final String merge_key,
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function,
+				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {					
 			//call operator and replace existing entry (if exists)
-			final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operation);				
+			final Tuple2<BasicMessageBean, Map<String,Object>> merge_info = LoggingUtils.getOrCreateMergeInfo(merge_logs, message.getBasicMessageBean(), merge_key, merge_operations);				
 			if ( rule_function.map(r->r.apply(merge_info)).orElse(true) ) {					
 				//we are sending a msg, update bmb w/ timestamp and count
 				merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.of(new Date().getTime())));

@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.utils;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -173,18 +174,19 @@ public class LoggingUtils {
 	 * @param merge_key
 	 * @return
 	 */
-	public static Tuple2<BasicMessageBean, Map<String, Object>> getOrCreateMergeInfo(final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs, final BasicMessageBean message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation) {			
+	public static Tuple2<BasicMessageBean, Map<String, Object>> getOrCreateMergeInfo(final Map<String, Tuple2<BasicMessageBean, Map<String,Object>>> merge_logs, final BasicMessageBean message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>[] merge_operations) {			
 		return merge_logs.compute(merge_key, (k, v) -> {
 			if ( v == null ) {
-				//calculate new entry
-				final BasicMessageBean bmb = merge_operation.apply(message, null);
+				//final BasicMessageBean bmb = merge_operations.apply(message, null);
+				final BasicMessageBean bmb = Arrays.stream(merge_operations).reduce(null, (bmb_a,fn)->fn.apply(message, bmb_a), (bmb_a,bmb_b)->bmb_a);
 				Map<String, Object> info = new HashMap<String, Object>();
 				info.put(LoggingFunctions.LOG_COUNT_FIELD, 0L);
 				info.put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);
 				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, info);
 			} else {
 				//merge with old entry
-				final BasicMessageBean bmb = merge_operation.apply(message, merge_logs.get(merge_key)._1);
+				//final BasicMessageBean bmb = merge_operations.apply(message, merge_logs.get(merge_key)._1);
+				final BasicMessageBean bmb = Arrays.stream(merge_operations).reduce(merge_logs.get(merge_key)._1, (bmb_a,fn)->fn.apply(message, bmb_a), (bmb_a,bmb_b)->bmb_a);
 				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, v._2);					
 			}
 		});			
