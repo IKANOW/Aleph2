@@ -325,7 +325,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return service_context.getSearchIndexService().map(Stream::of).orElse(Stream.empty()).collect(Collectors.toList());
+		return Stream.concat(Stream.of(this), service_context.getSearchIndexService().map(Stream::of).orElse(Stream.empty())).collect(Collectors.toList());
 	}
 
 	/* (non-Javadoc)

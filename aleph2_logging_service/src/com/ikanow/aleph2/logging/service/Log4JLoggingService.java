@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.service;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -60,7 +61,7 @@ public class Log4JLoggingService implements ILoggingService {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Collections.emptyList();
+		return Arrays.asList(this);
 	}
 
 	/* (non-Javadoc)
