@@ -15,9 +15,16 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.Level;
+
+import scala.Tuple2;
 
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 
@@ -26,7 +33,20 @@ import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
  *
  */
 public interface IBucketLogger {
+	//simple interfaces
+	public CompletableFuture<?> log(final Level level, final boolean success, final Supplier<String> message, final Supplier<String> subsystem);
+	public CompletableFuture<?> log(final Level level, final boolean success, final Supplier<String> message, final Supplier<String> subsystem, final Supplier<String> command);
+	public CompletableFuture<?> log(final Level level, final boolean success, final Supplier<String> message, final Supplier<String> subsystem, final Supplier<String> command, final Supplier<Integer> messageCode);
+	public CompletableFuture<?> log(final Level level, final boolean success, final Supplier<String> message, final Supplier<String> subsystem, final Supplier<String> command, final Supplier<Integer> messageCode, final Supplier<Map<String,Object>> details);
+	
+	//other interfaces?
 	public CompletableFuture<?> inefficientLog(final Level level, final BasicMessageBean message);
 	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message);
+	
+	
+	//complex interface
+	public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message, final String merge_key, final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation, final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function);
+	
+	//util interface
 	public CompletableFuture<?> flush();
 }

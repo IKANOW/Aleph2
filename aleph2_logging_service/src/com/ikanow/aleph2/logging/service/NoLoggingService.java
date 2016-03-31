@@ -15,11 +15,16 @@
  *******************************************************************************/
 package com.ikanow.aleph2.logging.service;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.Level;
 
@@ -46,7 +51,7 @@ public class NoLoggingService implements ILoggingService {
 	 */
 	@Override
 	public Collection<Object> getUnderlyingArtefacts() {
-		return Collections.emptyList();
+		return Arrays.asList(this);
 	}
 
 	/* (non-Javadoc)
@@ -116,6 +121,58 @@ public class NoLoggingService implements ILoggingService {
 		@Override
 		public CompletableFuture<?> log(Level level,
 				IBasicMessageBeanSupplier message) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction, java.util.Optional)
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> merge_operation,
+				final Optional<Function<Tuple2<BasicMessageBean, Map<String,Object>>, Boolean>> rule_function) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier, java.util.function.Supplier)
+		 */
+		@Override
+		public CompletableFuture<?> log(Level level, final boolean success, Supplier<String> message,
+				Supplier<String> subsystem, Supplier<String> command,
+				Supplier<Integer> messageCode,
+				Supplier<Map<String, Object>> details) {
 			return CompletableFuture.completedFuture(true);
 		}
 		
