@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -88,9 +89,11 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected final SetOnce<DocumentSchemaBean> _doc_schema = new SetOnce<>();
 	protected final SetOnce<String> _timestamp_field = new SetOnce<>();
 	protected final SetOnce<Boolean> _deduplication_is_disabled = new SetOnce<>();
+	protected final SetOnce<Boolean> _is_system_dedup_stage = new SetOnce<>(); // if executes the system level deduplication or if is part of the app logic (affects logging)
 	
 	protected final SetOnce<IEnrichmentBatchModule> _custom_handler = new SetOnce<>();
 	protected final SetOnce<DeduplicationEnrichmentContext> _custom_context = new SetOnce<>();
+	protected final SetOnce<EnrichmentControlMetadataBean> _control = new SetOnce<>();
 	
 	protected final SetOnce<List<String>> _dedup_fields = new SetOnce<>();
 	protected final SetOnce<DeduplicationPolicy> _policy = new SetOnce<>();	
@@ -133,12 +136,14 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			final Optional<List<String>> next_grouping_fields)
 	{
 		_context.set(context);
-
+		_control.set(dedup_control);
+		
 		context.getServiceContext().getService(ILoggingService.class, Optional.empty()).map(s -> s.getSystemLogger(bucket)).ifPresent(logger -> _logger.set(logger));
 		
 		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(dedup_control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
 		
 		final DocumentSchemaBean doc_schema = Optional.ofNullable(dedup_config.doc_schema_override()).orElse(bucket.data_schema().document_schema()); //(exists by construction)
+		_is_system_dedup_stage.set(null == dedup_config.doc_schema_override());
 		
 		_deduplication_is_disabled.set(
 				(null == doc_schema.deduplication_policy())
@@ -713,9 +718,16 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	public void onStageComplete(final boolean is_original) {
 		_custom_handler.optional().ifPresent(handler -> handler.onStageComplete(true));
 		
+		final Supplier<String> subsystem_builder = () -> (_is_system_dedup_stage.get() ? "" : ("." + _control.get().name() + Optional.ofNullable("no_name")));
+		final Supplier<String> command_builder = () -> (_is_system_dedup_stage.get() ? "system" : _control.get().name() + Optional.ofNullable("no_name"));
+		
 		_logger.optional().ifPresent(l -> l.log(Level.DEBUG,
-				ErrorUtils.lazyBuildMessage(true, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
-						() -> ErrorUtils.get("completed deduplication: nondup_keys={0}, dup_keys={1}, dups_inc={2}, dups_db={3}, del={4}", 
+				ErrorUtils.lazyBuildMessage(true, 
+						() -> "DeduplicationService" + subsystem_builder.get(),
+						() -> command_builder.get() + ".onStageComplete", 
+						() -> null, 
+						() -> ErrorUtils.get("Job {0} completed deduplication: nondup_keys={1}, dup_keys={2}, dups_inc={3}, dups_db={4}, del={5}",
+								command_builder.get(),
 								Integer.toString(_mutable_stats.nonduplicate_keys), Integer.toString(_mutable_stats.duplicate_keys), Integer.toString(_mutable_stats.duplicates_incoming), Integer.toString(_mutable_stats.duplicates_existing),
 								Integer.toString(_mutable_stats.deleted)), 
 						() -> (Map<String, Object>)_mapper.convertValue(_mutable_stats, Map.class))
@@ -727,8 +739,11 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			}
 			catch (Exception e) {
 				_logger.optional().ifPresent(l -> l.log(Level.ERROR, 
-						ErrorUtils.lazyBuildMessage(false, () -> "DeduplicationService", () -> "onStageComplete", () -> null, 
-								() -> "Error completing deleted ids: " + e.getMessage(), 
+						ErrorUtils.lazyBuildMessage(false, 
+								() -> "DeduplicationService" + subsystem_builder.get(),
+								() -> command_builder.get() + ".onStageComplete", 
+								() -> null, 
+								() -> ErrorUtils.get("Job {0}: error completing deleted ids: {1}", command_builder.get(), e.getMessage()), 
 								() -> null)
 								));
 			}
