@@ -72,8 +72,6 @@ public class LoggingMergeFunctions {
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum) {		
 		return sumField(field_to_sum, SUM_FIELD, false);		
 	}
-	//TODO if you stick the result in a different field, how does sum work?
-	//TODO look at this, maybe need to fix some logic error
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum, final String field_for_ouput, final boolean substituteMessage) {		
 		return (n,o)->{
 			Double sum = 
