@@ -138,6 +138,8 @@ public class TestAnalyticsContext {
 			
 			assertTrue("AnalyticsContext dependencies", test_context._core_management_db != null);
 			assertTrue("AnalyticsContext dependencies", test_context._distributed_services != null);
+			assertTrue("AnalyticsContext dependencies", test_context._logging_service != null);
+			assertTrue("AnalyticsContext dependencies", test_context._security_service != null);
 			assertTrue("AnalyticsContext dependencies", test_context._storage_service != null);
 			assertTrue("AnalyticsContext dependencies", test_context._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_context._service_context != null);
@@ -273,6 +275,9 @@ public class TestAnalyticsContext {
 			final AnalyticsContext test_external1b = (AnalyticsContext)test_external1a;
 			
 			assertTrue("AnalyticsContext dependencies", test_external1b._core_management_db != null);
+			assertTrue("AnalyticsContext dependencies", test_external1b._logging_service != null);
+			assertTrue("AnalyticsContext dependencies", test_external1b._security_service != null);
+			assertTrue("AnalyticsContext dependencies", test_external1b._storage_service != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._distributed_services != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_external1b._service_context != null);
@@ -302,6 +307,9 @@ public class TestAnalyticsContext {
 			final AnalyticsContext test_external2b = (AnalyticsContext)test_external2a;
 			
 			assertTrue("AnalyticsContext dependencies", test_external2b._core_management_db != null);
+			assertTrue("AnalyticsContext dependencies", test_external2b._logging_service != null);
+			assertTrue("AnalyticsContext dependencies", test_external2b._security_service != null);
+			assertTrue("AnalyticsContext dependencies", test_external2b._storage_service != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._distributed_services != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._globals != null);
 			assertTrue("AnalyticsContext dependencies", test_external2b._service_context != null);

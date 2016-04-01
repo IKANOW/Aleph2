@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -150,6 +151,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final HashMap<String, AnalyticsContext> sub_buckets = new HashMap<>();
 		final Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> extra_auto_context_libs = new HashSet<>();
 		boolean has_unflushed_data = false; //(not intended to be fully thread safe, just better than nothing if we shutdown mid write)
+		final Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>(); //(auto flushing)
 	};	
 	protected transient final MutableState _mutable_state = new MutableState(); 
 	
@@ -171,7 +173,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	protected transient SetOnce<MultiDataService> _multi_writer = new SetOnce<>();
 	
 	private static ConcurrentHashMap<String, AnalyticsContext> static_instances = new ConcurrentHashMap<>();
-	private Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -298,11 +299,11 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		_mutable_serializable_signature = signature;
 		
 		// Register myself a shutdown hook:
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+		Runtime.getRuntime().addShutdownHook(new Thread(Lambdas.wrap_runnable_u(() -> {
 			if (_mutable_state.has_unflushed_data) {
-				this.flushBatchOutput(Optional.empty(), _mutable_state.job.get());
+				this.flushBatchOutput(Optional.empty(), _mutable_state.job.get()).get(60, TimeUnit.SECONDS);
 			}			
-		}));
+		})));
 		
 		try {
 			// Inject dependencies
@@ -313,6 +314,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				_service_context = to_clone._service_context;
 				_core_management_db = to_clone._core_management_db;
 				_security_service = to_clone._security_service;
+				_logging_service = to_clone._logging_service;
 				_distributed_services = to_clone._distributed_services;	
 				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
@@ -325,6 +327,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
 				_storage_service = _service_context.getStorageService();
 				_security_service = _service_context.getSecurityService();
+				_logging_service = _service_context.getService(ILoggingService.class, Optional.empty()).get();
 				_globals = _service_context.getGlobalProperties();
 			}			
 			// Get bucket 
@@ -1050,8 +1053,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	@Override
 	public IBucketLogger getLogger(Optional<DataBucketBean> bucket) {
 		final DataBucketBean b = bucket.orElseGet(() -> _mutable_state.bucket.get());
-		return bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
-		//return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
+		return _mutable_state.bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
 	}
 
 	/* (non-Javadoc)
@@ -1405,7 +1407,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	public CompletableFuture<?> flushBatchOutput(
 			Optional<DataBucketBean> bucket, AnalyticThreadJobBean job)
 	{			
-		_mutable_state.has_unflushed_data = false; 
+		_mutable_state.has_unflushed_data = false; // (just means that the shutdown hook will do nothing)
 		
 		// (this can safely be run for multiple jobs since it only applies to the outputter we're using in this process anyway, plus multiple
 		// flushes don't have any functional side effects)
@@ -1415,27 +1417,29 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		_logger.info(ErrorUtils.get("Flushing output for bucket:job {0}:{1}", my_bucket.full_name(), job.name()));
 		
 		//first flush loggers
-		bucket_loggers.values().stream().forEach(l->l.flush());
+		final Stream<CompletableFuture<?>> flush_loggers = _mutable_state.bucket_loggers.values().stream().map(l->l.flush());
 		
 		// Flush external and sub-buckets:
-		_mutable_state.external_buckets.values().stream().forEach(e -> {
-			e.either(ee -> ee.either(batch -> {
-				batch.flushOutput(); // flush external output
-				return Unit.unit();
+		final Stream<CompletableFuture<?>> flush_external = _mutable_state.external_buckets.values().stream().map(e -> {
+			return e.<CompletableFuture<?>>either(ee -> ee.<CompletableFuture<?>>either(batch -> {
+				return batch.flushOutput(); // flush external output
 			}, 
 			slow -> {
 				//(nothing to do)
-				return Unit.unit();
+				return (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit());
 				
 			}), 
 			topic -> {			
 				//(nothing to do)
-				return Unit.unit();
+				return (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit());
 			});
 		});
-		_mutable_state.sub_buckets.values().stream().forEach(sub_context -> sub_context.flushBatchOutput(bucket, job));
+		final Stream<CompletableFuture<?>> flush_sub = _mutable_state.sub_buckets.values().stream().map(sub_context -> sub_context.flushBatchOutput(bucket, job));
 		
-		return _multi_writer.optional().<CompletableFuture<?>>map(writer -> writer.flushBatchOutput()).orElseGet(() -> (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit()));
+		final Stream<CompletableFuture<?>> flush_writer = Stream.of(_multi_writer.optional().<CompletableFuture<?>>map(writer -> writer.flushBatchOutput()).orElseGet(() -> (CompletableFuture<?>)CompletableFuture.completedFuture(Unit.unit()))); 
+		
+		// Important: this is the line that actually executes all the flushes, so need to ensure each of the above is added here:
+		return CompletableFuture.allOf(Stream.of(flush_loggers, flush_external, flush_sub, flush_writer).flatMap(__->__).toArray(CompletableFuture[]::new));
 	}
 	
 	/** For ping/pong output will switch the ping/pong buffers over

@@ -748,7 +748,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 								));
 			}
 		}
-		_logger.optional().ifPresent(l -> l.flush());
+		_logger.optional().ifPresent(Lambdas.wrap_consumer_u(l -> l.flush().get(60, TimeUnit.SECONDS)));
 	}
 
 }

@@ -114,6 +114,7 @@ public class HarvestContext implements IHarvestContext {
 		final SetOnce<Map<String, SharedLibraryBean>> library_configs = new SetOnce<>();
 		final SetOnce<ImmutableSet<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> service_manifest_override = new SetOnce<>();
 		final SetOnce<Boolean> initialized_direct_output = new SetOnce<>();		
+		private Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>();
 	};
 	protected final MutableState _mutable_state = new MutableState(); 
 	
@@ -134,7 +135,6 @@ public class HarvestContext implements IHarvestContext {
 	protected final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
 	private static ConcurrentHashMap<String, HarvestContext> static_instances = new ConcurrentHashMap<>();
-	private Map<String, IBucketLogger> bucket_loggers = new HashMap<String, IBucketLogger>();
 	
 	/**Guice injector
 	 * @param service_context
@@ -207,6 +207,7 @@ public class HarvestContext implements IHarvestContext {
 			if (null != to_clone) { //copy the fields				
 				_service_context = to_clone._service_context;
 				_core_management_db = to_clone._core_management_db;
+				_logging_service = to_clone._logging_service;
 				_distributed_services = to_clone._distributed_services;	
 				_storage_service = to_clone._storage_service;
 				_globals = to_clone._globals;
@@ -216,6 +217,7 @@ public class HarvestContext implements IHarvestContext {
 				ModuleUtils.initializeApplication(Collections.emptyList(), Optional.of(parsed_config), Either.right(this));
 				_core_management_db = _service_context.getCoreManagementDbService(); // (actually returns the _core_ management db service)
 				_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+				_logging_service = _service_context.getService(ILoggingService.class, Optional.empty()).get();
 				_storage_service = _service_context.getStorageService();
 				_globals = _service_context.getGlobalProperties();
 			}			
@@ -683,8 +685,7 @@ public class HarvestContext implements IHarvestContext {
 	@Override
 	public IBucketLogger getLogger(final Optional<DataBucketBean> bucket) {
 		final DataBucketBean b = bucket.orElseGet(() -> _mutable_state.bucket.get());
-		return bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
-//		return _logging_service.getLogger(bucket.orElseGet(() -> _mutable_state.bucket.get()));
+		return _mutable_state.bucket_loggers.computeIfAbsent(b.full_name(), (k)->_logging_service.getLogger(b));
 	}
 
 	/* (non-Javadoc)
@@ -789,8 +790,13 @@ public class HarvestContext implements IHarvestContext {
 	 */
 	@Override
 	public CompletableFuture<?> flushBatchOutput(Optional<DataBucketBean> bucket) {
-		//first flush loggers
-		bucket_loggers.values().stream().forEach(l->l.flush());
-		return _multi_writer.get().flushBatchOutput();
+		// Flush data and logger
+		
+		final Stream<CompletableFuture<?>> flush_writer = Stream.of(_multi_writer.get().flushBatchOutput());
+		final Stream<CompletableFuture<?>> flush_logger = _mutable_state.bucket_loggers.values().stream().map(l->l.flush());
+		
+		return CompletableFuture.allOf(
+					Stream.concat(flush_writer,  flush_logger).toArray(CompletableFuture[]::new)
+				);
 	}
 }

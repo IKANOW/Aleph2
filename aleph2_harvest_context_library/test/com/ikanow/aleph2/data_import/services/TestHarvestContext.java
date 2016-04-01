@@ -102,6 +102,7 @@ public class TestHarvestContext {
 			
 			assertTrue("Harvest Context dependencies", test_context._core_management_db != null);
 			assertTrue("Harvest Context dependencies", test_context._distributed_services != null);
+			assertTrue("Harvest Context dependencies", test_context._logging_service != null);
 			assertTrue("Harvest Context dependencies", test_context._globals != null);
 			assertTrue("Harvest Context dependencies", test_context._service_context != null);
 			
@@ -198,6 +199,7 @@ public class TestHarvestContext {
 			final HarvestContext test_external1b = (HarvestContext)test_external1a;
 			
 			assertTrue("Harvest Context dependencies", test_external1b._core_management_db != null);
+			assertTrue("Harvest Context dependencies", test_external1b._logging_service != null);
 			assertTrue("Harvest Context dependencies", test_external1b._distributed_services != null);
 			assertTrue("Harvest Context dependencies", test_external1b._globals != null);
 			assertTrue("Harvest Context dependencies", test_external1b._service_context != null);
@@ -227,6 +229,7 @@ public class TestHarvestContext {
 			final HarvestContext test_external2b = (HarvestContext)test_external2a;
 			
 			assertTrue("Harvest Context dependencies", test_external2b._core_management_db != null);
+			assertTrue("Harvest Context dependencies", test_external2b._logging_service != null);
 			assertTrue("Harvest Context dependencies", test_external2b._distributed_services != null);
 			assertTrue("Harvest Context dependencies", test_external2b._globals != null);
 			assertTrue("Harvest Context dependencies", test_external2b._service_context != null);
