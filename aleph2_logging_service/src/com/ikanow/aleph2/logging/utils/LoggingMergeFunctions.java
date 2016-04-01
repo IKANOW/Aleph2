@@ -72,13 +72,11 @@ public class LoggingMergeFunctions {
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum) {		
 		return sumField(field_to_sum, SUM_FIELD, false);		
 	}
-	//TODO if you stick the result in a different field, how does sum work?
-	//TODO look at this, maybe need to fix some logic error
 	public static BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean> sumField(final String field_to_sum, final String field_for_ouput, final boolean substituteMessage) {		
 		return (n,o)->{
 			Double sum = 
-				Optional.ofNullable(LoggingUtils.getDetailsMapValue(o, field_to_sum, Double.class)).orElse(0D) //old sum
-				+ Optional.ofNullable(LoggingUtils.getDetailsMapValue(n, field_to_sum, Double.class)).orElse(0D); //add new sum										
+				Optional.ofNullable(LoggingUtils.getDetailsMapValue(o, field_for_ouput, Double.class)).orElse(0D) //old sum, is stored in output field
+				+ Optional.ofNullable(LoggingUtils.getDetailsMapValue(n, field_to_sum, Double.class)).orElse(0D); //add new sum	is stored in input field									
 			return BeanTemplateUtils.clone(n).with(BasicMessageBean::details, LoggingUtils.mergeDetailsAddValue(o, n, field_for_ouput, sum)).done();
 		};
 	}
