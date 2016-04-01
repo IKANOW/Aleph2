@@ -20,18 +20,20 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier;
+import com.ikanow.aleph2.data_model.utils.SetOnce;
 
 /**
  * @author Burch
  *
  */
 public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
-	final boolean success;
-	final Supplier<String> source;
-	final Supplier<String> command;
-	final Supplier<Integer> message_code;
-	final Supplier<String> message;
-	final Supplier<Map<String, Object>> details;
+	final SetOnce<Boolean> success = new SetOnce<Boolean>();
+	final SetOnce<Supplier<String>> source = new SetOnce<Supplier<String>>();
+	final SetOnce<Supplier<String>> command = new SetOnce<Supplier<String>>();
+	final SetOnce<Supplier<Integer>> message_code = new SetOnce<Supplier<Integer>>();
+	final SetOnce<Supplier<String>> message = new SetOnce<Supplier<String>>();
+	final SetOnce<Supplier<Map<String, Object>>> details = new SetOnce<Supplier<Map<String,Object>>>();
+	final SetOnce<BasicMessageBean> bmb = new SetOnce<BasicMessageBean>();
 	/**
 	 * @param success
 	 * @param source
@@ -44,12 +46,21 @@ public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
 			Supplier<Integer> message_code,
 			Supplier<String> message,
 			Supplier<Map<String, Object>> details) {
-		this.success = success;
-		this.source = source;
-		this.command = command;
-		this.message_code = message_code;
-		this.message = message;
-		this.details = details;
+		this.success.set(success);
+		this.source.set(source);
+		this.command.set(command);
+		this.message_code.set(message_code);
+		this.message.set(message);
+		this.details.set(details);
+	}
+
+	/**
+	 * Builds a supplier from a BMB for utility
+	 * @param message2
+	 */
+	public BasicMessageBeanSupplier(final BasicMessageBean bmb) {		
+		this.bmb.set(bmb);
+		this.source.set(()->bmb.source());
 	}
 
 	/* (non-Javadoc)
@@ -57,7 +68,9 @@ public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
 	 */
 	@Override
 	public BasicMessageBean getBasicMessageBean() {
-		return new BasicMessageBean(new Date(), this.success, this.source.get(), this.command.get(), this.message_code.get(), this.message.get(), this.details.get());
+		if ( !this.bmb.isSet() )
+			this.bmb.set(new BasicMessageBean(new Date(), this.success.get(), this.source.get().get(), this.command.get().get(), this.message_code.get().get(), this.message.get().get(), this.details.get().get()));
+		return this.bmb.get();
 	}
 
 	/* (non-Javadoc)
@@ -65,7 +78,7 @@ public class BasicMessageBeanSupplier implements IBasicMessageBeanSupplier {
 	 */
 	@Override
 	public String getSubsystem() {
-		return this.source.get();
+		return this.source.get().get();
 	}
 
 }

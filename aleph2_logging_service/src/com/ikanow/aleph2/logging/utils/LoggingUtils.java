@@ -47,6 +47,8 @@ import com.ikanow.aleph2.data_model.utils.BucketUtils;
 public class LoggingUtils {
 	private static final String EXTERNAL_PREFIX = "/external";
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
+	public static final String LAST_LOG_TIMESTAMP_FIELD = "last_log_timestamp";
+	public static final String LOG_COUNT_FIELD = "log_count";
 	
 	/**
 	 * Builds a JsonNode log message object, contains fields for date, message, generated_by, bucket, subsystem, and severity
@@ -178,8 +180,8 @@ public class LoggingUtils {
 	 * @return
 	 */
 	public static Tuple2<BasicMessageBean, Map<String, Object>> updateInfo(final Tuple2<BasicMessageBean, Map<String, Object>> merge_info, final Optional<Long> timestamp) {
-		merge_info._2.merge(LoggingFunctions.LOG_COUNT_FIELD, 1L, (n,o)->(Long)n+(Long)o);
-		timestamp.ifPresent(t->merge_info._2.replace(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, t));
+		merge_info._2.merge(LOG_COUNT_FIELD, 1L, (n,o)->(Long)n+(Long)o);
+		timestamp.ifPresent(t->merge_info._2.replace(LAST_LOG_TIMESTAMP_FIELD, t));
 		return merge_info;
 	}
 	
@@ -196,8 +198,8 @@ public class LoggingUtils {
 				//final BasicMessageBean bmb = merge_operations.apply(message, null);
 				final BasicMessageBean bmb = Arrays.stream(merge_operations).reduce(null, (bmb_a,fn)->fn.apply(message, bmb_a), (bmb_a,bmb_b)->bmb_a);
 				Map<String, Object> info = new HashMap<String, Object>();
-				info.put(LoggingFunctions.LOG_COUNT_FIELD, 0L);
-				info.put(LoggingFunctions.LAST_LOG_TIMESTAMP_FIELD, 0L);
+				info.put(LOG_COUNT_FIELD, 0L);
+				info.put(LAST_LOG_TIMESTAMP_FIELD, 0L);
 				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, info);
 			} else {
 				//merge with old entry
@@ -206,5 +208,56 @@ public class LoggingUtils {
 				return new Tuple2<BasicMessageBean, Map<String,Object>>(bmb, v._2);					
 			}
 		});			
+	}
+	
+	/**
+	 * Returns the value in message.details.get(field) or any part of the access does not exist.
+	 * @param <T>
+	 * 
+	 * @param message
+	 * @param field
+	 * @param clazz 
+	 * @return
+	 */	
+	public static <T> T getDetailsMapValue(final BasicMessageBean message, final String field, final Class<T> clazz) {
+		return Optional.ofNullable(message)
+		.map(m->m.details())
+		.map(d->d.get(field))
+		.map(r->clazz.cast(r))
+		.orElse(null);
+	}
+	
+	/**
+	 * Copies the details from copyInto overtop of the details from copyFrom (merging them).  Adds in
+	 * key1, value1 after.
+	 * @param copyFrom
+	 * @param copyInto
+	 * @param key1
+	 * @param value1
+	 * @return
+	 */
+	public static Map<String, Object> mergeDetailsAddValue(final BasicMessageBean copyFrom, final BasicMessageBean copyInto, final String key1, final Object value1) {
+		final Map<String, Object> tempMap = new HashMap<String, Object>(Optional.ofNullable(copyFrom).map(c->c.details()).orElse(ImmutableMap.of())); //copy current map into modifiable map
+		tempMap.putAll(Optional.ofNullable(copyInto.details()).orElse(ImmutableMap.of())); //copy newer map over top of old map
+		if ( value1 != null ) tempMap.put(key1, value1);	//add in new value
+		return ImmutableMap.copyOf(tempMap); //return an immutable map
+	}
+	/**
+	 * Copies the details from copyInto overtop of the details from copyFrom (merging them).  Adds in
+	 * key1=value1 and key2=value2 after.
+	 * @param copyFrom
+	 * @param copyInto
+	 * @param key1
+	 * @param value1
+	 * @param key2
+	 * @param value2
+	 * @return
+	 */
+	public static Map<String, Object> mergeDetailsAddValue(final BasicMessageBean copyFrom, final BasicMessageBean copyInto, final String key1, final Object value1, final String key2, final Object value2) {
+		final Map<String, Object> tempMap = new HashMap<String, Object>(Optional.ofNullable(copyFrom).map(c->c.details()).orElse(ImmutableMap.of())); //copy current map into modifiable map
+		tempMap.putAll(Optional.ofNullable(copyInto.details()).orElse(ImmutableMap.of())); //copy newer map over top of old map
+		if ( value1 != null ) tempMap.put(key1, value1);	//add in new value
+		if ( value2 != null ) tempMap.put(key2, value2);
+		return ImmutableMap.copyOf(tempMap); //return an immutable map
 	}
 }
