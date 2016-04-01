@@ -206,37 +206,11 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			this.hostname = LoggingUtils.getHostname();
 		}
 
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#flush()
+		/**
+		 * Non-merge version of logging, doesn't allow rules/formatter/merging
 		 */
 		@Override
-		public CompletableFuture<?> flush() {
-			return logging_writable.flushBatchOutput();
-		}
-
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public CompletableFuture<?> inefficientLog(Level level, BasicMessageBean message) {
-			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.source(), default_log_level); //need to log to multiwriter
-			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
-			if ( log_out || log_log4j ) {
-				//create log message to output:				
-				final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field, hostname);				
-				if ( log_log4j )					
-					_logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, message.details(), hostname));
-				if ( log_out )
-					return CompletableFuture.completedFuture(logging_writable.batchWrite(logObject));				
-			}
-			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);		
-		}
-
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier)
-		 */
-		@Override
-		public CompletableFuture<?> log(Level level, IBasicMessageBeanSupplier message) {
+		public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message) {			
 			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {
@@ -251,8 +225,8 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
 		}
 		
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction)
+		/**
+		 * Merging version of logging, requires mergekey, merging functions, rules, formatter
 		 */
 		@Override
 		public CompletableFuture<?> log(
@@ -285,6 +259,22 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			}
 			return CompletableFuture.completedFuture(LOG_MESSAGE_BELOW_THRESHOLD);	
 		}	
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#flush()
+		 */
+		@Override
+		public CompletableFuture<?> flush() {
+			return logging_writable.flushBatchOutput();
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+		 */
+		@Override
+		public CompletableFuture<?> inefficientLog(final Level level, final BasicMessageBean message) {
+			return this.log(level, new BasicMessageBeanSupplier(message));		
+		}
 
 		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, java.util.function.Supplier, java.util.function.Supplier)
@@ -322,6 +312,44 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 				Supplier<Integer> messageCode,
 				Supplier<Map<String, Object>> details) {
 			return this.log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, details));
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				final Level level,
+				final IBasicMessageBeanSupplier message,
+				final String merge_key,
+				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, Collections.emptyList(), Optional.empty(), merge_operations);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.Optional, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				final Level level,
+				final IBasicMessageBeanSupplier message,
+				final String merge_key,
+				final Function<BasicMessageBean, BasicMessageBean> formatter,
+				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, Collections.emptyList(), Optional.of(formatter), merge_operations);			
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.Collection, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				final Level level,
+				final IBasicMessageBeanSupplier message,
+				final String merge_key,
+				final Collection<Function<Tuple2<BasicMessageBean, Map<String, Object>>, Boolean>> rule_functions,
+				@SuppressWarnings("unchecked") final BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, rule_functions, Optional.empty(), merge_operations);
 		}		
 	}
 

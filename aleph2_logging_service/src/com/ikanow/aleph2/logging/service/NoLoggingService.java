@@ -176,6 +176,44 @@ public class NoLoggingService implements ILoggingService {
 				Supplier<Map<String, Object>> details) {
 			return CompletableFuture.completedFuture(true);
 		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.Function, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				Function<BasicMessageBean, BasicMessageBean> formatter,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.Collection, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				Collection<Function<Tuple2<BasicMessageBean, Map<String, Object>>, Boolean>> rule_functions,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return CompletableFuture.completedFuture(true);
+		}
 		
 	}
 }

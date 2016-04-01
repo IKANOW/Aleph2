@@ -121,25 +121,6 @@ public class Log4JLoggingService implements ILoggingService {
 		}
 
 		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#flush()
-		 */
-		@Override
-		public CompletableFuture<?> flush() {
-			return CompletableFuture.completedFuture(true);
-		}
-
-		/* (non-Javadoc)
-		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-		 */
-		@Override
-		public CompletableFuture<?> inefficientLog(Level level,
-				BasicMessageBean message) {
-			final JsonNode logObject = LoggingUtils.createLogObject(level, bucket, message, isSystem, date_field, hostname);
-			logger.log(level, Log4JUtils.getLog4JMessage(logObject, level, Thread.currentThread().getStackTrace()[2], date_field, Collections.emptyMap(), hostname));
-			return CompletableFuture.completedFuture(true);
-		}
-
-		/* (non-Javadoc)
 		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier)
 		 */
 		@Override
@@ -175,6 +156,23 @@ public class Log4JLoggingService implements ILoggingService {
 			//even if we didn't send a bmb, update the count
 			merge_logs.put(merge_key, LoggingUtils.updateInfo(merge_info, Optional.empty()));
 			return CompletableFuture.completedFuture(LOG_MESSAGE_DID_NOT_MATCH_RULE);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#flush()
+		 */
+		@Override
+		public CompletableFuture<?> flush() {
+			return CompletableFuture.completedFuture(true);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#inefficientLog(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
+		 */
+		@Override
+		public CompletableFuture<?> inefficientLog(Level level,
+				BasicMessageBean message) {
+			return this.log(level, new BasicMessageBeanSupplier(message));
 		}
 
 		/* (non-Javadoc)
@@ -214,6 +212,44 @@ public class Log4JLoggingService implements ILoggingService {
 				Supplier<Integer> messageCode,
 				Supplier<Map<String, Object>> details) {
 			return log(level, new BasicMessageBeanSupplier(success, subsystem, command, messageCode, message, details));
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, Collections.emptyList(), Optional.empty(), merge_operations);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.function.Function, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				Function<BasicMessageBean, BasicMessageBean> formatter,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, Collections.emptyList(), Optional.of(formatter), merge_operations);
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger#log(org.apache.logging.log4j.Level, com.ikanow.aleph2.data_model.interfaces.shared_services.IBasicMessageBeanSupplier, java.lang.String, java.util.Collection, java.util.function.BiFunction[])
+		 */
+		@Override
+		public CompletableFuture<?> log(
+				Level level,
+				IBasicMessageBeanSupplier message,
+				String merge_key,
+				Collection<Function<Tuple2<BasicMessageBean, Map<String, Object>>, Boolean>> rule_functions,
+				@SuppressWarnings("unchecked") BiFunction<BasicMessageBean, BasicMessageBean, BasicMessageBean>... merge_operations) {
+			return this.log(level, message, merge_key, rule_functions, Optional.empty(), merge_operations);
 		}
 		
 	}
