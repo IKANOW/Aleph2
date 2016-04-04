@@ -225,6 +225,11 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		    f.set(this,  BeanTemplateUtils.configureMapper(Optional.empty()));
 	    }	    
 	    {
+		    final Field f = this.getClass().getDeclaredField("_multi_writer");
+		    f.setAccessible(true);
+		    f.set(this,  new SetOnce<MultiDataService>());
+	    }	    
+	    {
 		    final Field f = this.getClass().getDeclaredField("_state_name");
 		    f.setAccessible(true);
 		    f.set(this,  State.IN_MODULE);
