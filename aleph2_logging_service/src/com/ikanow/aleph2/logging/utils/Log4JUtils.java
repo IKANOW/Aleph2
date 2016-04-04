@@ -31,13 +31,18 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class Log4JUtils {
 	private static SimpleDateFormat date_format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	private static String message_format = "%s [%s.%s] %s %s %s"; // <date> [<subsystem>.<command>] <level> <class:line> <message> <other_fields=other_values>
+	private static String message_format = "%s [%s] %s %s:%s %s"; // <date> [<thread.name>] <level> <class[1]:line> <message> <other_fields=other_values>
 	private static String field_format = " %s=%s";
 	public static String getLog4JMessage(final JsonNode logObject, final Level level, final StackTraceElement stack, final String date_field, final Map<String, Object> map, final String hostname) {
 		StringBuilder sb = new StringBuilder();
-		sb.append(String.format(message_format, date_format.format(new Date(logObject.get(date_field).asLong())), logObject.get("subsystem").asText(), logObject.get("command").asText(), level.name(), stack, logObject.get("message").asText()));
+		final String c = stack.getClassName().substring(stack.getClassName().lastIndexOf(".")+1);
+		final String l = Integer.toString(stack.getLineNumber());
+		final String thread = Thread.currentThread().getName().isEmpty() ? Thread.currentThread().getName() : Long.toString(Thread.currentThread().getId());
+		sb.append(String.format(message_format, date_format.format(new Date(logObject.get(date_field).asLong())), thread, level.name(), c, l, logObject.get("message").asText()));
 		sb.append(String.format(field_format, "bucket", logObject.get("bucket").asText()));
 		sb.append(String.format(field_format, "hostname", hostname));
+		sb.append(String.format(field_format, "subsystem", logObject.get("subsystem").asText()));
+		sb.append(String.format(field_format, "command", logObject.get("command").asText()));
 		Optional.ofNullable(map).orElse(Collections.emptyMap()).entrySet().stream().forEach(e -> sb.append(String.format(field_format, e.getKey(), e.getValue())));
 		return sb.toString();
 	}
