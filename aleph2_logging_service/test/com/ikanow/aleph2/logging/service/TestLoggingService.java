@@ -45,7 +45,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import scala.Tuple2;
@@ -506,9 +505,7 @@ public class TestLoggingService {
 		logging_crud.deleteDatastore().get();
 	}
 	
-	//TODO Caleb: this was failing: java.lang.AssertionError: expected:<5.2> but was:<9.86> 
-	@SuppressWarnings("serial")
-	@Ignore
+	@SuppressWarnings("serial")	
 	@Test
 	public void test_LoggingMergeFunctions() {
 		//testing LoggingMergeFunctions.getDetailsMapValue
@@ -569,7 +566,7 @@ public class TestLoggingService {
 				.details().get(LoggingMergeFunctions.SUM_FIELD), 0D, 0.0001D);
 		assertEquals((double)LoggingMergeFunctions.sumField(VALUE_FIELD).apply(
 				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 5.2)).done().get(), 
-				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(VALUE_FIELD, 4.66)).done().get())
+				BeanTemplateUtils.build(BasicMessageBean.class).with(BasicMessageBean::details, ImmutableMap.of(LoggingMergeFunctions.SUM_FIELD, 4.66)).done().get())
 				.details().get(LoggingMergeFunctions.SUM_FIELD), 9.86D, 0.0001D);
 		
 		//test min
