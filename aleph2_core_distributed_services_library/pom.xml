@@ -6,7 +6,7 @@
 	<version>${aleph2.version}</version>
 	<properties>
 		<aleph2.scope>compile</aleph2.scope>
-		<aleph2.version>2.8.0-SNAPSHOT</aleph2.version>
+		<aleph2.version>2.9.0</aleph2.version>
 		<aleph2.curator>2.7.1</aleph2.curator>
 		<aleph2.akka>2.4.1</aleph2.akka>
 	</properties>
