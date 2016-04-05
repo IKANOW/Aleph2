@@ -210,7 +210,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 		 * Non-merge version of logging, doesn't allow rules/formatter/merging
 		 */
 		@Override
-		public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message) {			
+		public CompletableFuture<?> log(final Level level, final IBasicMessageBeanSupplier message) {	
 			final boolean log_out = LoggingUtils.meetsLogLevelThreshold(level, bucket_logging_thresholds, message.getSubsystem(), default_log_level); //need to log to multiwriter
 			final boolean log_log4j = isSystem && log4j_level.isLessSpecificThan(level); //need to log to log4j
 			if ( log_out || log_log4j ) {

@@ -37,7 +37,7 @@ public class Log4JUtils {
 		StringBuilder sb = new StringBuilder();
 		final String c = stack.getClassName().substring(stack.getClassName().lastIndexOf(".")+1);
 		final String l = Integer.toString(stack.getLineNumber());
-		final String thread = Thread.currentThread().getName().isEmpty() ? Thread.currentThread().getName() : Long.toString(Thread.currentThread().getId());
+		final String thread = Thread.currentThread().getName().isEmpty() ? Long.toString(Thread.currentThread().getId()) : Thread.currentThread().getName();
 		sb.append(String.format(message_format, date_format.format(new Date(logObject.get(date_field).asLong())), thread, level.name(), c, l, logObject.get("message").asText()));
 		sb.append(String.format(field_format, "bucket", logObject.get("bucket").asText()));
 		sb.append(String.format(field_format, "hostname", hostname));
