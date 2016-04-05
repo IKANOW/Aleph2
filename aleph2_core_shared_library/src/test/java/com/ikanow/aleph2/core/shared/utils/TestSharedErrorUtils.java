@@ -50,7 +50,7 @@ public class TestSharedErrorUtils {
 		assertEquals(test2.command(), "TestMessage");
 		assertEquals((double)test2.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(test2.details(), null);
-		assertEquals(test2.message(), "Shared library {1} not found: 2");
+		assertEquals(test2.message(), "Shared library {1} not found (or user does not have read permission): 2");
 		assertEquals(test2.message_code(), null);
 		assertEquals(test2.source(), ref_name);
 		assertEquals(test2.success(), false);
@@ -61,7 +61,7 @@ public class TestSharedErrorUtils {
 		assertEquals(test3.command(), "TestMessage");
 		assertEquals((double)test3.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(test3.details(), null);
-		assertEquals(test3.message(), "Shared library 3b not found: 3a");
+		assertEquals(test3.message(), "Shared library 3b not found (or user does not have read permission): 3a");
 		assertEquals(test3.message_code(), null);
 		assertEquals(test3.source(), ref_name);
 		assertEquals(test3.success(), false);

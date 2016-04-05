@@ -228,7 +228,7 @@ public class TestJarCacheUtils {
 		assertEquals(error.command(), "TestMessageBean");
 		assertEquals((double)error.date().getTime(), (double)((new Date()).getTime()), 1000.0);
 		assertEquals(error.details(), null);
-		assertTrue(error.message().contains("not found: "));
+		assertTrue(error.message().contains("not found (or user does not have read permission): "));
 		assertEquals(error.message_code(), null);
 		assertEquals(error.source(), "test1");
 		assertEquals(error.success(), false);
