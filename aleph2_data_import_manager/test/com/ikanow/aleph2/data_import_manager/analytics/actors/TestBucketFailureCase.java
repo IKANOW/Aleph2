@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.junit.Test;
@@ -55,7 +56,7 @@ public class TestBucketFailureCase {
 			fail("Errored deseralizing " + BeanTemplateUtils.toJson(bucket));
 		}
 		// Encapsulate that into bucket
-		final BucketActionMessage message = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
+		final BucketActionMessage message = new BucketActionMessage.PollFreqBucketActionMessage(bucket, Collections.emptySet());
 		try {
 			java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
 			ObjectOutputStream out = new ObjectOutputStream(baos);

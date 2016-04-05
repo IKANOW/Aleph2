@@ -1396,7 +1396,7 @@ public class TestDataBucketChangeActor {
 		
 		// Test 9: poll
 		{
-			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
+			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketAnalyticsChangeActor.talkToAnalytics(
 					bucket, poll,

@@ -17,6 +17,7 @@ package com.ikanow.aleph2.management_db.controllers.actors;
 
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -133,7 +134,7 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 				Optional.of(multi_node_enabled || !Optional.ofNullable(bucket_bstatus._2().node_affinity()).orElse(Collections.emptyList()).isEmpty()),				
 				_actor_context.getBucketActionSupervisor(), 
 				_actor_context.getActorSystem(), 
-				new PollFreqBucketActionMessage(bucket_bstatus._1()), 
+				new PollFreqBucketActionMessage(bucket_bstatus._1(), new HashSet<String>(Optionals.ofNullable(bucket_bstatus._2().node_affinity()))), 
 				Optional.empty());			
 		_logger.debug("Sent poll message from actor for bucket: " + bucket_bstatus._1().full_name());
 		return poll_future;

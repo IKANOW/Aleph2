@@ -186,8 +186,8 @@ public class BucketActionMessage implements Serializable {
 		/** User c'tor for creating a message to create a bucket
 		 * @param bucket - the bucket to create
 		 */
-		public PollFreqBucketActionMessage(final DataBucketBean bucket) {
-			super(bucket);
+		public PollFreqBucketActionMessage(final DataBucketBean bucket, final Set<String> handling_clients) {
+			super(bucket, handling_clients);
 		}
 	}
 	public static class BucketActionAnalyticJobMessage extends BucketActionMessage implements Serializable {

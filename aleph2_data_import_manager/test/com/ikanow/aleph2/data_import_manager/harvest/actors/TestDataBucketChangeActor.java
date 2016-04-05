@@ -468,7 +468,7 @@ public class TestDataBucketChangeActor {
 		}
 		// Test 9: poll
 		{
-			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket);
+			final BucketActionMessage.PollFreqBucketActionMessage poll = new BucketActionMessage.PollFreqBucketActionMessage(bucket, Collections.emptySet());
 			
 			final CompletableFuture<BucketActionReplyMessage> test9 = DataBucketHarvestChangeActor.talkToHarvester(
 					bucket, poll, "test9", _actor_context.getNewHarvestContext(), _actor_context, 
