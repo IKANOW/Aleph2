@@ -721,12 +721,46 @@ public class DataSchemaBean implements Serializable {
 	public static class GraphSchemaBean implements Serializable {
 		public static final String name = "graph_service";
 		
-		private static final long serialVersionUID = -824592579880124213L;
-		//TODO (ALEPH-15): define an initial set of graph schema 
-		// (eg options: 1] use annotations, 2] link on specified field pairs within object or fields across object, 3] build 2-hop via objects) 
-		//private Boolean enabled;
-		//private String service_name;
-		//private Map<String, Object> technology_override_schema;
+		private static final long serialVersionUID = -824592579880124213L;		
+		
+		/** Describes if the graph db service is used for this bucket
+		 * @return the enabled
+		 */
+		public Boolean enabled() {
+			return enabled;
+		}
+		/** (OPTIONAL) Enables a non-default service to be used for this schema
+		 * @return the overriding service_name
+		 */
+		public String service_name() {
+			return service_name;
+		}
+		/** Technology-specific settings for this schema - see the specific service implementation for details 
+		 * USE WITH CAUTION
+		 * @return the technology_override_schema
+		 */
+		public Map<String, Object> technology_override_schema() {
+			return technology_override_schema;
+		}
+
+		/** For "custom" decomposition policy, this bean determines the processing to occur (currently only the first element is processed)
+		 * @return
+		 */
+		public List<EnrichmentControlMetadataBean> custom_decomposition_configs() {
+			return custom_decomposition_configs;
+		}		
+		/** For "custom" merge policy, this bean determines the processing to occur (currently only the first element is processed)
+		 * @return
+		 */
+		public List<EnrichmentControlMetadataBean> custom_merge_configs() {
+			return custom_merge_configs;
+		}		
+		
+		private Boolean enabled;
+		private String service_name;
+		private Map<String, Object> technology_override_schema;
+		private List<EnrichmentControlMetadataBean> custom_decomposition_configs;
+		private List<EnrichmentControlMetadataBean> custom_merge_configs;
 	}
 
 	/** Per bucket schema for the Data Warehouse service 
