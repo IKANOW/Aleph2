@@ -755,10 +755,26 @@ public class DataSchemaBean implements Serializable {
 		public List<EnrichmentControlMetadataBean> custom_merge_configs() {
 			return custom_merge_configs;
 		}		
+		/** This ordered list of fields is the deduplication key (together with bucket)
+		 * Defaults to [ "name", "type" ]
+		 * @return the deduplication_fields
+		 */
+		public List<String> deduplication_fields() {
+			return deduplication_fields;
+		}
+		/** This ordered list of bucket paths/globs describes the scope of the deduplication performed,
+		 *  It defaults to all buckets over which the user has write privileges 
+		 * @return the deduplication_fields
+		 */
+		public List<String> deduplication_contexts() {
+			return deduplication_contexts;
+		}
 		
 		private Boolean enabled;
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
+		private List<String> deduplication_fields;
+		private List<String> deduplication_contexts;
 		private List<EnrichmentControlMetadataBean> custom_decomposition_configs;
 		private List<EnrichmentControlMetadataBean> custom_merge_configs;
 	}
