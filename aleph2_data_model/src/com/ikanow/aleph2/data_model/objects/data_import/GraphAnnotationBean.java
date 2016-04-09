@@ -16,7 +16,7 @@
 
 package com.ikanow.aleph2.data_model.objects.data_import;
 
-/** Defines GraphSON fields used in Aleph2
+/** Defines GraphSON/Tinkerpop3 fields used in Aleph2
  * @author Alex
  *
  */
@@ -24,9 +24,13 @@ public class GraphAnnotationBean {
 
 	// Common fields
 	
+	/** Searchabel for edges but not vertices
+	 */
+	public static final String label = "label";
+	
 	/** "edge" or "vertex"
 	 */
-	public static final String _type = "_type";
+	public static final String type = "type";
 	
 	/** A list of bucket paths that determine the permission of the node/edge/attribute
 	 */
@@ -34,32 +38,34 @@ public class GraphAnnotationBean {
 	
 	// Vertex fields
 	
-	/** In decomposition mode for vertices a map of indexed attributes that is used for deduplication (if this is not unique, the right one will have to be chosen from the merge stage) 
+	/** In decomposition mode for vertices a map of indexed properties that is used for deduplication (if this is not unique, the right one will have to be chosen from the merge stage) 
 	 *  Otherwise leave blank/as the populated value 
 	 *  eg: { "name": "alex", "type": "person" }
+	 *  In merge mode is the internal "id" assigned by the system, and should not be changed by the user
 	 */
-	public static final String _id = "_id";
+	public static final String id = "id";
 		
 	// Vertex property fields
 	
 	/** Allows permissions and other properties to be set on edge/vertex properties
 	 *  "_b" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
 	 */
-	public static final String _meta = "_meta";
+	public static final String properties = "properties";
 	
 	// Edge fields
 
 	// Internal
-	public static final String _label = "_label";
-	/** In decomposition mode should be formatted like the _id field described above 
-	 *  In merge mode points to the long _ids
+	/** In decomposition mode should be formatted like the id field described above 
+	 *  In merge mode points to the long ids
 	 */
-	public static final String _inV = "_inV";
-	/** In decomposition mode should be formatted like the _id field described above 
-	 *  In merge mode points to the long _ids
+	public static final String inV = "inV";
+	/** In decomposition mode should be formatted like the id field described above 
+	 *  In merge mode points to the long ids
 	 */
-	public static final String _outV = "_outV";
-	// Common
-	public static final String _weight = "weight";
+	public static final String outV = "outV";
+	public static final String inVLabel = "inVLabel";
+	public static final String outVLabel = "outVLabel";
+	// Typical edge fields
+	public static final String weight = "weight";
 
 }
