@@ -769,12 +769,19 @@ public class DataSchemaBean implements Serializable {
 		public List<String> deduplication_contexts() {
 			return deduplication_contexts;
 		}
+		/** If true (default: false) then all objects are run through the custom merge (ie acting as a "finalize" step before emitting when there is no matching dedup)
+		 * @return whether to finalize all objects, even if they didn't match a dedup
+		 */
+		public Boolean custom_finalize_all_objects() {
+			return custom_finalize_all_objects;
+		}
 		
 		private Boolean enabled;
 		private String service_name;
 		private Map<String, Object> technology_override_schema;
 		private List<String> deduplication_fields;
 		private List<String> deduplication_contexts;
+		private Boolean custom_finalize_all_objects;
 		private List<EnrichmentControlMetadataBean> custom_decomposition_configs;
 		private List<EnrichmentControlMetadataBean> custom_merge_configs;
 	}
