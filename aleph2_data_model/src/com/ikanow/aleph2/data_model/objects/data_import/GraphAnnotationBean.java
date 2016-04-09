@@ -16,6 +16,9 @@
 
 package com.ikanow.aleph2.data_model.objects.data_import;
 
+import java.util.Arrays;
+import java.util.List;
+
 /** Defines GraphSON/Tinkerpop3 fields used in Aleph2
  * @author Alex
  *
@@ -36,6 +39,11 @@ public class GraphAnnotationBean {
 	 */
 	public static final String _b = "_b";
 	
+	/** Allows permissions and other properties to be set on edge/vertex properties
+	 *  "_b" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
+	 */
+	public static final String properties = "properties";
+	
 	// Vertex fields
 	
 	/** In decomposition mode for vertices a map of indexed properties that is used for deduplication (if this is not unique, the right one will have to be chosen from the merge stage) 
@@ -46,11 +54,10 @@ public class GraphAnnotationBean {
 	public static final String id = "id";
 		
 	// Vertex property fields
-	
-	/** Allows permissions and other properties to be set on edge/vertex properties
-	 *  "_b" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
-	 */
-	public static final String properties = "properties";
+	// Internal
+	// Typical vertex properties
+	public static final String name = "name";	
+	// also use type as a property
 	
 	// Edge fields
 
@@ -65,7 +72,6 @@ public class GraphAnnotationBean {
 	public static final String outV = "outV";
 	public static final String inVLabel = "inVLabel";
 	public static final String outVLabel = "outVLabel";
-	// Typical edge fields
+	// Typical edge properties
 	public static final String weight = "weight";
-
 }
