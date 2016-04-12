@@ -3,6 +3,8 @@
 # Aleph2
 The IKANOW v2 meta-database and analytics platform
 
+(see also the [wiki](https://github.com/IKANOW/Aleph2/wiki) for more high level information and low level documentation.)
+
 Aleph2 provides a single, self-consistent, interface and orchestration framework for data-driven applications:
 * Plugin different NoSQL/graph/SQL/domain-specific data stores - Aleph2 provides consumers with a technology-independent view of the underlying data (but with the option to access the data stores' underlying capabilities directly at the expense of future compatibility).
 * Use JSON to create and schedule ETL ("harvest and enrichment") pipelines using either the provided components (eg Flume/logstash) or by plugging in script or JVM based modules or technologies.
