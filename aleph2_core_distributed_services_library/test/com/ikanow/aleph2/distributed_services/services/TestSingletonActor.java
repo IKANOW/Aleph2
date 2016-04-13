@@ -171,6 +171,14 @@ public class TestSingletonActor {
 				"CREATE_ME_WITH_WRONG_ROLE"
 				).toArray(new String[0]));
 		
+		inheritIO(px_wrong_role.getInputStream(), System.out);
+		inheritIO(px_wrong_role.getErrorStream(), System.err);
+		
+		for (int i = 0;i < 30; ++i) { // (wait for remote process to start up and set up the cluster, so it's definitely the oldest...) 
+			try { Thread.sleep(1000); } catch (Exception e) {}	
+		}		
+		_logger.info("Launching second remote process");
+		
 		// Launch a remote process #2
 		
 		final Process px = Runtime.getRuntime().exec(Arrays.<String>asList(
