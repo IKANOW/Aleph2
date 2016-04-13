@@ -1619,7 +1619,7 @@ public class TestDeduplicationService {
 		
 		// OK wait for these writes to be complete
 		
-		for (;;) {
+		for (int i = 0; i < 40; ++i) {
 			Thread.sleep(250L);
 			if ((write_context1.countObjects().join() >= num_write_records)
 					&&
