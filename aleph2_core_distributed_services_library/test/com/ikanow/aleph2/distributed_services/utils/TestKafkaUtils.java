@@ -40,6 +40,7 @@ public class TestKafkaUtils {
 	@Before
 	public void setupCoreDistributedServices() throws Exception {
 		_cds = new MockCoreDistributedServices();	
+		_cds.getKafkaBroker(); // (Setup kafka)
 	}
 	
 	@Test
