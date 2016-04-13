@@ -35,6 +35,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.ikanow.aleph2.distributed_services.data_model.DistributedServicesPropertyBean;
 import com.ikanow.aleph2.distributed_services.data_model.IBroadcastEventBusWrapper;
 import com.ikanow.aleph2.distributed_services.utils.ZookeeperUtils;
@@ -49,6 +50,7 @@ import akka.event.japi.LookupEventBus;
 
 public class TestSingletonActor {
 	public static final Logger _logger = LogManager.getLogger();
+	public static String UUID = UuidUtils.get().getRandomUuid(); // (ie one per process)
 
 	// clean_shutdown==false is slower so normally leave this as true
 	//static boolean clean_shutdown = false;
@@ -109,7 +111,7 @@ public class TestSingletonActor {
 		
 		public TestActor(ICoreDistributedServices core_distributed_services) {
 			_local_singleton_is_alive = true;
-			_logger.info("Launched TestActor: " + this + " /" + this.self());
+			_logger.info("Launched TestActor: " + this + " /" + this.self() + " (uuid=" + UUID + ")");
 			_test_bus1 = core_distributed_services.getBroadcastMessageBus(TestBeanWrapper.class, TestBean.class, "test_bean");
 			_test_bus1.subscribe(this.self(), "test_bean");
 		}		
@@ -117,11 +119,11 @@ public class TestSingletonActor {
 		@Override
 		public void onReceive(Object arg0) throws Exception {
 			if (arg0 instanceof TestBean) {
-				_logger.info("Received test bean: " + this.self());
+				_logger.info("Received test bean: " + this.self() + " (uuid=" + UUID + ")");
 				_remote_singleton_is_alive = true;
 				this.sender().tell(createMessage(), this.self());
 			}
-			else _logger.info("Received: " + arg0.getClass());
+			else _logger.info("Received: " + arg0.getClass() + " (uuid=" + UUID + ")");
 		}
 	}
 
@@ -130,7 +132,7 @@ public class TestSingletonActor {
 		@Override
 		public void onReceive(Object arg0) throws Exception {
 			if (arg0 instanceof TestBean) {
-				_logger.info("Remote TestActor is alive");
+				_logger.info("Remote TestActor is alive" + " (uuid=" + UUID + ")");
 				_remote_singleton_is_alive = true;
 			}
 		} // (will sit on test bus 2)
@@ -182,9 +184,10 @@ public class TestSingletonActor {
 		inheritIO(px.getInputStream(), System.out);
 		inheritIO(px.getErrorStream(), System.err);
 
-		for (int i = 0;i < 15; ++i) { // (wait for remote process to start up) 
+		for (int i = 0;i < 30; ++i) { // (wait for remote process to start up and set up the cluster, so it's definitely the oldest...) 
 			try { Thread.sleep(1000); } catch (Exception e) {}	
 		}		
+		_logger.info("Starting main process: " + UUID);
 		
 		// Now launch Akka:
 		
@@ -208,7 +211,10 @@ public class TestSingletonActor {
 		});
 		for (int j = 0;j < 10; ++j) {
 			try { Thread.sleep(1000); } catch (Exception e) {}
-			if (started.isSet()) break;
+			if (started.isSet()) {
+				_logger.info("Main thread was up after secs=" + j + " (uuid=" + UUID + ")");
+				break;
+			}
 		}
 		if (!started.isSet()) {
 			fail("Cluster never woke up");
@@ -272,12 +278,11 @@ public class TestSingletonActor {
 	
 	// A "remote" service that will shoot messages over the broadcast bus
 	
-	public static void main(String args[]) throws Exception {		
+	public static void main(String args[]) throws Exception {
 		final boolean wrong_role;
 		if (2 == args.length) { // I'm support to have the wrong role
 			wrong_role = true;
 			ZookeeperUtils.overrideHostname("wrong_role");
-			_logger.info("STARTING WITH WRONG ROLE");
 		}
 		else if (1 != args.length) {
 			wrong_role = true;
@@ -287,6 +292,8 @@ public class TestSingletonActor {
 			ZookeeperUtils.overrideHostname("right_role");
 			wrong_role = false;
 		}
+		_logger.info("STARTING REMOTE ACTOR WITH ROLE: wrong=" + wrong_role + " (uuid=" + UUID + ")"); // (i think we'll only see wrong=false, the other one's io isn't inherited)
+		
 		HashMap<String, Object> config_map = new HashMap<String, Object>();
 		config_map.put(DistributedServicesPropertyBean.ZOOKEEPER_CONNECTION, args[0]);
 		if (wrong_role) {
@@ -310,6 +317,7 @@ public class TestSingletonActor {
 						ImmutableSet.<String>builder().add("test_role").build(), Props.create(TestActor.class, core_distributed_services)).get();						
 				_logger.info("Singleton manager = " + handler.toString() + ": " + handler.path().name());
 			}
+			else _logger.info("(Wrong role remote actor has also joined, as expected)"); // (not sure if we'll see this because we're only inheriting the io of the correct one)
 		});
 		
 		for (int k = 0;k < 180; ++k) {
