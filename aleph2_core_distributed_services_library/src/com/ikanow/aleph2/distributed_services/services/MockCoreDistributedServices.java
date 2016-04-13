@@ -72,6 +72,10 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 	
 	protected String _mock_application_name = null;
 	
+	///////////////////////////////////////////////////////////////
+
+	// INIT
+	
 	/** For testing, lets the developer create an application name for the mock CDS object
 	 * @param application_name
 	 */
@@ -91,37 +95,15 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 	 */
 	@Inject
 	public MockCoreDistributedServices(DistributedServicesPropertyBean config_bean) throws Exception {
-		setupKafka(); // (also sets up curator) lazy initialization didn't seem to work - maybe MockKafkaBroker takes a few seconds to become available, not worth worrying about for now 
-		
 		_mock_application_name = Optional.ofNullable(config_bean).map(cfg -> cfg.application_name()).orElse(null); //(uses the same config param as full CDS)
 		
 		_akka_system = ActorSystem.create("default");		
 	}	
 	 
-	/** Lazy initialization for Kafka
-	 */
-	private void setupKafka() {
-		setupCurator();
-		synchronized (this) {
-			if (!_kafka_broker.isSet()) {
-				try {
-					_kafka_broker.set(new MockKafkaBroker(_test_server.get().getConnectString()));
-					
-					final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
-							.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
-							.put("zookeeper.connect", _test_server.get().getConnectString())
-							.build();	
-					KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
-					
-					_kafka_zk_framework.set(KafkaUtils.getNewZkClient());
-				}
-				catch (Exception e) { // (just make unchecked)
-					throw new RuntimeException(e);
-				}
-			}
-		}
-	}
-
+	///////////////////////////////////////////////////////////////
+	
+	// CURATOR
+	
 	/** Lazy initialization for Curator/zookeeper
 	 */
 	private void setupCurator() {
@@ -156,6 +138,10 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 		this.setupCurator();
 		return _curator_framework.get();
 	}
+	
+	///////////////////////////////////////////////////////////////
+	
+	// AKKA
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getAkkaSystem()
@@ -209,6 +195,34 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 		return CompletableFuture.runAsync(task);
 	}
 
+	///////////////////////////////////////////////////////////////
+
+	// KAFKA
+	
+	/** Lazy initialization for Kafka
+	 */
+	private void setupKafka() {
+		setupCurator();
+		synchronized (this) {
+			if (!_kafka_broker.isSet()) {
+				try {
+					_kafka_broker.set(new MockKafkaBroker(_test_server.get().getConnectString()));
+					
+					final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+							.put("metadata.broker.list", "127.0.0.1:" + getKafkaBroker().getBrokerPort())
+							.put("zookeeper.connect", _test_server.get().getConnectString())
+							.build();	
+					KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));
+					
+					_kafka_zk_framework.set(KafkaUtils.getNewZkClient());
+				}
+				catch (Exception e) { // (just make unchecked)
+					throw new RuntimeException(e);
+				}
+			}
+		}
+	}
+
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#createTopic(java.lang.String)
 	 */
@@ -259,6 +273,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 	 */
 	@Override
 	public String generateTopicName(String path, Optional<String> subchannel) {
+		setupKafka();
 		return KafkaUtils.bucketPathToTopicName(path, subchannel.filter(sc -> !sc.equals(QUEUE_START_ALIAS.get())));		
 	}	
 	
@@ -267,8 +282,29 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 	 */
 	@Override
 	public boolean doesTopicExist(String topic) {
+		setupKafka();
 		return KafkaUtils.doesTopicExist(topic, _kafka_zk_framework.get());
 	}
+	
+	/** Stops a kafka broker
+	 */
+	public void kill() {
+		if (_kafka_broker.isSet()) {
+			getKafkaBroker().stop();
+		}
+	}
+
+	/** Returns the current Kafka broker
+	 * @return
+	 */
+	public MockKafkaBroker getKafkaBroker() {
+		setupKafka();
+		return _kafka_broker.get();
+	}
+
+	///////////////////////////////////////////////////////////////
+
+	// MISC
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingArtefacts()
@@ -287,20 +323,6 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 		return Optional.empty();
 	}
 	
-	/** Stops a kafka broker
-	 */
-	public void kill() {
-		getKafkaBroker().stop();
-	}
-
-	/** Returns the current Kafka broker
-	 * @return
-	 */
-	public MockKafkaBroker getKafkaBroker() {
-		setupKafka();
-		return _kafka_broker.get();
-	}
-
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#getApplicationName()
 	 */
