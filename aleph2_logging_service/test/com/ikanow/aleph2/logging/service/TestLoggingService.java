@@ -190,15 +190,19 @@ public class TestLoggingService {
 			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
 		});
 		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);
+		waitForResults(logging_crud, 10, num_messages_to_log*2);
 		assertEquals(num_messages_to_log*2, logging_crud.countObjects().get().longValue());
 		
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, num_messages_to_log);
 		assertEquals(num_messages_to_log, logging_crud_external.countObjects().get().longValue());
 
 		//cleanup
@@ -230,15 +234,19 @@ public class TestLoggingService {
 			});
 		});
 		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);
+		waitForResults(logging_crud, 10, 10);
 		assertEquals(10, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
 
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, 15);
 		assertEquals(15, logging_crud_external.countObjects().get().longValue());
 		
 		//cleanup
@@ -277,17 +285,21 @@ public class TestLoggingService {
 			});
 		});
 		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
 		//check its in ES, wait 10s max for the index to refresh
 		//USER + SYSTEM
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);
+		waitForResults(logging_crud, 10, 20);
 		assertEquals(20, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
 
 		//EXTERNAL
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, 15);
 		assertEquals(15, logging_crud_external.countObjects().get().longValue());
 		
 		//cleanup
@@ -308,6 +320,10 @@ public class TestLoggingService {
 			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
 			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
 		});
+		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
 		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
@@ -351,6 +367,10 @@ public class TestLoggingService {
 			system_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
 			external_logger.log(Level.ERROR, ErrorUtils.lazyBuildMessage(true, () -> subsystem_name, ()->"test_message " + i, () -> null, ()->"no error", ()->Collections.emptyMap()));
 		});
+		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
 		
 		//check in our appender for how many messages we received		
 		assertEquals(num_messages_to_log*3, appender.message_count);
@@ -410,15 +430,19 @@ public class TestLoggingService {
 			});
 		});
 		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);
+		waitForResults(logging_crud, 10, 70);
 		assertEquals(70, logging_crud.countObjects().get().longValue()); //should only have logged ERROR messages
 
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, 105);
 		assertEquals(105, logging_crud_external.countObjects().get().longValue());
 		
 		//cleanup
@@ -493,12 +517,12 @@ public class TestLoggingService {
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<JsonNode> logging_crud = search_index_service.getDataService().get().getWritableDataService(JsonNode.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);
+		waitForResults(logging_crud, 10, (1+10+44+1+45+27+44)*2);
 		assertEquals((1+10+44+1+45+27+44)*2, logging_crud.countObjects().get().longValue());
 		
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, 1+(num_messages_to_log/5)+44+1+45+27+44);
 		assertEquals(1+(num_messages_to_log/5)+44+1+45+27+44, logging_crud_external.countObjects().get().longValue());
 
 		//cleanup
@@ -658,15 +682,19 @@ public class TestLoggingService {
 			external_logger.log(Level.ERROR, message, "key1", Arrays.asList(LoggingRules.logEveryCount(1)), LoggingMergeFunctions.replaceMessage());
 		});
 		
+		user_logger.flush();
+		system_logger.flush();
+		external_logger.flush();
+		
 		//check its in ES, wait 10s max for the index to refresh
 		final DataBucketBean logging_test_bucket = BucketUtils.convertDataBucketBeanToLogging(test_bucket);
 		final IDataWriteService<BasicMessageBean> logging_crud = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud, 10);		
+		waitForResults(logging_crud, 10, num_messages_to_log*14);		
 		assertEquals(num_messages_to_log*14, logging_crud.countObjects().get().longValue());
 		
 		final DataBucketBean logging_external_test_bucket = BucketUtils.convertDataBucketBeanToLogging(BeanTemplateUtils.clone(test_bucket).with(DataBucketBean::full_name, "/external/"+ subsystem_name+"/").done());
 		final IDataWriteService<BasicMessageBean> logging_crud_external = search_index_service.getDataService().get().getWritableDataService(BasicMessageBean.class, logging_external_test_bucket, Optional.empty(), Optional.empty()).get();
-		waitForResults(logging_crud_external, 10);
+		waitForResults(logging_crud_external, 10, num_messages_to_log*7);
 		assertEquals(num_messages_to_log*7, logging_crud_external.countObjects().get().longValue());
 
 		//cleanup
@@ -700,10 +728,10 @@ public class TestLoggingService {
 	 * @param crud_service
 	 * @param max_wait_time_s
 	 */
-	private static void waitForResults(final IDataWriteService<?> crud_service, final long max_wait_time_s) {
+	private static void waitForResults(final IDataWriteService<?> crud_service, final long max_wait_time_s, final long expected) {
 		for (int ii = 0; ii < max_wait_time_s; ++ii) {
 			try { Thread.sleep(1000L); } catch (Exception e) {}
-			if (crud_service.countObjects().join().intValue() > 0) break;
+			if (crud_service.countObjects().join().intValue() >= expected) break;
 		}
 	}
 	
