@@ -64,11 +64,8 @@ public class TestAnalyticsTriggerSupervisorActor extends TestAnalyticsTriggerWor
 	@Before
 	@Override
 	public void test_Setup() throws Exception {
-		System.out.println("Starting test_Setup");
+		_logger.info("running child test_Setup");
 		
-		if (null != _service_context) {
-			return;
-		}
 		super.test_Setup();
 			
 		//(currently nothing else to do here)

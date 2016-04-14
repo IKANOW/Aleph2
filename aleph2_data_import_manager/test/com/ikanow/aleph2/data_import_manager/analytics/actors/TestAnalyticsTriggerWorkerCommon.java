@@ -60,7 +60,7 @@ public class TestAnalyticsTriggerWorkerCommon {
 	@SuppressWarnings("deprecation")
 	@Before
 	public void test_Setup() throws Exception {
-		_parent_logger.info("runnnig parent test_Setup");
+		_parent_logger.info("running parent test_Setup: " + (null == _service_context));
 				
 		if (null != _service_context) {
 			return;

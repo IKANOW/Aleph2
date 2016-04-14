@@ -117,12 +117,12 @@ public class TestAnalyticsTriggerWorkerActor extends TestAnalyticsTriggerWorkerC
 	@Before
 	@Override
 	public void test_Setup() throws Exception {
-		_logger.info("runnnig test_Setup");
-		_num_received_errors.set(0L); //(do this for every test)
-		if (null != _service_context) {
+		_logger.info("running child test_Setup: " + (null == _trigger_worker));
+		super.test_Setup();
+		if (null != _trigger_worker) {
 			return;
 		}
-		super.test_Setup();
+		_num_received_errors.set(0L); //(do this for every test)
 				
 		_trigger_worker = _actor_context.getActorSystem().actorOf(
 				Props.create(com.ikanow.aleph2.data_import_manager.analytics.actors.AnalyticsTriggerWorkerActor.class),
