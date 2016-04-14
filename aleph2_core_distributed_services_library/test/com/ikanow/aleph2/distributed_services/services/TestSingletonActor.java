@@ -161,7 +161,6 @@ public class TestSingletonActor {
 		
 		// Launch a remote process #1, will create with wrong role
 		
-		@SuppressWarnings("unused")
 		final Process px_wrong_role = Runtime.getRuntime().exec(Arrays.<String>asList(
 				System.getenv("JAVA_HOME") + File.separator + "bin" + File.separator + "java",
 				"-classpath",

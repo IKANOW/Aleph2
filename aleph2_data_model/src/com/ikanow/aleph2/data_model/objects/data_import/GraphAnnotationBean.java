@@ -16,9 +16,6 @@
 
 package com.ikanow.aleph2.data_model.objects.data_import;
 
-import java.util.Arrays;
-import java.util.List;
-
 /** Defines GraphSON/Tinkerpop3 fields used in Aleph2
  * @author Alex
  *
@@ -27,17 +24,21 @@ public class GraphAnnotationBean {
 
 	// Common fields
 	
-	/** Searchabel for edges but not vertices
+	/** label - for display, searchable for edges but not vertices
 	 */
 	public static final String label = "label";
 	
+	public enum ElementType { edge, vertex }
 	/** "edge" or "vertex"
 	 */
 	public static final String type = "type";
 	
 	/** A list of bucket paths that determine the permission of the node/edge/attribute
 	 */
-	public static final String _b = "_b";
+	public static final String a2_p = "a2_p";
+	/** Optionally, a list of references 
+	 */
+	public static final String a2_r = "a2_r";
 	
 	/** Allows permissions and other properties to be set on edge/vertex properties
 	 *  "_b" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
