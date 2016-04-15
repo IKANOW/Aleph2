@@ -39,11 +39,19 @@ public class GraphAnnotationBean {
 	/** Optionally, a list of references 
 	 */
 	public static final String a2_r = "a2_r";
+	/** Created timestamp (long)
+	 */
+	public static final String a2_tc = "a2_tc";
+	/** Modified timestamp (long)
+	 */
+	public static final String a2_tm = "a2_tm";
 	
 	/** Allows permissions and other properties to be set on edge/vertex properties
-	 *  "_b" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
+	 *  "a2_p" is interpreted by Aleph2 to mean a bucket path on which the user must have read access
 	 */
 	public static final String properties = "properties";
+	
+	public static final String value = "value"; // (the nested value inside properties, along with "id" and "properties, the contains the actual value)
 	
 	// Vertex fields
 	
