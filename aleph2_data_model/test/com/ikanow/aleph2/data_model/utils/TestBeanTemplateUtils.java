@@ -420,6 +420,9 @@ public class TestBeanTemplateUtils {
 				.done().get();
 		String j = BeanTemplateUtils.toJson(x).toString();
 		assertEquals("{\"is_transient\":true}", j);
+		
+		String j2 = BeanTemplateUtils.configureMapper(Optional.empty()).convertValue(BeanTemplateUtils.toMap(x), JsonNode.class).toString();
+		assertEquals(j, j2);
 	}
 
 

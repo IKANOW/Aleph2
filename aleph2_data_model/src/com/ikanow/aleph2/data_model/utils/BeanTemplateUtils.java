@@ -85,6 +85,16 @@ public class BeanTemplateUtils {
 		return object_mapper.valueToTree(bean);		
 	}
 	
+	/** Converts a bean to its Map<String, Object> representation (not high performance)
+	 * @param bean - the bean to convert to JSON
+	 * @return - the JSON
+	 */
+	@SuppressWarnings("unchecked")
+	static public <T> Map<String, Object> toMap(final T bean) {
+		ObjectMapper object_mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+		return object_mapper.convertValue(bean, Map.class);		
+	}
+	
 	/** Converts a JsonNode to a bean template of the specified type
 	 * (note: not very high performance, should only be used for management-type operations)
 	 * @param map_json - the bean to convert to JSON
