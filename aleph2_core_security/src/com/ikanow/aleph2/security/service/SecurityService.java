@@ -111,9 +111,6 @@ public class SecurityService implements ISecurityService, IExtraDependencyLoader
 	@Override
 	public synchronized ISubject login(String principalName, Object credentials){
 		Subject currentUser = SecurityUtils.getSubject();
-		if(principalName ==null){
-			
-		}
 		boolean needsLogin = true;
 		try{
 		    Session session = currentUser.getSession();

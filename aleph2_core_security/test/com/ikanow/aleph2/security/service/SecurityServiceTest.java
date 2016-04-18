@@ -42,7 +42,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.subject.Subject;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.inject.Inject;
@@ -141,6 +140,7 @@ public class SecurityServiceTest {
 
 	@Test
 	public void testPermission(){
+		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
 		String permission = "permission1";
         //test a typed permission (not instance-level)
@@ -164,6 +164,7 @@ public class SecurityServiceTest {
 	
 	@Test
 	public void testCaching(){
+		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
 		// test personal community permission
 		String permission = "permission2";
@@ -202,6 +203,7 @@ public class SecurityServiceTest {
 
 	@Test
 	public void testInvalidateAuthenticationCache(){
+		@SuppressWarnings("unused")
 		ISubject subject = loginAsRegularUser();
 		
 		// test personal community permission
@@ -491,6 +493,7 @@ public class SecurityServiceTest {
 		MapRoleProvider roleProvider = MockSecurityService.roleProvider;
 		authProvider.setCallCount(0);
 		roleProvider.setCallCount(0);
+		@SuppressWarnings("unused")
 		Subject s = ms.loginAsSystem();
 
 		authProvider.setCallCount(0);
@@ -543,6 +546,7 @@ public class SecurityServiceTest {
 	public void testSessionTimeout(){
 		MockSecurityService ms = ((MockSecurityService)securityService);
 		ms.setSessionTimeout(500);
+		@SuppressWarnings("unused")
 		Subject s = ms.loginAsSystem();
 		//timeoutSession
 		sleep(1000);
@@ -570,6 +574,7 @@ public class SecurityServiceTest {
 	@Test
 	public void testMultiThreading(){
 		MockSecurityService ms = ((MockSecurityService)securityService);
+		@SuppressWarnings("unused")
 		Subject s = ms.loginAsSystem();
 		PermissionChecker pc = new PermissionChecker(testUserId,"t1",testUserId);
 		Thread t1  = new Thread(pc);
@@ -607,6 +612,7 @@ public class SecurityServiceTest {
 				
 			done = false;
 			MockSecurityService ms = ((MockSecurityService) securityService);
+			@SuppressWarnings("unused")
 			Subject s = ms.loginAsSystem();
 			// check user permission
 			for (int i = 0; i < 5; i++) {

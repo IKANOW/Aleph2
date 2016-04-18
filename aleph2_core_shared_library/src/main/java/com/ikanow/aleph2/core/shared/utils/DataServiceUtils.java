@@ -24,6 +24,7 @@ import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
@@ -63,7 +64,8 @@ public class DataServiceUtils {
 				Tuples._2T(data_schema.document_schema(), data_schema.document_schema().name),
 				Tuples._2T(data_schema.columnar_schema(), data_schema.columnar_schema().name),
 				Tuples._2T(data_schema.temporal_schema(), data_schema.temporal_schema().name),
-				Tuples._2T(data_schema.data_warehouse_schema(), data_schema.data_warehouse_schema().name)
+				Tuples._2T(data_schema.data_warehouse_schema(), data_schema.data_warehouse_schema().name),
+				Tuples._2T(data_schema.graph_schema(), data_schema.graph_schema().name)
 				)
 			.flatMap(schema_name -> Optional.<Object>ofNullable(schema_name._1())
 										.map(schema -> Tuples._2T(BeanTemplateUtils.build(schema), schema_name._2()))
@@ -104,6 +106,7 @@ public class DataServiceUtils {
 					.when(ds -> DataSchemaBean.DocumentSchemaBean.name.equals(ds), __ -> IDocumentService.class)
 					.when(ds -> DataSchemaBean.ColumnarSchemaBean.name.equals(ds), __ -> IColumnarService.class)
 					.when(ds -> DataSchemaBean.TemporalSchemaBean.name.equals(ds), __ -> ITemporalService.class)
+					.when(ds -> DataSchemaBean.GraphSchemaBean.name.equals(ds), __ -> IGraphService.class)
 					.when(ds -> DataSchemaBean.DataWarehouseSchemaBean.name.equals(ds), __ -> IDataWarehouseService.class)
 					.otherwise(() -> null)
 				)
