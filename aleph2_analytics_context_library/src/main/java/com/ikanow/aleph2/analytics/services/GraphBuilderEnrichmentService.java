@@ -88,10 +88,12 @@ public class GraphBuilderEnrichmentService implements IEnrichmentBatchModule {
 	public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
 			Optional<Integer> batch_size, Optional<JsonNode> grouping_key)
 	{
-		if (!_enabled.get()) { // Just passthrough
-			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key));
+		// Always passthrough:
+		batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key));
+		
+		if (_enabled.get()) { // Also process
+			_delegate.optional().ifPresent(delegate -> delegate.onObjectBatch(batch, batch_size, grouping_key));
 		}
-		else _delegate.optional().ifPresent(delegate -> delegate.onObjectBatch(batch, batch_size, grouping_key));
 	}
 
 	/* (non-Javadoc)
