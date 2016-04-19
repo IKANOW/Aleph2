@@ -494,10 +494,18 @@ public class HarvestContext implements IHarvestContext {
 			
 			final Config service_subset = complete_services_set.stream() // DON'T MAKE PARALLEL SEE BELOW
 				.map(clazz_name -> {
+					final Optional<? extends IUnderlyingService> underlying_service = _service_context.getService(clazz_name._1(), clazz_name._2());
 					final String config_path = clazz_name._2().orElse(clazz_name._1().getSimpleName().substring(1));
-					return service_config.get().hasPath(config_path) 
-							? Tuples._2T(config_path, service_config.get().getConfig(config_path)) 
-							: null;
+					return Lambdas.wrap_u(
+							__ -> service_config.get().hasPath(config_path) 
+								? Tuples._2T(config_path, service_config.get().getConfig(config_path)) 
+								: null
+							)
+							.andThen(maybe_t2 -> Optional.ofNullable(maybe_t2).map(t2 -> Tuples._2T(t2._1(), underlying_service.map(ds -> ds.createRemoteConfig(t2._2())).orElse(t2._2())))
+													.orElse(null)
+									)
+							.apply(Unit.unit())
+							;
 				})
 				.filter(cfg -> null != cfg)
 				.reduce(

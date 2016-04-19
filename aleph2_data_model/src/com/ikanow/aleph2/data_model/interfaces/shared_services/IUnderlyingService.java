@@ -18,6 +18,8 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.Collection;
 import java.util.Optional;
 
+import com.typesafe.config.Config;
+
 /** A service that enables the underlying artefacts to be exposed
  * @author Alex
  */
@@ -41,4 +43,13 @@ public interface IUnderlyingService {
 	 * @return a driver to the underlying technology. Will exception if you pick the wrong one!
 	 */
 	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
+	
+	/** In many cases jobs will be distributed to remote machines not running Aleph2 infrastructure - in that case,
+	 *  this function can be overridden to change eg instances of "localhost" to remotely addressible hostnames, local files can be stringified etc 
+	 * @param local_config
+	 * @return
+	 */
+	default Config createRemoteConfig(final Config local_config) {
+		return local_config;
+	}
 }
