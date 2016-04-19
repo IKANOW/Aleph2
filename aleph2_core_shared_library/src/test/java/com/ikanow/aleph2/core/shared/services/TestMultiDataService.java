@@ -43,10 +43,12 @@ import java.util.stream.Stream;
 
 
 
+
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 
 
 
@@ -70,6 +72,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
@@ -122,6 +125,10 @@ public class TestMultiDataService {
 										BeanTemplateUtils.build(DataSchemaBean.DataWarehouseSchemaBean.class)
 											.with(DataSchemaBean.DataWarehouseSchemaBean::service_name, "test")
 										.done().get())
+								.with(DataSchemaBean::graph_schema, 
+										BeanTemplateUtils.build(DataSchemaBean.GraphSchemaBean.class)
+											.with(DataSchemaBean.GraphSchemaBean::service_name, "test")
+										.done().get())
 								.with(DataSchemaBean::storage_schema, 
 										BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class)
 										.done().get())
@@ -135,7 +142,7 @@ public class TestMultiDataService {
 			
 			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.empty());
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("All services", 7, mds.getDataServices().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudWriters().size());
@@ -151,17 +158,17 @@ public class TestMultiDataService {
 			
 			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.empty());
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
+			assertEquals("All services", 7, mds.getDataServices().size());
 			assertEquals("No batches", 0, mds.getBatchWriters().size());
-			assertEquals("All cruds", 6, mds.getCrudOnlyWriters().size());
-			assertEquals("All cruds", 6, mds.getCrudWriters().size());
+			assertEquals("All cruds", 7, mds.getCrudOnlyWriters().size());
+			assertEquals("All cruds", 7, mds.getCrudWriters().size());
 			assertEquals(false, mds._doc_write_mode);
 			assertEquals(0, _apply_count);
 			
 			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
 			
 			assertTrue("No batch responses: " + _batch_responses.keySet(), _batch_responses.isEmpty());
-			assertEquals("CRUD responses: " + _crud_responses.keySet(), 6, _crud_responses.size());
+			assertEquals("CRUD responses: " + _crud_responses.keySet(), 7, _crud_responses.size());
 			_crud_responses.clear();
 			
 			//check that the the flush batch output returns with no errors
@@ -174,21 +181,21 @@ public class TestMultiDataService {
 			final MultiDataService mds = new MultiDataService(bucket, mock_service_context, Optional.empty(), Optional.of(__ -> { _apply_count++; return Optional.empty(); }));
 			assertEquals(false, mds._doc_write_mode);
 			
-			assertEquals("All services", 6, mds.getDataServices().size());
-			assertEquals("All batches", 6, mds.getBatchWriters().size());
+			assertEquals("All services", 7, mds.getDataServices().size());
+			assertEquals("All batches", 7, mds.getBatchWriters().size());
 			assertEquals("No cruds", 0, mds.getCrudOnlyWriters().size());
-			assertEquals("No cruds", 6, mds.getCrudWriters().size());
-			assertEquals(6, _apply_count);
+			assertEquals("No cruds", 7, mds.getCrudWriters().size());
+			assertEquals(7, _apply_count);
 			
 			assertEquals("Found data services", true, mds.batchWrite(_mapper.createObjectNode()));
 			
 			assertTrue("No CRUD responses: " + _crud_responses.keySet(), _crud_responses.isEmpty());
-			assertEquals("batch responses: " + _batch_responses.keySet(), 6, _batch_responses.size());			
+			assertEquals("batch responses: " + _batch_responses.keySet(), 7, _batch_responses.size());			
 			_batch_responses.clear();
 			
 			//check that the the flush batch output returns with no errors
 			assertTrue(mds.flushBatchOutput().isDone());
-			assertEquals("batch responses: " + _batch_responses.keySet(), 6, _batch_responses.size());			
+			assertEquals("batch responses: " + _batch_responses.keySet(), 7, _batch_responses.size());			
 			_batch_responses.clear();
 		}
 	}
@@ -502,9 +509,10 @@ public class TestMultiDataService {
 		final IColumnarService columnar = Mockito.mock(IColumnarService.class);
 		final ITemporalService temporal = Mockito.mock(ITemporalService.class);
 		final IDataWarehouseService data_warehouse = Mockito.mock(IDataWarehouseService.class);
+		final IGraphService graph = Mockito.mock(IGraphService.class);
 		final IStorageService storage = Mockito.mock(IStorageService.class);
 		
-		Stream.<IDataServiceProvider>of(search_index, document, columnar, temporal, data_warehouse, storage)
+		Stream.<IDataServiceProvider>of(search_index, document, columnar, temporal, data_warehouse, graph, storage)
 			.forEach(ds -> {
 				if (0 == mode) {
 					boolean tiebreak = 0 == (ds.getClass().toString().hashCode() % 2); //(get some code coverage)
@@ -569,11 +577,13 @@ public class TestMultiDataService {
 		mock_service_context.addService(ITemporalService.class, Optional.empty(), search_index);
 		mock_service_context.addService(IDataWarehouseService.class, Optional.empty(), data_warehouse);
 		mock_service_context.addService(IStorageService.class, Optional.empty(), storage);
+		mock_service_context.addService(IGraphService.class, Optional.empty(), graph);
 		// Alts:
 		mock_service_context.addService(IDocumentService.class, Optional.of("test"), document);
 		mock_service_context.addService(IColumnarService.class, Optional.of("test"), columnar);
 		mock_service_context.addService(ITemporalService.class, Optional.of("test"), temporal);
 		mock_service_context.addService(IDataWarehouseService.class, Optional.of("test"), data_warehouse);
+		mock_service_context.addService(IGraphService.class, Optional.of("test"), graph);
 		
 		return mock_service_context;
 	}

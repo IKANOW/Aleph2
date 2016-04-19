@@ -70,6 +70,8 @@ public class MultiDataService {
 	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_doc_service;	
 	protected IDataWriteService<JsonNode> _crud_data_warehouse_service;
 	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_data_warehouse_service;	
+	protected IDataWriteService<JsonNode> _crud_graph_service;
+	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_graph_service;	
 	protected IDataWriteService<JsonNode> _crud_columnar_service;
 	protected IDataWriteService.IBatchSubservice<JsonNode> _batch_columnar_service;
 	protected IDataWriteService<JsonNode> _crud_temporal_service;
@@ -162,6 +164,12 @@ public class MultiDataService {
 				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
 				_crud_data_warehouse_service = t2._1();
 				_batch_data_warehouse_service = t2._2();
+				storeWriters(t2, vals);
+			}
+			else if (vals.contains(DataSchemaBean.GraphSchemaBean.name)) {
+				Tuple2<IDataWriteService<JsonNode>, IDataWriteService.IBatchSubservice<JsonNode>> t2 = getWriters(bucket, kv.getKey(), maybe_get_storage_type, maybe_get_buffer_name);
+				_crud_graph_service = t2._1();
+				_batch_graph_service = t2._2();
 				storeWriters(t2, vals);
 			}
 			else if (vals.contains(DataSchemaBean.ColumnarSchemaBean.name)) {
@@ -278,6 +286,14 @@ public class MultiDataService {
 		else if (_crud_data_warehouse_service!= null){ // (super slow)
 			mutable_written = true;
 			_crud_data_warehouse_service.storeObject(obj_json, _doc_write_mode);
+		}		
+		if (_batch_graph_service!= null) {
+			mutable_written = true;
+			_batch_graph_service.storeObject(obj_json, _doc_write_mode);
+		}
+		else if (_crud_graph_service!= null){ // (super slow)
+			mutable_written = true;
+			_crud_graph_service.storeObject(obj_json, _doc_write_mode);
 		}		
 		if (_batch_columnar_service!= null) {
 			mutable_written = true;

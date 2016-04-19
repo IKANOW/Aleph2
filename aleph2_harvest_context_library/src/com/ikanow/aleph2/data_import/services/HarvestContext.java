@@ -459,6 +459,9 @@ public class HarvestContext implements IHarvestContext {
 								.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 					)
 					// Optional services:
+					//TODO (ALEPH-19): 1) should port this across to the more comprehensive/centralized CSL, 2) Do I need a "support direct output" flag, and not do this if not set?
+					// seems like a waste to stick these JARs on the classpath when the Harvester is normally only writing to real-time/file-based queue?
+					// (see AnalyticsContext/DataServiceUtils for more details on point #1)
 					.map(sb -> 
 						(maybe_bucket.map(b -> hasSearchIndexOutput(b)).orElse(false))
 								? 

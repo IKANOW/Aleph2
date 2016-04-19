@@ -65,7 +65,6 @@ import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.core.shared.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
-import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -390,7 +389,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	 * @param services
 	 * @return
 	 */
-	protected Config setupServices(final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
+	protected Config setupServices(final Optional<DataBucketBean> maybe_bucket, final Optional<Set<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>> services) {
 		// 
 		// - set up for any of the services described
 		// - all the rest of the configuration
@@ -406,13 +405,13 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						.addAll(services.orElse(Collections.emptySet()))
 						.add(Tuples._2T(ICoreDistributedServices.class, Optional.empty()))
 						.add(Tuples._2T(IManagementDbService.class, Optional.empty()))
-						.add(Tuples._2T(ISearchIndexService.class, Optional.empty()))
-						.add(Tuples._2T(IDocumentService.class, Optional.empty()))
+						.add(Tuples._2T(ISearchIndexService.class, Optional.empty())) //(need this because logging doesn't correctly report its service set, should fix at some point)
 						.add(Tuples._2T(IStorageService.class, Optional.empty()))
 						.add(Tuples._2T(ISecurityService.class, Optional.empty()))
 						.add(Tuples._2T(ILoggingService.class, Optional.empty()))
 						.add(Tuples._2T(IManagementDbService.class, IManagementDbService.CORE_MANAGEMENT_DB))
 						.addAll(_mutable_state.extra_auto_context_libs)
+						.addAll(maybe_bucket.map(bucket -> DataServiceUtils.listUnderlyingServiceProviders(bucket.data_schema())).orElse(Collections.emptyList()))
 						.build();
 		
 		if (_mutable_state.service_manifest_override.isSet()) {
@@ -434,7 +433,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		if (_state_name == State.IN_TECHNOLOGY) {
 			final DataBucketBean my_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get());
 			
-			final Config full_config = setupServices(services);
+			final Config full_config = setupServices(bucket, services);
 			
 			if (_mutable_state.signature_override.isSet()) { // only run once... (this is important because can do ping/pong buffer type stuff below)
 				//(note only doing this here so I can quickly check that I'm not being called multiple times with different services - ie in this case I error...)
@@ -856,7 +855,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		
 		if (_state_name == State.IN_TECHNOLOGY) {
 			if (!_mutable_state.service_manifest_override.isSet()) {
-				setupServices(services);
+				setupServices(_mutable_state.bucket.optional(), services);
 			}
 			
 			// Already registered 

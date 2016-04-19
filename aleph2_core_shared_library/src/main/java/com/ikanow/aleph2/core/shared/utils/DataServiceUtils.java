@@ -16,9 +16,14 @@
 
 package com.ikanow.aleph2.core.shared.utils;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import scala.Tuple2;
+
+import com.codepoetics.protonpack.StreamUtils;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
@@ -31,6 +36,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.TemplateHelper;
 import com.ikanow.aleph2.data_model.utils.Patterns;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -41,24 +47,77 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingServic
  */
 public class DataServiceUtils {
 	
+	// common fields
+	private static final String enabled_ = "enabled";
+	private static final String service_name_ = "service_name";
+	
 	/** Gets a minimal of service instances and associated service names
 	 *  (since each service instance can actually implement multiple services)
 	 * @param data_schema
 	 * @param context
 	 * @return
 	 */
-	@SuppressWarnings({ "static-access", "unchecked" })
+	@SuppressWarnings("unchecked")
 	public static Multimap<IDataServiceProvider, String> selectDataServices(final DataSchemaBean data_schema, final IServiceContext context) {		
 		final Multimap<IDataServiceProvider, String> mutable_output = HashMultimap.create();
 		if (null == data_schema) { //(rare NPE check! - lets calling client invoke bucket.data_schema() without having to worry about it)
 			return mutable_output;
 		}
 		
-		// common fields
-		final String enabled_ = "enabled";
-		final String service_name_ = "service_name";
+		listDataSchema(data_schema)
+			.forEach(schema_name -> {
+				Optional.of(schema_name._1())
+					.flatMap(s -> getDataServiceInterface(schema_name._2()))
+					.flatMap(ds_name -> context.getService((Class<IUnderlyingService>)(Class<?>)ds_name, Optional.ofNullable(schema_name._1().<String>get(service_name_))))
+					.ifPresent(ds -> mutable_output.put((IDataServiceProvider)ds, schema_name._2()));
+					;
+			});
 		
-		Stream.of(
+		return mutable_output;
+	}
+
+	/** Returns a list of interface/optional-non-default-name for the designated data schema
+	 * @param data_schema
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public static List<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>> listUnderlyingServiceProviders(final DataSchemaBean data_schema) {
+		return streamDataServiceProviders(data_schema)
+					.<Tuple2<Class<? extends IUnderlyingService>, Optional<String>>>
+						map(t2 -> Tuples._2T((Class<? extends IUnderlyingService>)(Class<?>) t2._1(), t2._2()))
+					.collect(Collectors.toList());		
+	}
+	
+	public static List<Tuple2<Class<? extends IDataServiceProvider>, Optional<String>>> listDataServiceProviders(final DataSchemaBean data_schema) {
+		return streamDataServiceProviders(data_schema).collect(Collectors.toList());
+	}
+	
+	/** Returns a list of interface/optional-non-default-name for the designated data schema
+	 * @param data_schema
+	 * @return
+	 */
+	protected static Stream<Tuple2<Class<? extends IDataServiceProvider>, Optional<String>>> streamDataServiceProviders(final DataSchemaBean data_schema) {
+		if (null == data_schema) { //(rare NPE check! - lets calling client invoke bucket.data_schema() without having to worry about it)
+			return Stream.empty();
+		}
+		return listDataSchema(data_schema).<Optional<Tuple2<Class<? extends IDataServiceProvider>, Optional<String>>>>map(schema_name -> {
+			return 
+			Optional.of(schema_name._1())
+				.flatMap(s -> getDataServiceInterface(schema_name._2()))
+				.map(ds -> Tuples._2T(ds, Optional.ofNullable(schema_name._1().<String>get(service_name_))))
+				;			
+		})
+		.flatMap(maybe -> StreamUtils.stream(maybe))	
+		;
+	}
+
+	/** Common utility function for selectDataServices, listDataServiceProviders
+	 * @param data_schema
+	 * @return
+	 */
+	@SuppressWarnings({ "static-access" })
+	protected static Stream<Tuple2<TemplateHelper<Object>, String>> listDataSchema(final DataSchemaBean data_schema) {
+		return Stream.of(
 				Tuples._2T(data_schema.search_index_schema(), data_schema.search_index_schema().name),
 				Tuples._2T(data_schema.storage_schema(), data_schema.storage_schema().name),
 				Tuples._2T(data_schema.document_schema(), data_schema.document_schema().name),
@@ -71,20 +130,10 @@ public class DataServiceUtils {
 										.map(schema -> Tuples._2T(BeanTemplateUtils.build(schema), schema_name._2()))
 										.map(Stream::of).orElseGet(Stream::empty)
 			)
-			.forEach(schema_name -> {
-				Optional.of(schema_name._1()).filter(s -> Optional.ofNullable(s.<Boolean>get(enabled_)).orElse(true)).ifPresent(schema -> {
-					Optional.of(schema)
-						.flatMap(s -> getDataServiceInterface(schema_name._2()))
-						.flatMap(ds_name -> context.getService((Class<IUnderlyingService>)(Class<?>)ds_name, Optional.ofNullable(schema.<String>get(service_name_))))
-						.ifPresent(ds -> mutable_output.put((IDataServiceProvider)ds, schema_name._2()));
-						;
-				});					
-			});
-		
-		return mutable_output;
+			.filter(schema_name -> Optional.ofNullable(schema_name._1().<Boolean>get(enabled_)).orElse(true))
+			;
 	}
 	
-
 	/** Simple map of data service provider name to interface (underlying service mode)
 	 * @param data_service
 	 * @return
