@@ -35,6 +35,7 @@ import scala.Tuple3;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDataWarehouseService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.IGraphService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
@@ -182,16 +183,22 @@ public class BucketValidationUtils {
 						.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
 								ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "data_warehouse_schema")))));
 			}
-			//TODO (ALEPH-19) graph schema, geospatial schema
+			if ((null != bucket.data_schema().graph_schema()) && Optional.ofNullable(bucket.data_schema().graph_schema().enabled()).orElse(true))
+			{
+				errors.addAll(service_context.getService(IGraphService.class, Optional.ofNullable(bucket.data_schema().graph_schema().service_name()))
+						.map(s -> s.validateSchema(bucket.data_schema().graph_schema(), bucket))
+						.map(s -> { 
+							if ((null != s._1()) && !s._1().isEmpty()) data_locations.put("graph_schema", s._1());
+							return s._2(); 
+						})
+						.orElse(Arrays.asList(MgmtCrudUtils.createValidationError(
+								ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "graph_schema")))));
+			}
+			//TODO (ALEPH-19) geospatial schema
 			if (null != bucket.data_schema().geospatial_schema())
 			{
 				errors.add(MgmtCrudUtils.createValidationError(
 						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "geospatial_schema")));
-			}
-			if (null != bucket.data_schema().graph_schema())
-			{
-				errors.add(MgmtCrudUtils.createValidationError(
-						ErrorUtils.get(ManagementDbErrorUtils.SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT, bucket.full_name(), "graph_schema")));
 			}
 		}
 		

@@ -108,7 +108,7 @@ public class ManagementDbErrorUtils extends com.ikanow.aleph2.data_model.utils.E
 	
 	// Schema validation
 	
-	public static final String SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT = "Bucket {0}: schema {1} enabled but not present";
+	public static final String SCHEMA_ENABLED_BUT_SERVICE_NOT_PRESENT = "Bucket {0}: schema {1} enabled but service not present";
 	
 	///////////////////////////////////////////////////////////////////////////////////////////
 	
