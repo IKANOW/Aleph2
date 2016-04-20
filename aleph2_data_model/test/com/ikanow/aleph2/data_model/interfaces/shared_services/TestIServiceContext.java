@@ -111,6 +111,8 @@ public class TestIServiceContext {
 		assertNotNull(context.getTemporalService());
 		assertNotNull(context.getSecurityService());
 		assertNotNull(context.getGlobalProperties());
+		
+		assertEquals(11, context.listServiceProviders().size());
 	}
 	
 	@Test

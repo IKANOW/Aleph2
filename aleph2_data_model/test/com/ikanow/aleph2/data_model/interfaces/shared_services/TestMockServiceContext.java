@@ -79,6 +79,7 @@ public class TestMockServiceContext implements IUnderlyingService {
 		assertEquals(Optional.empty(), context.getService(TestMockServiceContext.class, Optional.empty()));
 		assertEquals(Optional.empty(), context.getService(ISearchIndexService.class, Optional.of("fail")));
 		
+		assertEquals(11, context.listServiceProviders().size());
 		
 		assertFalse("Shouldn't be equal", context.getCoreManagementDbService() == context.getService(IManagementDbService.class, Optional.empty()).get());
 	}

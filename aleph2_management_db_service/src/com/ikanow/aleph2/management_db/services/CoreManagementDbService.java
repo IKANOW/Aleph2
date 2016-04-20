@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,11 +37,14 @@ import org.apache.logging.log4j.Logger;
 import scala.Tuple2;
 import scala.concurrent.duration.FiniteDuration;
 
+import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provider;
+import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IExtraDependencyLoader;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IManagementCrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ISecurityService;
@@ -394,6 +398,24 @@ public class CoreManagementDbService implements IManagementDbService, IExtraDepe
 				return CompletableFuture.completedFuture(Unit.unit());
 			}
 		}).thenCompose(__ -> {
+			// Register the bucket with its services before launching the test:
+			final  Multimap<IDataServiceProvider, String> data_service_info = DataServiceUtils.selectDataServices(validated_test_bucket.data_schema(), _service_context);
+			
+			final List<CompletableFuture<Collection<BasicMessageBean>>> ds_update_results = data_service_info.asMap().entrySet().stream()
+				.map(kv -> 
+						kv.getKey()
+							.onPublishOrUpdate(validated_test_bucket, Optional.empty(), false, 
+								kv.getValue().stream().collect(Collectors.toSet()), 
+								Collections.emptySet()
+								)
+				)
+				.collect(Collectors.toList())
+				;
+			
+			return CompletableFuture.allOf(ds_update_results.stream().toArray(CompletableFuture[]::new));
+			
+		}).thenCompose(__ -> {
+									
 			final long max_startup_time_secs = Optional.ofNullable(test_spec.max_startup_time_secs()).orElse(DEFAULT_MAX_STARTUP_TIME_SECS);
 			final CompletableFuture<Collection<BasicMessageBean>> future_replies = 
 					BucketActionSupervisor.askBucketActionActor(Optional.empty(),

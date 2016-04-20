@@ -1648,8 +1648,8 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 							}
 							else { // 2) all other cases: this is the ES case, where we just use an alias to switch ..
 								// So here there are side effects
-								if (_state_name == State.IN_MODULE) { // this should not happen
-									_logger.error(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4}, secondaries={5})",
+								if (_state_name == State.IN_MODULE) { // this should not happen (unless the data service doesn't support secondary buffers)
+									_logger.warn(ErrorUtils.get("Startup case: no primary buffer for bucket:job {0}:{1} service {2}, number of secondary buffers = {3} (ping/pong={4}, secondaries={5})",
 											bucket.full_name(), job_name.orElse("(none)"), data_service.getClass().getSimpleName(), ping_pong_count, need_ping_pong_buffer,
 											secondaries.stream().collect(Collectors.joining(";"))
 											));									
@@ -1669,7 +1669,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 								final CompletableFuture<BasicMessageBean> future_res = data_service.switchCrudServiceToPrimaryBuffer(bucket, curr_primary, Optional.empty(), job_name);							
 								future_res.thenAccept(res -> {
 									if (!res.success()) {
-										_logger.error("Error switching between ping/pong buffers: " + res.message());
+										_logger.warn(ErrorUtils.get("Error switching between ping/pong buffers (service {0}: ", data_service.getClass().getSimpleName()) + res.message());
 									}
 								});
 								return curr_primary;

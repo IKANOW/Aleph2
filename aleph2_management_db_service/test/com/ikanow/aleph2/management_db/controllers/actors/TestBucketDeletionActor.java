@@ -51,6 +51,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
+import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
@@ -470,6 +471,11 @@ public class TestBucketDeletionActor {
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
 										.with("full_name", path)
 										.with("harvest_technology_name_or_id", "test")
+										.with("data_schema", BeanTemplateUtils.build(DataSchemaBean.class)
+												.with("search_index_schema", BeanTemplateUtils.build(DataSchemaBean.SearchIndexSchemaBean.class).done().get())
+												.with("storage_schema", BeanTemplateUtils.build(DataSchemaBean.StorageSchemaBean.class).done().get())
+												.done().get()
+												)
 										.done().get();
 		
 		// Then create it:

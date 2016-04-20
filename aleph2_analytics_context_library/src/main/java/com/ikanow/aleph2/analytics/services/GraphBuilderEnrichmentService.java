@@ -78,6 +78,8 @@ public class GraphBuilderEnrichmentService implements IEnrichmentBatchModule {
 				.flatMap(graph_service -> graph_service.getUnderlyingPlatformDriver(IEnrichmentBatchModule.class, Optional.of(this.getClass().getName())))
 				.ifPresent(delegate -> _delegate.set(delegate));
 				;
+				
+			_delegate.optional().ifPresent(delegate -> delegate.onStageInitialize(context, bucket, control, previous_next, next_grouping_fields));
 		}
 	}
 
@@ -88,12 +90,16 @@ public class GraphBuilderEnrichmentService implements IEnrichmentBatchModule {
 	public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
 			Optional<Integer> batch_size, Optional<JsonNode> grouping_key)
 	{
-		// Always passthrough:
-		batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key));
-		
-		if (_enabled.get()) { // Also process
-			_delegate.optional().ifPresent(delegate -> delegate.onObjectBatch(batch, batch_size, grouping_key));
+		if (_enabled.get()) { // Also process +annoying hack to ensure the stream is also emitted normally
+			
+			_delegate.optional().ifPresent(delegate -> delegate.onObjectBatch(
+					batch.peek(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key)), 
+					batch_size, grouping_key));
 		}
+		try { // Passthrough if the stream hasn't been processed (ie not enabled), else harmless error
+			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key));			
+		}
+		catch (IllegalStateException e) {} // just means the 
 	}
 
 	/* (non-Javadoc)

@@ -30,9 +30,9 @@ import org.apache.logging.log4j.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
-import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
@@ -216,23 +216,19 @@ public class BucketDeletionActor extends UntypedActor {
 		
 		// Currently the only supported data service is the search index
 		try {
-			final Optional<ISearchIndexService> search_index = service_context.getSearchIndexService();
-		
 			final LinkedList<CompletableFuture<BasicMessageBean>> vals = new LinkedList<>();
 			
-			search_index
-				.flatMap(ISearchIndexService::getDataService)
-				.ifPresent(index -> {
-					vals.add(index.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
+			service_context.listServiceProviders().stream()
+				.map(t3 -> t3._1().get())
+				.filter(s -> IDataServiceProvider.class.isAssignableFrom(s.getClass()))
+				.map(s -> (IDataServiceProvider)s)
+				.distinct()
+				.forEach(service -> {
+					if (!(delete_bucket && IStorageService.class.isAssignableFrom(service.getClass()))) { 
+						// if deleting the bucket then don't need to remove the storage path
+						service.getDataService().ifPresent(ds -> vals.add(ds.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket)));
+					}
 				});
-			
-			if (!delete_bucket) { // (Else will be deleted in the main actor fn)
-				
-				service_context.getStorageService().getDataService()
-					.ifPresent(storage -> {
-						vals.add(storage.handleBucketDeletionRequest(bucket, Optional.empty(), delete_bucket));
-					});			
-			}		
 			
 			return CompletableFuture.allOf(vals.toArray(new CompletableFuture[0]))
 					.thenApply(__ -> {

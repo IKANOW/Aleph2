@@ -18,9 +18,11 @@ package com.ikanow.aleph2.data_model.utils;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,9 +33,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import scala.Tuple2;
+import scala.Tuple3;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
@@ -104,6 +111,7 @@ public class ModuleUtils {
 			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices", "LoggingService"));
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
+	private static List<Tuple2<Class<?>, Optional<String>>> injected_services = new LinkedList<>();
 	private static Injector parent_injector = null;
 	private static GlobalPropertiesBean globals = BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get();
 		//(do it this way to avoid having to keep changing this test every time globals changes)
@@ -159,7 +167,7 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
-			Config config, Injector parent_injector) throws Exception {	
+			Config config, Injector parent_injector, List<Tuple2<Class<?>, Optional<String>>> injected_services) throws Exception {	
 		//temporary map so we don't create multiple injectors for the same service class
 		Map<String, Injector> service_class_injectors = new HashMap<String, Injector>(); 
 		//actual list of key->injector we are returning
@@ -195,6 +203,13 @@ public class ModuleUtils {
 					}
 					//always bind all the new entries we created					
 					injectors.putAll(injector_entries);
+					
+					// (just keep a list of everything we've done)
+					getInterfaceClass(entry.interfaceName)
+						.map(cz -> Tuples._2T((Class<?>) cz, Optional.ofNullable(entry.annotationName).filter(__ -> !entry.isDefault)))
+						.ifPresent(t2 -> injected_services.add(t2))
+						;
+					
 				} catch (Exception e) {
 					if (e instanceof CreationException) { // (often fails to provide useful information, so we'll insert it ourselves..)
 						CreationException ce = (CreationException) e;
@@ -460,9 +475,10 @@ public class ModuleUtils {
 		if ( parent_injector != null)
 			logger.warn("Resetting default bindings, this could cause issues if it occurs after initialization and typically should not occur except during testing");
 		interfaceHasDefault = new HashSet<Class<?>>();
+		injected_services.clear();
 		final ServiceModule service_module = new ServiceModule();
 		parent_injector = injector_builder_lambda.map(f -> f.apply(Arrays.asList(service_module))).orElseGet(() -> Guice.createInjector(service_module));		
-		serviceInjectors = loadServicesFromConfig(config, parent_injector);		
+		serviceInjectors = loadServicesFromConfig(config, parent_injector, injected_services);		
 	}
 	
 	/** GENERIC - CALLED BY TEST / APP
@@ -766,6 +782,28 @@ public class ModuleUtils {
 		@Override
 		public GlobalPropertiesBean getGlobalProperties() {
 			return globals;
+		}
+
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext#listServiceProviders()
+		 */
+		@SuppressWarnings("unchecked")
+		@Override
+		public Collection<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>> listServiceProviders() {
+			
+			return injected_services.stream()
+						.<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>>flatMap(t2 -> {
+							return 
+								this.getServiceProvider((Class<? extends IUnderlyingService>)t2._1(), t2._2())
+									.<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>>
+										map(s -> Tuples._3T(s, (Class<? extends IUnderlyingService>)t2._1(), t2._2()))
+									.map(Stream::of)
+									.orElseGet(Stream::empty)
+									;
+
+						})
+					.collect(Collectors.toList())
+					;
 		}
 	}
 	

@@ -15,8 +15,12 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import scala.Tuple3;
 
 import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
@@ -28,6 +32,7 @@ import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ITemporalService;
 import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 /** A useful mock object for unit testing, enables devs to create their own IServiceContexts without using guice
  * @author acp
@@ -35,7 +40,7 @@ import com.ikanow.aleph2.data_model.objects.shared.GlobalPropertiesBean;
  */
 public class MockServiceContext implements IServiceContext {
 
-	protected final HashMap<String, HashMap<String, IUnderlyingService>> _mocks;
+	protected final HashMap<Class<?>, HashMap<String, IUnderlyingService>> _mocks;
 	protected GlobalPropertiesBean _globals = null;
 	
 	/** Provider implementation
@@ -67,7 +72,7 @@ public class MockServiceContext implements IServiceContext {
 	/** User constructor 
 	 */
 	public MockServiceContext() {
-		_mocks = new HashMap<String, HashMap<String, IUnderlyingService>>();
+		_mocks = new HashMap<Class<?>, HashMap<String, IUnderlyingService>>();
 	}
 	
 	/** Enables users to insert their own services into the service context
@@ -76,10 +81,10 @@ public class MockServiceContext implements IServiceContext {
 	 * @param instance - the instance to insert
 	 */
 	public <I extends IUnderlyingService> void addService(Class<I> clazz, Optional<String> service_name, I instance) {
-		HashMap<String, IUnderlyingService> submock = _mocks.get(clazz.getName());
+		HashMap<String, IUnderlyingService> submock = _mocks.get(clazz);
 		if (null == submock) {
 			submock = new HashMap<String, IUnderlyingService>();
-			_mocks.put(clazz.getName(), submock);
+			_mocks.put(clazz, submock);
 		}
 		submock.put(service_name.orElse(""), instance);
 	}
@@ -97,7 +102,7 @@ public class MockServiceContext implements IServiceContext {
 	@Override
 	public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz,
 			Optional<String> serviceName) {
-		return (Optional<Provider<I>>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz.getName()))
+		return (Optional<Provider<I>>) Optional.ofNullable(Optional.ofNullable(_mocks.get(serviceClazz))
 								.orElse(new HashMap<String, IUnderlyingService>())
 								.get(serviceName.orElse("")))
 								.map(i -> (Provider<I>)new MockProvider<I>((I)i))
@@ -195,6 +200,19 @@ public class MockServiceContext implements IServiceContext {
 		return _globals;
 	}
 
-
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext#listServiceProviders()
+	 */
+	@SuppressWarnings("unchecked")
+	@Override
+	public Collection<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>> listServiceProviders() {		
+		return _mocks.entrySet().stream().flatMap(kv -> 
+				kv.getValue().entrySet().stream().<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>>map(kv2 -> 
+					Tuples._3T(new MockProvider<>(kv2.getValue()), 
+								(Class<? extends IUnderlyingService>) kv.getKey(), 
+								Optional.of(kv2.getKey()).filter(s -> !s.isEmpty()))))
+				.collect(Collectors.toList())
+			;
+	}
 
 }

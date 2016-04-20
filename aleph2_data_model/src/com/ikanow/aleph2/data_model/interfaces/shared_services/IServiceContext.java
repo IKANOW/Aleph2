@@ -15,7 +15,10 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.interfaces.shared_services;
 
+import java.util.Collection;
 import java.util.Optional;
+
+import scala.Tuple3;
 
 import com.google.inject.Provider;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IColumnarService;
@@ -59,6 +62,12 @@ public interface IServiceContext {
 	* @return the data service requested or null if it does not exist
 	*/
 	public <I extends IUnderlyingService> Optional<Provider<I>> getServiceProvider(Class<I> serviceClazz, Optional<String> serviceName);	
+	
+	/** Generates a list of all service providers in the system - note to get a unique set of services, deduplicate on the first element in the tuple
+	 *  first element is the service provider, second is the name of the interface, third is the service name
+	 * @return
+	 */
+	public Collection<Tuple3<Provider<? extends IUnderlyingService>, Class<? extends IUnderlyingService>, Optional<String>>> listServiceProviders(); 
 	
 	/////////////////////////////////////////////////////////////////////
 	

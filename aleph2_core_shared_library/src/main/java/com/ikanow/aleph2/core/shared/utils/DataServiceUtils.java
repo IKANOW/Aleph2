@@ -77,6 +77,7 @@ public class DataServiceUtils {
 	}
 
 	/** Returns a list of interface/optional-non-default-name for the designated data schema
+	 *  (WARNING: considers each use of a given data service to be unique, ie returns 2 elements for search/doc service if both implemented by ES) 
 	 * @param data_schema
 	 * @return
 	 */
@@ -88,11 +89,17 @@ public class DataServiceUtils {
 					.collect(Collectors.toList());		
 	}
 	
+	/** Returns a list of interface/optional-non-default-name for the designated data schema
+	 *  (WARNING: considers each use of a given data service to be unique, ie returns 2 elements for search/doc service if both implemented by ES) 
+	 * @param data_schema
+	 * @return
+	 */
 	public static List<Tuple2<Class<? extends IDataServiceProvider>, Optional<String>>> listDataServiceProviders(final DataSchemaBean data_schema) {
 		return streamDataServiceProviders(data_schema).collect(Collectors.toList());
 	}
 	
 	/** Returns a list of interface/optional-non-default-name for the designated data schema
+	 *  (WARNING: considers each use of a given data service to be unique, ie returns 2 elements for search/doc service if both implemented by ES) 
 	 * @param data_schema
 	 * @return
 	 */
