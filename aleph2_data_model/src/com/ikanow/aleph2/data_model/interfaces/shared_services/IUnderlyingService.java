@@ -46,9 +46,10 @@ public interface IUnderlyingService {
 	<T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class, final Optional<String> driver_options);
 	
 	/** In many cases jobs will be distributed to remote machines not running Aleph2 infrastructure - in that case,
-	 *  this function can be overridden to change eg instances of "localhost" to remotely addressible hostnames, local files can be stringified etc 
+	 *  this function can be overridden to change eg instances of "localhost" to remotely addressible hostnames, local files can be stringified etc
+	 *  NOTE: The entire config is passed in and should be returned, not just the service's parts - the service is responsible for only transforming that for which it is owns
 	 * @param maybe_bucket - if applicable, the bucket responsible for the distributed processing
-	 * @param local_config - the original config
+	 * @param local_config - the original config (the entire config, not just the service's parts - the service is responsible for only transforming that for which it owns)
 	 * @return
 	 */
 	default Config createRemoteConfig(final Optional<DataBucketBean> maybe_bucket, final Config local_config) {

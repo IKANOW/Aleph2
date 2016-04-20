@@ -440,24 +440,21 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 				return this.getClass().getName() + ":" + _mutable_state.signature_override.get();
 			}
 			
-			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");
-						
+			final Optional<Config> service_config = PropertiesUtils.getSubConfig(full_config, "service");						
 			final Config config_no_services = full_config.withoutPath("service");
 			
 			// Ugh need to add: core deps, core + underlying management db to this list
 			
-			final Config service_subset = _mutable_state.service_manifest_override.get().stream() // DON'T MAKE PARALLEL SEE BELOW
+			// Service interface/implementation:
+			final Config service_defn_subset = _mutable_state.service_manifest_override.get().stream() // DON'T MAKE PARALLEL SEE BELOW
 				.map(clazz_name -> {
-					final Optional<? extends IUnderlyingService> underlying_service = _service_context.getService(clazz_name._1(), clazz_name._2());
 					final String config_path = clazz_name._2().orElse(clazz_name._1().getSimpleName().substring(1));
 					return Lambdas.wrap_u(
 							__ -> service_config.get().hasPath(config_path) 
 								? Tuples._2T(config_path, service_config.get().getConfig(config_path)) 
 								: null
 							)
-							.andThen(maybe_t2 -> Optional.ofNullable(maybe_t2).map(t2 -> Tuples._2T(t2._1(), underlying_service.map(ds -> ds.createRemoteConfig(Optional.of(my_bucket), t2._2())).orElse(t2._2())))
-													.orElse(null)
-									)
+							//(could add extra transforms here if we wanted)
 							.apply(Unit.unit())
 							;							
 				})
@@ -468,7 +465,18 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 						(acc1, acc2) -> acc1 // (This will never be called as long as the above stream is not parallel)
 						);
 				
-			final Config config_subset_services = config_no_services.withValue("service", service_subset.root());
+			// Service configuration:
+			final Config service_cfgn_subset = _mutable_state.service_manifest_override.get().stream() // DON'T MAKE PARALLEL SEE BELOW
+					.reduce(
+							config_no_services, // (leave other configurations, we just transform service specific configuration)
+							(acc, clazz_name) -> {
+								final Optional<? extends IUnderlyingService> underlying_service = _service_context.getService(clazz_name._1(), clazz_name._2());
+								return underlying_service.map(ds -> ds.createRemoteConfig(Optional.of(my_bucket), acc)).orElse(acc);
+							},
+							(acc1, acc2) -> acc1 // (This will never be called as long as the above stream is not parallel)
+							);
+			
+			final Config config_subset_services = service_cfgn_subset.withValue("service", service_defn_subset.root());
 			
 			final Config last_call = 
 					Lambdas.<Config, Config>wrap_u(config_pipeline -> 
