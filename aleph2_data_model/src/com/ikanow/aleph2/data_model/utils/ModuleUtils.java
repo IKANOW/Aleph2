@@ -111,7 +111,8 @@ public class ModuleUtils {
 			"SearchIndexService", "StorageService", "TemporalService", "CoreDistributedServices", "LoggingService"));
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> serviceInjectors = null;
-	private static List<Tuple2<Class<?>, Optional<String>>> injected_services = new LinkedList<>();
+	@SuppressWarnings("rawtypes")
+	private static List<Tuple2<Class, Optional<String>>> injected_services = new LinkedList<>();
 	private static Injector parent_injector = null;
 	private static GlobalPropertiesBean globals = BeanTemplateUtils.build(GlobalPropertiesBean.class).done().get();
 		//(do it this way to avoid having to keep changing this test every time globals changes)
@@ -167,7 +168,7 @@ public class ModuleUtils {
 	 */
 	@SuppressWarnings("rawtypes")
 	private static Map<Key, Injector> loadServicesFromConfig(
-			Config config, Injector parent_injector, List<Tuple2<Class<?>, Optional<String>>> injected_services) throws Exception {	
+			Config config, Injector parent_injector, List<Tuple2<Class, Optional<String>>> injected_services) throws Exception {	
 		//temporary map so we don't create multiple injectors for the same service class
 		Map<String, Injector> service_class_injectors = new HashMap<String, Injector>(); 
 		//actual list of key->injector we are returning
@@ -206,7 +207,7 @@ public class ModuleUtils {
 					
 					// (just keep a list of everything we've done)
 					getInterfaceClass(entry.interfaceName)
-						.map(cz -> Tuples._2T((Class<?>) cz, Optional.ofNullable(entry.annotationName).filter(__ -> !entry.isDefault)))
+						.map(cz -> Tuples._2T((Class) cz, Optional.ofNullable(entry.annotationName).filter(__ -> !entry.isDefault)))
 						.ifPresent(t2 -> injected_services.add(t2))
 						;
 					
