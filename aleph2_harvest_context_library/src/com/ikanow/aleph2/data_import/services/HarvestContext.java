@@ -501,7 +501,7 @@ public class HarvestContext implements IHarvestContext {
 								? Tuples._2T(config_path, service_config.get().getConfig(config_path)) 
 								: null
 							)
-							.andThen(maybe_t2 -> Optional.ofNullable(maybe_t2).map(t2 -> Tuples._2T(t2._1(), underlying_service.map(ds -> ds.createRemoteConfig(t2._2())).orElse(t2._2())))
+							.andThen(maybe_t2 -> Optional.ofNullable(maybe_t2).map(t2 -> Tuples._2T(t2._1(), underlying_service.map(ds -> ds.createRemoteConfig(bucket, t2._2())).orElse(t2._2())))
 													.orElse(null)
 									)
 							.apply(Unit.unit())
