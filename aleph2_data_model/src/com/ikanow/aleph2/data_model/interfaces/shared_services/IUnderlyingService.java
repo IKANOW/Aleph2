@@ -18,6 +18,7 @@ package com.ikanow.aleph2.data_model.interfaces.shared_services;
 import java.util.Collection;
 import java.util.Optional;
 
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.typesafe.config.Config;
 
 /** A service that enables the underlying artefacts to be exposed
@@ -46,10 +47,12 @@ public interface IUnderlyingService {
 	
 	/** In many cases jobs will be distributed to remote machines not running Aleph2 infrastructure - in that case,
 	 *  this function can be overridden to change eg instances of "localhost" to remotely addressible hostnames, local files can be stringified etc 
-	 * @param local_config
+	 * @param maybe_bucket - if applicable, the bucket responsible for the distributed processing
+	 * @param local_config - the original config
 	 * @return
 	 */
-	default Config createRemoteConfig(final Config local_config) {
+	default Config createRemoteConfig(final Optional<DataBucketBean> maybe_bucket, final Config local_config) {
 		return local_config;
 	}
+
 }
