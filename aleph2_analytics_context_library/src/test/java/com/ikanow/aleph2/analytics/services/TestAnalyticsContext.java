@@ -415,14 +415,14 @@ public class TestAnalyticsContext {
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+			assertEquals(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "emergencyQuarantineBucket"), e.getMessage());
 		}
 		try {
 			test_context.emergencyDisableBucket(null);
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+			assertEquals(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "emergencyDisableBucket"), e.getMessage());
 		}
 //		try {
 //			test_context.logStatusForThreadOwner(null, null);
@@ -1238,7 +1238,7 @@ public class TestAnalyticsContext {
 			fail("Should have thrown exception");
 		}
 		catch (Exception e) {
-			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
+			assertEquals(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "annotations"), e.getMessage());
 		}
 
 		test_external1a.emitObject(Optional.of(test_bucket), analytic_job1, Either.left(jn1), Optional.empty());

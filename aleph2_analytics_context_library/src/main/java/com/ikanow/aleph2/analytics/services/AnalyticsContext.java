@@ -590,7 +590,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	public Optional<Tuple2<String, Optional<String>>> getOutputPath(
 			final Optional<DataBucketBean> bucket, final AnalyticThreadJobBean job) {
 		// TODO (ALEPH-12)
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "getOutputPath"));
 	}
 
 	/* (non-Javadoc)
@@ -1049,24 +1049,6 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		// (ie will exception if not present)
 	}
 
-//	/* (non-Javadoc)
-//	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean, boolean)
-//	 */
-//	@Override
-//	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
-//			final BasicMessageBean message, final boolean roll_up_duplicates) {
-//		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-//	}
-//
-//	/* (non-Javadoc)
-//	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#logStatusForThreadOwner(java.util.Optional, com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean)
-//	 */
-//	@Override
-//	public void logStatusForThreadOwner(final Optional<DataBucketBean> bucket,
-//			final BasicMessageBean message) {
-//		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
-//	}
-
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext#getLogger(java.util.Optional)
 	 */
@@ -1081,7 +1063,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	 */
 	@Override
 	public void emergencyDisableBucket(final Optional<DataBucketBean> bucket) {
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "emergencyDisableBucket"));
 	}
 
 	/* (non-Javadoc)
@@ -1092,7 +1074,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			final Optional<DataBucketBean> bucket,
 			final String quarantine_duration)
 	{
-		throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);
+		throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "emergencyQuarantineBucket"));
 	}
 
 	/* (non-Javadoc)
@@ -1105,7 +1087,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 			final Optional<AnnotationBean> annotations)
 	{
 		if (annotations.isPresent()) {
-			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
+			throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "annotations"));			
 		}
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
 
@@ -1219,7 +1201,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 		final DataBucketBean this_bucket = bucket.orElseGet(() -> _mutable_state.bucket.get()); 
 		
 		if (annotations.isPresent()) {
-			throw new RuntimeException(ErrorUtils.NOT_YET_IMPLEMENTED);			
+			throw new RuntimeException(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "annotations"));			
 		}
 		final JsonNode obj_json =  object.either(__->__, map -> (JsonNode) _mapper.convertValue(map, JsonNode.class));
 		

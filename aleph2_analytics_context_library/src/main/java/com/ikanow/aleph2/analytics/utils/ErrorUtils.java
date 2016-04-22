@@ -20,7 +20,6 @@ package com.ikanow.aleph2.analytics.utils;
  */
 public class ErrorUtils extends com.ikanow.aleph2.data_model.utils.ErrorUtils {
 
-	final public static String NOT_YET_IMPLEMENTED = "Functionality is not yet implemented";
 	final public static String NOT_SUPPORTED_IN_STREAM_ANALYICS = "Functionality does not apply to streaming context - this is for batch";
 	final public static String NOT_SUPPORTED_IN_BATCH_ANALYICS = "Functionality does not apply to batch context - this is for streaming";
 	final public static String SERVICE_RESTRICTIONS = "Can't call getAnalyticsContextSignature/getAnalyticsContextLibraries with different 'services' parameter; can't call getUnderlyingArtefacts without having called getAnalyticsContextSignature/getAnalyticsContextLibraries; can't call getServiceInput/Output after getAnalyticsContextSignature/getAnalyticsContextLibraries.";
