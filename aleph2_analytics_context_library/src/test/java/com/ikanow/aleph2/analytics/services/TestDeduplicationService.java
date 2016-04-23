@@ -208,7 +208,7 @@ public class TestDeduplicationService {
 			final ObjectNode test_nest = _mapper.createObjectNode();
 			test.put("field1", "test1");
 			test.put("field2", "test2");
-			test.put("nested1", test_nest);
+			test.set("nested1", test_nest);
 			test_nest.put("nested_field", "nested1");
 			
 			// Empty things:
@@ -277,13 +277,13 @@ public class TestDeduplicationService {
 		test1.put("field_1", "test1a");
 		test1.put("field_2", "test1b");
 		test_nest1.put("nested_1", "nested1");
-		test1.put("nested", test_nest1);
+		test1.set("nested", test_nest1);
 		final ObjectNode test2 = _mapper.createObjectNode();
 		final ObjectNode test_nest2 = _mapper.createObjectNode();
 		test2.put("field_1", "test2a");
 		test1.put("field_2", "test2b");
 		test_nest2.put("nested_1", "nested2");
-		test2.put("nested", test_nest2);
+		test2.set("nested", test_nest2);
 		
 		final List<Tuple2<Long, IBatchRecord>> batch =
 				Arrays.<JsonNode>asList(

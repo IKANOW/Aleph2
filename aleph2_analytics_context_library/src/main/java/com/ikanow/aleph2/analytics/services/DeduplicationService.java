@@ -449,7 +449,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					final JsonNode old_record = old_records.stream().findFirst().get();
 					if (newRecordUpdatesOld(timestamp_field, last_record._2().getJson(), old_record)) {
-						last_record._3().put(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
+						last_record._3().set(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
 						return config.delete_unhandled_duplicates() ? deleteOtherDuplicates(old_records.stream()) : Stream.empty();
 					}
 					else {
@@ -461,7 +461,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					final Tuple3<Long, IBatchRecord, ObjectNode> last_record = new_records.peekLast();
 					// Just update the new record's "_id" field
 					final JsonNode old_record = old_records.stream().findFirst().get();
-					last_record._3().put(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
+					last_record._3().set(AnnotationBean._ID, old_record.get(AnnotationBean._ID));
 					return config.delete_unhandled_duplicates() ? deleteOtherDuplicates(old_records.stream()) : Stream.empty();
 				})
 				.when(p -> p == DeduplicationPolicy.custom_update, __ -> {
@@ -703,7 +703,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected static Optional<JsonNode> extractKeyFields(final JsonNode in, final List<String> key_fields) {
 		final ObjectNode on = key_fields.stream()
 				.reduce(_mapper.createObjectNode(),
-						(acc, v) -> JsonUtils.getProperty(v, in).<ObjectNode>map(val -> (ObjectNode) acc.put(v, val)).orElse(acc),
+						(acc, v) -> JsonUtils.getProperty(v, in).<ObjectNode>map(val -> (ObjectNode) acc.set(v, val)).orElse(acc),
 						(acc1, acc2) -> acc1 //(not possible because not parallel())
 						);
 
