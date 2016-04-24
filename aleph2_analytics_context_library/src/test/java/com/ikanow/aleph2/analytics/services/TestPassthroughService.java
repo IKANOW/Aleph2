@@ -18,6 +18,7 @@ package com.ikanow.aleph2.analytics.services;
 
 import static org.junit.Assert.*;
 
+import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -25,6 +26,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule.ProcessingStage;
@@ -37,42 +40,200 @@ import com.ikanow.aleph2.data_model.utils.Tuples;
  * @author Alex
  */
 public class TestPassthroughService {
-
+	final static protected ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+	
 	class TestBatchRecord implements IBatchRecord {
 		@Override
 		public JsonNode getJson() {
-			return null;
+			return _mapper.createObjectNode().set("object_field",  _mapper.createObjectNode().put("field", "/test"));
 		}		
 	}
 	
 	@Test
 	public void test_passthroughService() {
 
-		// Some globals
-		final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
-					.with(EnrichmentControlMetadataBean::name, "test")
-				.done().get();
-		final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
-		Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-		.thenThrow(new RuntimeException("worked!"));
-		
-		final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
-		
-		final PassthroughService test_module = new PassthroughService();
-		
-		test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
-		
-		test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
-
-		try {
-			test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
-			fail("Should have thrown");
+		// Pass (default)
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+				fail("Should have thrown");
+			}
+			catch (Exception e) {
+				assertEquals("normal_output", e.getMessage());
+			}
+			
+			test_module.onStageComplete(true);		
 		}
-		catch (Exception e) {
-			assertEquals("worked!", e.getMessage());
+		// Pass (specify)
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+						.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.of(PassthroughService.OUTPUT_TO_FIELDNAME, PassthroughService.OUTPUT_TO_INTERNAL)))
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+				fail("Should have thrown");
+			}
+			catch (Exception e) {
+				assertEquals("normal_output", e.getMessage());
+			}
+			
+			test_module.onStageComplete(true);		
 		}
-		
-		test_module.onStageComplete(true);		
+		// Stop
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+						.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.of(PassthroughService.OUTPUT_TO_FIELDNAME, PassthroughService.OUTPUT_TO_STOP)))
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+			}
+			catch (Exception e) {
+				fail("Shouldn't have thrown");
+			}
+			
+			test_module.onStageComplete(true);		
+		}
+		// By field - external emit
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+						.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.of(PassthroughService.OUTPUT_TO_FIELDNAME, "$object_field.field")))
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+				fail("Should have thrown");
+			}
+			catch (Exception e) {
+				assertEquals("external_emit", e.getMessage());
+			}
+			
+			test_module.onStageComplete(true);					
+		}
+		// Error case - missing field
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+						.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.of(PassthroughService.OUTPUT_TO_FIELDNAME, "$missing_field")))
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+			}
+			catch (Exception e) {
+				fail("Shouldn't have thrown: " + e.getMessage());
+			}
+			
+			test_module.onStageComplete(true);		
+		}
+		// Error case - non-string field
+		{
+			// Some globals
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+						.with(EnrichmentControlMetadataBean::name, "test")
+						.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.of(PassthroughService.OUTPUT_TO_FIELDNAME, "$object_field")))
+					.done().get();
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.emitImmutableObject(Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("normal_output"));
+			Mockito.when(enrich_context.externalEmit(Mockito.any(), Mockito.any(), Mockito.any()))
+				.thenThrow(new RuntimeException("external_emit"));
+			
+			final DataBucketBean test_bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, "/test").done().get();
+			
+			final PassthroughService test_module = new PassthroughService();
+			
+			test_module.onStageInitialize(enrich_context, test_bucket, control, Tuples._2T(ProcessingStage.input, ProcessingStage.output), Optional.empty());
+			
+			test_module.onObjectBatch(Stream.empty(), Optional.empty(), Optional.empty());
+	
+			try {
+				test_module.onObjectBatch(Stream.of(Tuples._2T(0L, new TestBatchRecord())), Optional.empty(), Optional.empty());
+			}
+			catch (Exception e) {
+				fail("Shouldn't have thrown");
+			}
+			
+			test_module.onStageComplete(true);		
+		}
 	}
 	
 }

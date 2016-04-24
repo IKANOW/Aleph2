@@ -30,6 +30,11 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
+import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.JsonUtils;
+
+import fj.data.Either;
+
 
 /** Default Batch enrichment module.
  * @author jfreydank
@@ -37,10 +42,14 @@ import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadat
  */
 public class PassthroughService implements IEnrichmentBatchModule {
 	private static final Logger logger = LogManager.getLogger(PassthroughService.class);
-
+	public static final String OUTPUT_TO_FIELDNAME = "output";
+	public static final String OUTPUT_TO_INTERNAL = "$$internal";
+	public static final String OUTPUT_TO_STOP = "$$stop";
+	
 	protected IEnrichmentModuleContext _context;
 	protected DataBucketBean _bucket;
 	protected Tuple2<ProcessingStage, ProcessingStage> _previous_next;
+	protected String _output;
 	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#onStageInitialize(com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, boolean)
@@ -53,6 +62,8 @@ public class PassthroughService implements IEnrichmentBatchModule {
 		this._context = context;
 		this._bucket = bucket;
 		this._previous_next = previous_next;
+		
+		_output = Optional.ofNullable(control.config()).map(cfg -> cfg.get(OUTPUT_TO_FIELDNAME)).map(s -> s.toString()).filter(s -> !s.isEmpty()).orElse(OUTPUT_TO_INTERNAL);
 	}
 
 	/* (non-Javadoc)
@@ -62,15 +73,36 @@ public class PassthroughService implements IEnrichmentBatchModule {
 	public void onObjectBatch(final Stream<Tuple2<Long, IBatchRecord>> batch, Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {
 		if (logger.isDebugEnabled()) logger.debug("BatchEnrichmentModule.onObjectBatch:" + batch_size);
 		batch.forEach(t2 -> {
-
-			// not sure what to do with streaming (probably binary) data - probably will have to just ignore it in default mode?
-			// (the alternative is to build Tika directly in? or maybe dump it directly in .. not sure how Jackson manages raw data?)
-			
-			_context.emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key);
-
+			handleObject(t2, grouping_key, _output, _context);
 		}); // for 
 	}
 
+	/** Handles an individual object
+	 * @param object
+	 * @param grouping_key
+	 * @param output
+	 */
+	protected static void handleObject(final Tuple2<Long, IBatchRecord> t2, final Optional<JsonNode> grouping_key, final String output, final IEnrichmentModuleContext context) {
+		// not sure what to do with streaming (probably binary) data - probably will have to just ignore it in default mode?
+		// (the alternative is to build Tika directly in? or maybe dump it directly in .. not sure how Jackson manages raw data?)
+		if (OUTPUT_TO_INTERNAL.equals(output)) {
+			context.emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key);				
+		}
+		else if (OUTPUT_TO_STOP.equals(output)) {
+			//(do nothing)
+		}
+		else if (output.startsWith("$")) {
+			JsonUtils.getProperty(output.substring(1), t2._2().getJson()).filter(j -> j.isTextual()).map(j -> j.asText()).filter(p -> !p.startsWith("$")).ifPresent(p -> {
+				handleObject(t2, grouping_key, p, context);
+			});
+		}
+		else { // external emit...
+			final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class).with(DataBucketBean::full_name, output).done().get();
+			context.externalEmit(bucket, Either.left(t2._2().getJson()), Optional.empty());
+		}
+		
+	}
+	
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#onStageComplete(boolean)
 	 */

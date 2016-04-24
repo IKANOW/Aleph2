@@ -18,6 +18,7 @@ package com.ikanow.aleph2.analytics.services;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -205,7 +206,10 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 		if (IAnalyticsContext.class.isAssignableFrom(driver_class)) {
 			return (Optional<T>) Optional.of(_delegate.get());
 		}
-		return _delegate.get().getUnderlyingPlatformDriver(driver_class, driver_options);
+		if (List.class.isAssignableFrom(driver_class)) {
+			return (Optional<T>) Optional.of(_mutable_records);
+		}
+		else return _delegate.get().getUnderlyingPlatformDriver(driver_class, driver_options);
 	}
 
 	/* (non-Javadoc)

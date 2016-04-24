@@ -65,6 +65,7 @@ import com.ikanow.aleph2.core.shared.utils.SharedErrorUtils;
 import com.ikanow.aleph2.core.shared.utils.TimeSliceDirUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -566,13 +567,21 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 	
 	// OVERRIDES
 	
+	@SuppressWarnings("unchecked")
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService#getUnderlyingPlatformDriver(java.lang.Class, java.util.Optional)
 	 */
 	@Override
 	public <T> Optional<T> getUnderlyingPlatformDriver(final Class<T> driver_class,
 			final Optional<String> driver_options) {
-		return Optional.empty();
+		
+		if (IEnrichmentModuleContext.class.isAssignableFrom(driver_class)) {
+			return driver_options.map(batch_str -> {
+				return (Optional<T>)Optional.of(new BatchEnrichmentContext(new BatchEnrichmentContext(this), Integer.parseInt(batch_str)));
+			})
+			.orElseGet(() -> (Optional<T>)Optional.of(new BatchEnrichmentContext(this)));
+		}
+		else return Optional.empty();
 	}
 
 	/* (non-Javadoc)
