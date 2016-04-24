@@ -33,6 +33,18 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	 */
 	public static final String ENRICHMENT_PIPELINE = "enrich_pipeline";
 	
+	/** It is recommended for analytic job developers to support this technology_override field wherever possible
+	 */
+	public static final String BATCH_SIZE_OVERRIDE = "batch_size";
+	
+	/** It is recommended for analytic job developers to support this technology_override field wherever possible - how often to flush batches (time)
+	 */
+	public static final String STREAM_BATCH_TIME = "stream_batch_time";
+
+	/** It is recommended for analytic job developers to support this technology_override field wherever possible - how often to call "onStageComplete"
+	 */
+	public static final String STREAM_POLL_TIME = "stream_poll_time";
+	
 	/** User constructor
 	 * @param name - The name of the job - optional but required if it is needed as a dependency
 	 * @param dependencies -  the dependency order of enrichment - this can be used by the framework to optimize runtime

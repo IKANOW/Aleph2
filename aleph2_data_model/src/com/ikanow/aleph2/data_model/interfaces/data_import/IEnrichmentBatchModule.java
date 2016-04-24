@@ -37,7 +37,7 @@ public interface IEnrichmentBatchModule {
 	/** The different types of processing stage
 	 * @author Alex
 	 */
-	public enum ProcessingStage { input, batch, grouping, output, unknown };
+	public enum ProcessingStage { input, batch, grouping, output, unknown, stream };
 	
 	/** Called when the stage (eg map or reduce) is starting
 	 *  Note that this is only called once per set of onObjectBatches - if multiple instances of the batch module are spawned (eg when grouping)
