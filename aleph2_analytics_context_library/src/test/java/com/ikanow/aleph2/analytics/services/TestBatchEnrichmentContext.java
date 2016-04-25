@@ -21,6 +21,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -618,8 +619,15 @@ public class TestBatchEnrichmentContext {
 		BatchEnrichmentContext test_peek_inside_external1 = (BatchEnrichmentContext)  test_external1a;
 		
 		assertEquals(3, test_peek_inside_external1.getOutputRecords().size());
+		
+		@SuppressWarnings("rawtypes")
+		Optional<List> other_api = test_external1a.getUnderlyingPlatformDriver(List.class, Optional.empty());
+		assertTrue(other_api.isPresent());
+		assertEquals(3, other_api.get().size());
+		
 		test_peek_inside_external1.clearOutputRecords();
 		assertEquals(0, test_peek_inside_external1.getOutputRecords().size());
+		assertEquals(0, other_api.get().size());
 	}
 
 	public static class TestBean {}	

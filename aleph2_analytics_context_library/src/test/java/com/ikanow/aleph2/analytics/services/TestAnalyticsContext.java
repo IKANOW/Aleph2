@@ -57,6 +57,7 @@ import com.ikanow.aleph2.analytics.services.AnalyticsContext.State;
 import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsAccessContext;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IAnalyticsContext;
+import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IStorageService;
@@ -410,6 +411,25 @@ public class TestAnalyticsContext {
 		assertEquals(Optional.empty(), test_context.getUnderlyingPlatformDriver(String.class, Optional.empty()));
 		assertEquals(Optional.empty(), test_context.getBucket());
 		
+		test_context.setBucket(BeanTemplateUtils.build(DataBucketBean.class).done().get());
+		test_context.resetJob(BeanTemplateUtils.build(AnalyticThreadJobBean.class).done().get());			
+		
+		// Batch enrichment module accessor
+		{
+			final Optional<IEnrichmentModuleContext> test1 = test_context.getUnderlyingPlatformDriver(IEnrichmentModuleContext.class, Optional.empty());
+			assertTrue(test1.isPresent());
+			assertTrue(BatchEnrichmentContext.class.isAssignableFrom(test1.get().getClass()));
+			final BatchEnrichmentContext test_batch = (BatchEnrichmentContext) test1.get();
+			assertEquals(State.IN_TECHNOLOGY.toString(), test_batch._state_name.toString());
+		}
+		{
+			final Optional<IEnrichmentModuleContext> test1 = test_context.getUnderlyingPlatformDriver(IEnrichmentModuleContext.class, Optional.of("100"));
+			assertTrue(test1.isPresent());
+			assertTrue(BatchEnrichmentContext.class.isAssignableFrom(test1.get().getClass()));
+			final BatchEnrichmentContext test_batch = (BatchEnrichmentContext) test1.get();
+			assertEquals(State.IN_MODULE.toString(), test_batch._state_name.toString());
+		}
+		
 		try {
 			test_context.emergencyQuarantineBucket(null, null);
 			fail("Should have thrown exception");
@@ -424,20 +444,7 @@ public class TestAnalyticsContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "emergencyDisableBucket"), e.getMessage());
 		}
-//		try {
-//			test_context.logStatusForThreadOwner(null, null);
-//			fail("Should have thrown exception");
-//		}
-//		catch (Exception e) {
-//			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-//		}
-//		try {
-//			test_context.logStatusForThreadOwner(null, null, false);
-//			fail("Should have thrown exception");
-//		}
-//		catch (Exception e) {
-//			assertEquals(ErrorUtils.NOT_YET_IMPLEMENTED, e.getMessage());
-//		}
+		
 		// (This has now been implemented, though not ready to test yet)
 //		try {
 //			test_context.getBucketStatus(null);

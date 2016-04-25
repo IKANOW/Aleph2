@@ -85,6 +85,7 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 	{
 		_state_name = State.IN_TECHNOLOGY;
 		_delegate.trySet(analytics_context);
+		analytics_context.getJob().ifPresent(job -> _job.set(job));
 	}
 	
 	/** Copy constructor - to clone and then override the _module
