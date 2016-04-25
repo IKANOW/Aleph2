@@ -149,7 +149,7 @@ public class LoggingService implements ILoggingService, IExtraDependencyLoader {
 			return bucket_writable_cache.get(getWritableCacheKey(log_bucket), () -> {
 				return LoggingUtils.getLoggingServiceForBucket(service_context, log_bucket);
 			});
-		} catch (ExecutionException e) {
+		} catch (Throwable e) {
 			//return an empty multiwriter when we've had a failure (this shouldn't occur, but justu to be safe)
 			_logger.error("Error getting writable for bucket: " + log_bucket.full_name() + " return an empty logger instead that ignores requests", e);
 			return LoggingUtils.getLoggingServiceForBucket(service_context, LoggingUtils.getEmptyBucket());
