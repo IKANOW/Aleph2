@@ -99,7 +99,9 @@ public class GraphBuilderEnrichmentService implements IEnrichmentBatchModule {
 		try { // Passthrough if the stream hasn't been processed (ie not enabled), else harmless error
 			batch.forEach(t2 -> _context.get().emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key));			
 		}
-		catch (IllegalStateException e) {} // just means the 
+		catch (IllegalStateException e) {
+			// just means the stream was already processed, ie the above peek worked, ie we're good
+		} 
 	}
 
 	/* (non-Javadoc)
@@ -107,7 +109,9 @@ public class GraphBuilderEnrichmentService implements IEnrichmentBatchModule {
 	 */
 	@Override
 	public void onStageComplete(boolean is_original) {
-		_delegate.optional().ifPresent(delegate -> delegate.onStageComplete(is_original));
+		if (_enabled.get()) {
+			_delegate.optional().ifPresent(delegate -> delegate.onStageComplete(is_original));
+		}
 	}
 
 	/* (non-Javadoc)
