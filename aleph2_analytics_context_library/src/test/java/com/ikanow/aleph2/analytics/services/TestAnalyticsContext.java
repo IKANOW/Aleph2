@@ -1516,7 +1516,7 @@ public class TestAnalyticsContext {
 			assertTrue("Should work: " + ret_val_2.toString(), ret_val_2.isSuccess());
 
 			//grab message to check actually emitted			
-			Thread.sleep(5000); //wait a few seconds for producers to dump batch
+			Thread.sleep(10000); //wait a few seconds for producers to dump batch
 			
 			long count = 0;			
 			while ( iter.hasNext() ) {

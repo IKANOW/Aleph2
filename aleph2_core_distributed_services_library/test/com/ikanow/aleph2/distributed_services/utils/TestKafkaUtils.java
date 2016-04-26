@@ -105,7 +105,7 @@ public class TestKafkaUtils {
 		final String topic = "test_create";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
-		//Thread.sleep(5000);
+		//Thread.sleep(10000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 	}
 	
@@ -119,7 +119,7 @@ public class TestKafkaUtils {
 		final String topic = "test_produce_consume";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
-		//Thread.sleep(5000);
+		//Thread.sleep(10000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		
 		//have to create consumers before producing
@@ -132,7 +132,7 @@ public class TestKafkaUtils {
 		for (long i = 0; i < num_messages_to_produce; i++)
 			producer.send(new KeyedMessage<String, String>(topic, "test"));		
 		
-		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
 		//see if we can read that items
 		
@@ -152,7 +152,7 @@ public class TestKafkaUtils {
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic1, Optional.empty(), zk_client);		
 		KafkaUtils.createTopic(topic2, Optional.empty(), zk_client);
-		//Thread.sleep(5000);
+		//Thread.sleep(10000);
 		assertTrue(KafkaUtils.doesTopicExist(topic1, zk_client));
 		assertTrue(KafkaUtils.doesTopicExist(topic2, zk_client));
 		
@@ -171,7 +171,7 @@ public class TestKafkaUtils {
 			producer.send(new KeyedMessage<String, String>(topic2, "test2"));
 		}
 		
-		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
 		//see if we can read that items from topic1				
 		long count = 0;
@@ -211,7 +211,7 @@ public class TestKafkaUtils {
 		//Create a topic to delete later
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);
 		
-//		Thread.sleep(5000);
+//		Thread.sleep(10000);
 		
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
@@ -219,13 +219,13 @@ public class TestKafkaUtils {
 		for (long i = 0; i < num_messages_to_produce; i++)
 			producer.send(new KeyedMessage<String, String>(topic, "test"));		
 		
-		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
 		//delete the topic
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		KafkaUtils.deleteTopic(topic, zk_client);
 		//need to wait a second for DeleteTopicsListener to pick up our delete request
-		Thread.sleep(5000);	
+		Thread.sleep(10000);	
 		//NOTE: looks like the local kafka might not clean up topics
 		assertFalse(KafkaUtils.doesTopicExist(topic, zk_client));
 		
@@ -289,7 +289,7 @@ public class TestKafkaUtils {
 		
 		System.out.println("CREATING TOPIC");
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
-		//Thread.sleep(5000);
+		//Thread.sleep(10000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		
 		System.out.println("CREATING CONSUMER");
@@ -306,7 +306,7 @@ public class TestKafkaUtils {
 			System.out.println("produce message: " + i);
 			producer.send(new KeyedMessage<String, String>(topic, "test_pt1_" + i));
 		}
-		Thread.sleep(5000); //sleep to wait for records getting moved
+		Thread.sleep(10000); //sleep to wait for records getting moved
 		
 		System.out.println("CONSUMING DATA");
 		//see if we can read that items
@@ -337,7 +337,7 @@ public class TestKafkaUtils {
 		//write something into the topic, again
 		for (long i = 0; i < num_messages_to_produce; i++)
 			producer.send(new KeyedMessage<String, String>(topic, "test_pt2"));				
-		Thread.sleep(5000); //sleep to wait for records getting moved
+		Thread.sleep(10000); //sleep to wait for records getting moved
 		
 		System.out.println("CONSUME DATA");
 		//see if we can read that items			
