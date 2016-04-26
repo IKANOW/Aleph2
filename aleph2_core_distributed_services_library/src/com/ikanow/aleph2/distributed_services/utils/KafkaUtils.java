@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,11 +61,12 @@ import kafka.utils.ZKStringSerializer$;
  */
 public class KafkaUtils {
 	private static final Integer NUM_THREADS = 1;
-	private static Producer<String, String> producer;	
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
 	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
 	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+	protected static int producer_pool_index = -1;
+	protected static List<Producer<String,String>> producer_pool = null;
 	//TODO (ALEPH-12): make my_topics a cached map also
 	
 	/** Creates a new ZK client from the properties
@@ -84,25 +86,33 @@ public class KafkaUtils {
 	 * 
 	 * @return
 	 */
-	public synchronized static Producer<String, String> getKafkaProducer() {		
-		if ( producer == null ) {
+	public synchronized static Producer<String, String> getKafkaProducer() {	
+		final int num_producers = 25; //TODO make this configurable, probably per topic rather than globally?
+		if ( producer_pool == null ) {
+			producer_pool = new ArrayList<Producer<String,String>>(num_producers);
 			ProducerConfig config = new ProducerConfig(kafka_properties);
-			producer = new Producer<String, String>(config);
+			for ( int i = 0; i < num_producers; i++ ) {
+				producer_pool.add(new Producer<String, String>(config));
+			}
 		}
-        return producer;
+		producer_pool_index = (producer_pool_index+1)%num_producers;
+        return producer_pool.get(producer_pool_index);
 	}
 	
 	/**
 	 * Creates a consumer for a single topic with the currently configured Kafka instance.
 	 * 
-	 * This consumer should be closed once you are done reading.
+	 * WARNING: When a consumer is created, it starts its reading at now, so if you
+	 * previously produced on a topic, this consumer won't be able to see it.
 	 * 
+	 * This consumer should be closed once you are done reading.
+	 *
 	 * @param topic
 	 * @param consumer_name - if set then uses a specific consumer group instead of the central "system" consumer - this has the effect of copying the data instead of round-robining it
 	 * @return
 	 */
-	public static ConsumerConnector getKafkaConsumer(String topic, Optional<String> consumer_name) {
-		Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
+	public static ConsumerConnector getKafkaConsumer(final String topic, final Optional<String> consumer_name) {
+		final Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
 		topicCountMap.put(topic, NUM_THREADS);
 		final Properties new_properties = 
 				consumer_name
@@ -114,7 +124,7 @@ public class KafkaUtils {
 					})
 				.orElse(kafka_properties)
 				;
-		ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
+		final ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
 		consumer.commitOffsets();
 		return consumer;
 	}
@@ -174,8 +184,15 @@ public class KafkaUtils {
 		kafka_properties = new Properties();
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				.put("group.id", "aleph2_unknown")
-				.put("serializer.class", "kafka.serializer.StringEncoder")
+				
+				//producer specific config
+				.put("serializer.class", "kafka.serializer.StringEncoder") 
 				.put("request.required.acks", "1")
+				.put("producer.type", "async") 
+				.put("compression.codec", "2")
+				.put("batch.size", "800") 				
+				
+				
 				.put("consumer.timeout.ms", "3000")
 		        .put("auto.commit.interval.ms", "1000")
 		        // Not sure which of these 2 sets is correct, so will list them both!
@@ -202,9 +219,12 @@ public class KafkaUtils {
 		logger.debug("ZOOKEEPER: " + zk);
         
         //reset producer so a new one will be created
-        if ( producer != null )
-        	producer.close();
-        producer = null;
+		if ( producer_pool != null ) {
+			for ( Producer<String, String> producer : producer_pool) 
+				producer.close();
+		}
+		producer_pool = null;
+		producer_pool_index = -1;        
 	}
 
 	/** Generates a connection string by reading ZooKeeper
@@ -271,16 +291,16 @@ public class KafkaUtils {
 				logger.debug("LEADER WAS ELECTED: " + leader_elected);
 				
 				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic);
+				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic, 1);
 				iter.hasNext();
 				
 				//debug info
 				if (logger.isDebugEnabled()) {
-					logger.debug("DONE CREATING TOPIC");
+					logger.error("DONE CREATING TOPIC");
 					//(this was removed in 0.9):
 					//logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
 					TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
-					logger.debug("META: " + meta);
+					logger.error("META: " + meta);
 				}
 				
 				// (close resources)

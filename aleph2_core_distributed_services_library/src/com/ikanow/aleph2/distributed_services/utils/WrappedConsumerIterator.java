@@ -20,6 +20,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,6 +45,7 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 
 	final protected ConsumerConnector consumer;
 	final protected String topic;	
+	final protected long force_timeout_ms;
 	final protected Iterator<MessageAndMetadata<byte[], byte[]>> iterator;
 	final private static Logger logger = LogManager.getLogger();
 	
@@ -49,15 +56,21 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 * @param consumer
 	 * @param topic
 	 */
-	public WrappedConsumerIterator(ConsumerConnector consumer, String topic) {
+	public WrappedConsumerIterator(final ConsumerConnector consumer, final String topic ) {
+		this(consumer, topic, 0);
+	}
+	
+	public WrappedConsumerIterator(final ConsumerConnector consumer, final String topic, final long force_timeout_ms) {
 		this.consumer = consumer;
 		this.topic = topic;
+		this.force_timeout_ms = force_timeout_ms;
 		Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
         topicCountMap.put(topic, 1);
         final Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap = consumer.createMessageStreams(topicCountMap);
         final List<KafkaStream<byte[], byte[]>> streams = consumerMap.get(topic);
         final KafkaStream<byte[], byte[]> stream = streams.get(0);
         this.iterator = stream.iterator();       
+        
 	}
 	
 	/**
@@ -83,13 +96,41 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 * that timeout and return false, otherwise it will block forever until a new item is found,
 	 * it never returns false from the internal iterator, we do on an exception (timeout)
 	 * 
+	 * If force_timeout_ms is set, will only wait a max of it for hasNext to return, if set to 0 or less, will
+	 * just leave it up to kafka config for when to kick out of hasNext (see consumer.timeout.ms)
+	 * 
 	 */
 	@Override
 	public boolean hasNext() {
+		final ExecutorService executor = Executors.newSingleThreadExecutor();
+		Future<Boolean> future = executor.submit(new Callable<Boolean>() {
+			@Override
+			public Boolean call() throws Exception {
+				try {
+					return iterator.hasNext();
+				} catch (Exception e) {
+					logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
+					close();
+					return false;
+				}	
+			}
+		});
+		executor.shutdown();
+		if ( force_timeout_ms > 0 ) {
+			try {
+				executor.awaitTermination(force_timeout_ms, TimeUnit.MILLISECONDS);				
+			} catch (Exception ex) {
+				logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", ex);
+				close();
+				return false;
+			} finally {
+				executor.shutdownNow();
+			}
+		}
 		try {
-			return iterator.hasNext();
-		} catch (Exception e) {
-			logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms");
+			return future.get();
+		} catch (InterruptedException | ExecutionException e) {
+			logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
 			close();
 			return false;
 		}		
