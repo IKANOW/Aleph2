@@ -54,6 +54,7 @@ public class TestCoreDistributedServices {
 	@Parameters(name = "{index}: auto config = {0}")
 	public static Iterable<Boolean> data1() {
 		return Arrays.asList(true, false);
+//		return Arrays.asList(true);
 	}
 	
 	final boolean auto_configure;
@@ -177,16 +178,18 @@ public class TestCoreDistributedServices {
 		//create a random topic so its new (has to call create function)
 		final String TOPIC_NAME = "TEST_CDS_" + System.currentTimeMillis();  
 		final int num_to_test = 10;
-		//throw items on the queue
-				
+		
+		//grab the consumer
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());		
+		
+		//throw items on the queue				
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
 		String original_message = jsonNode.toString();	
 		for ( int i = 0; i < num_to_test; i++ ) {
 			_core_distributed_services.produce(TOPIC_NAME, original_message);
 		}
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
-		//grab the consumer
-		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
 		
 		String consumed_message = null;
 		int message_count = 0;
@@ -215,18 +218,23 @@ public class TestCoreDistributedServices {
 			return; 
 		}
 		
+		System.out.println("STARTING TEST: testKafkaForStormSpout");
+		
 		//create a topic for a kafka spout, put some things in the spout		
 		final String TOPIC_NAME = "TEST_KAFKA_SPOUT_" + System.currentTimeMillis();  
 		final int num_to_test = 100; //set this high enough to hit the concurrent connection limit just incase we messed something up
-		//throw items on the queue
 		
-		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
+		//grab the consumer		
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
+		
+		//throw items on the queue		
+		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val21\",\"keyB\":\"val22\",\"keyC\":\"val23\"}");
 		String original_message = jsonNode.toString();	
 		for ( int i = 0; i < num_to_test; i++ ) 
 			_core_distributed_services.produce(TOPIC_NAME, original_message);	
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
-		//grab the consumer
-		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
+		
 		String consumed_message = null;
 		int message_count = 0;
 		//read the item off the queue

@@ -358,7 +358,7 @@ public class TestHarvestContext {
 	}
 	
 	@Test
-	public void test_produceConsume() throws JsonProcessingException, IOException {
+	public void test_produceConsume() throws JsonProcessingException, IOException, InterruptedException {
 		_logger.info("running test_produceConsume");
 		
 		final DataBucketBean bucket = BeanTemplateUtils.build(DataBucketBean.class)
@@ -368,6 +368,7 @@ public class TestHarvestContext {
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 		
 		final HarvestContext test_context = _app_injector.getInstance(HarvestContext.class);
+		
 		assertEquals(Optional.empty(), test_context.getBucket());
 		String message1 = "{\"key\":\"val\"}";
 		String message2 = "{\"key\":\"val2\"}";
@@ -383,11 +384,12 @@ public class TestHarvestContext {
 		catch (Exception e) {}
 		test_context.setBucket(bucket);
 		assertEquals(bucket, test_context.getBucket().get());
+		
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.left(mapper.readTree(message1)));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.left(mapper.readTree(message2)));
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.right(msg3));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.right(msg4));
-		
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume

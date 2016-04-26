@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,11 +61,11 @@ import kafka.utils.ZKStringSerializer$;
  */
 public class KafkaUtils {
 	private static final Integer NUM_THREADS = 1;
-	private static Producer<String, String> producer;	
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
 	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
 	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+	protected static Producer<String, String> producer = null;
 	//TODO (ALEPH-12): make my_topics a cached map also
 	
 	/** Creates a new ZK client from the properties
@@ -84,25 +85,27 @@ public class KafkaUtils {
 	 * 
 	 * @return
 	 */
-	public synchronized static Producer<String, String> getKafkaProducer() {		
-		if ( producer == null ) {
-			ProducerConfig config = new ProducerConfig(kafka_properties);
-			producer = new Producer<String, String>(config);
-		}
-        return producer;
+	public synchronized static Producer<String, String> getKafkaProducer() {			
+		if ( producer == null ) 
+			producer = new Producer<String, String>(new ProducerConfig(kafka_properties));
+		
+		return producer;
 	}
 	
 	/**
 	 * Creates a consumer for a single topic with the currently configured Kafka instance.
 	 * 
-	 * This consumer should be closed once you are done reading.
+	 * WARNING: When a consumer is created, it starts its reading at now, so if you
+	 * previously produced on a topic, this consumer won't be able to see it.
 	 * 
+	 * This consumer should be closed once you are done reading.
+	 *
 	 * @param topic
 	 * @param consumer_name - if set then uses a specific consumer group instead of the central "system" consumer - this has the effect of copying the data instead of round-robining it
 	 * @return
 	 */
-	public static ConsumerConnector getKafkaConsumer(String topic, Optional<String> consumer_name) {
-		Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
+	public static ConsumerConnector getKafkaConsumer(final String topic, final Optional<String> consumer_name) {
+		final Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
 		topicCountMap.put(topic, NUM_THREADS);
 		final Properties new_properties = 
 				consumer_name
@@ -114,7 +117,7 @@ public class KafkaUtils {
 					})
 				.orElse(kafka_properties)
 				;
-		ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
+		final ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
 		consumer.commitOffsets();
 		return consumer;
 	}
@@ -174,8 +177,15 @@ public class KafkaUtils {
 		kafka_properties = new Properties();
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
 				.put("group.id", "aleph2_unknown")
-				.put("serializer.class", "kafka.serializer.StringEncoder")
+				
+				//producer specific config
+				.put("serializer.class", "kafka.serializer.StringEncoder") 
 				.put("request.required.acks", "1")
+				.put("producer.type", "async") 
+				.put("compression.codec", "2")
+				.put("batch.size", "800") 		//latest version config I think		
+				.put("batch.num.messages", "800") //old version config 0.8.0?
+				
 				.put("consumer.timeout.ms", "3000")
 		        .put("auto.commit.interval.ms", "1000")
 		        // Not sure which of these 2 sets is correct, so will list them both!
@@ -202,9 +212,10 @@ public class KafkaUtils {
 		logger.debug("ZOOKEEPER: " + zk);
         
         //reset producer so a new one will be created
-        if ( producer != null )
-        	producer.close();
-        producer = null;
+		if ( producer != null ) {
+			producer.close();
+			producer = null;
+		}    
 	}
 
 	/** Generates a connection string by reading ZooKeeper
@@ -227,11 +238,12 @@ public class KafkaUtils {
 	 * @param zk_connection
 	 * @param broker_list
 	 */
-	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name) {
+	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name, Optional<Map<String,String>> optional_kafka_properties) {
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				.putAll(optional_kafka_properties.orElse(Collections.emptyMap()))
 				.put("metadata.broker.list", broker_list)
 				.put("zookeeper.connect", zk_connection)
-				.put("group.id", cluster_name)
+				.put("group.id", cluster_name)				
 				.build();	
 		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));		
 	}
@@ -271,16 +283,16 @@ public class KafkaUtils {
 				logger.debug("LEADER WAS ELECTED: " + leader_elected);
 				
 				//create a consumer to fix offsets (this is a hack, idk why it doesn't work until we create a consumer)
-				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic);
+				WrappedConsumerIterator iter = new WrappedConsumerIterator(getKafkaConsumer(topic, Optional.empty()), topic, 1);
 				iter.hasNext();
 				
 				//debug info
 				if (logger.isDebugEnabled()) {
-					logger.debug("DONE CREATING TOPIC");
+					logger.error("DONE CREATING TOPIC");
 					//(this was removed in 0.9):
 					//logger.debug(AdminUtils.fetchTopicConfig(zk_client, topic).toString());
 					TopicMetadata meta = AdminUtils.fetchTopicMetadataFromZk(topic, zk_client);
-					logger.debug("META: " + meta);
+					logger.error("META: " + meta);
 				}
 				
 				// (close resources)

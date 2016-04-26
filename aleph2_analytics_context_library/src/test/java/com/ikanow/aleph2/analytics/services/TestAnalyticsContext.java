@@ -1253,6 +1253,7 @@ public class TestAnalyticsContext {
 		// (create topic now)
 		String topic = KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.of("$end"));
 		test_context._distributed_services.createTopic(topic, Optional.empty());
+		Iterator<String> iter = test_context._distributed_services.consumeAs(topic, Optional.empty());		
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
@@ -1276,7 +1277,8 @@ public class TestAnalyticsContext {
 		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
 				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
 	
-		List<String> kafka = Optionals.streamOf(test_context._distributed_services.consumeAs(topic, Optional.empty()), false).collect(Collectors.toList());
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		List<String> kafka = Optionals.streamOf(iter, false).collect(Collectors.toList());
 		assertEquals(first_time ? 1 : 3, kafka.size()); //(second time through the topic exists so all 3 emits work)
 
 		//return Tuples._2T(test_bucket, check_index.getDataService().get());
@@ -1284,7 +1286,7 @@ public class TestAnalyticsContext {
 	}
 
 	@Test
-	public void test_streamingPipeline() throws JsonProcessingException, IOException {
+	public void test_streamingPipeline() throws JsonProcessingException, IOException, InterruptedException {
 		_logger.info("running test_streamingPipeline");
 		
 		final ObjectMapper mapper = BeanTemplateUtils.configureMapper(Optional.empty());
@@ -1375,6 +1377,7 @@ public class TestAnalyticsContext {
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
 		long count = 0;
 		while ( iter.hasNext() ) {
@@ -1386,15 +1389,15 @@ public class TestAnalyticsContext {
 	}
 	
 	@Test
-	public void test_externalEmit() throws JsonProcessingException, IOException {
+	public void test_externalEmit() throws JsonProcessingException, IOException, InterruptedException {
 		test_externalEmit_worker(false);
 	}
 	@Test
-	public void test_externalEmit_testMode() throws JsonProcessingException, IOException {
+	public void test_externalEmit_testMode() throws JsonProcessingException, IOException, InterruptedException {
 		test_externalEmit_worker(true);
 	}
 		
-	public void test_externalEmit_worker(boolean is_test) throws JsonProcessingException, IOException {
+	public void test_externalEmit_worker(boolean is_test) throws JsonProcessingException, IOException, InterruptedException {
 		final MockSecurityService mock_security = (MockSecurityService) _service_context.getSecurityService();
 		
 		// Create some buckets:
@@ -1505,6 +1508,7 @@ public class TestAnalyticsContext {
 			
 			// Start listening
 			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
+			Iterator<String> iter = test_context._distributed_services.consumeAs(listen_topic, Optional.empty());
 			
 			Validation<BasicMessageBean, JsonNode> ret_val_2 =
 					test_context.emitObject(Optional.of(stream_bucket), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream2\"}")), Optional.empty());
@@ -1512,7 +1516,8 @@ public class TestAnalyticsContext {
 			assertTrue("Should work: " + ret_val_2.toString(), ret_val_2.isSuccess());
 
 			//grab message to check actually emitted			
-			Iterator<String> iter = test_context._distributed_services.consumeAs(listen_topic, Optional.empty());
+			Thread.sleep(10000); //wait a few seconds for producers to dump batch
+			
 			long count = 0;			
 			while ( iter.hasNext() ) {
 				String msg = iter.next();
