@@ -348,4 +348,41 @@ public class TestKafkaUtils {
 		}
 		assertEquals(count, num_messages_to_produce);
 	}
+	
+	@Test
+	public void testSpeed() throws InterruptedException {
+		final String topic = "test_speed";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
+		//Thread.sleep(5000);
+		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
+		
+		//have to create consumers before producing
+		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);		
+		
+		long start_time = System.currentTimeMillis();
+		
+		//write something into the topic
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 500000;
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+		
+		long time_to_produce = System.currentTimeMillis()-start_time;
+		
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items
+		
+		long count = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count++;
+		}
+		wrapped_consumer2.close();
+		assertEquals(count, num_messages_to_produce);
+		
+		System.out.println("TEST RESULTS: num_produced: " + num_messages_to_produce + " time: " + time_to_produce + "ms");
+	}
 }

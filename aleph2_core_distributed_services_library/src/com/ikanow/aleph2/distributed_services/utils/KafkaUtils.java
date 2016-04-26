@@ -15,7 +15,6 @@
  *******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,8 +64,7 @@ public class KafkaUtils {
 	private final static Logger logger = LogManager.getLogger();
 	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
 	protected final static Cache<String, Boolean> known_topics = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
-	protected static int producer_pool_index = -1;
-	protected static List<Producer<String,String>> producer_pool = null;
+	protected static Producer<String, String> producer = null;
 	//TODO (ALEPH-12): make my_topics a cached map also
 	
 	/** Creates a new ZK client from the properties
@@ -86,17 +84,11 @@ public class KafkaUtils {
 	 * 
 	 * @return
 	 */
-	public synchronized static Producer<String, String> getKafkaProducer() {	
-		final int num_producers = 25; //TODO make this configurable, probably per topic rather than globally?
-		if ( producer_pool == null ) {
-			producer_pool = new ArrayList<Producer<String,String>>(num_producers);
-			ProducerConfig config = new ProducerConfig(kafka_properties);
-			for ( int i = 0; i < num_producers; i++ ) {
-				producer_pool.add(new Producer<String, String>(config));
-			}
-		}
-		producer_pool_index = (producer_pool_index+1)%num_producers;
-        return producer_pool.get(producer_pool_index);
+	public synchronized static Producer<String, String> getKafkaProducer() {			
+		if ( producer == null ) 
+			producer = new Producer<String, String>(new ProducerConfig(kafka_properties));
+		
+		return producer;
 	}
 	
 	/**
@@ -190,8 +182,8 @@ public class KafkaUtils {
 				.put("request.required.acks", "1")
 				.put("producer.type", "async") 
 				.put("compression.codec", "2")
-				.put("batch.size", "800") 				
-				
+				.put("batch.size", "800") 		//latest version config I think		
+				.put("batch.num.messages", "800") //old version config 0.8.0?
 				
 				.put("consumer.timeout.ms", "3000")
 		        .put("auto.commit.interval.ms", "1000")
@@ -219,12 +211,10 @@ public class KafkaUtils {
 		logger.debug("ZOOKEEPER: " + zk);
         
         //reset producer so a new one will be created
-		if ( producer_pool != null ) {
-			for ( Producer<String, String> producer : producer_pool) 
-				producer.close();
-		}
-		producer_pool = null;
-		producer_pool_index = -1;        
+		if ( producer != null ) {
+			producer.close();
+			producer = null;
+		}    
 	}
 
 	/** Generates a connection string by reading ZooKeeper
