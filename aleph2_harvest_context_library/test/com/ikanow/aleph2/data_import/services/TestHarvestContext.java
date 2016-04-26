@@ -389,7 +389,7 @@ public class TestHarvestContext {
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.left(mapper.readTree(message2)));
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.right(msg3));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.right(msg4));
-		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
