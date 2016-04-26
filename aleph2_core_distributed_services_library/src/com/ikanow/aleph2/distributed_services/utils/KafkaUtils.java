@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -237,11 +238,12 @@ public class KafkaUtils {
 	 * @param zk_connection
 	 * @param broker_list
 	 */
-	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name) {
+	public static void setStandardKafkaProperties(final String zk_connection, final String broker_list, final String cluster_name, Optional<Map<String,String>> optional_kafka_properties) {
 		final Map<String, Object> config_map_kafka = ImmutableMap.<String, Object>builder()
+				.putAll(optional_kafka_properties.orElse(Collections.emptyMap()))
 				.put("metadata.broker.list", broker_list)
 				.put("zookeeper.connect", zk_connection)
-				.put("group.id", cluster_name)
+				.put("group.id", cluster_name)				
 				.build();	
 		KafkaUtils.setProperties(ConfigFactory.parseMap(config_map_kafka));		
 	}

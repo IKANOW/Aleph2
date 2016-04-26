@@ -132,7 +132,8 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		if (null != config_bean.broker_list()) {
 			final String broker_list_string = config_bean.broker_list();
 			KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list_string, 
-					Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
+					Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME),
+					Optional.empty());			
 			_initialized_kafka = new CompletableFuture<>();
 			_initialized_kafka.complete(null);
 			_initializing_kafka = false;
@@ -143,14 +144,16 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 				try {
 					final String broker_list = KafkaUtils.getBrokerListFromZookeeper(this.getCuratorFramework(), Optional.empty(), _mapper);
 					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), broker_list,										
-							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
+							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME),
+							Optional.empty());			
 					logger.info("Kafka broker_list=" + broker_list);
 					
 					_kafka_zk_framework.set(KafkaUtils.getNewZkClient());
 				}
 				catch (Exception e) { // just use the default and hope:
 					KafkaUtils.setStandardKafkaProperties(_config_bean.zookeeper_connection(), DistributedServicesPropertyBean.__DEFAULT_BROKER_LIST,
-							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME));			
+							Optional.ofNullable(_config_bean.cluster_name()).orElse(DistributedServicesPropertyBean.__DEFAULT_CLUSTER_NAME),
+							Optional.empty());			
 				}
 				_initializing_kafka = false;
 			});
