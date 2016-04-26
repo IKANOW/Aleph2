@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.Patterns;
 
 /** A handy centralized supply of implementations of IBatchRecord
  * @author Alex
@@ -83,6 +84,20 @@ public class BatchRecordUtils {
 		 * @see com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord#getContent()
 		 */
 		public Optional<ByteArrayOutputStream> getContent() { return Optional.ofNullable(_content); }
+	
+		/* (non-Javadoc)
+		 * @see java.lang.Object#hashCode()
+		 */
+		@Override
+		public int hashCode() { return _json.hashCode(); }
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#equals(java.lang.Object)
+		 */
+		@Override
+		public boolean equals(Object other) {
+			return isEquals(_json, _content, other);
+		}
 		
 		protected JsonNode _json; 
 		protected ByteArrayOutputStream _content;
@@ -139,6 +154,20 @@ public class BatchRecordUtils {
 		 */
 		public Optional<ByteArrayOutputStream> getContent() { return Optional.empty(); }
 		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#hashCode()
+		 */
+		@Override
+		public int hashCode() { return _json.hashCode(); }
+		
+		/* (non-Javadoc)
+		 * @see java.lang.Object#equals(java.lang.Object)
+		 */
+		@Override
+		public boolean equals(Object other) {
+			return isEquals(_json, null, other);
+		}
+		
 		protected JsonNode _json; 
 	}
 	
@@ -155,5 +184,23 @@ public class BatchRecordUtils {
 		public boolean injected() { return true; }		
 	}
 	
-
+	//////////////////////////////////////////////////////////////////////
+	
+	// UTILS
+	
+	/** Pattern match to check equality between the different Json containers
+	 * @param json
+	 * @param content
+	 * @param o2
+	 * @return
+	 */
+	protected static boolean isEquals(JsonNode json, ByteArrayOutputStream content, Object o2) {
+		return Patterns.match(o2).<Boolean>andReturn()
+				.when(j -> null == j, __ -> false)
+				.when(BatchRecord.class, j -> json.equals(j._json) && (null == content) && (null == j._content))
+				.when(JsonBatchRecord.class, j -> json.equals(j._json) && (null == content))
+				.otherwise(() -> false);
+		
+	}
+	
 }
