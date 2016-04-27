@@ -84,6 +84,10 @@ public class EnrichmentControlMetadataBean implements Serializable {
 	public String name() {
 		return name;
 	}
+	
+	public static final String PREVIOUS_STEP_DEPENDENCY = "$previous";
+	public static final String PREVIOUS_STEP_ALL_INPUTS = "$inputs";
+	
 	/** Defines the dependency order of enrichment - this can be used by the framework to optimize runtime
 	 * @return the dependencies
 	 */
