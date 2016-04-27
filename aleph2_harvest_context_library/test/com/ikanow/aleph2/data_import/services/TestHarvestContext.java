@@ -385,15 +385,17 @@ public class TestHarvestContext {
 		test_context.setBucket(bucket);
 		assertEquals(bucket, test_context.getBucket().get());
 		
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()), Optional.empty());
+		
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.left(mapper.readTree(message1)));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.left(mapper.readTree(message2)));
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.right(msg3));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.right(msg4));
-		Thread.sleep(10000); //wait a few seconds for producers to dump batch
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		final HashSet<String> mutable_set = new HashSet<>(Arrays.asList(message1, message2, message3, message4));
 		
 		//nothing will be in consume
-		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()), Optional.empty());
+		
 		long count = 0;
 		while ( iter.hasNext() ) {
 			String msg = iter.next();
