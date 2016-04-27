@@ -1354,6 +1354,8 @@ public class TestAnalyticsContext {
 		catch (Exception e) {}
 		test_context.setBucket(test_bucket);
 		assertEquals(test_bucket, test_context.getBucket().get());
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.left(mapper.readTree(message1)), Optional.empty());
 		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), analytic_job1, Either.left(mapper.readTree(message2)), Optional.empty());
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.right(msg3), Optional.empty());
@@ -1378,7 +1380,7 @@ public class TestAnalyticsContext {
 		
 		//nothing will be in consume
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
-		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		
 		long count = 0;
 		while ( iter.hasNext() ) {
 			String msg = iter.next();
