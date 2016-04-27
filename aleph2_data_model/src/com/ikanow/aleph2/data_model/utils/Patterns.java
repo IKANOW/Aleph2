@@ -89,7 +89,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> Matcher<R, G> when(final Class<P> clazz, final Function<P, R> expression) {
-			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
+			if (!_r_set && (null != _g) && clazz.isAssignableFrom(_g.getClass())) {
 				_r = expression.apply(clazz.cast(_g));
 				_r_set = true;
 			}
@@ -101,7 +101,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> Matcher<R, G> when(final Class<P> clazz, final Supplier<R> expression) {
-			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
+			if (!_r_set && (null != _g) && clazz.isAssignableFrom(_g.getClass())) {
 				_r = expression.get();
 				_r_set = true;
 			}
@@ -115,7 +115,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> Matcher<R, G> when(final Class<P> clazz, final Predicate<P> predicate, final Function<P, R> expression) {
-			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
+			if (!_r_set && (null != _g) && clazz.isAssignableFrom(_g.getClass())) {
 				P p = clazz.cast(_g);
 				if (predicate.test(p)) {
 					_r = expression.apply(p);
@@ -131,7 +131,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> Matcher<R, G> when(final Class<P> clazz, final Supplier<Boolean> predicate, final Supplier<R> expression) {
-			if (!_r_set && clazz.isAssignableFrom(_g.getClass())) {
+			if (!_r_set && (null != _g) && clazz.isAssignableFrom(_g.getClass())) {
 				if (predicate.get()) {
 					_r = expression.get();
 					_r_set = true;
@@ -234,7 +234,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> ActionMatcher<G> when(final Class<P> clazz, final Consumer<P> expression) {
-			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
+			if ((!_r_set || _allow_multiple) && ((null != _g) && clazz.isAssignableFrom(_g.getClass()))) {
 				expression.accept(clazz.cast(_g));
 				_r_set = true;
 			}
@@ -246,7 +246,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> ActionMatcher<G> when(final Class<P> clazz, final Runnable expression) {
-			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
+			if ((!_r_set || _allow_multiple) && ((null != _g) && clazz.isAssignableFrom(_g.getClass()))) {
 				expression.run();
 				_r_set = true;
 			}
@@ -259,7 +259,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> ActionMatcher<G> when(final Class<P> clazz, final Predicate<P> predicate, final Consumer<P> expression) {
-			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
+			if ((!_r_set || _allow_multiple) && ((null != _g) && clazz.isAssignableFrom(_g.getClass()))) {
 				P p = clazz.cast(_g);
 				if (predicate.test(p)) {
 					expression.accept(p);
@@ -275,7 +275,7 @@ public class Patterns {
 		 * @return Matching utility
 		 */
 		public <P> ActionMatcher<G> when(final Class<P> clazz, final Supplier<Boolean> predicate, final Runnable expression) {
-			if ((!_r_set || _allow_multiple) && (clazz.isAssignableFrom(_g.getClass()))) {
+			if ((!_r_set || _allow_multiple) && ((null != _g) && clazz.isAssignableFrom(_g.getClass()))) {
 				if (predicate.get()) {
 					expression.run();
 					_r_set = true;
