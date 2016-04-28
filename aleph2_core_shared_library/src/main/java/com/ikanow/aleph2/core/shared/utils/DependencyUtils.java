@@ -60,18 +60,23 @@ public class DependencyUtils {
 
 	// PUBLIC API
 	
-	//TODO: do need the list of inputs, and do need to add $inputs 
-	
 	/** Breaks the list of enrichment elements into containers that need to be separated by expensive serialization/distribution boundaries
 	 * @param in
 	 * @return
 	 */
-	public static Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> buildPipelineOfContainers(final List<EnrichmentControlMetadataBean> in) {
+	public static Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> buildPipelineOfContainers(final Collection<String> inputs, final List<EnrichmentControlMetadataBean> in) {
 		
 		final List<EnrichmentControlMetadataBean> tidy = tidyUpEnrichmentPipeline(in);
 
-		//(note that the inputs will sort themselves out if referenced, so I can just pass in an empty set here)
-		return generateOrder(createDependencyGraph(Collections.emptySet(), tidy))
+		// Create a set of all the available inputs that are also referenced in the enrichment pipeline
+		final Set<String> refd_inputs = tidy.stream().flatMap(e -> e.dependencies().stream()).collect(Collectors.toSet());
+		final Collection<String> filtered_inputs =
+				Stream.concat(inputs.stream(), Stream.of(EnrichmentControlMetadataBean.PREVIOUS_STEP_ALL_INPUTS))
+						.filter(i -> refd_inputs.contains(i))
+						.collect(Collectors.toSet())
+						;
+		
+		return generateOrder(createDependencyGraph(filtered_inputs, tidy))
 				.<LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>>map(dep_graph -> 
 						buildPipelineOfContainers(
 							dep_graph,
@@ -125,6 +130,7 @@ public class DependencyUtils {
 	 */
 	protected static LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>> buildPipelineOfContainers(final List<Node> ordered_pipeline, final Map<String, EnrichmentControlMetadataBean> pipeline_elements)
 	{
+		final LinkedHashMap<String, Node> node_lookup = ordered_pipeline.stream().collect(Collectors.toMap(v -> v.name, v -> v, (a1, a2) -> a1, () -> new LinkedHashMap<>()));
 		return ordered_pipeline.stream()
 			.reduce(
 					new LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>(),
@@ -140,6 +146,7 @@ public class DependencyUtils {
 								}
 							}))
 							.map(curr_state -> {
+								
 								// OK here's some other cases (in addition to "fan in" above) where we need to create a new container:
 								// 0) the current container is an input
 								if (curr_state._1().isEmpty()) {
@@ -149,8 +156,12 @@ public class DependencyUtils {
 								else if (Optionals.ofNullable(enricher.grouping_fields()).size() > 0) {
 									return null;
 								}
-								// 2) I have fan out
-								else if (Optionals.ofNullable(v.outEdges).size() > 1) {
+								// 2) I am one of the forks of a fan out (the fan out node itself is the last element)								
+								else if (Lambdas.get(() -> {
+									final String sole_dep = enricher.dependencies().get(0); // exists by construction)
+									final Optional<Node> maybe_parent_node = Optional.ofNullable(node_lookup.get(sole_dep)); // (exists by construction)
+									return maybe_parent_node.map(parent_node -> parent_node.numOutEdges > 1).orElse(true);
+								})) {
 									return null;
 								}
 								else return curr_state;
@@ -220,6 +231,23 @@ public class DependencyUtils {
 			._2()
 			.toJavaList()
 		;
+		
+		// (NOTE: this is equivalent to:)
+		// ie applying the "event" State via the flatMap modifies the state, whereas the "event.map" modifies the result (by combining with the output from the current_state)
+		// (so if you had a giant stream with relatively few outputs, eg as determined by an optional, then this would allow you to minimize memory)
+//		actions.toJavaList().stream().reduce(
+//				State.<Map<String, Node>, List<Node>>constant((List<Node>) new LinkedList<Node>()), //(starting _output_)
+//				(curr_state, event) -> curr_state.flatMap(curr_state_result -> event.map(event_result -> {
+//					curr_state_result.add(event_result);
+//					return curr_state_result;
+//				}))
+//				,
+//				(acc1, acc2) -> acc1
+//				)
+//				.run(new HashMap<>())  //(starting _state_)
+//				//(etc)
+//				;
+		
 	}
 	
 	/////////////////////
@@ -237,6 +265,7 @@ public class DependencyUtils {
 		//S <- Set of all nodes with no incoming edges
 		HashSet<Node> S = new HashSet<Node>(); 
 		for(Node n : mutable_in){
+			n.numOutEdges = n.outEdges.size(); // (store this so can use it later...)
 			if(n.inEdges.size() == 0){
 				S.add(n);
 			}
@@ -283,9 +312,10 @@ public class DependencyUtils {
 	}
 
 	protected static class Node{
-		public final String name;
-		public final HashSet<Edge> inEdges;
-		public final HashSet<Edge> outEdges;
+		public final String name; //(invariant)
+		public int numOutEdges; //(invariant once set)
+		public final HashSet<Edge> inEdges; //(mutable)
+		public final HashSet<Edge> outEdges; //(mutable)
 		public Node(String name) {
 			this.name = name;
 			inEdges = new HashSet<Edge>();

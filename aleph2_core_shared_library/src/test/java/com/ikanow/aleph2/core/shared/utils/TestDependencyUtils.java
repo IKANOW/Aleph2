@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,6 +33,7 @@ import com.ikanow.aleph2.core.shared.utils.DependencyUtils.Edge;
 import com.ikanow.aleph2.core.shared.utils.DependencyUtils.Node;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 import fj.data.Validation;
 
@@ -89,12 +91,100 @@ public class TestDependencyUtils {
 		final LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>> containers = 
 				DependencyUtils.buildPipelineOfContainers(res.success(), fixed_enrichers.stream().collect(Collectors.toMap(e->e.name(), e->e)));
 		
-		//TODO: assert
 		
-		//TODO: test top level method
+		final LinkedHashMap<String, Tuple2<Set<String>, Set<Map<String, Object>>>> displayable_containers = 
+				containers.entrySet().stream()
+					.collect(Collectors.toMap(
+							kv -> kv.getKey(), 
+							kv -> Tuples._2T(kv.getValue()._1(), kv.getValue()._2().stream().map(e -> BeanTemplateUtils.toMap(e)).collect(Collectors.toSet())),
+							(v1, v2) -> v1,
+							() -> new LinkedHashMap<String, Tuple2<Set<String>, Set<Map<String, Object>>>>()
+							));
 		
+		assertEquals("{$inputs=([],[]), test_in1=([],[]), test_in2=([],[]), test_e4=([$inputs],[{name=test_e4, dependencies=[$inputs]}]), test_e1=([test_in1],[{name=test_e1, dependencies=[test_in1]}]), test_e2=([test_e1, $inputs],[{name=test_e2, dependencies=[test_e1, $inputs]}]), test_e3=([test_e2, test_in2, test_e4],[{name=test_e3, dependencies=[test_e2, test_in2, test_e4]}])}",
+				displayable_containers.toString()
+				);
+		
+		final Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> containers_end2end = 
+				DependencyUtils.buildPipelineOfContainers(ImmutableSet.of("test_in1", "test_in2"), enrichers);
+		
+		assertTrue(containers_end2end.isSuccess());
+
+		final LinkedHashMap<String, Tuple2<Set<String>, Set<Map<String, Object>>>> displayable_containers_end2end = 
+				containers_end2end.success().entrySet().stream()
+					.collect(Collectors.toMap(
+							kv -> kv.getKey(), 
+							kv -> Tuples._2T(kv.getValue()._1(), kv.getValue()._2().stream().map(e -> BeanTemplateUtils.toMap(e)).collect(Collectors.toSet())),
+							(v1, v2) -> v1,
+							() -> new LinkedHashMap<String, Tuple2<Set<String>, Set<Map<String, Object>>>>()
+							));
+		
+		assertEquals(displayable_containers.toString(), displayable_containers_end2end.toString());
+	}
+	
+	@Test
+	public void test_buildPipelineOfContainers() {
+		
+		// Similar to above but focusing on coverage instead of black box testing of the components
+		
+		final List<EnrichmentControlMetadataBean> enrichers = Arrays.asList(
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e1")
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e2")
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("$previous"))
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e3")
+					.with(EnrichmentControlMetadataBean::grouping_fields, Arrays.asList("?"))
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("$previous"))
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e4")
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("$previous"))
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e5")
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("$previous"))
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e6")
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("e5"))
+				.done().get()
+				,
+				BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "e7")
+					.with(EnrichmentControlMetadataBean::dependencies, Arrays.asList("e5"))
+				.done().get()
+				);
+		
+		final Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> containers_end2end = 
+				DependencyUtils.buildPipelineOfContainers(ImmutableSet.of("test_in1", "test_in2"), enrichers);
+		
+		assertTrue(containers_end2end.isSuccess());
+
+		final String displayable_containers_end2end = 
+				containers_end2end.success().values().stream().distinct()
+							.map(v -> Tuples._2T(v._1(), v._2().stream().map(e -> BeanTemplateUtils.toMap(e)).collect(Collectors.toList())))
+							.map(t2 -> t2.toString())
+							.collect(Collectors.joining(" // "))
+							;
+
 		/**/
-		System.out.println(containers);
+		System.out.println(displayable_containers_end2end);
+
+		assertEquals(5, containers_end2end.success().values().stream().distinct().count());
+		
+		final String expected =
+				"([],[]) // ([$inputs],[{name=e1, dependencies=[$inputs]}, {name=e2, dependencies=[e1]}]) // ([e2],[{name=e3, dependencies=[e2], grouping_fields=[?]}, {name=e4, dependencies=[e3]}, {name=e5, dependencies=[e4]}]) // ([e5],[{name=e6, dependencies=[e5]}]) // ([e5],[{name=e7, dependencies=[e5]}])";
+
+		assertEquals(expected, displayable_containers_end2end);
 	}
 	
 	//////////////////////////////////////////////
