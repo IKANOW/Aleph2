@@ -145,6 +145,42 @@ public class TestKafkaUtils {
 		assertEquals(count, num_messages_to_produce);
 	}
 	
+	/**
+	 * Some systems were holding on to one consumer and checking hasNext perioidically.  This test
+	 * ensures that if you check hasNext and it returns false (because there are no items in the queue)
+	 * that the connection stays active and you can check it again later.
+	 * 
+	 * @throws InterruptedException
+	 */
+	@Test
+	public void testConsumerEmptyHasNext() throws InterruptedException {
+		final String topic = "test_consumer_sleep";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);
+		
+		//create a consumer
+		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic);
+		
+		wrapped_consumer1.hasNext();
+		
+		//produce something
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		producer.send(new KeyedMessage<String, String>(topic, "asdfsa"));
+		//check if it exists
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		long count = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count++;
+		}
+		wrapped_consumer1.close();
+		assertEquals(count, 1);
+		
+		
+	}
+	
 	@Test
 	public void testProduceConsumeSecondTopic() throws InterruptedException {
 		final String topic1 = "test_produce_consume1";

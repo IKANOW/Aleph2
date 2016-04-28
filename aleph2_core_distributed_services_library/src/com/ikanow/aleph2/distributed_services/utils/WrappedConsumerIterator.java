@@ -110,7 +110,6 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 					return iterator.hasNext();
 				} catch (Exception e) {
 					logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
-					close();
 					return false;
 				}	
 			}
@@ -121,7 +120,6 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 				executor.awaitTermination(force_timeout_ms, TimeUnit.MILLISECONDS);				
 			} catch (Exception ex) {
 				logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", ex);
-				close();
 				return false;
 			} finally {
 				executor.shutdownNow();
@@ -131,7 +129,6 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 			return future.get();
 		} catch (InterruptedException | ExecutionException e) {
 			logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
-			close();
 			return false;
 		}		
 	}
@@ -142,6 +139,7 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 */
 	@Override
 	public void close() {
+		System.out.println("Consumer for topic: " + topic + " was told to close");
 		if ( consumer != null )
 			consumer.shutdown();
 	}
