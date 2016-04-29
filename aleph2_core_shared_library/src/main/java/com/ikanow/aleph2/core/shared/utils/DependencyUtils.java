@@ -64,7 +64,7 @@ public class DependencyUtils {
 	 * @param in
 	 * @return
 	 */
-	public static Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> buildPipelineOfContainers(final Collection<String> inputs, final List<EnrichmentControlMetadataBean> in) {
+	public static Validation<String, LinkedHashMap<String, Tuple2<Set<String>, List<EnrichmentControlMetadataBean>>>> buildPipelineOfContainers(final Collection<String> inputs, final Collection<EnrichmentControlMetadataBean> in) {
 		
 		final List<EnrichmentControlMetadataBean> tidy = tidyUpEnrichmentPipeline(in);
 
@@ -90,7 +90,7 @@ public class DependencyUtils {
 	 * @param in the list of beans
 	 * @return
 	 */
-	public static List<EnrichmentControlMetadataBean> tidyUpEnrichmentPipeline(final List<EnrichmentControlMetadataBean> in) {
+	public static List<EnrichmentControlMetadataBean> tidyUpEnrichmentPipeline(final Collection<EnrichmentControlMetadataBean> in) {
 		
 		// Build a stream of previous/next, starting at (null, first)
 		return StreamUtils.<Tuple3<EnrichmentControlMetadataBean, EnrichmentControlMetadataBean, Iterator<EnrichmentControlMetadataBean>>>
