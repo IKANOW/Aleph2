@@ -384,4 +384,69 @@ public class TestKafkaUtils {
 		}
 		assertEquals(count, num_messages_to_produce);
 	}
+	
+	/**
+	 * Tests creating a second consumer pointed at a topic (w/o closing the first).  Will only
+	 * work if both have different names.
+	 * @throws InterruptedException 
+	 * 
+	 */
+	@SuppressWarnings("resource")
+	@Test
+	public void testTwoConsumerSameTopic() throws InterruptedException {
+		final String topic = "test_produce_consume";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
+		//Thread.sleep(10000);
+		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
+		
+		//CONSUMER 1 - PRODUCE A MESSAGE AND MAKE SURE IT GETS IT
+		
+		//have to create consumers before producing
+		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c1"));
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic, 2000);		
+		
+		//write something into the topic
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5;
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+		
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items
+		
+		long count = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count++;
+		}
+		assertEquals(count, num_messages_to_produce);
+		
+		//CONSUMER 2 - Now create a consumer pointed at same topic, produce a message, make sure consumer 2 gets it
+		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c2"));
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);		
+
+		//write something into the topic
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+		
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items	
+		
+		long count2 = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count2++;
+		}
+		long count1 = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count1++;
+		}
+		
+		assertEquals(count1, 0); //old consumer can no longer read
+		assertEquals(count2, num_messages_to_produce); //new consumer gets all the results
+	}
 }
