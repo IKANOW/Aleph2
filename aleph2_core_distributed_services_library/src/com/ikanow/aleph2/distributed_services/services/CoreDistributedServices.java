@@ -30,15 +30,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
 import kafka.utils.ZkUtils;
 
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -471,7 +471,7 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 		final Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		
 		logger.debug("SENDING");
-		producer.send(new KeyedMessage<String, String>(topic, message));
+		producer.send(new ProducerRecord<String, String>(topic, message));
 		
 		logger.debug("DONE SENDING");
 	}
@@ -480,12 +480,12 @@ public class CoreDistributedServices implements ICoreDistributedServices, IExtra
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#consume(java.lang.String)
 	 */
 	@Override
-	public Iterator<String> consumeAs(String topic, Optional<String> consumer_name) {
+	public Iterator<String> consumeAs(String topic, Optional<String> from, Optional<String> consumer_name) {
 		if (_initializing_kafka) { //(wait for async to complete)
 			_initialized_kafka.join();
 		}		
 		logger.debug("CONSUMING");
-		final ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, consumer_name);
+		final KafkaConsumer<String, String> consumer = KafkaUtils.getKafkaConsumer(topic, from, consumer_name);
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 

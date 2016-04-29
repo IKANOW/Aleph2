@@ -166,6 +166,7 @@ public class NoCoreDistributedServices implements ICoreDistributedServices {
 	 */
 	@Override
 	public Iterator<String> consumeAs(String topic,
+			Optional<String> from,
 			Optional<String> consumer_name) {
 		return null;
 	}

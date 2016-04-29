@@ -180,7 +180,7 @@ public class TestCoreDistributedServices {
 		final int num_to_test = 10;
 		
 		//grab the consumer
-		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());		
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty(), Optional.empty());		
 		
 		//throw items on the queue				
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val1\",\"keyB\":\"val2\",\"keyC\":\"val3\"}");
@@ -225,7 +225,7 @@ public class TestCoreDistributedServices {
 		final int num_to_test = 100; //set this high enough to hit the concurrent connection limit just incase we messed something up
 		
 		//grab the consumer		
-		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty());
+		Iterator<String> consumer = _core_distributed_services.consumeAs(TOPIC_NAME, Optional.empty(), Optional.empty());
 		
 		//throw items on the queue		
 		JsonNode jsonNode = new ObjectMapper().readTree("{\"keyA\":\"val21\",\"keyB\":\"val22\",\"keyC\":\"val23\"}");

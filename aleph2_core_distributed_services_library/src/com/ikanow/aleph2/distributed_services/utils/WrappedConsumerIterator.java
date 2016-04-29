@@ -16,23 +16,12 @@
 package com.ikanow.aleph2.distributed_services.utils;
 
 import java.io.Closeable;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.message.MessageAndMetadata;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 /**
  * Wrapper around a kafka consumer iterator for ease of use, returns Strings
@@ -43,11 +32,12 @@ import kafka.message.MessageAndMetadata;
  */
 public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 
-	final protected ConsumerConnector consumer;
+	final protected KafkaConsumer<String,String> consumer;
 	final protected String topic;	
 	final protected long force_timeout_ms;
-	final protected Iterator<MessageAndMetadata<byte[], byte[]>> iterator;
-	final private static Logger logger = LogManager.getLogger();
+//	final private static Logger logger = LogManager.getLogger();
+	private static final long DEFAULT_TIMEOUT_MS = 2000;
+	protected List<ConsumerRecord<String, String>> curr_record_set = new ArrayList<ConsumerRecord<String,String>>();
 	
 	/**
 	 * Takes a consumer and the topic name, retrieves the stream of results and
@@ -56,21 +46,15 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 * @param consumer
 	 * @param topic
 	 */
-	public WrappedConsumerIterator(final ConsumerConnector consumer, final String topic ) {
-		this(consumer, topic, 0);
+	public WrappedConsumerIterator(final KafkaConsumer<String,String> consumer, final String topic ) {
+		this(consumer, topic, DEFAULT_TIMEOUT_MS);
 	}
 	
-	public WrappedConsumerIterator(final ConsumerConnector consumer, final String topic, final long force_timeout_ms) {
+	public WrappedConsumerIterator(final KafkaConsumer<String,String> consumer, final String topic, final long force_timeout_ms) {
 		this.consumer = consumer;
 		this.topic = topic;
 		this.force_timeout_ms = force_timeout_ms;
-		Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
-        topicCountMap.put(topic, 1);
-        final Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap = consumer.createMessageStreams(topicCountMap);
-        final List<KafkaStream<byte[], byte[]>> streams = consumerMap.get(topic);
-        final KafkaStream<byte[], byte[]> stream = streams.get(0);
-        this.iterator = stream.iterator();       
-        
+		getNextRecordSet(0); //initialize by forcing a poll call to occur (ugh)        
 	}
 	
 	/**
@@ -79,15 +63,9 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 */
 	@Override
 	public String next() {
-		try {
-			MessageAndMetadata<byte[], byte[]> next_message = iterator.next();
-			if ( next_message != null )
-				return new String(next_message.message());
+		if ( curr_record_set.isEmpty())
 			return null;
-		} catch (Exception e) {
-			close();
-			return null;
-		}
+		return curr_record_set.remove(0).value();
 	}
 	
 	/**
@@ -102,35 +80,21 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	 */
 	@Override
 	public boolean hasNext() {
-		final ExecutorService executor = Executors.newSingleThreadExecutor();
-		Future<Boolean> future = executor.submit(new Callable<Boolean>() {
-			@Override
-			public Boolean call() throws Exception {
-				try {
-					return iterator.hasNext();
-				} catch (Exception e) {
-					logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
-					return false;
-				}	
-			}
-		});
-		executor.shutdown();
-		if ( force_timeout_ms > 0 ) {
-			try {
-				executor.awaitTermination(force_timeout_ms, TimeUnit.MILLISECONDS);				
-			} catch (Exception ex) {
-				logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", ex);
-				return false;
-			} finally {
-				executor.shutdownNow();
-			}
+		//if we have records left in buffer, just bail out quickly
+		if ( !curr_record_set.isEmpty() )
+			return true;
+		
+		//otherwise try to get more records
+		getNextRecordSet(force_timeout_ms);
+		return curr_record_set.size() > 0;
+	}
+	
+	private void getNextRecordSet(long timeout_ms) {
+		ConsumerRecords<String, String> records = consumer.poll(timeout_ms);
+		for ( ConsumerRecord<String, String> record : records) {
+			curr_record_set.add(record);
 		}
-		try {
-			return future.get();
-		} catch (InterruptedException | ExecutionException e) {
-			logger.debug("Topic iterator exceptioned (typically because no item was found in timeout period), this is set in KafkaUtils via consumer.timeout.ms", e);
-			return false;
-		}		
+		consumer.commitSync();
 	}
 	
 	/**
@@ -141,7 +105,7 @@ public class WrappedConsumerIterator implements Closeable, Iterator<String> {
 	public void close() {
 		System.out.println("Consumer for topic: " + topic + " was told to close");
 		if ( consumer != null )
-			consumer.shutdown();
+			consumer.close();
 	}
 
 }

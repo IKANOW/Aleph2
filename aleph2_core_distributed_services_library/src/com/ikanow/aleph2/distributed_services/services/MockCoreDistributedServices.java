@@ -25,15 +25,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
 import kafka.utils.ZkUtils;
+
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -253,7 +254,7 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 		logger.debug("PRODUCING");
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();	
 		logger.debug("SENDING");
-		producer.send(new KeyedMessage<String, String>(topic, message));
+		producer.send(new ProducerRecord<String, String>(topic, message));
 		logger.debug("DONE SENDING");
 	}
 	
@@ -261,10 +262,10 @@ public class MockCoreDistributedServices implements ICoreDistributedServices, IE
 	 * @see com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices#consume(java.lang.String)
 	 */
 	@Override
-	public Iterator<String> consumeAs(String topic, Optional<String> consumer_name) {
+	public Iterator<String> consumeAs(String topic, Optional<String> from, Optional<String> consumer_name) {
 		setupKafka();
 		logger.debug("CONSUMING");
-		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, consumer_name);
+		KafkaConsumer<String, String> consumer = KafkaUtils.getKafkaConsumer(topic, from, consumer_name);
 		return new WrappedConsumerIterator(consumer, topic);
 	}
 	

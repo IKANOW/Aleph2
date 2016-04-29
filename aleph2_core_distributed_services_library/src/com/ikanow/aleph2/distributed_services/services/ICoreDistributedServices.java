@@ -146,6 +146,6 @@ public interface ICoreDistributedServices extends IUnderlyingService {
 	 * @param topic - the name of the message queue, eg for buckets will usually be KafkaUtils.bucketNameToKafkaTopic(bucket.full_name)
 	 * @return an iterator of Strings, typically representing JSON stringd
 	 */
-	Iterator<String> consumeAs(String topic, Optional<String> consumer_name);
+	Iterator<String> consumeAs(String topic, Optional<String> from, Optional<String> consumer_name);
 	
 }

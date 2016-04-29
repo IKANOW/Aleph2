@@ -19,11 +19,11 @@ import static org.junit.Assert.*;
 
 import java.util.Optional;
 
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.KeyedMessage;
 import kafka.utils.ZkUtils;
 
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -123,14 +123,15 @@ public class TestKafkaUtils {
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		
 		//have to create consumers before producing
-		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
 		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);		
 		
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 5;
 		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+//			producer.send(new ProducerRecord<String, String>(topic, "test"));		
 		
 		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
@@ -154,19 +155,19 @@ public class TestKafkaUtils {
 	 */
 	@Test
 	public void testConsumerEmptyHasNext() throws InterruptedException {
-		final String topic = "test_consumer_sleep";
+		final String topic = "testConsumerEmptyHasNext";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);
 		
 		//create a consumer
-		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
 		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic);
 		
 		wrapped_consumer1.hasNext();
 		
 		//produce something
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
-		producer.send(new KeyedMessage<String, String>(topic, "asdfsa"));
+		producer.send(new ProducerRecord<String, String>(topic, "asdfsa"));
 		//check if it exists
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
@@ -181,8 +182,64 @@ public class TestKafkaUtils {
 		
 	}
 	
+	/**
+	 * Creates 2 topics, 2 consumers w/ diff groupnames, then produce/consume on both topics.
+	 * Should be able to receive all messages because they have diff names and are pointed at different topics.
+	 * @throws InterruptedException
+	 */
 	@Test
-	public void testProduceConsumeSecondTopic() throws InterruptedException {
+	public void testProduceConsumeTwoTopicDiffGroups() throws InterruptedException {
+		final String topic1 = "test_produce_consume1";
+		final String topic2 = "test_produce_consume2";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic1, Optional.empty(), zk_client);		
+		KafkaUtils.createTopic(topic2, Optional.empty(), zk_client);
+		assertTrue(KafkaUtils.doesTopicExist(topic1, zk_client));
+		assertTrue(KafkaUtils.doesTopicExist(topic2, zk_client));
+		
+		//have to create consumers before producing
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.of("g1"));
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic1, 2000);		
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic2, Optional.of("g2"));
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic2, 2000);
+		
+		
+		//write something into the topic		
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5;
+		for (long i = 0; i < num_messages_to_produce; i++) {
+			producer.send(new ProducerRecord<String, String>(topic1, "test1"));
+			producer.send(new ProducerRecord<String, String>(topic2, "test2"));
+		}
+		
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items from topic1			
+		long count = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count++;
+		}
+		wrapped_consumer1.close();
+		assertEquals(count, num_messages_to_produce);
+		
+		//see if we can read that items from topic2	
+		count = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count++;
+		}
+		wrapped_consumer2.close();
+		assertEquals(count, num_messages_to_produce);
+	}
+	
+	/**
+	 * Create 2 topics, 2 consumers w/ the same group name, then produce/consume on both topics.
+	 * Should be able to receive all messages because they are pointed at different topics.
+	 * @throws InterruptedException
+	 */
+	@Test
+	public void testProduceConsumeTwoTopicSameGroups() throws InterruptedException {
 		final String topic1 = "test_produce_consume1";
 		final String topic2 = "test_produce_consume2";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
@@ -193,23 +250,23 @@ public class TestKafkaUtils {
 		assertTrue(KafkaUtils.doesTopicExist(topic2, zk_client));
 		
 		//have to create consumers before producing
-		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty());
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty()); //defaults to aleph2_unknown
 		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic1, 2000);		
-		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic2, Optional.empty());
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic2, Optional.empty()); //defaults to aleph2_unknown
 		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic2, 2000);
 		
 		
-		//write something into the topic
+		//write something into the topic		
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 5;
 		for (long i = 0; i < num_messages_to_produce; i++) {
-			producer.send(new KeyedMessage<String, String>(topic1, "test1"));
-			producer.send(new KeyedMessage<String, String>(topic2, "test2"));
+			producer.send(new ProducerRecord<String, String>(topic1, "test1"));
+			producer.send(new ProducerRecord<String, String>(topic2, "test2"));
 		}
 		
 		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
-		//see if we can read that items from topic1				
+		//see if we can read that items from topic1			
 		long count = 0;
 		while ( wrapped_consumer1.hasNext() ) {
 			wrapped_consumer1.next();
@@ -218,8 +275,7 @@ public class TestKafkaUtils {
 		wrapped_consumer1.close();
 		assertEquals(count, num_messages_to_produce);
 		
-		//see if we can read that items from topic2
-				
+		//see if we can read that items from topic2	
 		count = 0;
 		while ( wrapped_consumer2.hasNext() ) {
 			wrapped_consumer2.next();
@@ -228,6 +284,62 @@ public class TestKafkaUtils {
 		wrapped_consumer2.close();
 		assertEquals(count, num_messages_to_produce);
 	}
+	
+	/**
+	 * Set 2 topics up and 2 consumers pointed to that topic (w/ same groupname).
+	 * They should each get part of the produced messages (have to go above the batch limit to get
+	 * data to both).
+	 * 
+	 * @throws InterruptedException
+	 */
+	@Ignore //this test is ignored currently because we don't allow partitioning, so the 2nd consumer will never get anything
+	@Test
+	public void testProduceConsumeOneTopicSameGroups() throws InterruptedException {
+		final String topic1 = "test_produce_consume1";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic1, Optional.empty(), zk_client);	
+		//Thread.sleep(10000);
+		assertTrue(KafkaUtils.doesTopicExist(topic1, zk_client));
+		
+		//have to create consumers before producing
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty()); //defaults to aleph2_unknown
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic1, 2000);		
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty()); //defaults to aleph2_unknown
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic1, 2000);
+		
+		
+		//write something into the topic		
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5000;
+		for (long i = 0; i < num_messages_to_produce; i++) {			
+			producer .send(new ProducerRecord<String, String>(topic1, "test1"));
+		}
+		
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items from topic1			
+		long count = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count++;
+		}
+		
+		assertTrue(count > 0); //should have received some number of messages		
+		
+		//see if we can read that items from topic2
+		count = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count++;
+		}		
+		
+		assertTrue(count > 0); //should have received some number of messages
+		
+		wrapped_consumer1.close();
+		wrapped_consumer2.close();
+	}
+	
+	
 	
 	/**
 	 * Tests deleting an existing topic.
@@ -253,7 +365,7 @@ public class TestKafkaUtils {
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 3;
 		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+			producer.send(new ProducerRecord<String, String>(topic, "test"));		
 		
 		Thread.sleep(10000); //wait a few seconds for producers to dump batch
 		
@@ -268,9 +380,8 @@ public class TestKafkaUtils {
 		//verify it doesn't exist AT ALL
 		//TODO we shouldn't be able to grab the data in a consumer
 		//TODO see what actually happens in here
-		System.out.println("STARTING TO GET CONSUMER");
 		//see if we can read that iem
-		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.empty());
 		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic, 2000);
 		System.out.println("LOOPING OVER MESSAGES");
 		while ( wrapped_consumer1.hasNext() ) {
@@ -323,28 +434,23 @@ public class TestKafkaUtils {
 		final String group_id = "test_consumer";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		
-		System.out.println("CREATING TOPIC");
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
 		//Thread.sleep(10000);
 		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
 		
-		System.out.println("CREATING CONSUMER");
 		//create a named consumer before we start producing
-		ConsumerConnector consumer = KafkaUtils.getKafkaConsumer(topic, Optional.of(group_id));
+		KafkaConsumer<String, String> consumer = KafkaUtils.getKafkaConsumer(topic, Optional.of(group_id));
 		@SuppressWarnings("resource")
 		WrappedConsumerIterator wrapped_consumer = new WrappedConsumerIterator(consumer, topic, 2000);
 		
-		System.out.println("PRODUCE SOME DATA");
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 5;
 		for (long i = 0; i < num_messages_to_produce; i++) {
-			System.out.println("produce message: " + i);
-			producer.send(new KeyedMessage<String, String>(topic, "test_pt1_" + i));
+			producer.send(new ProducerRecord<String, String>(topic, "test_pt1_" + i));
 		}
 		Thread.sleep(10000); //sleep to wait for records getting moved
 		
-		System.out.println("CONSUMING DATA");
 		//see if we can read that items
 		long count = 0;
 		while ( wrapped_consumer.hasNext() ) {
@@ -353,7 +459,6 @@ public class TestKafkaUtils {
 		}
 		assertEquals(count, num_messages_to_produce);
 		
-		System.out.println("DELETING CONSUMER");
 		//assert consumer exists
 		assertTrue(zk_client.pathExists(ZkUtils.ConsumersPath() + "/" + group_id));
 		//close consumer
@@ -364,18 +469,15 @@ public class TestKafkaUtils {
 		//TODO when we want to fully kill consumers we can put this line back in
 		//assertFalse(ZkUtils.pathExists(zk_client, ZkUtils.ConsumersPath() + "/" + group_id));
 		
-		System.out.println("CREATING CONSUMER AGAIN, REUSING NAME");
 		consumer = KafkaUtils.getKafkaConsumer(topic, Optional.of(group_id));
 		wrapped_consumer = new WrappedConsumerIterator(consumer, topic, 2000);	
 		
-		System.out.println("PRODUCE SOME DATA");
 		//assert we can reuse the same consumer
 		//write something into the topic, again
 		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test_pt2"));				
+			producer.send(new ProducerRecord<String, String>(topic, "test_pt2"));				
 		Thread.sleep(10000); //sleep to wait for records getting moved
 		
-		System.out.println("CONSUME DATA");
 		//see if we can read that items			
 		count = 0;
 		while ( wrapped_consumer.hasNext() ) {
@@ -394,7 +496,7 @@ public class TestKafkaUtils {
 	@SuppressWarnings("resource")
 	@Test
 	public void testTwoConsumerSameTopic() throws InterruptedException {
-		final String topic = "test_produce_consume";
+		final String topic = "testTwoConsumerSameTopic";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
 		//Thread.sleep(10000);
@@ -403,14 +505,15 @@ public class TestKafkaUtils {
 		//CONSUMER 1 - PRODUCE A MESSAGE AND MAKE SURE IT GETS IT
 		
 		//have to create consumers before producing
-		ConsumerConnector consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c1"));
-		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic, 2000);		
-		
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c1"));
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic, 2000);
+		Thread.sleep(5000);
 		//write something into the topic
 		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
 		long num_messages_to_produce = 5;
-		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+		for (long i = 0; i < num_messages_to_produce; i++) {
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+		}
 		
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
@@ -424,29 +527,125 @@ public class TestKafkaUtils {
 		assertEquals(count, num_messages_to_produce);
 		
 		//CONSUMER 2 - Now create a consumer pointed at same topic, produce a message, make sure consumer 2 gets it
-		ConsumerConnector consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c2"));
-		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);		
-
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c2"));
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);	
+		Thread.sleep(5000);
+		
 		//write something into the topic
-		for (long i = 0; i < num_messages_to_produce; i++)
-			producer.send(new KeyedMessage<String, String>(topic, "test"));		
+		for (long i = 0; i < num_messages_to_produce; i++) {
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+		}
 		
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		
 		//see if we can read that items	
-		
-		long count2 = 0;
-		while ( wrapped_consumer2.hasNext() ) {
-			wrapped_consumer2.next();
-			count2++;
-		}
+
 		long count1 = 0;
 		while ( wrapped_consumer1.hasNext() ) {
 			wrapped_consumer1.next();
 			count1++;
 		}
-		
-		assertEquals(count1, 0); //old consumer can no longer read
+		long count2 = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count2++;
+		}
+		//because the consumers have different names they should both be able to read
+		assertEquals(count1, num_messages_to_produce); //old consumer should get the new messages
 		assertEquals(count2, num_messages_to_produce); //new consumer gets all the results
+	}
+	
+	@SuppressWarnings("resource")
+	@Test
+	public void testTwoConsumerSameTopic2() throws InterruptedException {
+		final String topic = "testTwoConsumerSameTopic";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
+		//Thread.sleep(10000);
+		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5;
+		//CONSUMER 1 - PRODUCE A MESSAGE AND MAKE SURE IT GETS IT
+		
+		//have to create consumers before producing
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c1"));
+		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic, 2000);
+		//write something into the topic
+		
+		for (long i = 0; i < num_messages_to_produce; i++) {
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+		}
+		
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items
+		
+		long count = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count++;
+		}
+		assertEquals(count, num_messages_to_produce);
+		
+		//CONSUMER 2 - Now create a consumer pointed at same topic, produce a message, make sure consumer 2 gets it
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.of("c2"));
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);	
+		
+		//write something into the topic
+		for (long i = 0; i < num_messages_to_produce; i++) {
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+		}
+		
+		Thread.sleep(5000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items	
+
+		long count1 = 0;
+		while ( wrapped_consumer1.hasNext() ) {
+			wrapped_consumer1.next();
+			count1++;
+		}
+		long count2 = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count2++;
+		}
+		//because the consumers have different names they should both be able to read
+		assertEquals(count1, num_messages_to_produce); //old consumer should get the new messages
+		assertEquals(count2, num_messages_to_produce); //new consumer gets all the results
+	}
+	
+	@Test
+	public void testProduceConsumeLongGroupid() throws InterruptedException {
+		final String topic = "test_produce_consume";
+		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
+		KafkaUtils.createTopic(topic, Optional.empty(), zk_client);		
+		//Thread.sleep(10000);
+		assertTrue(KafkaUtils.doesTopicExist(topic, zk_client));
+		
+		//have to create consumers before producing
+		final String from = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+		final String groupid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic, Optional.of(from), Optional.of(groupid));
+		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic, 2000);		
+		
+		//write something into the topic
+		Producer<String, String> producer = KafkaUtils.getKafkaProducer();
+		long num_messages_to_produce = 5;
+		for (long i = 0; i < num_messages_to_produce; i++)
+			producer.send(new ProducerRecord<String, String>(topic, "test"));
+//			producer.send(new ProducerRecord<String, String>(topic, "test"));		
+		
+		Thread.sleep(10000); //wait a few seconds for producers to dump batch
+		
+		//see if we can read that items
+		
+		long count = 0;
+		while ( wrapped_consumer2.hasNext() ) {
+			wrapped_consumer2.next();
+			count++;
+		}
+		wrapped_consumer2.close();
+		assertEquals(count, num_messages_to_produce);
 	}
 }

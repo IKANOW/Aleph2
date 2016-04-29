@@ -15,8 +15,8 @@
  *******************************************************************************/
 package com.ikanow.aleph2.distributed_services.utils;
 
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,16 +42,12 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
+import com.ikanow.aleph2.data_model.utils.UuidUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import kafka.admin.AdminUtils;
 import kafka.api.TopicMetadata;
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.ProducerConfig;
 import kafka.utils.ZkUtils;
 import kafka.utils.ZKStringSerializer$;
 
@@ -60,7 +59,7 @@ import kafka.utils.ZKStringSerializer$;
  *
  */
 public class KafkaUtils {
-	private static final Integer NUM_THREADS = 1;
+//	private static final Integer NUM_THREADS = 1;
 	private static Properties kafka_properties = new Properties();
 	private final static Logger logger = LogManager.getLogger();
 	protected final static Map<String, Boolean> my_topics = new ConcurrentHashMap<String, Boolean>(); // (Things to which I am publishing)
@@ -86,40 +85,80 @@ public class KafkaUtils {
 	 * @return
 	 */
 	public synchronized static Producer<String, String> getKafkaProducer() {			
-		if ( producer == null ) 
-			producer = new Producer<String, String>(new ProducerConfig(kafka_properties));
+		if ( producer == null )
+			producer = new KafkaProducer<>(kafka_properties);
+			//producer = new Producer<String, String>(new ProducerConfig(kafka_properties));
 		
 		return producer;
 	}
 	
 	/**
-	 * Creates a consumer for a single topic with the currently configured Kafka instance.
+	 * Returns a consumer pointed at the given topic.  The consumer group.id will be auto set to:
+	 * <topic>__a2__<random_uuid>
 	 * 
 	 * WARNING: When a consumer is created, it starts its reading at now, so if you
 	 * previously produced on a topic, this consumer won't be able to see it.
 	 * 
 	 * This consumer should be closed once you are done reading.
+	 * 
+	 * @param topic
+	 * @return
+	 */
+	public static KafkaConsumer<String, String> getKafkaConsumer(final String topic) {
+		return getKafkaConsumer(topic, Optional.empty());
+	}
+	
+	/**
+	 * Returns a consumer pointed at the given topic.  The consumer group.id will be auto set to:
+	 * <topic>__<from|a2>__<random_uuid>
+	 * 
+	 * WARNING: When a consumer is created, it starts its reading at now, so if you
+	 * previously produced on a topic, this consumer won't be able to see it.
+	 * 
+	 * This consumer should be closed once you are done reading.
+	 * 
+	 * @param topic
+	 * @param from
+	 * @return
+	 */
+	public static KafkaConsumer<String, String> getKafkaConsumer(final String topic, Optional<String> from) {
+		return getKafkaConsumer(topic, from, Optional.empty());
+	}
+	
+	/**
+	 * Creates a consumer for a single topic with the currently configured Kafka instance.
+	 * The consumer group.id will be set to: <topic>__<from|a2>__<consumer_name|random_uuid>
+	 * 
+	 * WARNING: When a consumer is created, it starts its reading at now, so if you
+	 * previously produced on a topic, this consumer won't be able to see it.
+	 * 
+	 * This consumer should be closed once you are done reading.
+	 * 
+	 * Note: if you set the consumer_name you must be careful about creating consumers:
+	 * 1. multiple consumers with different names pointed to same topic == everyone gets all data from the same topic
+	 * 2. multiple consumers with different names pointed to different topics == everyone reads their own topics (like normal)
+	 * 3. multiple consumers with same names pointed to same topic == should round-robin (partitioning is not currently setup in aleph2 (TODO))
+	 * 4. multiple consumers with same names pointed to different topic == BROKEN (kafka issue)
 	 *
 	 * @param topic
 	 * @param consumer_name - if set then uses a specific consumer group instead of the central "system" consumer - this has the effect of copying the data instead of round-robining it
 	 * @return
 	 */
-	public static ConsumerConnector getKafkaConsumer(final String topic, final Optional<String> consumer_name) {
-		final Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
-		topicCountMap.put(topic, NUM_THREADS);
-		final Properties new_properties = 
-				consumer_name
-					.map(name -> {
-						final Properties np = new Properties();
-						kafka_properties.forEach((key, val) -> np.put(key, val));
-						np.put("group.id", name);
-						return np;
-					})
-				.orElse(kafka_properties)
-				;
-		final ConsumerConnector consumer = Consumer.createJavaConsumerConnector(new ConsumerConfig(new_properties));
-		consumer.commitOffsets();
+	public static KafkaConsumer<String, String> getKafkaConsumer(final String topic, final Optional<String> from, final Optional<String> consumer_name) {
+		final String groupid = topic + "__" +
+			from.map(f->f).orElse("a2") + "__" +
+			consumer_name.map(name -> name).orElse(UuidUtils.get().getRandomUuid());
+		final Properties new_properties = addGroupIdToProps(groupid);
+		final KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(new_properties);
+		consumer.subscribe(Arrays.asList(topic));
 		return consumer;
+	}
+	
+	private static Properties addGroupIdToProps(final String groupid) {
+		final Properties np = new Properties();
+		kafka_properties.forEach((key, val) -> np.put(key, val));
+		np.put("group.id", groupid);
+		return np;
 	}
 	
 	/** Returns the configured Zookeeper connection string, needed by some Kafka modules
@@ -186,6 +225,14 @@ public class KafkaUtils {
 				.put("batch.size", "800") 		//latest version config I think		
 				.put("batch.num.messages", "800") //old version config 0.8.0?
 				
+				//producer 0.9.0 config
+				.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+				.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+				
+				//consumer 0.9.0 config
+				.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+				.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+				
 				.put("consumer.timeout.ms", "3000")
 		        .put("auto.commit.interval.ms", "1000")
 		        // Not sure which of these 2 sets is correct, so will list them both!
@@ -205,6 +252,7 @@ public class KafkaUtils {
 
 		//PRODUCER PROPERTIES		
 		String broker = fullConfig.getString("metadata.broker.list");
+		kafka_properties.put("bootstrap.servers", broker); //DEBUG TESTING 0.9.0 consumer
 		logger.debug("BROKER: " + broker);
 		
         //CONSUMER PROPERTIES		

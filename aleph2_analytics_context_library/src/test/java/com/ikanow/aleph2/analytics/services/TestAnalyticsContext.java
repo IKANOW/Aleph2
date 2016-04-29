@@ -1152,6 +1152,7 @@ public class TestAnalyticsContext {
 		saved2._2().completeBucketOutput(saved2._1());
 	}
 	
+	@SuppressWarnings("null")
 	public Tuple2<DataBucketBean, AnalyticsContext> test_objectEmitting(boolean preserve_out, boolean first_time) throws InterruptedException, ExecutionException, InstantiationException, IllegalAccessException, ClassNotFoundException {
 		_logger.info("run test_objectEmitting: " + preserve_out);
 
@@ -1248,13 +1249,17 @@ public class TestAnalyticsContext {
 		catch (Exception e) {
 			assertEquals(ErrorUtils.get(ErrorUtils.NOT_YET_IMPLEMENTED, "annotations"), e.getMessage());
 		}
-
+		String topic = KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.of("$end"));
+		WrappedConsumerIterator iter = null;
+		if ( !first_time)
+			iter = (WrappedConsumerIterator)test_context._distributed_services.consumeAs(topic, Optional.empty(), Optional.empty());
 		test_external1a.emitObject(Optional.of(test_bucket), analytic_job1, Either.left(jn1), Optional.empty());
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.left(jn2), Optional.empty());
 		// (create topic now)
-		String topic = KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.of("$end"));
+		
 		test_context._distributed_services.createTopic(topic, Optional.empty());
-		WrappedConsumerIterator iter = (WrappedConsumerIterator)test_context._distributed_services.consumeAs(topic, Optional.empty());		
+		if ( first_time )
+			iter = (WrappedConsumerIterator)test_context._distributed_services.consumeAs(topic, Optional.empty(), Optional.empty());		
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
@@ -1355,7 +1360,7 @@ public class TestAnalyticsContext {
 		catch (Exception e) {}
 		test_context.setBucket(test_bucket);
 		assertEquals(test_bucket, test_context.getBucket().get());
-		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty());
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/ANALYICS/CONTEXT", Optional.of("test1")), Optional.empty(), Optional.empty());
 		
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), analytic_job1, Either.left(mapper.readTree(message1)), Optional.empty());
 		test_context.sendObjectToStreamingPipeline(Optional.of(test_bucket), analytic_job1, Either.left(mapper.readTree(message2)), Optional.empty());
@@ -1511,7 +1516,7 @@ public class TestAnalyticsContext {
 			
 			// Start listening
 			test_context._distributed_services.createTopic(listen_topic, Optional.empty());
-			Iterator<String> iter = test_context._distributed_services.consumeAs(listen_topic, Optional.empty());
+			Iterator<String> iter = test_context._distributed_services.consumeAs(listen_topic, Optional.empty(), Optional.empty());
 			
 			Validation<BasicMessageBean, JsonNode> ret_val_2 =
 					test_context.emitObject(Optional.of(stream_bucket), job, Either.left((ObjectNode)_mapper.readTree("{\"test\":\"stream2\"}")), Optional.empty());
