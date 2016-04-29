@@ -91,6 +91,7 @@ import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.distributed_services.services.ICoreDistributedServices;
 import com.ikanow.aleph2.distributed_services.utils.KafkaUtils;
+import com.ikanow.aleph2.distributed_services.utils.WrappedConsumerIterator;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -1253,7 +1254,7 @@ public class TestAnalyticsContext {
 		// (create topic now)
 		String topic = KafkaUtils.bucketPathToTopicName(test_bucket.full_name(), Optional.of("$end"));
 		test_context._distributed_services.createTopic(topic, Optional.empty());
-		Iterator<String> iter = test_context._distributed_services.consumeAs(topic, Optional.empty());		
+		WrappedConsumerIterator iter = (WrappedConsumerIterator)test_context._distributed_services.consumeAs(topic, Optional.empty());		
 		test_external1a.emitObject(Optional.empty(), analytic_job1, Either.right(
 				ImmutableMap.<String, Object>builder().put("test", "test3").put("extra", "test3_extra").build()
 				), Optional.empty());
@@ -1280,7 +1281,7 @@ public class TestAnalyticsContext {
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		List<String> kafka = Optionals.streamOf(iter, false).collect(Collectors.toList());
 		assertEquals(first_time ? 1 : 3, kafka.size()); //(second time through the topic exists so all 3 emits work)
-
+		iter.close();
 		//return Tuples._2T(test_bucket, check_index.getDataService().get());
 		return Tuples._2T(test_bucket, test_context);
 	}
