@@ -937,10 +937,14 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 					CrudUtils.anyOf(SharedLibraryBean.class)
 						.when(SharedLibraryBean::_id, name_or_id)
 						.when(SharedLibraryBean::path_name, name_or_id);
-			
+
 			final List<SingleQueryComponent<SharedLibraryBean>> other_libs = 
-				Optionals.ofNullable(jobs).stream()
-					.flatMap(job -> Optionals.ofNullable(job.library_names_or_ids()).stream())
+				Stream.concat(
+					Optional.ofNullable(jobs.stream().findFirst().get().module_name_or_id()).map(Stream::of).orElseGet(Stream::empty)
+					,
+					Optionals.ofNullable(jobs).stream()
+						.flatMap(job -> Optionals.ofNullable(job.library_names_or_ids()).stream())
+					)
 					.map(name -> {
 						return CrudUtils.anyOf(SharedLibraryBean.class)
 								.when(SharedLibraryBean::_id, name)
@@ -953,7 +957,7 @@ public class AnalyticsContext implements IAnalyticsContext, Serializable {
 							));
 
 			@SuppressWarnings("unchecked")
-			final MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(tech_query,
+			final MultiQueryComponent<SharedLibraryBean> spec = CrudUtils.<SharedLibraryBean>anyOf(tech_query, 
 					other_libs.toArray(new SingleQueryComponent[other_libs.size()]));
 			
 			// Get the names or ids, get the shared libraries, get the cached ids (must be present)
