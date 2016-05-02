@@ -167,4 +167,13 @@
 		</dependencies>
 	</profile>	
   </profiles>
+  <dependencyManagement>
+	  	<dependencies>
+	  		<dependency>
+	  			<groupId>io.netty</groupId>
+	  			<artifactId>netty</artifactId>
+	  			<version>3.10.5.Final</version>
+	  		</dependency>
+	  	</dependencies>
+	  </dependencyManagement>
 </project>
