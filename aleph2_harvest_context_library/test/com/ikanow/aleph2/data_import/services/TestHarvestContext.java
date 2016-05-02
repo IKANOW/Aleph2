@@ -385,7 +385,7 @@ public class TestHarvestContext {
 		test_context.setBucket(bucket);
 		assertEquals(bucket, test_context.getBucket().get());
 		
-		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()), Optional.empty());
+		Iterator<String> iter = test_context._distributed_services.consumeAs(BucketUtils.getUniqueSignature("/TEST/HARVEST/CONTEXT", Optional.empty()), Optional.empty(), Optional.empty());
 		
 		test_context.sendObjectToStreamingPipeline(Optional.empty(), Either.left(mapper.readTree(message1)));
 		test_context.sendObjectToStreamingPipeline(Optional.of(bucket), Either.left(mapper.readTree(message2)));

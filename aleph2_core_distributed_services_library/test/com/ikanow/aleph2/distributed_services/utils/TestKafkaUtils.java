@@ -189,8 +189,8 @@ public class TestKafkaUtils {
 	 */
 	@Test
 	public void testProduceConsumeTwoTopicDiffGroups() throws InterruptedException {
-		final String topic1 = "test_produce_consume1";
-		final String topic2 = "test_produce_consume2";
+		final String topic1 = "test_produce_consume2_1";
+		final String topic2 = "test_produce_consume2_2";
 		final ZkUtils zk_client = KafkaUtils.getNewZkClient();
 		KafkaUtils.createTopic(topic1, Optional.empty(), zk_client);		
 		KafkaUtils.createTopic(topic2, Optional.empty(), zk_client);
@@ -250,9 +250,9 @@ public class TestKafkaUtils {
 		assertTrue(KafkaUtils.doesTopicExist(topic2, zk_client));
 		
 		//have to create consumers before producing
-		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty()); //defaults to aleph2_unknown
+		KafkaConsumer<String, String> consumer1 = KafkaUtils.getKafkaConsumer(topic1, Optional.empty()); //defaults to random_uuid
 		WrappedConsumerIterator wrapped_consumer1 = new WrappedConsumerIterator(consumer1, topic1, 2000);		
-		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic2, Optional.empty()); //defaults to aleph2_unknown
+		KafkaConsumer<String, String> consumer2 = KafkaUtils.getKafkaConsumer(topic2, Optional.empty()); //defaults to random_uuid
 		WrappedConsumerIterator wrapped_consumer2 = new WrappedConsumerIterator(consumer2, topic2, 2000);
 		
 		
