@@ -108,6 +108,7 @@ public class TestDataSchemaBean {
 						Arrays.<EnrichmentControlMetadataBean>asList(),
 						true,
 						false,
+						false,
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 		
@@ -120,7 +121,8 @@ public class TestDataSchemaBean {
 		assertEquals("Document bean deduplication_contexts", document_bean.deduplication_contexts(), Arrays.asList("deduplication_contexts"));
 		assertEquals("Doc bean dedup custom config", document_bean.custom_deduplication_configs(), Arrays.asList());
 		assertEquals("Doc bean dedup custom finalze", document_bean.custom_finalize_all_objects(), true);
-		assertEquals("Doc bean dedup custom finalze", document_bean.delete_unhandled_duplicates(), false);
+		assertEquals("Doc bean delete unhandled", document_bean.delete_unhandled_duplicates(), false);
+		assertEquals("Doc bean allow manual delete", document_bean.allow_manual_deletion(), false);
 		assertEquals("Document bean technology_override_schema", document_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// WriteSettings (shared across schemas - currenly only search_index_bean though)

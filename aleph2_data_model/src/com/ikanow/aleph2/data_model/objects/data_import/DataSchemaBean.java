@@ -307,6 +307,7 @@ public class DataSchemaBean implements Serializable {
 				final List<EnrichmentControlMetadataBean> custom_deduplication_configs,
 				final Boolean custom_finalize_all_objects,
 				final Boolean delete_unhandled_duplicates,
+				final Boolean allow_manual_deletion,
 				final Map<String, Object> technology_override_schema)
 		{
 			this.enabled = enabled;
@@ -319,6 +320,7 @@ public class DataSchemaBean implements Serializable {
 			this.custom_deduplication_configs = custom_deduplication_configs;
 			this.custom_finalize_all_objects = custom_finalize_all_objects;
 			this.delete_unhandled_duplicates = delete_unhandled_duplicates;
+			this.allow_manual_deletion = allow_manual_deletion;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -389,6 +391,11 @@ public class DataSchemaBean implements Serializable {
 		public Boolean delete_unhandled_duplicates() {
 			return delete_unhandled_duplicates;
 		}
+		/** If true (default: false) then user code can delete objects from custom merge code
+		 */
+		public Boolean allow_manual_deletion() {
+			return allow_manual_deletion;
+		}
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -406,6 +413,7 @@ public class DataSchemaBean implements Serializable {
 		private List<EnrichmentControlMetadataBean> custom_deduplication_configs;
 		private Boolean custom_finalize_all_objects;
 		private Boolean delete_unhandled_duplicates;
+		private Boolean allow_manual_deletion;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service

@@ -162,6 +162,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					.with(DocumentSchemaBean::delete_unhandled_duplicates, 
 							Optional.ofNullable(doc_schema.delete_unhandled_duplicates()).orElse(
 									CustomPolicy.very_strict == Optional.ofNullable(doc_schema.custom_policy()).orElse(CustomPolicy.strict)))
+					.with(DocumentSchemaBean::allow_manual_deletion, Optional.ofNullable(doc_schema.allow_manual_deletion()).orElse(false))
 				.done()
 				);
 		
@@ -185,7 +186,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					.map(ds -> ds.secured(context.getServiceContext(), new AuthorizationBean(bucket.owner_id())))
 					.flatMap(ds -> ds.getDataService())
 					.flatMap(ds -> 
-						_doc_schema.get().delete_unhandled_duplicates()
+						_doc_schema.get().delete_unhandled_duplicates() || _doc_schema.get().allow_manual_deletion()
 							? ds.getUpdatableCrudService(JsonNode.class, Arrays.asList(context_holder), Optional.empty())
 							: ds.getReadableCrudService(JsonNode.class, Arrays.asList(context_holder), Optional.empty()).map(crud -> (ICrudService<JsonNode>)crud)
 					)
