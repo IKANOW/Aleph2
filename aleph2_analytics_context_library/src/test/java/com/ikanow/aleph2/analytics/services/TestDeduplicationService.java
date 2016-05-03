@@ -32,6 +32,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -798,6 +799,7 @@ public class TestDeduplicationService {
 	
 	@SuppressWarnings("unchecked")
 	@Test
+	@Ignore
 	public void test_puttingItAllTogether() throws InterruptedException {
 		
 		test_puttingItAllTogether_genericPhase();
@@ -1435,6 +1437,7 @@ public class TestDeduplicationService {
 	 */
 	@SuppressWarnings("unchecked")
 	@Test
+	@Ignore
 	public void test_puttingItAllTogether_deletionTests() throws InterruptedException {
 		
 		test_puttingItAllTogether_genericPhase();
