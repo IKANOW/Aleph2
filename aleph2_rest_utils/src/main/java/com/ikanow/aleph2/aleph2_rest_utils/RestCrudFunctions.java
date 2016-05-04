@@ -41,6 +41,7 @@ import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+import com.ikanow.aleph2.data_model.utils.Tuples;
 
 import fj.data.Either;
 
@@ -133,13 +134,21 @@ public class RestCrudFunctions {
 		if ( crud_service_either.isLeft() )
     		return Response.status(Status.BAD_REQUEST).entity(crud_service_either.left().value()).build();		
 		
-		CompletableFuture<Supplier<Object>> fut = json.map(j->{
-			//TODO exception when this isn't a shared lib bean
-			final SharedLibraryBean slb = BeanTemplateUtils.from(j, SharedLibraryBean.class).get();
-			return (CompletableFuture<Supplier<java.lang.Object>>)
-					(((ICrudService<Tuple2<ICrudService<T>, Class<T>>>)crud_service_either.right().value()._1).storeObject(new Tuple2(slb,file_upload)));	
-		}).orElseGet(()-> (CompletableFuture<Supplier<java.lang.Object>>)
-					((ICrudService<FileDescriptor>)crud_service_either.right().value()._1).storeObject(file_upload));
+		final Optional<CompletableFuture<Supplier<Object>>> maybe_fut = json
+			.<CompletableFuture<Supplier<Object>>>map(j->{
+				//TODO exception when this isn't a shared lib bean
+				final SharedLibraryBean slb = BeanTemplateUtils.from(j, SharedLibraryBean.class).get();
+				final ICrudService<Tuple2<ICrudService<T>, Class<T>>> crud_service = (ICrudService<Tuple2<ICrudService<T>, Class<T>>>)crud_service_either.right().value()._1();
+				return (CompletableFuture<Supplier<Object>>)crud_service.storeObject(new Tuple2(slb,file_upload));	
+			})
+			;
+		
+		final CompletableFuture<Supplier<Object>> fut = maybe_fut // (sun didn't like this in one statement so split into 2 for compile reasons)
+				.orElseGet(()-> {
+					final ICrudService<FileDescriptor> crud_service = (ICrudService<FileDescriptor>)crud_service_either.right().value()._1();
+					return (CompletableFuture<Supplier<Object>>)crud_service.storeObject(file_upload);
+				})
+				;
 		
 		try {
 			final Tuple3<String, Boolean, String> id_or_error = fut.handle((ok, ex) -> {
