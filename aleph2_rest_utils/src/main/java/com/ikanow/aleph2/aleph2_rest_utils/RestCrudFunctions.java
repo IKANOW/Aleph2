@@ -136,7 +136,8 @@ public class RestCrudFunctions {
 		CompletableFuture<Supplier<Object>> fut = json.map(j->{
 			//TODO exception when this isn't a shared lib bean
 			final SharedLibraryBean slb = BeanTemplateUtils.from(j, SharedLibraryBean.class).get();
-			return ((ICrudService<Tuple2<ICrudService<T>, Class<T>>>)crud_service_either.right().value()._1).storeObject(new Tuple2(slb,file_upload));	
+			return (CompletableFuture<Supplier<java.lang.Object>>)
+					(((ICrudService<Tuple2<ICrudService<T>, Class<T>>>)crud_service_either.right().value()._1).storeObject(new Tuple2(slb,file_upload)));	
 		}).orElseGet(()-> ((ICrudService<FileDescriptor>)crud_service_either.right().value()._1).storeObject(file_upload));
 		
 		try {
