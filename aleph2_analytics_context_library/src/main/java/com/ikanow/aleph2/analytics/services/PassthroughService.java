@@ -85,7 +85,7 @@ public class PassthroughService implements IEnrichmentBatchModule {
 	protected static void handleObject(final Tuple2<Long, IBatchRecord> t2, final Optional<JsonNode> grouping_key, final String output, final IEnrichmentModuleContext context) {
 		// not sure what to do with streaming (probably binary) data - probably will have to just ignore it in default mode?
 		// (the alternative is to build Tika directly in? or maybe dump it directly in .. not sure how Jackson manages raw data?)
-		if (OUTPUT_TO_INTERNAL.equals(output)) {
+		if (OUTPUT_TO_INTERNAL.equals(output) || output.isEmpty()) {
 			context.emitImmutableObject(t2._1(), t2._2().getJson(), Optional.empty(), Optional.empty(), grouping_key);				
 		}
 		else if (OUTPUT_TO_STOP.equals(output)) {
