@@ -26,6 +26,7 @@ public class GlobalPropertiesBean implements Serializable {
 	public static final String __DEFAULT_LOCAL_CACHED_JARS_DIR = "/opt/aleph2-home/cached-jars/"; 	
 	public static final String __DEFAULT_DISTRIBUTED_ROOT_DIR = "/app/aleph2/";
 	public static final String BUCKET_DATA_ROOT_OFFSET = "/data/";
+	public static final String SHARED_LIBRARY_ROOT_OFFSET = "/library/";
 	
 	/** User constructor
 	 * @param local_root_dir
