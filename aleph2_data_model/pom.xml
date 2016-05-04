@@ -7,11 +7,11 @@
 	<properties>
 		<aleph2.version>2.9.0</aleph2.version>
 		<!-- Jackson needs to stay at 2.3.x for compatibility with Storm in HDP2.3 (can't just exclude because not all classes are present)
-			 SEE ALSO XML JACKSON IN HADOOP_ANALYTIC_SERVICES
+			 SEE ALSO XML JACKSON IN HADOOP_ANALYTIC_SERVICES AND (test mode) SPARK_ANALYTIC_SERVICES
 			 Note that ES 2.0 needs 2.6.2, so will need seems like Storm/HDP2.3 and ES2.0 are incompatible, will have to move to Spark as the
 			 standard streaming enrichment engine
 			 -->
-		<jackson.version>2.3.1</jackson.version>
+		<jackson.version>2.6.2</jackson.version>
 	</properties>
 	<repositories>
 		<repository>
