@@ -22,6 +22,7 @@
         <module>aleph2_data_import_manager</module>
         <module>aleph2_management_db_service</module>
         <module>aleph2_core_security</module>
+        <module>aleph2_rest_utils</module>
     </modules>
 
     <build>
