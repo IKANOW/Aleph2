@@ -33,6 +33,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -45,6 +46,7 @@ import com.ikanow.aleph2.data_import_manager.analytics.utils.AnalyticTriggerBean
 import com.ikanow.aleph2.data_import_manager.services.DataImportActorContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
@@ -77,12 +79,13 @@ import akka.actor.UntypedActor;
 public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	protected static final Logger _logger = LogManager.getLogger();	
 
-	final DataImportActorContext _local_actor_context;
-	final IServiceContext _service_context;
-	final ICoreDistributedServices _distributed_services;
+	protected final DataImportActorContext _local_actor_context;
+	protected final IServiceContext _service_context;
+	protected final ICoreDistributedServices _distributed_services;
+	protected final ILoggingService _logging_service;
 	
-	final SetOnce<ICrudService<DataBucketStatusBean>> _bucket_status_crud = new SetOnce<>();
-	final SetOnce<ICrudService<BucketTimeoutMessage>> _bucket_test_status_crud = new SetOnce<>();
+	protected final SetOnce<ICrudService<DataBucketStatusBean>> _bucket_status_crud = new SetOnce<>();
+	protected final SetOnce<ICrudService<BucketTimeoutMessage>> _bucket_test_status_crud = new SetOnce<>();
 	
 	/** Akka c'tor
 	 */
@@ -90,6 +93,7 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 		_local_actor_context = DataImportActorContext.get();
 		_service_context = _local_actor_context.getServiceContext();
 		_distributed_services = _service_context.getService(ICoreDistributedServices.class, Optional.empty()).get();
+		_logging_service = _local_actor_context.getServiceContext().getService(ILoggingService.class, Optional.empty()).get();
 	}
 	
 	/** Lazy initialization
@@ -153,7 +157,14 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 * @param message
 	 */
 	protected void onBucketChanged(final BucketActionMessage message) {
-		_logger.info(ErrorUtils.get("Received bucket action relay for bucket {0}: {1}", message.bucket().full_name(), message.getClass().getName()));
+		_logging_service.getSystemLogger(message.bucket()).log(Level.INFO, 
+				ErrorUtils.lazyBuildMessage(
+						true, 
+						()->this.getClass().getSimpleName(), 
+						()->"onBucketChanged", 
+						()->null, 
+						()->ErrorUtils.get("Received bucket action relay for bucket {0}: {1}", message.bucket().full_name(), message.getClass().getName()), 
+						()->Collections.emptyMap()));					
 		
 		// Create the state objects
 
@@ -191,11 +202,19 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			
 			path_names.trySet(triggers.keySet());
 			
-			_logger.info(ErrorUtils.get("Generated {0} trigger(s) ({1} group(s)) for bucket {2} ({3} job(s))", 
-					triggers_in.values().stream().flatMap(l->l.stream()).count(),
-					triggers_in.size(),
-					message.bucket().full_name(), 
-					Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0)));			
+			_logging_service.getSystemLogger(message.bucket()).log(Level.INFO, 
+					ErrorUtils.lazyBuildMessage(
+							true, 
+							()->this.getClass().getSimpleName(), 
+							()->"onBucketChanged", 
+							()->null, 
+							()->ErrorUtils.get("Generated {0} trigger(s) ({1} group(s)) for bucket {2} ({3} job(s))", 
+									triggers_in.values().stream().flatMap(l->l.stream()).count(),
+									triggers_in.size(),
+									message.bucket().full_name(), 
+									Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0))
+							, 
+							()->Collections.emptyMap()));								
 
 			// Output them
 			
@@ -435,10 +454,15 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 	 */
 	protected void onAnalyticTrigger_checkActiveJob(final DataBucketBean bucket, final AnalyticThreadJobBean job, final AnalyticTriggerStateBean trigger) {
 		
-		//TODO (ALEPH-12): might need to reduce the chattiness of this (can I check once every 5 minutes or something? use a google cache)
-		// (but also then need to reduce the chattiness of logging for the choose and distribution actor, else there's no point...)
-		_logger.info(ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name(), 
-				Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse("")));
+		_logging_service.getSystemLogger(bucket).log(Level.DEBUG, 
+				ErrorUtils.lazyBuildMessage(
+						true, 
+						()->this.getClass().getSimpleName(), 
+						()->"checkActiveJob", 
+						()->null, 
+						()->ErrorUtils.get("Check completion status of active job = {0}:{1}{2}", bucket.full_name(), job.name(), 
+								Optional.ofNullable(trigger.locked_to_host()).map(s->" (host="+s+")").orElse("")), 
+						()->Collections.emptyMap()));							
 		
 		final BucketActionMessage new_message = 
 				AnalyticTriggerBeanUtils.buildInternalEventMessage(bucket, Arrays.asList(job), JobMessageType.check_completion, Optional.ofNullable(trigger.locked_to_host()));		
@@ -523,11 +547,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.starting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket().full_name(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
-									msg.type()
-									));							
+							_logging_service.getSystemLogger(message.bucket()).log(Level.INFO, 
+									ErrorUtils.lazyBuildMessage(
+											true, 
+											()->this.getClass().getSimpleName(), 
+											()->"onAnalyticBucketEvent", 
+											()->null, 
+											()->ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+													msg.bucket().full_name(), 
+													Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
+													msg.type()
+													), 
+											()->Collections.emptyMap()));														
 							
 							// 1) 1+ jobs have been confirmed/manually started by the technology:
 							// (or just the bucket if msg.jobs()==null)
@@ -562,11 +593,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.stopping == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket().full_name(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
-									msg.type()
-									));
+							_logging_service.getSystemLogger(msg.bucket()).log(Level.INFO, 
+									ErrorUtils.lazyBuildMessage(
+											true, 
+											()->this.getClass().getSimpleName(), 
+											()->"onAnalyticBucketEvent", 
+											()->null, 
+											()->ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+													msg.bucket().full_name(), 
+													Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
+													msg.type()
+													), 
+											()->Collections.emptyMap()));														
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());
@@ -609,11 +647,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					msg -> BucketActionMessage.BucketActionAnalyticJobMessage.JobMessageType.deleting == msg.type(),
 						msg -> { // (note don't need to worry about locking here)
 							
-							_logger.info(ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
-									msg.bucket().full_name(), 
-									Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
-									msg.type()
-									));
+							_logging_service.getSystemLogger(msg.bucket()).log(Level.INFO, 
+									ErrorUtils.lazyBuildMessage(
+											true, 
+											()->this.getClass().getSimpleName(), 
+											()->"onAnalyticBucketEvent", 
+											()->null, 
+											()->ErrorUtils.get("Bucket:(jobs) {0}:({1}): received message {2}", 
+													msg.bucket().full_name(), 
+													Optionals.ofNullable(msg.jobs()).stream().map(j -> j.name()).collect(Collectors.joining(";")),
+													msg.type()
+													), 
+											()->Collections.emptyMap()));														
 							
 							final Optional<String> locked_to_host = Optional.ofNullable(msg.handling_clients())
 									.flatMap(s -> s.stream().findFirst());							
@@ -734,7 +779,15 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 			&&
 			(bucket_active_record.last_checked().toInstant().plusSeconds(60L).isAfter(next_check.toInstant())))
 		{
-			_logger.info(ErrorUtils.get("Ignoring possible de-activation of newly activated bucket {0}", bucket_to_check.full_name()));
+			_logging_service.getSystemLogger(bucket_to_check).log(Level.INFO, 
+					ErrorUtils.lazyBuildMessage(
+							true, 
+							()->this.getClass().getSimpleName(), 
+							()->"currentActiveBuckets", 
+							()->null, 
+							()->ErrorUtils.get("Ignoring possible de-activation of newly activated bucket {0}", bucket_to_check.full_name()), 
+							()->Collections.emptyMap()));														
+			
 			return;
 		}
 		
@@ -752,7 +805,14 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 					AnalyticTriggerCrudUtils.areAnalyticJobsActive(trigger_crud, bucket_to_check.full_name(), Optional.empty(), locked_to_host).join();
 
 			if (!bucket_still_active) {
-				_logger.info(ErrorUtils.get("Bucket {0}: changed to inactive", bucket_to_check.full_name()));			
+				_logging_service.getSystemLogger(bucket_to_check).log(Level.INFO, 
+						ErrorUtils.lazyBuildMessage(
+								true, 
+								()->this.getClass().getSimpleName(), 
+								()->"currentActiveBuckets", 
+								()->null, 
+								()->ErrorUtils.get("Bucket {0}: changed to inactive", bucket_to_check.full_name()), 
+								()->Collections.emptyMap()));														
 				
 				// Send a message to the technology
 
@@ -806,10 +866,18 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 														
 						boolean b = AnalyticTriggerBeanUtils.checkTrigger(checker, resources_dataservices, true);
 						
-						if (b) _logger.info(ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
-								bucket_to_check.full_name(),
-								resources_dataservices.toString())
-								);							
+						if (b) {
+							_logging_service.getSystemLogger(bucket_to_check).log(Level.INFO, 
+									ErrorUtils.lazyBuildMessage(
+											true, 
+											()->this.getClass().getSimpleName(), 
+											()->"currentlyInactiveBuckets", 
+											()->null, 
+											()->ErrorUtils.get("Bucket {0}: changed to active because of {1}", 
+													bucket_to_check.full_name(),
+													resources_dataservices.toString()), 
+											()->Collections.emptyMap()));														
+						}
 						
 						return b;
 					})
@@ -904,9 +972,16 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 				.thenAccept(res -> { if (res) AnalyticTriggerBeanUtils.sendInternalEventMessage(new_message, _bucket_status_crud.get(), _bucket_test_status_crud.get()); });
 			//(don't wait for a reply or anything)
 			
-			_logger.info(ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),
-					mutable_newly_active_jobs.stream().map(j -> j.name()).collect(Collectors.joining(";"))
-					));						
+			_logging_service.getSystemLogger(bucket_to_check).log(Level.INFO, 
+					ErrorUtils.lazyBuildMessage(
+							true, 
+							()->this.getClass().getSimpleName(), 
+							()->"currentlyInactiveJobs", 
+							()->null, 
+							()->ErrorUtils.get("Bucket {0}: triggered {1}", bucket_to_check.full_name(),
+									mutable_newly_active_jobs.stream().map(j -> j.name()).collect(Collectors.joining(";"))
+									), 
+							()->Collections.emptyMap()));														
 			
 			// But do immediately set up the jobs as active - if the tech fails, then we'll find out when we poll them later
 			
