@@ -121,34 +121,19 @@
   		<version>${aleph2.version}</version> <!-- TODO replace this with aleph2.version, something is wrong in my workspace -->
 		<scope>${aleph2.scope}</scope>
 	</dependency>
-<!-- 	 <dependency> -->
-<!--   	<groupId>com.ikanow.aleph2</groupId> -->
-<!--   	<artifactId>aleph2_crud_service_elasticsearch</artifactId> -->
-<!--   	<version>${aleph2.version}</version> -->
-<!-- 		<scope>${aleph2.scope}</scope> -->
-<!--   </dependency> -->
 	<!-- Other external dependencies here -->
 	<dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>javax.servlet-api</artifactId>
-      <version>3.1.0</version>
+	      <groupId>javax.servlet</groupId>
+	      <artifactId>javax.servlet-api</artifactId>
+	      <version>3.1.0</version>
+	      <scope>provided</scope>
     </dependency>
-<!--     <dependency> -->
-<!--     <groupId>org.glassfish.jersey.containers</groupId> -->
-<!--     <artifactId>jersey-container-servlet</artifactId> -->
-<!--     <version>2.22.2</version> -->
-<!--     <scope>provided</scope> -->
-<!-- </dependency> -->
-<!-- 	<dependency> -->
-<!--     <groupId>org.glassfish.jersey.media</groupId> -->
-<!--     <artifactId>jersey-media-multipart</artifactId> -->
-<!--     <version>2.22.2</version> -->
-<!-- </dependency> -->
-<dependency>
-	  		<groupId>org.apache.hadoop</groupId>
-	  		<artifactId>hadoop-common</artifactId>
-	  		<version>${aleph2.hadoop}</version>
-	  		<scope>provided</scope>
-	  	</dependency>
+	<dependency>
+  		<groupId>org.apache.hadoop</groupId>
+  		<artifactId>hadoop-common</artifactId>
+  		<version>${aleph2.hadoop}</version>
+  		<scope>provided</scope>
+  	</dependency>
   </dependencies>
 </project>
+
