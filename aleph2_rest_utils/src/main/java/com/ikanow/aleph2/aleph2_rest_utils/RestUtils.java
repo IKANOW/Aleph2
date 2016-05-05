@@ -102,6 +102,10 @@ public class RestUtils {
 	public static <T> Either<String,Tuple2<ICrudService<T>, Class<T>>> getCrudService(final IServiceContext service_context, final String service_type, 
 			final String access_level, final String service_identifier, final Optional<String> bucket_full_names ) {
 		_logger.error("trying to get crud service for: " + service_type + " " + access_level + " " + service_identifier);
+		//TODO need to wrap crud in security service
+		//security_service.wrap(user, crud)
+		//return management_db.getSharedLibraryStore().secured(context, new AuthorizationBean(bucket.owner_id()))
+		//.map(ds -> ds.secured(context.getServiceContext(), new AuthorizationBean(bucket.owner_id())))
 		if ( service_type.toUpperCase().equals(SERVICE_TYPE_DATA_SERVICE) ) {
 			return bucket_full_names.<Either<String,Tuple2<ICrudService<T>, Class<T>>>>
 					map(b->getDataService(service_context, access_level, service_identifier, b))
