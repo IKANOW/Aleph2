@@ -45,8 +45,6 @@ import com.ikanow.aleph2.data_model.utils.BucketUtils;
  *
  */
 public class LoggingUtils {
-	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
-	
 	private static final String EXTERNAL_PREFIX = "/external";
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
 	public static final String LAST_LOG_TIMESTAMP_FIELD = "last_log_timestamp";
