@@ -45,6 +45,8 @@ import com.ikanow.aleph2.data_model.utils.BucketUtils;
  *
  */
 public class LoggingUtils {
+	protected static ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
+	
 	private static final String EXTERNAL_PREFIX = "/external";
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
 	public static final String LAST_LOG_TIMESTAMP_FIELD = "last_log_timestamp";
@@ -61,7 +63,6 @@ public class LoggingUtils {
 	 */
 	public static JsonNode createLogObject(final Level level, final DataBucketBean bucket, final BasicMessageBean message, final boolean isSystemMessage, 
 			final String date_field, final String hostname) {
-		final ObjectMapper _mapper = new ObjectMapper();
 		return Optional.ofNullable(message.details()).map(d -> _mapper.convertValue(d, ObjectNode.class)).orElseGet(() -> _mapper.createObjectNode())
 				.put(date_field, message.date().getTime())
 				.put("message", message.message())
