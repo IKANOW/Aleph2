@@ -202,6 +202,13 @@ public class KafkaUtils {
 		return topic_exists;
 	}
 	
+	/** Returns the map of kafka properties
+	 * @return
+	 */
+	public static Map<String, String> getProperties() {
+		return kafka_properties.entrySet().stream().collect(Collectors.toMap(o -> o.toString(), o -> Optional.ofNullable(o).map(oo -> oo.toString()).orElse(null)));
+	}
+	
 	/**
 	 * Changes out this classes configured properties pointing at
 	 * a kafka instance.  Also resets the current producer so a
