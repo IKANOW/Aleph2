@@ -51,6 +51,7 @@ public class LoggingUtils {
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
 	public static final String LAST_LOG_TIMESTAMP_FIELD = "last_log_timestamp";
 	public static final String LOG_COUNT_FIELD = "log_count";
+	protected static final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
 	/**
 	 * Builds a JsonNode log message object, contains fields for date, message, generated_by, bucket, subsystem, and severity
