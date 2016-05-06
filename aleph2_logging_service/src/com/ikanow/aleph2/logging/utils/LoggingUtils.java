@@ -49,6 +49,7 @@ public class LoggingUtils {
 	private static final String DEFAULT_LEVEL_KEY = "__DEFAULT__";
 	public static final String LAST_LOG_TIMESTAMP_FIELD = "last_log_timestamp";
 	public static final String LOG_COUNT_FIELD = "log_count";
+	protected static final ObjectMapper _mapper = BeanTemplateUtils.configureMapper(Optional.empty());
 	
 	/**
 	 * Builds a JsonNode log message object, contains fields for date, message, generated_by, bucket, subsystem, and severity
@@ -61,7 +62,6 @@ public class LoggingUtils {
 	 */
 	public static JsonNode createLogObject(final Level level, final DataBucketBean bucket, final BasicMessageBean message, final boolean isSystemMessage, 
 			final String date_field, final String hostname) {
-		final ObjectMapper _mapper = new ObjectMapper();
 		return Optional.ofNullable(message.details()).map(d -> _mapper.convertValue(d, ObjectNode.class)).orElseGet(() -> _mapper.createObjectNode())
 				.put(date_field, message.date().getTime())
 				.put("message", message.message())
