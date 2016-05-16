@@ -283,7 +283,9 @@ public class AnalyticTriggerBeanUtils {
 						return new AnalyticThreadComplexTriggerBean(TriggerOperator.and, true, getFullyAutomaticTriggerList(bucket));
 					}
 					else {
-						return info.trigger();
+						return Optional.ofNullable(info.trigger()).orElseGet(() -> 
+								new AnalyticThreadComplexTriggerBean(TriggerOperator.and, true, Collections.emptyList()) // (will resolve to true if no trigger set)
+								);
 					}					
 				});
 				;

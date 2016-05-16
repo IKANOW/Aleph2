@@ -52,6 +52,7 @@ import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadJobBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean;
 import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean;
+import com.ikanow.aleph2.data_model.objects.data_analytics.AnalyticThreadTriggerBean.AnalyticThreadComplexTriggerBean.TriggerType;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketStatusBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
@@ -208,11 +209,16 @@ public class AnalyticsTriggerWorkerActor extends UntypedActor {
 							()->this.getClass().getSimpleName(), 
 							()->"onBucketChanged", 
 							()->null, 
-							()->ErrorUtils.get("Generated {0} trigger(s) ({1} group(s)) for bucket {2} ({3} job(s))", 
+							()->ErrorUtils.get("Generated {0} trigger(s) ({1} group(s)) for bucket {2} ({3} job(s)) trigger_types={4}", 
 									triggers_in.values().stream().flatMap(l->l.stream()).count(),
 									triggers_in.size(),
 									message.bucket().full_name(), 
-									Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0))
+									Optionals.of(() -> message.bucket().analytic_thread().jobs()).map(j -> j.size()).orElse(0),
+									triggers_in.values().stream().flatMap(l->l.stream())
+										.map(t -> Optional.ofNullable(t.trigger_type()).orElse(TriggerType.none).toString() + ":" + Optional.ofNullable(t.input_data_service()).orElse("-"))												
+										.distinct()
+										.collect(Collectors.joining(","))
+									)
 							, 
 							()->Collections.emptyMap()));								
 

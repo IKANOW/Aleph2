@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -246,6 +247,26 @@ public class TestAnalyticTriggerBeanUtils {
 		assertTrue("Manual trigger present", trigger.isPresent());
 		assertEquals("Manual trigger returns itself", manual_trigger_bucket.analytic_thread().trigger_config().trigger(), trigger.get());
 		
+	}
+
+	@Test
+	public void test_buildManualEmptyTrigger() {
+		final DataBucketBean manual_trigger_bucket = BeanTemplateUtils.build(DataBucketBean.class)
+					.with(DataBucketBean::analytic_thread, 
+							BeanTemplateUtils.build(AnalyticThreadBean.class)
+								.with(AnalyticThreadBean::trigger_config, BeanTemplateUtils.build(AnalyticThreadTriggerBean.class)
+										.with(AnalyticThreadTriggerBean::auto_calculate, false)
+									.done().get())
+							.done().get()
+							)
+				.done().get();
+		
+		Optional<AnalyticThreadComplexTriggerBean> trigger = AnalyticTriggerBeanUtils.getManualOrAutomatedTrigger(manual_trigger_bucket);
+		assertTrue("Manual trigger present", trigger.isPresent());
+		assertTrue("Manual trigger ANDs nothign together", trigger.get().op() == TriggerOperator.and);
+		assertTrue("Manual trigger ANDs nothign together", trigger.get().dependency_list().isEmpty());
+		
+		assertTrue("Trigger check passes", AnalyticTriggerBeanUtils.checkTrigger(trigger.get(), Collections.emptySet(), false));
 	}
 	
 	@Test
