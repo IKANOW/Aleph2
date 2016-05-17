@@ -1281,7 +1281,7 @@ public class TestAnalyticsContext {
 		
 		assertEquals(3, crud_check_index.countObjects().get().intValue());
 		assertEquals("{\"test\":\"test3\",\"extra\":\"test3_extra\"}", ((ObjectNode)
-				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id")).toString());
+				crud_check_index.getObjectBySpec(CrudUtils.anyOf().when("test", "test3")).get().get()).remove(Arrays.asList("_id", "_type", "_index")).toString());
 	
 		Thread.sleep(5000); //wait a few seconds for producers to dump batch
 		List<String> kafka = Optionals.streamOf(iter, false).collect(Collectors.toList());
