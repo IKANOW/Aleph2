@@ -109,6 +109,13 @@ public class TimeSliceDirUtils {
 				.map(dir -> Tuples._2T(dir, dir.lastIndexOf("/"))) // if not present, returns -1 which means the substring below grabs the entire thing
 				.map(dir_date -> Tuples._2T(dir_date._1(), dir_date._1().substring(1 + dir_date._2())))
 				.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), dir_date._2().lastIndexOf("_"))) // if not present, returns -1 which means the substring below grabs the entire thing
+				.map(dir_date_index -> { // ugly case where ends in a segment (with or without date)
+					if ((dir_date_index._2().length() - dir_date_index._3()) <= 4) { //ie 3 chars + 1 for '_', means it can't be a date so must be a segment
+						final String new_date = dir_date_index._1().substring(0, dir_date_index._3()); //(up to including the last _)
+						return Tuples._3T(dir_date_index._1(), new_date, new_date.lastIndexOf("_"));
+					}
+					else return dir_date_index;
+				})
 				.map(dir_date_index -> Tuples._2T(dir_date_index._1(), dir_date_index._2().substring(1 + dir_date_index._3())))
 				.map(dir_date -> Tuples._3T(dir_date._1(), dir_date._2(), TimeUtils.getDateFromSuffix(dir_date._2())))
 				;
