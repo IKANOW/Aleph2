@@ -123,28 +123,28 @@ public class TestTimeUtils {
 
 		// Confirm this human readable date is in the past
 		{
-			Validation<String, Date> result = TimeUtils.getSchedule("2am", Optional.of(now)); // (2am EST, 7am GMT)
+			Validation<String, Date> result = TimeUtils.getSchedule("7am UTC", Optional.of(now)); // (2am EST, 7am GMT)
 			assertTrue("Passes", result.isSuccess());
 			assertEquals(946710000000L, result.success().getTime());
 			assertTrue(now.getTime() > result.success().getTime()); //Sat, 01 Jan 2000 07:00:00 GMT
 		}
 		// Now check that we get a forward if that's what we want
 		{
-			Validation<String, Date> result = TimeUtils.getForwardSchedule("2am", Optional.of(now));
+			Validation<String, Date> result = TimeUtils.getForwardSchedule("7am UTC", Optional.of(now));
 			assertTrue("Passes", result.isSuccess());
 			assertEquals(946796400000L, result.success().getTime());
 			assertTrue(now.getTime() < result.success().getTime());			
 		}
 		// OK now a failure case
 		{
-			Validation<String, Date> result = TimeUtils.getSchedule("jan 1 1983", Optional.of(now)); // (2am EST, 7am GMT)
+			Validation<String, Date> result = TimeUtils.getSchedule("jan 1 1983 10am UTC", Optional.of(now)); // (2am EST, 7am GMT)
 			assertTrue("Passes", result.isSuccess());
-			assertEquals(410266800000L, result.success().getTime());
-			assertTrue(now.getTime() > result.success().getTime()); //Sat, 01 Jan 2000 07:00:00 GMT
+			assertEquals(410263200000L, result.success().getTime());
+			assertTrue(now.getTime() > result.success().getTime()); 
 		}
 		// Now check that we get a forward if that's what we want
 		{
-			Validation<String, Date> result = TimeUtils.getForwardSchedule("jan 1 1983", Optional.of(now));
+			Validation<String, Date> result = TimeUtils.getForwardSchedule("jan 1 1983 10am UTC", Optional.of(now));
 			assertTrue("Fails", result.isFail());
 		}
 	}
