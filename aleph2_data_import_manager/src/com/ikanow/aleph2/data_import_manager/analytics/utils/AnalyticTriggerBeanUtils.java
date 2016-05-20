@@ -360,7 +360,7 @@ public class AnalyticTriggerBeanUtils {
 				.orElse("")
 				;
 		
-		return TimeUtils.getSchedule(check_time, Optional.of(from))
+		return TimeUtils.getForwardSchedule(check_time, Optional.of(from))
 				.validation(fail -> Date.from(from.toInstant().plus(10L, ChronoUnit.MINUTES)), success -> success);
 	}
 	

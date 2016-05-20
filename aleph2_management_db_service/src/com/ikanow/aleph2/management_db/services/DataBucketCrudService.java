@@ -274,7 +274,7 @@ public class DataBucketCrudService implements IManagementCrudService<DataBucketB
 		// Made it this far, try to set the next_poll_time in the status object
 		if ( null != new_object.poll_frequency()) {
 			//get the next poll time
-			final Date next_poll_time = TimeUtils.getSchedule(new_object.poll_frequency(), Optional.of(new Date())).success();
+			final Date next_poll_time = TimeUtils.getForwardSchedule(new_object.poll_frequency(), Optional.of(new Date())).success();
 			//update the status
 			_underlying_data_bucket_status_db.get().updateObjectById(new_object._id(), CrudUtils.update(DataBucketStatusBean.class).set(DataBucketStatusBean::next_poll_date, next_poll_time));
 		}

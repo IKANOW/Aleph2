@@ -161,7 +161,7 @@ public class BucketPollFreqSingletonActor extends UntypedActor {
 		//update this buckets with a new next_date		
 		//TODO handle validation failure (shouldn't happen if poll date was already set? (i.e. instead of calling .success())
 		return Optional.ofNullable(bucket.poll_frequency())
-				.map(p_f -> TimeUtils.getSchedule(bucket.poll_frequency(), Optional.of(new Date()))) //success pass back poll_freq
+				.map(p_f -> TimeUtils.getForwardSchedule(bucket.poll_frequency(), Optional.of(new Date()))) //success pass back poll_freq
 				.orElse(Validation.fail("next_poll_time does not exist, probably was removed when bucket was republished")) //poll_freq doesn't exist, fail validation
 				.validation(f->{
 					//didn't have a poll_freq, clean up and kick out

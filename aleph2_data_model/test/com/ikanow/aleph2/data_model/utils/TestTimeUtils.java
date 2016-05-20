@@ -115,6 +115,40 @@ public class TestTimeUtils {
 		assertTrue("Fails", error2.isFail());
 		assertEquals(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT, "nonsense"), error2.fail());
 	}
+
+	@Test
+	public void test_getForwardSchedule() {
+		
+		final Date now = new Date(946724400000L); //Sat, 01 Jan 2000 10:00:00 GMT
+
+		// Confirm this human readable date is in the past
+		{
+			Validation<String, Date> result = TimeUtils.getSchedule("2am", Optional.of(now)); // (2am EST, 7am GMT)
+			assertTrue("Passes", result.isSuccess());
+			assertEquals(946710000000L, result.success().getTime());
+			assertTrue(now.getTime() > result.success().getTime()); //Sat, 01 Jan 2000 07:00:00 GMT
+		}
+		// Now check that we get a forward if that's what we want
+		{
+			Validation<String, Date> result = TimeUtils.getForwardSchedule("2am", Optional.of(now));
+			assertTrue("Passes", result.isSuccess());
+			assertEquals(946796400000L, result.success().getTime());
+			assertTrue(now.getTime() < result.success().getTime());			
+		}
+		// OK now a failure case
+		{
+			Validation<String, Date> result = TimeUtils.getSchedule("jan 1 1983", Optional.of(now)); // (2am EST, 7am GMT)
+			assertTrue("Passes", result.isSuccess());
+			assertEquals(410266800000L, result.success().getTime());
+			assertTrue(now.getTime() > result.success().getTime()); //Sat, 01 Jan 2000 07:00:00 GMT
+		}
+		// Now check that we get a forward if that's what we want
+		{
+			Validation<String, Date> result = TimeUtils.getForwardSchedule("jan 1 1983", Optional.of(now));
+			assertTrue("Fails", result.isFail());
+		}
+	}
+	
 	
 	@SuppressWarnings("unused")
 	@Test

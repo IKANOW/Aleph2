@@ -15,6 +15,7 @@
  *******************************************************************************/
 package com.ikanow.aleph2.data_model.utils;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 import java.text.ParseException;
@@ -22,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -227,14 +229,15 @@ public class TimeUtils {
 		});
 	}
 	
-	/** Returns a date from a human readable date
+	/** Returns a date from a human readable date - can be in the future or past
 	 * @param human_readable_date - the date expressed in words, eg "next wednesday".. Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
 	 * @param base_date - for relative date, locks the date to this origin
 	 * @return the machine readable date, or an error
 	 */
 	public static Validation<String, Date> getSchedule(final String human_readable_date, Optional<Date> base_date) {
 		try { // just read the first - note can ignore all the error checking here, just fail out using the try/catch
-			CalendarSource.setBaseDate(base_date.orElse(new Date()));
+			final Date adjusted_date = base_date.orElse(new Date());
+			CalendarSource.setBaseDate(adjusted_date);
 			final Parser parser = new Parser();
 			final List<DateGroup> l = parser.parse(human_readable_date);
 			final DateGroup d = l.get(0);
@@ -253,5 +256,30 @@ public class TimeUtils {
 		}		
 	}
 	
+	/** Returns a date from a human readable date - can only be in the future
+	 * @param human_readable_date - the date expressed in words, eg "next wednesday".. Uses some simple regexes (1h,d, 1month etc), and Natty (try examples http://natty.joestelmach.com/try.jsp#)
+	 * @param base_date - for relative date, locks the date to this origin
+	 * @return the machine readable date, or an error
+	 */
+	public static Validation<String, Date> getForwardSchedule(final String human_readable_date, Optional<Date> base_date) {
+		final Date adjusted_date = base_date.orElse(new Date());
+		return _adjustments.stream()
+				.map(adjust -> Date.from(adjusted_date.toInstant().plus(adjust._1(), adjust._2()))) // (adjust the date by the increasing adjustment)
+				.map(adjusted -> getSchedule(human_readable_date, Optional.of(adjusted)))
+				.filter(parsed -> parsed.isSuccess())
+				.filter(parsed -> parsed.success().getTime() >= adjusted_date.getTime())
+				.findFirst()
+				.orElse(Validation.fail(ErrorUtils.get(ErrorUtils.INVALID_DATETIME_FORMAT_PAST, human_readable_date)));		
+	}
+	
 	private static Pattern date_parser = Pattern.compile("^\\s*([0-9]+)\\s*([a-z][a-rt-z]*)s?\\s*$", Pattern.CASE_INSENSITIVE);
+	private static final List<Tuple2<Long, TemporalUnit>> _adjustments =
+			Arrays.asList(
+					Tuples._2T(0L, ChronoUnit.HOURS),
+					Tuples._2T(1L, ChronoUnit.HOURS),
+					Tuples._2T(1L, ChronoUnit.DAYS),
+					Tuples._2T(7L, ChronoUnit.DAYS),
+					Tuples._2T(30L, ChronoUnit.DAYS)
+					);
+	
 }

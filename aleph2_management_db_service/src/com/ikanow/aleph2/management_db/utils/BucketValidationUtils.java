@@ -557,7 +557,7 @@ public class BucketValidationUtils {
 			
 			if (null != analytic_thread.trigger_config()) {
 				if (null != analytic_thread.trigger_config().schedule()) {
-					final Validation<String, Date> test = TimeUtils.getSchedule(analytic_thread.trigger_config().schedule(), Optional.empty());
+					final Validation<String, Date> test = TimeUtils.getForwardSchedule(analytic_thread.trigger_config().schedule(), Optional.empty());
 					if (test.isFail()) {
 						errs.add(ErrorUtils.get(ManagementDbErrorUtils.ANALYTIC_TRIGGER_MALFORMED_DATE, bean.full_name(), analytic_thread.trigger_config().schedule(), test.fail()));
 					}					
