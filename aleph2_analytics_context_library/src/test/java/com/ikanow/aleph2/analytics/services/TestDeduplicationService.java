@@ -139,6 +139,7 @@ public class TestDeduplicationService {
 								BeanTemplateUtils.build(DedupConfigBean.class)
 									.with(DedupConfigBean::doc_schema_override, 
 											BeanTemplateUtils.build(DocumentSchemaBean.class)
+												.with(DocumentSchemaBean::lookup_service_override, "")
 											.done().get()
 											)
 								.done().get()

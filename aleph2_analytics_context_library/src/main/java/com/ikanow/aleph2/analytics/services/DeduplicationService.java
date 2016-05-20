@@ -152,7 +152,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 			return mutable_errs; //(no point going any further here)
 		}
 
-		if (null == doc_schema.lookup_service_override()) {
+		if (!Optional.ofNullable(doc_schema.lookup_service_override()).filter(s -> !s.isEmpty()).isPresent()) {
 			final boolean doc_schema_enabled = 
 					Optionals.of(() -> bucket.data_schema().document_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
 			if (!doc_schema_enabled) {
@@ -803,6 +803,7 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	protected static Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> getDataService(final DocumentSchemaBean doc_schema) {
 		final Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>> service_to_use =
 				Optional.ofNullable(doc_schema.lookup_service_override())
+						.filter(s -> !s.isEmpty())
 						.map(s -> s.split("[.:]", 2))
 						.map(s2 -> Tuples._2T(DataServiceUtils.getUnderlyingServiceInterface(s2[0]), (s2.length > 1) ? Optional.ofNullable(s2[1]) : Optional.<String>empty()))
 						.orElseGet(() -> Tuples._2T(Optional.of(IDocumentService.class), Optional.ofNullable(doc_schema.service_name())))
