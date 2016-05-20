@@ -109,6 +109,7 @@ public class TestDataSchemaBean {
 						true,
 						false,
 						false,
+						"",
 						ImmutableMap.<String, Object>builder().put("technology_override", "schema").build()
 						);
 		
@@ -123,6 +124,7 @@ public class TestDataSchemaBean {
 		assertEquals("Doc bean dedup custom finalze", document_bean.custom_finalize_all_objects(), true);
 		assertEquals("Doc bean delete unhandled", document_bean.delete_unhandled_duplicates(), false);
 		assertEquals("Doc bean allow manual delete", document_bean.allow_manual_deletion(), false);
+		assertEquals("Doc bean lookup service override", document_bean.lookup_service_override(), "");
 		assertEquals("Document bean technology_override_schema", document_bean.technology_override_schema(), ImmutableMap.<String, Object>builder().put("technology_override", "schema").build());
 		
 		// WriteSettings (shared across schemas - currenly only search_index_bean though)

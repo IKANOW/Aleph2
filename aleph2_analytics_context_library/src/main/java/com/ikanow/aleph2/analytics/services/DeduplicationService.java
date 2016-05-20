@@ -44,14 +44,18 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.ikanow.aleph2.analytics.data_model.DedupConfigBean;
+import com.ikanow.aleph2.analytics.utils.ErrorUtils;
 import com.ikanow.aleph2.core.shared.utils.BatchRecordUtils;
+import com.ikanow.aleph2.core.shared.utils.DataServiceUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule;
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataServiceProvider;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ILoggingService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.AnnotationBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
@@ -60,12 +64,12 @@ import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentS
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationTiming;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.shared.AuthorizationBean;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils.MethodNamingHelper;
 import com.ikanow.aleph2.data_model.utils.BucketUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
-import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.Lambdas;
 import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Patterns;
@@ -76,6 +80,7 @@ import com.ikanow.aleph2.data_model.utils.JsonUtils;
 import com.ikanow.aleph2.data_model.utils.SetOnce;
 
 import fj.data.Either;
+import fj.data.Validation;
 
 /** An enrichment module that will perform deduplication using the provided document_schema
  * @author Alex
@@ -125,6 +130,57 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 	}
 	protected final SetOnce<Function<String, String>> _db_mapper = new SetOnce<>();
 	
+	/* (non-Javadoc)
+	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#validateModule(com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean)
+	 */
+	@Override
+	public Collection<BasicMessageBean> validateModule(
+			IEnrichmentModuleContext context, DataBucketBean bucket,
+			EnrichmentControlMetadataBean control) {
+		
+		final LinkedList<BasicMessageBean> mutable_errs = new LinkedList<>();
+		
+		// Validation
+		
+		// 1) Check that has doc schema enabled unless override set 
+
+		final DedupConfigBean dedup_config = BeanTemplateUtils.from(Optional.ofNullable(control.config()).orElse(Collections.emptyMap()), DedupConfigBean.class).get();
+		
+		final DocumentSchemaBean doc_schema = Optional.ofNullable(dedup_config.doc_schema_override()).orElse(bucket.data_schema().document_schema()); //(exists by construction)
+		if (null == doc_schema) { // Has to either have a doc schema or an override 
+			mutable_errs.add(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "validateModule", ErrorUtils.get(ErrorUtils.MISSING_DOCUMENT_SERVICE)));
+			return mutable_errs; //(no point going any further here)
+		}
+
+		if (null == doc_schema.lookup_service_override()) {
+			final boolean doc_schema_enabled = 
+					Optionals.of(() -> bucket.data_schema().document_schema()).map(ds -> Optional.ofNullable(ds.enabled()).orElse(true)).orElse(false);
+			if (!doc_schema_enabled) {
+				mutable_errs.add(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "validateModule", ErrorUtils.get(ErrorUtils.MISSING_DOCUMENT_SERVICE)));
+			}
+		}
+		//(else up to the user to ensure that the required service is included)
+		
+		// 1.5) Validate that the service override is valid
+		
+		final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> service_to_use = getDataService(doc_schema);					
+		
+		if (service_to_use.isFail()) {
+			mutable_errs.add(ErrorUtils.buildErrorMessage(this.getClass().getSimpleName(), "validateModule", service_to_use.fail()));
+		}
+		
+		// 2) Validate any child modules
+
+		Optional<EnrichmentControlMetadataBean> custom_config =  
+				Optionals.ofNullable(doc_schema.custom_deduplication_configs()).stream().filter(cfg -> Optional.ofNullable(cfg.enabled()).orElse(true)).findFirst();
+		
+		custom_config.ifPresent(cfg -> {
+			mutable_errs.addAll(
+					getEnrichmentModules(context, cfg).stream().flatMap(module -> module.validateModule(context, bucket, cfg).stream()).collect(Collectors.toList()));
+		});
+		return mutable_errs;
+	}
+
 	/* (non-Javadoc)
 	 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#onStageInitialize(com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean, scala.Tuple2, java.util.Optional)
 	 */
@@ -180,10 +236,13 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 					)
 					.orElse(bucket);
 		
+		//(valid by construction - see validateSchema)
+		final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> service_to_use = getDataService(_doc_schema.get());					
+		
 		// Get secured data service -> CRUD for id checking and deletion
 		final Optional<ICrudService<JsonNode>> maybe_read_crud =				
-			context.getServiceContext().getService(IDocumentService.class, Optional.ofNullable(doc_schema.service_name()))
-					.map(ds -> ds.secured(context.getServiceContext(), new AuthorizationBean(bucket.owner_id())))
+			context.getServiceContext().getService(service_to_use.success()._1().get(), service_to_use.success()._2())
+					.map(ds -> ((IDataServiceProvider)ds).secured(context.getServiceContext(), new AuthorizationBean(bucket.owner_id())))
 					.flatMap(ds -> ds.getDataService())
 					.flatMap(ds -> 
 						_doc_schema.get().delete_unhandled_duplicates() || _doc_schema.get().allow_manual_deletion()
@@ -211,29 +270,14 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		_policy.set(Optional.ofNullable( _doc_schema.get().deduplication_policy()).orElse(DeduplicationPolicy.leave));
 		
 		if ((DeduplicationPolicy.custom == _policy.get()) || (DeduplicationPolicy.custom_update == _policy.get())) {
-			Optional<EnrichmentControlMetadataBean> custom_config =  Optionals.ofNullable(_doc_schema.get().custom_deduplication_configs()).stream().findFirst();
+						
+			Optional<EnrichmentControlMetadataBean> custom_config =  
+					Optionals.ofNullable(_doc_schema.get().custom_deduplication_configs()).stream().filter(cfg -> Optional.ofNullable(cfg.enabled()).orElse(true)).findFirst();
+			
 			custom_config.ifPresent(cfg -> {
-				final Optional<String> entry_point = Optional.ofNullable(cfg.entry_point())
-						.map(Optional::of)
-						.orElseGet(() -> {
-							// Get the shared library bean:
-							
-							return BucketUtils.getBatchEntryPoint(							
-								context.getServiceContext().getCoreManagementDbService().readOnlyVersion().getSharedLibraryStore()
-									.getObjectBySpec(CrudUtils.anyOf(SharedLibraryBean.class)
-												.when(SharedLibraryBean::_id, cfg.module_name_or_id())
-												.when(SharedLibraryBean::path_name, cfg.module_name_or_id())
-											)
-									.join()
-									.map(bean -> (Map<String, SharedLibraryBean>)ImmutableMap.of(cfg.module_name_or_id(), bean))
-									.orElse(Collections.<String, SharedLibraryBean>emptyMap())
-									,
-									cfg);
-						});
 				
-				entry_point.ifPresent(Lambdas.wrap_consumer_u(ep -> 
-					_custom_handler.set((IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance())));
-
+				getEnrichmentModules(context, cfg).stream().findFirst().ifPresent(module -> _custom_handler.set(module));			
+				
 				_custom_context.set(new DeduplicationEnrichmentContext(context, _doc_schema.get(), j -> getKeyFieldsAgain(j, getKeyFields(_dedup_fields.get()))));
 				
 				_custom_handler.optional().ifPresent(base_module -> base_module.onStageInitialize(_custom_context.get(), bucket, cfg, previous_next, next_grouping_fields));
@@ -752,4 +796,53 @@ public class DeduplicationService implements IEnrichmentBatchModule {
 		_logger.optional().ifPresent(Lambdas.wrap_consumer_u(l -> l.flush().get(60, TimeUnit.SECONDS)));
 	}
 
+	/** Utility function to allow the user to override data service to use in the lookup
+	 * @param doc_schema
+	 * @return
+	 */
+	protected static Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> getDataService(final DocumentSchemaBean doc_schema) {
+		final Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>> service_to_use =
+				Optional.ofNullable(doc_schema.lookup_service_override())
+						.map(s -> s.split("[.:]", 2))
+						.map(s2 -> Tuples._2T(DataServiceUtils.getUnderlyingServiceInterface(s2[0]), (s2.length > 1) ? Optional.ofNullable(s2[1]) : Optional.<String>empty()))
+						.orElseGet(() -> Tuples._2T(Optional.of(IDocumentService.class), Optional.ofNullable(doc_schema.service_name())))
+						;
+		
+		if (!service_to_use._1().isPresent()) {
+			return Validation.fail(ErrorUtils.get(ErrorUtils.INVALID_LOOKUP_SERVICE, doc_schema.lookup_service_override()));
+		}		
+		else return Validation.success(service_to_use);
+	}
+	
+	/** Utility to get the list (currently 0/1) of enrichment modules that define deduplication handling
+	 * @param doc_schema
+	 * @return
+	 */
+	final protected static Collection<IEnrichmentBatchModule> getEnrichmentModules(final IEnrichmentModuleContext context, final EnrichmentControlMetadataBean cfg) {
+		
+		final Optional<String> entry_point = Optional.ofNullable(cfg.entry_point())
+				.map(Optional::of)
+				.orElseGet(() -> {
+					// Get the shared library bean:
+					
+					return BucketUtils.getBatchEntryPoint(							
+						context.getServiceContext().getCoreManagementDbService().readOnlyVersion().getSharedLibraryStore()
+							.getObjectBySpec(CrudUtils.anyOf(SharedLibraryBean.class)
+										.when(SharedLibraryBean::_id, cfg.module_name_or_id())
+										.when(SharedLibraryBean::path_name, cfg.module_name_or_id())
+									)
+							.join()
+							.map(bean -> (Map<String, SharedLibraryBean>)ImmutableMap.of(cfg.module_name_or_id(), bean))
+							.orElse(Collections.<String, SharedLibraryBean>emptyMap())
+							,
+							cfg);
+				});
+		
+		return entry_point.map(Lambdas.wrap_u(ep -> 
+				(IEnrichmentBatchModule) Class.forName(ep, true, Thread.currentThread().getContextClassLoader()).newInstance()))
+			.map(i -> Arrays.asList(i))
+			.orElse(Collections.emptyList())
+			;
+	}
+	
 }

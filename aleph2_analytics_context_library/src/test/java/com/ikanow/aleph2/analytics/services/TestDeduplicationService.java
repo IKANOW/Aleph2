@@ -20,6 +20,8 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -31,6 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.elasticsearch.common.collect.ImmutableMap;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -44,6 +47,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.ikanow.aleph2.analytics.data_model.DedupConfigBean;
 import com.ikanow.aleph2.analytics.services.DeduplicationService;
 import com.ikanow.aleph2.core.shared.utils.BatchRecordUtils;
 import com.ikanow.aleph2.data_model.interfaces.data_analytics.IBatchRecord;
@@ -52,18 +56,22 @@ import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModul
 import com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IDocumentService;
 import com.ikanow.aleph2.data_model.interfaces.data_services.IManagementDbService;
+import com.ikanow.aleph2.data_model.interfaces.data_services.ISearchIndexService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IBucketLogger;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IDataWriteService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.IUnderlyingService;
 import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean;
 import com.ikanow.aleph2.data_model.objects.data_import.DataSchemaBean.DocumentSchemaBean.DeduplicationPolicy;
+import com.ikanow.aleph2.data_model.objects.shared.BasicMessageBean;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.ModuleUtils;
+import com.ikanow.aleph2.data_model.utils.Optionals;
 import com.ikanow.aleph2.data_model.utils.Tuples;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
 import com.typesafe.config.Config;
@@ -92,6 +100,209 @@ public class TestDeduplicationService {
 
 		Injector app_injector = ModuleUtils.createTestInjector(Arrays.asList(), Optional.of(config));	
 		app_injector.injectMembers(this);
+	}
+	
+	@Test
+	public void test_validateModule() {
+		
+		// Fails because no doc schema nor doc schema override, no lookup override
+		{
+			final DataBucketBean test_bucket = getDocBucket("/test/simple",
+					null
+					);
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertFalse(res.isEmpty());
+			assertTrue(res.stream().allMatch(b -> !b.success()));			
+		}
+		// No doc schema, no lookup override set 
+		{
+			final DataBucketBean test_bucket = getDocBucket("/test/simple",
+					null
+					);
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+					.with(EnrichmentControlMetadataBean::config,
+							BeanTemplateUtils.toMap(
+								BeanTemplateUtils.build(DedupConfigBean.class)
+									.with(DedupConfigBean::doc_schema_override, 
+											BeanTemplateUtils.build(DocumentSchemaBean.class)
+											.done().get()
+											)
+								.done().get()
+								))
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertFalse(res.isEmpty());
+			assertTrue(res.stream().allMatch(b -> !b.success()));			
+			
+		}
+		// No doc schema, but lookup override set (should work)
+		{
+			final DataBucketBean test_bucket = getDocBucket("/test/simple",
+					null
+					);
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+					.with(EnrichmentControlMetadataBean::config,
+							BeanTemplateUtils.toMap(
+								BeanTemplateUtils.build(DedupConfigBean.class)
+									.with(DedupConfigBean::doc_schema_override, 
+											BeanTemplateUtils.build(DocumentSchemaBean.class)
+												.with(DocumentSchemaBean::lookup_service_override, "search_index_service")
+											.done().get()
+											)
+								.done().get()
+								))
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertTrue("Errors = " + res.stream().map(b -> b.message()).collect(Collectors.joining(";")), res.isEmpty());			
+		}
+		// No doc schema, but lookup override set ... but is invalid
+		{
+			final DataBucketBean test_bucket = getDocBucket("/test/simple",
+					null
+					);
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+					.with(EnrichmentControlMetadataBean::config,
+							BeanTemplateUtils.toMap(
+								BeanTemplateUtils.build(DedupConfigBean.class)
+									.with(DedupConfigBean::doc_schema_override, 
+											BeanTemplateUtils.build(DocumentSchemaBean.class)
+												.with(DocumentSchemaBean::lookup_service_override, "rabbit")
+											.done().get()
+											)
+								.done().get()
+								))
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertFalse(res.isEmpty());
+			assertTrue(res.stream().allMatch(b -> !b.success()));			
+		}
+		// Doc schema, no lookup override
+		{
+			final DataBucketBean test_bucket = getDocBucket("/test/simple",
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom_update)
+					.done().get()
+					);
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertTrue("Errors = " + res.stream().map(b -> b.message()).collect(Collectors.joining(";")), res.isEmpty());			
+		}
+		// Child module fails
+		{
+			final DataBucketBean test_bucket = addTimestampField("@timestamp", getDocBucket("/test/custom/1",
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
+											.with(EnrichmentControlMetadataBean::config, new LinkedHashMap<>(ImmutableMap.<String, Object>of("fail", true)))
+											.with(EnrichmentControlMetadataBean::entry_point, TestDedupEnrichmentModule.class.getName())
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertFalse(res.isEmpty());
+			assertTrue(res.stream().allMatch(b -> !b.success()));			
+		}			
+		// Child module succeeds
+		{
+			final DataBucketBean test_bucket = addTimestampField("@timestamp", getDocBucket("/test/custom/1",
+					BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::deduplication_policy, DeduplicationPolicy.custom)
+						.with(DocumentSchemaBean::custom_deduplication_configs,
+								Arrays.asList(
+										BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+											.with(EnrichmentControlMetadataBean::name, "custom_test")
+											.with(EnrichmentControlMetadataBean::entry_point, TestDedupEnrichmentModule.class.getName())
+										.done().get()										
+										)
+								)
+					.done().get()
+					));
+			
+			final EnrichmentControlMetadataBean control = BeanTemplateUtils.build(EnrichmentControlMetadataBean.class)
+					.with(EnrichmentControlMetadataBean::name, "test")
+				.done().get();
+
+			final DeduplicationService test_module = new DeduplicationService();
+
+			final IEnrichmentModuleContext enrich_context = Mockito.mock(IEnrichmentModuleContext.class);
+			Mockito.when(enrich_context.getServiceContext()).thenReturn(_service_context);
+			
+			final Collection<BasicMessageBean> res = test_module.validateModule(enrich_context, test_bucket, control);
+			
+			// Check errors
+			assertTrue("Errors = " + res.stream().map(b -> b.message()).collect(Collectors.joining(";")), res.isEmpty());			
+		}			
+		
 	}
 	
 	@Test
@@ -389,6 +600,72 @@ public class TestDeduplicationService {
 			assertFalse(DeduplicationService.newRecordUpdatesOld("s", json1, json1));
 		}
 		
+	}
+	
+	@Test
+	public void test_getDataService() {
+		
+		// Default
+		{
+			final DocumentSchemaBean doc_schema = BeanTemplateUtils.build(DocumentSchemaBean.class)
+					.done().get();
+			
+			final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> res = DeduplicationService.getDataService(doc_schema);
+			
+			assertTrue(res.isSuccess());
+			
+			assertEquals(IDocumentService.class, res.success()._1().get());
+			assertEquals(Optional.empty(), res.success()._2());
+		}
+		// Override - default service name
+		{
+			final DocumentSchemaBean doc_schema = BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::lookup_service_override, "search_index_service")
+					.done().get();
+			
+			final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> res = DeduplicationService.getDataService(doc_schema);
+			
+			assertTrue(res.isSuccess());
+			
+			assertEquals(ISearchIndexService.class, res.success()._1().get());
+			assertEquals(Optional.empty(), res.success()._2());
+		}
+		// Override - non standard service name (1)
+		{
+			final DocumentSchemaBean doc_schema = BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::lookup_service_override, "search_index_service.rabbit")
+					.done().get();
+			
+			final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> res = DeduplicationService.getDataService(doc_schema);
+			
+			assertTrue(res.isSuccess());
+			
+			assertEquals(ISearchIndexService.class, res.success()._1().get());
+			assertEquals(Optional.of("rabbit"), res.success()._2());
+		}
+		// Override - non standard service name (2)
+		{
+			final DocumentSchemaBean doc_schema = BeanTemplateUtils.build(DocumentSchemaBean.class)
+						.with(DocumentSchemaBean::lookup_service_override, "search_index_service:rabbit")
+					.done().get();
+			
+			final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> res = DeduplicationService.getDataService(doc_schema);
+			
+			assertTrue(res.isSuccess());
+			
+			assertEquals(ISearchIndexService.class, res.success()._1().get());
+			assertEquals(Optional.of("rabbit"), res.success()._2());
+		}
+		// Override - invalid
+		{
+			final DocumentSchemaBean doc_schema = BeanTemplateUtils.build(DocumentSchemaBean.class)
+					.with(DocumentSchemaBean::lookup_service_override, "rabbit")
+				.done().get();
+		
+			final Validation<String, Tuple2<Optional<Class<? extends IUnderlyingService>>, Optional<String>>> res = DeduplicationService.getDataService(doc_schema);
+			
+			assertTrue(res.isFail());			
+		}
 	}
 	
 	@Test
@@ -1731,6 +2008,24 @@ public class TestDeduplicationService {
 	
 	public static class TestDedupEnrichmentModule implements IEnrichmentBatchModule {
 
+		/* (non-Javadoc)
+		 * @see com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentBatchModule#validateModule(com.ikanow.aleph2.data_model.interfaces.data_import.IEnrichmentModuleContext, com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean, com.ikanow.aleph2.data_model.objects.data_import.EnrichmentControlMetadataBean)
+		 */
+		@Override
+		public Collection<BasicMessageBean> validateModule(
+				IEnrichmentModuleContext context, DataBucketBean bucket,
+				EnrichmentControlMetadataBean control) {
+			
+			if (Optionals.of(() -> control.config().containsKey("fail")).orElse(false)) {
+				validation_fails = true;
+			}
+			return validation_fails 
+					? Arrays.asList(ErrorUtils.buildErrorMessage("", "", ""))
+					: Collections.emptyList();
+		}
+
+		boolean validation_fails = false;
+		
 		@Override
 		public void onStageInitialize(IEnrichmentModuleContext context,
 				DataBucketBean bucket, EnrichmentControlMetadataBean control,
@@ -1739,6 +2034,8 @@ public class TestDeduplicationService {
 			assertEquals("custom_test", control.name());			
 		}
 
+		
+		
 		@Override
 		public void onObjectBatch(Stream<Tuple2<Long, IBatchRecord>> batch,
 				Optional<Integer> batch_size, Optional<JsonNode> grouping_key) {

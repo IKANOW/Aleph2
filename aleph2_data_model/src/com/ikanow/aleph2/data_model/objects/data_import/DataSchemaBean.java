@@ -308,6 +308,7 @@ public class DataSchemaBean implements Serializable {
 				final Boolean custom_finalize_all_objects,
 				final Boolean delete_unhandled_duplicates,
 				final Boolean allow_manual_deletion,
+				final String lookup_service_override,
 				final Map<String, Object> technology_override_schema)
 		{
 			this.enabled = enabled;
@@ -321,6 +322,7 @@ public class DataSchemaBean implements Serializable {
 			this.custom_finalize_all_objects = custom_finalize_all_objects;
 			this.delete_unhandled_duplicates = delete_unhandled_duplicates;
 			this.allow_manual_deletion = allow_manual_deletion;
+			this.lookup_service_override = lookup_service_override;
 			this.technology_override_schema = technology_override_schema;
 		}
 		/** Describes if the document db service is used for this bucket
@@ -396,6 +398,15 @@ public class DataSchemaBean implements Serializable {
 		public Boolean allow_manual_deletion() {
 			return allow_manual_deletion;
 		}
+		/** Enables other service to be used when is being used in "lookup mode"
+		 *  Use "." or ":" to specify the service override
+		 *  If left blank, this bucket must contain a document schema (and the document service will be used)
+		 * @return
+		 */
+		public String lookup_service_override() {
+			return lookup_service_override;
+		}
+		
 		/** Technology-specific settings for this schema - see the specific service implementation for details 
 		 * USE WITH CAUTION
 		 * @return the technology_override_schema
@@ -414,6 +425,7 @@ public class DataSchemaBean implements Serializable {
 		private Boolean custom_finalize_all_objects;
 		private Boolean delete_unhandled_duplicates;
 		private Boolean allow_manual_deletion;
+		private String lookup_service_override;
 		private Map<String, Object> technology_override_schema;
 	}
 	/** Per bucket schema for the Search Index Service
