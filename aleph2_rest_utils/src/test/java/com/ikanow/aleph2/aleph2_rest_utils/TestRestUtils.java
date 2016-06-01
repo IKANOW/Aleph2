@@ -25,9 +25,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import scala.Tuple2;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.objects.data_import.DataBucketBean;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
+
+import fj.data.Either;
 
 /**
  * @author Burch
@@ -65,6 +71,8 @@ public class TestRestUtils {
 
 	@Test
 	public void test() throws Exception {
+		final Either<String,Tuple2<ICrudService<DataBucketBean>, Class<DataBucketBean>>> crud_service_either1 = RestUtils.getCrudService(null, null, null, null, null);
+		final Either<String,Tuple2<ICrudService<DataBucketBean>, Class<DataBucketBean>>> crud_service_either2 = inbetween(DataBucketBean.class);
 //		ObjectMapper mapper = new ObjectMapper();
 //		final String query_obj = "{\"equals\":{\"fieldx\":\"valuey\"}}";
 //    	try {
@@ -77,6 +85,10 @@ public class TestRestUtils {
 //		}
 //    	
 //    	System.out.println(CrudUtils.allOf().when("fieldx", "valuey").toString());
+	}
+	
+	public <T> Either<String,Tuple2<ICrudService<T>, Class<T>>> inbetween(Class<T> clazz) {
+		return RestUtils.getCrudService(null, null, null, null, null);
 	}
 
 }

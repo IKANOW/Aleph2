@@ -38,6 +38,7 @@ import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -220,8 +221,12 @@ public class RestCrudFunctions {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
 			}    		
     	} else {
-    		//TODO actually we should probably just do something else when this is empty (like return first item, or search all and return limit 10, etc)
-    		return Response.status(Status.BAD_REQUEST).entity("GET requires an id in the url or query in the body").build();
+    		try {
+				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(CrudUtils.allOf(clazz)).get()).toString()).build();
+			} catch (JsonProcessingException | InterruptedException
+					| ExecutionException e) {
+				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
+			}
     	}
 	}
 	
@@ -254,7 +259,7 @@ public class RestCrudFunctions {
 			boolean before_updated = false; //TODO get from url params
 			return Response.ok(RestUtils.convertObjectToJson(crud_service.updateAndReturnObjectBySpec(q_u._1, Optional.of(upsert), q_u._2, Optional.of(before_updated), Collections.emptyList(), false).get().get()).toString()).build();
 		} else {
-			return Response.status(Status.BAD_REQUEST).entity("POST requires json in the body").build();
+			return Response.status(Status.BAD_REQUEST).entity("PUT requires json in the body").build();
 		}    
 	}
 	
