@@ -221,8 +221,9 @@ public class RestCrudFunctions {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
 			}    		
     	} else {
+    		//empty query, does a getall using limit (or 10)
     		try {
-				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(CrudUtils.allOf(clazz)).get()).toString()).build();
+				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(CrudUtils.allOf(clazz).limit(limit.orElse(10L))).get()).toString()).build();
 			} catch (JsonProcessingException | InterruptedException
 					| ExecutionException e) {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
