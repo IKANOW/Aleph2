@@ -55,7 +55,7 @@ public class SharedLibraryCrudServiceWrapper implements ICrudService<Tuple2<Shar
 			Tuple2<SharedLibraryBean, FileDescriptor> new_object) {
 		//if storing shared_lib object is successful, try to store the file
 		return this.shared_library_crud.storeObject(new_object._1).thenCompose(f->{			
-			_logger.error("stored object: " + f.get()); //I think I should be returning this
+			_logger.debug("stored object: " + f.get()); //I think I should be returning this
 			final Tuple2<ICrudService<FileDescriptor>, FileDescriptor> storage = getSharedLibraryDataStore(service_context, new_object._1.path_name(), new_object._2);
 			storage._1.storeObject(storage._2);
 			return CompletableFuture.completedFuture(f);
@@ -63,7 +63,7 @@ public class SharedLibraryCrudServiceWrapper implements ICrudService<Tuple2<Shar
 	}
 	
 	private static Tuple2<ICrudService<FileDescriptor>, FileDescriptor> getSharedLibraryDataStore(final IServiceContext service_context, final String output_path, final FileDescriptor file_descriptor) {
-		_logger.error("filepath is: " + output_path);
+		_logger.debug("filepath is: " + output_path);
 		final String path = output_path.substring(0, output_path.lastIndexOf("/")+1); //TODO what if they use \ instead of /
 		final String file_name = output_path.substring(output_path.lastIndexOf("/")+1);
 		

@@ -101,7 +101,7 @@ public class RestUtils {
 	 */
 	public static <T> Either<String,Tuple2<ICrudService<T>, Class<T>>> getCrudService(final IServiceContext service_context, final String service_type, 
 			final String access_level, final String service_identifier, final Optional<String> bucket_full_names ) {
-		_logger.error("trying to get crud service for: " + service_type + " " + access_level + " " + service_identifier);
+		_logger.debug("trying to get crud service for: " + service_type + " " + access_level + " " + service_identifier);
 		//TODO need to wrap crud in security service
 		//security_service.wrap(user, crud)
 		//return management_db.getSharedLibraryStore().secured(context, new AuthorizationBean(bucket.owner_id()))
@@ -128,7 +128,7 @@ public class RestUtils {
 	 * @return
 	 */
 	private static <T> Either<String,Tuple2<ICrudService<T>, Class<T>>> getManagementDBService(final IServiceContext service_context, final String access_level, final String service_identifier, final Optional<String> bucket_full_names) {
-		_logger.error("trying to get management db service for: " + access_level + " " + service_identifier);
+		_logger.debug("trying to get management db service for: " + access_level + " " + service_identifier);
 		final IManagementDbService db_service = service_context.getCoreManagementDbService();
 		//figure out which sub_service to get
 		switch ( service_identifier.toUpperCase() ) {
@@ -136,7 +136,7 @@ public class RestUtils {
 				if (access_level.toUpperCase().equals(ACCESS_LEVEL_READ)) {
 					return Either.right(new Tuple2(db_service.getDataBucketStore().readOnlyVersion().getCrudService().get(), DataBucketBean.class));
 				} else if (access_level.toUpperCase().equals(ACCESS_LEVEL_WRITE)) {
-					_logger.error("returning writable db crud service");
+					_logger.debug("returning writable db crud service");
 					return Either.right(new Tuple2(db_service.getDataBucketStore(), DataBucketBean.class));
 				} else {
 					return Either.left("Access Level did not match expected types: " + access_level);
@@ -189,7 +189,7 @@ public class RestUtils {
 	 * @return
 	 */
 	private static <T> Either<String,Tuple2<ICrudService<T>, Class<T>>> getDataService(final IServiceContext service_context, final String access_level, final String service_identifier, final String bucket_full_names) {
-		_logger.error("trying to get data_service for: " + access_level + " " + service_identifier );
+		_logger.debug("trying to get data_service for: " + access_level + " " + service_identifier );
 		//wants a buckets crud service, try to get the approriate crud
 		final Either<String, IGenericDataService> either_g = getGenericDataService(service_context, service_identifier);
 		if ( either_g.isLeft() ) 
@@ -215,7 +215,7 @@ public class RestUtils {
 	 * @return
 	 */
 	public static DataBucketBean convertToBucketFullName(final IServiceContext service_context, final String bucket_full_name) {
-		_logger.error("Looking up data bucket for : " + bucket_full_name);
+		_logger.debug("Looking up data bucket for : " + bucket_full_name);
 		//TODO should I store this globally so I don't have to grab it everytime?
 		final IManagementCrudService<DataBucketBean> bucket_store = service_context.getCoreManagementDbService().getDataBucketStore();
 		ManagementFuture<Optional<DataBucketBean>> future = bucket_store.getObjectBySpec(CrudUtils.allOf(DataBucketBean.class).when(DataBucketBean::full_name, bucket_full_name));
@@ -237,7 +237,7 @@ public class RestUtils {
 	}
 
 	private static Either<String, IGenericDataService> getGenericDataService(final IServiceContext service_context, final String service_identifier ) {
-		_logger.error("Getting generic service for data_service: " + service_identifier);
+		_logger.debug("Getting generic service for data_service: " + service_identifier);
 		//parse service type
 		switch ( service_identifier.toUpperCase() ) {
 			case DATA_SERVICE_IDENTIFIER_SEARCH_INDEX:

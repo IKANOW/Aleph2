@@ -73,7 +73,7 @@ public class RestCrudFunctions {
 	
 	public static <T> Response readFunction(IServiceContext service_context, FunctionType function_type, String service_type, String access_level, String service_identifier, Optional<String> bucket_full_names, 
 			Optional<String> query_json, Optional<String> query_id, Optional<Long> limit) {				
-		_logger.error("Handling READ request");
+		_logger.debug("Handling READ request");
 		//parse out the url params
 		
 		final Either<String,Tuple2<ICrudService<T>, Class<T>>> crud_service_either = RestUtils.getCrudService(service_context, service_type, access_level, service_identifier, bucket_full_names);
@@ -97,7 +97,7 @@ public class RestCrudFunctions {
 //	public static <T> Response createFunction(IServiceContext service_context, String service_type, String access_level, String service_identifier, Optional<String> bucket_full_names, 
 //			Optional<String> json) {
 //		return createFunction(service_context, service_type, access_level, service_identifier, bucket_full_names, json, Optional.empty());
-//		_logger.error("Handling CREATE request");
+//		_logger.debug("Handling CREATE request");
 //		//parse out the url params
 //		final Either<String,Tuple2<ICrudService<T>, Class<T>>> crud_service_either = RestUtils.getCrudService(service_context, service_type, access_level, service_identifier, bucket_full_names);
 //
@@ -113,13 +113,13 @@ public class RestCrudFunctions {
 	//create just json version
 	public static <T> Response createFunction(IServiceContext service_context, String service_type, String access_level, String service_identifier, Optional<String> bucket_full_names, 
 			final String json) {
-		_logger.error("Handling CREATE request");
+		_logger.debug("Handling CREATE request");
 		final Either<String,Tuple2<ICrudService<T>, Class<T>>> crud_service_either = RestUtils.getCrudService(service_context, service_type, access_level, service_identifier, bucket_full_names);
 		if ( crud_service_either.isLeft() )
     		return Response.status(Status.BAD_REQUEST).entity(crud_service_either.left().value()).build();			
 		
 		
-		_logger.error("handling regular create request (non file upload)");
+		_logger.debug("handling regular create request (non file upload)");
 		try {
 			return handleCreateRequest(json, crud_service_either.right().value()._1, crud_service_either.right().value()._2);
 		} catch ( Exception ex ) {
@@ -168,7 +168,7 @@ public class RestCrudFunctions {
 	
 	public static <T> Response updateFunction(IServiceContext service_context, String service_type, String access_level, String service_identifier, Optional<String> bucket_full_names, 
 			Optional<String> json) {
-		_logger.error("Handling UPDATE request");
+		_logger.debug("Handling UPDATE request");
 		//parse out the url params
 		final Either<String,Tuple2<ICrudService<T>, Class<T>>> crud_service_either = RestUtils.getCrudService(service_context, service_type, access_level, service_identifier, bucket_full_names);
 		if ( crud_service_either.isLeft() )
@@ -184,7 +184,7 @@ public class RestCrudFunctions {
 	
 	public static <T> Response deleteFunction(IServiceContext service_context, String service_type, String access_level, String service_identifier, Optional<String> bucket_full_names, 
 			Optional<String> query_json, Optional<String> query_id) {		
-		_logger.error("Handling DELETE request");
+		_logger.debug("Handling DELETE request");
 		//parse out the url params
 		final Either<String,Tuple2<ICrudService<T>, Class<T>>> crud_service_either = RestUtils.getCrudService(service_context, service_type, access_level, service_identifier, bucket_full_names);
 		if ( crud_service_either.isLeft() )
@@ -205,7 +205,7 @@ public class RestCrudFunctions {
     		//ID query
     		try {
     			final String id = query_id.get();
-        		_logger.error("id: " + id);
+        		_logger.debug("id: " + id);
 				return Response.ok(RestUtils.convertObjectToJson(crud_service.getObjectById(id).get()).toString()).build();
 			} catch (JsonProcessingException | InterruptedException | ExecutionException e) {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
@@ -214,7 +214,7 @@ public class RestCrudFunctions {
     		//Body Query
 			try {
 				final String json = query_json.get();
-				_logger.error("query: " + json);
+				_logger.debug("query: " + json);
 				final QueryComponent<T> query = RestUtils.convertStringToQueryComponent(json, clazz, limit);				
 				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(query).get()).toString()).build();
 			} catch (Exception e) {
@@ -223,6 +223,7 @@ public class RestCrudFunctions {
     	} else {
     		//empty query, does a getall using limit (or 10)
     		try {
+    			_logger.debug("empty query, get all");
 				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(CrudUtils.allOf(clazz).limit(limit.orElse(10L))).get()).toString()).build();
 			} catch (JsonProcessingException | InterruptedException
 					| ExecutionException e) {
@@ -235,7 +236,7 @@ public class RestCrudFunctions {
 		//get query or if there is none just return count	  		
 		return query_json.map(json->{
 			try {
-				_logger.error("query: " + json);
+				_logger.debug("query: " + json);
 				final QueryComponent<T> query = RestUtils.convertStringToQueryComponent(json, clazz, Optional.empty());				
 				return Response.ok(RestUtils.convertSingleObjectToJson(crud_service.countObjectsBySpec(query).get(), COUNT_FIELD_NAME).toString()).build();
 			} catch (Exception e) {
@@ -246,7 +247,7 @@ public class RestCrudFunctions {
 	
 	private static <T> Response handleCreateRequest(final String json, final ICrudService<T> crud_service, final Class<T> clazz) throws JsonProcessingException, InterruptedException, ExecutionException {
 		//get id or a query object that was posted
-		_logger.error("input: " + json);
+		_logger.debug("input: " + json);
 		//TODO handle overwriting existing object
 		return Response.ok(RestUtils.convertObjectToJson(crud_service.storeObject(BeanTemplateUtils.from(json, clazz).get()).get().get()).toString()).build();
 	}
@@ -254,7 +255,7 @@ public class RestCrudFunctions {
 	private static <T> Response handleUpdateRequest(final Optional<String> json, final ICrudService<T> crud_service, final Class<T> clazz) throws JsonParseException, JsonMappingException, IOException, InterruptedException, ExecutionException {
 		//get id or a query object that was posted
 		if ( json.isPresent() ) {			
-			_logger.error("input: " + json.get());
+			_logger.debug("input: " + json.get());
 			final Tuple2<QueryComponent<T>, UpdateComponent<T>> q_u = RestUtils.convertStringToUpdateComponent(json.get(), clazz);
 			boolean upsert = false; //TODO get from url params
 			boolean before_updated = false; //TODO get from url params
@@ -270,7 +271,7 @@ public class RestCrudFunctions {
     		//ID delete
     		try {
     			final String id = query_id.get();
-        		_logger.error("id: " + id);
+        		_logger.debug("id: " + id);
 				return Response.ok(RestUtils.convertSingleObjectToJson(crud_service.deleteObjectById(id).get(), DELETE_SUCCESS_FIELD_NAME).toString()).build();
 			} catch ( InterruptedException | ExecutionException e) {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
@@ -279,7 +280,7 @@ public class RestCrudFunctions {
     		//Body delete
 			try {
 				final String json = query_json.get();
-				_logger.error("query: " + json);
+				_logger.debug("query: " + json);
 				final QueryComponent<T> query = RestUtils.convertStringToQueryComponent(json, clazz, Optional.empty());				
 				return Response.ok(RestUtils.convertSingleObjectToJson(crud_service.deleteObjectBySpec(query).get(), DELETE_SUCCESS_FIELD_NAME).toString()).build();
 			} catch (Exception e) {

@@ -62,7 +62,7 @@ public class DataStoreCrudService implements ICrudService<FileDescriptor> {
 	public DataStoreCrudService(final IServiceContext service_context, final String output_directory) {
 		this.output_directory = output_directory;
 		this.fileContext = service_context.getStorageService().getUnderlyingPlatformDriver(FileContext.class, Optional.empty()).get();
-		_logger.error("Created DataStoreCrudService pointed at dir: " + output_directory);
+		_logger.debug("Created DataStoreCrudService pointed at dir: " + output_directory);
 	}
 	
 	public static class DataStoreCursor extends Cursor<FileDescriptor> {
@@ -94,7 +94,7 @@ public class DataStoreCrudService implements ICrudService<FileDescriptor> {
 	@Override
 	public CompletableFuture<Supplier<Object>> storeObject(final FileDescriptor new_object) {		
 		final String path = output_directory + new_object.file_name();
-		_logger.error("attempting to store object: " + path);
+		_logger.debug("attempting to store object: " + path);
 		try {
 			FileUtils.writeFile(fileContext, new_object.input_stream(), path);
 		} catch (Exception e) {
@@ -348,9 +348,9 @@ public class DataStoreCrudService implements ICrudService<FileDescriptor> {
 	public CompletableFuture<Boolean> deleteObjectById(Object id) {		
 		try {			
 			final Path path = new Path(output_directory + id.toString());
-			_logger.error("Trying to delete: " + path.toString());
+			_logger.debug("Trying to delete: " + path.toString());
 			final boolean delete_success = fileContext.delete(path, false); //this is always returning false
-			_logger.error("success deleteing: " + delete_success);			
+			_logger.debug("success deleteing: " + delete_success);			
 			return CompletableFuture.completedFuture(!doesPathExist(path, fileContext)); //if file does not exist, delete was a success
 		} catch (IllegalArgumentException | IOException e) {
 			final CompletableFuture<Boolean> fut = new CompletableFuture<Boolean>();
