@@ -34,11 +34,14 @@ import scala.Tuple3;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService;
+import com.ikanow.aleph2.data_model.interfaces.shared_services.ICrudService.Cursor;
 import com.ikanow.aleph2.data_model.interfaces.shared_services.IServiceContext;
 import com.ikanow.aleph2.data_model.objects.shared.SharedLibraryBean;
 import com.ikanow.aleph2.data_model.utils.BeanTemplateUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils;
+import com.ikanow.aleph2.data_model.utils.CrudUtils.SingleQueryComponent;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.UpdateComponent;
 import com.ikanow.aleph2.data_model.utils.ErrorUtils;
 import com.ikanow.aleph2.data_model.utils.CrudUtils.QueryComponent;
@@ -224,7 +227,9 @@ public class RestCrudFunctions {
     		//empty query, does a getall using limit (or 10)
     		try {
     			_logger.debug("empty query, get all");
-				return Response.ok(RestUtils.convertCursorToJson(crud_service.getObjectsBySpec(CrudUtils.allOf(clazz).limit(limit.orElse(10L))).get()).toString()).build();
+    			final SingleQueryComponent<T> query = JsonNode.class.isAssignableFrom(clazz) ? (SingleQueryComponent<T>) CrudUtils.allOf() : CrudUtils.allOf(clazz);
+    			final Cursor<T> cursor = crud_service.getObjectsBySpec(query.limit(limit.orElse(10L))).get();
+				return Response.ok(RestUtils.convertCursorToJson(cursor).toString()).build();
 			} catch (JsonProcessingException | InterruptedException
 					| ExecutionException e) {
 				return Response.status(Status.BAD_REQUEST).entity(ErrorUtils.getLongForm("Error converting input stream to string: {0}", e)).build();
