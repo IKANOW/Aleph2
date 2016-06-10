@@ -31,6 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -286,9 +287,11 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 				Tuples._2T(Tuples._2T(_mutable_1up.incrementAndGet(), new BatchRecordUtils.BatchRecord(mutated_json, null)), grouping_fields);
 		
 		if (null != _mutable_output_override) {
+			_logger.log(Level.ERROR, "have output_override");
 			return _mutable_output_override.apply(out_record);
 		}
 		else {
+			_logger.log(Level.ERROR, "no output override");
 			_mutable_records.add(out_record);
 			return Validation.success(mutated_json);
 		}
