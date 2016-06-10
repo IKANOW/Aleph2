@@ -288,10 +288,12 @@ public class BatchEnrichmentContext implements IEnrichmentModuleContext {
 		
 		if (null != _mutable_output_override) {
 			_logger.log(Level.ERROR, "have output_override");
+			this.getLogger(this.getBucket()).log(Level.FATAL, true, ()->"have output override", ()->"BatchEnrichmentContext");
 			return _mutable_output_override.apply(out_record);
 		}
 		else {
 			_logger.log(Level.ERROR, "no output override");
+			this.getLogger(this.getBucket()).log(Level.FATAL, true, ()->"no output override", ()->"BatchEnrichmentContext");
 			_mutable_records.add(out_record);
 			return Validation.success(mutated_json);
 		}
